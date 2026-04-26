@@ -1,0 +1,22 @@
+CREATE TABLE category (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    isCustom INTEGER NOT NULL DEFAULT 0
+);
+
+insertCategory:
+INSERT OR REPLACE INTO category(id, name, icon, isCustom)
+VALUES (?, ?, ?, ?);
+
+getAllCategories:
+SELECT * FROM category;
+
+getCategoryById:
+SELECT * FROM category WHERE id = ?;
+
+deleteCategory:
+DELETE FROM category WHERE id = ?;
+
+countCategories:
+SELECT count(*) FROM category;

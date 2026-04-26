@@ -1,0 +1,23 @@
+ALTER TABLE expense RENAME TO expense_old;
+
+CREATE TABLE expense (
+    id TEXT NOT NULL PRIMARY KEY,
+    amount TEXT NOT NULL,
+    date INTEGER NOT NULL,
+    categoryId TEXT NOT NULL,
+    description TEXT,
+    isShared INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(categoryId) REFERENCES category(id) ON DELETE RESTRICT
+);
+
+INSERT INTO expense(id, amount, date, categoryId, description, isShared)
+SELECT
+    id,
+    CAST(ROUND(amount * 100) AS TEXT),
+    date,
+    categoryId,
+    description,
+    isShared
+FROM expense_old;
+
+DROP TABLE expense_old;
