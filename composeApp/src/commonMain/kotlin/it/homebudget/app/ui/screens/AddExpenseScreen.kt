@@ -90,6 +90,7 @@ class AddExpenseScreen(
         var isRecurringMonthly by remember { mutableStateOf(false) }
         var recurringSeriesId by remember { mutableStateOf<String?>(null) }
         var isShared by remember { mutableStateOf(false) }
+        var initialIsShared by remember { mutableStateOf(false) }
         var categoryExpanded by remember { mutableStateOf(false) }
         var installmentExpanded by remember { mutableStateOf(false) }
         var isSaving by remember { mutableStateOf(false) }
@@ -120,6 +121,7 @@ class AddExpenseScreen(
             selectedDateMillis = expense.date
             recurringSeriesId = expense.recurringSeriesId
             isShared = expense.isShared == 1L
+            initialIsShared = expense.isShared == 1L
             isInitialized = true
         }
 
@@ -485,6 +487,12 @@ class AddExpenseScreen(
                                                         )
                                                     }
                                                 } else {
+                                                    recurringSeriesId?.takeIf { initialIsShared != isShared }?.let { seriesId ->
+                                                        repository.updateRecurringExpenseShared(
+                                                            seriesId = seriesId,
+                                                            isShared = isShared
+                                                        )
+                                                    }
                                                     listOf(
                                                         PendingExpense(
                                                             id = expenseId,

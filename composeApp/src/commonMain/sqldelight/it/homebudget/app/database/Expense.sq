@@ -27,6 +27,11 @@ DELETE FROM expense
 WHERE recurringSeriesId = ?
   AND date >= ?;
 
+updateRecurringExpenseShared:
+UPDATE expense
+SET isShared = ?
+WHERE recurringSeriesId = ?;
+
 getExpensesByCategory:
 SELECT * FROM expense WHERE categoryId = ? ORDER BY date DESC;
 

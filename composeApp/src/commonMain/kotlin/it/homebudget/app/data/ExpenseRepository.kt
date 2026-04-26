@@ -115,4 +115,13 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
             )
         }
     }
+
+    suspend fun updateRecurringExpenseShared(seriesId: String, isShared: Boolean) {
+        withContext(Dispatchers.IO) {
+            expenseQueries.updateRecurringExpenseShared(
+                isShared = if (isShared) 1L else 0L,
+                recurringSeriesId = seriesId
+            )
+        }
+    }
 }
