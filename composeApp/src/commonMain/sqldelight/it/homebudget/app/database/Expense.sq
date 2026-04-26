@@ -5,12 +5,13 @@ CREATE TABLE expense (
     categoryId TEXT NOT NULL,
     description TEXT,
     isShared INTEGER NOT NULL DEFAULT 0,
+    recurringSeriesId TEXT,
     FOREIGN KEY(categoryId) REFERENCES category(id) ON DELETE RESTRICT
 );
 
 insertExpense:
-INSERT OR REPLACE INTO expense(id, amount, date, categoryId, description, isShared)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO expense(id, amount, date, categoryId, description, isShared, recurringSeriesId)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 getAllExpenses:
 SELECT * FROM expense ORDER BY date DESC;
@@ -20,6 +21,11 @@ SELECT * FROM expense WHERE id = ?;
 
 deleteExpense:
 DELETE FROM expense WHERE id = ?;
+
+deleteRecurringExpensesFrom:
+DELETE FROM expense
+WHERE recurringSeriesId = ?
+  AND date >= ?;
 
 getExpensesByCategory:
 SELECT * FROM expense WHERE categoryId = ? ORDER BY date DESC;

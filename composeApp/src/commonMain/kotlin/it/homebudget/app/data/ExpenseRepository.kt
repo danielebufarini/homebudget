@@ -74,14 +74,44 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         description: String?,
         isShared: Boolean
     ) {
+        insertExpenses(
+            listOf(
+                PendingExpense(
+                    id = id,
+                    amount = amount,
+                    date = date,
+                    categoryId = categoryId,
+                    description = description,
+                    isShared = isShared,
+                    recurringSeriesId = null
+                )
+            )
+        )
+    }
+
+    suspend fun insertExpenses(expenses: List<PendingExpense>) {
         withContext(Dispatchers.IO) {
-            expenseQueries.insertExpense(
-                id = id,
-                amount = amount,
-                date = date,
-                categoryId = categoryId,
-                description = description,
-                isShared = if (isShared) 1L else 0L
+            database.transaction {
+                expenses.forEach { expense ->
+                    expenseQueries.insertExpense(
+                        id = expense.id,
+                        amount = expense.amount,
+                        date = expense.date,
+                        categoryId = expense.categoryId,
+                        description = expense.description,
+                        isShared = if (expense.isShared) 1L else 0L,
+                        recurringSeriesId = expense.recurringSeriesId
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun cancelRecurringExpenses(seriesId: String, fromDate: Long) {
+        withContext(Dispatchers.IO) {
+            expenseQueries.deleteRecurringExpensesFrom(
+                recurringSeriesId = seriesId,
+                date = fromDate
             )
         }
     }

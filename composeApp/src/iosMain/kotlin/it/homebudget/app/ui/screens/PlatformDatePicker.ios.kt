@@ -15,6 +15,7 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIDatePicker
 import platform.UIKit.UIDatePickerMode
 import platform.UIKit.UIDatePickerStyle
+import platform.UIKit.UIWindow
 import platform.UIKit.UIViewController
 import kotlin.time.Clock
 
@@ -31,7 +32,7 @@ actual fun rememberPlatformDatePicker(): PlatformDatePicker {
     return remember {
         PlatformDatePicker { initialDateMillis, onDateSelected ->
             val referenceOffsetSeconds = 978307200.0
-            val presenter = topViewController(UIApplication.sharedApplication.keyWindow?.rootViewController)
+            val presenter = topViewController(keyWindow()?.rootViewController)
                 ?: return@PlatformDatePicker
 
             val alert = UIAlertController.alertControllerWithTitle(
@@ -69,6 +70,10 @@ actual fun rememberPlatformDatePicker(): PlatformDatePicker {
             presenter.presentViewController(alert, true, completion = null)
         }
     }
+}
+
+private fun keyWindow(): UIWindow? {
+    return UIApplication.sharedApplication.windows.firstOrNull() as? UIWindow
 }
 
 private fun topViewController(controller: UIViewController?): UIViewController? {
