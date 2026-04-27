@@ -2,49 +2,25 @@ package it.homebudget.app.ui.screens
 
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionContext
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCompositionContext
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.platform.ComposeView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import it.homebudget.app.data.formatAmount
@@ -298,6 +274,7 @@ private fun AndroidGroupedExpenseSectionCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color(0xFFFFF4F7))
                     .clickable(onClick = onToggleExpanded)
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -305,6 +282,7 @@ private fun AndroidGroupedExpenseSectionCard(
                 Text(
                     text = section.title,
                     modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -317,7 +295,8 @@ private fun AndroidGroupedExpenseSectionCard(
                 Icon(
                     imageVector = Icons.Filled.KeyboardArrowDown,
                     contentDescription = if (expanded) "Collapse section" else "Expand section",
-                    modifier = Modifier.rotate(rotationAngle)
+                    modifier = Modifier.rotate(rotationAngle),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -354,64 +333,37 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenExpense(row.id) }
         )
         return
     }
 
     val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDeleteExpense(row.id)
-                true
-            } else {
-                false
-            }
-        },
         positionalThreshold = { distance ->
             distance * 0.35f
         }
     )
+    LaunchedEffect(dismissState.currentValue) {
+        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+            onDeleteExpense(row.id)
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
         backgroundContent = {
-            AndroidDeleteExpenseBackground()
+            DeleteExpenseBackground()
         }
     ) {
         ExpenseListItemRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenExpense(row.id) }
         )
-    }
-}
-
-@Composable
-private fun AndroidDeleteExpenseBackground() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.error)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        contentAlignment = Alignment.CenterEnd
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Delete",
-                color = MaterialTheme.colorScheme.onError
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = "Delete expense",
-                tint = MaterialTheme.colorScheme.onError
-            )
-        }
     }
 }
 

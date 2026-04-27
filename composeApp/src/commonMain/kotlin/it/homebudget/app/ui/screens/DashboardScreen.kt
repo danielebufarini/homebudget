@@ -1,44 +1,15 @@
 package it.homebudget.app.ui.screens
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -52,18 +23,13 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
-import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.averageAmount
-import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigInteger
-import it.homebudget.app.data.toDisplayDouble
+import it.homebudget.app.data.*
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
-import org.koin.compose.koinInject
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.koin.compose.koinInject
 import kotlin.math.floor
-import kotlin.math.max
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -120,19 +86,19 @@ fun DashboardRoute(
         repository.insertDefaultCategoriesIfEmpty()
     }
 
-    val monthlyExpenses = remember(expenses, selectedMonth) {
-        expenses.filter { expense ->
-            val date = expense.date.asMonthCursor()
-            date.year == selectedMonth.year && date.month == selectedMonth.month
-        }
+    val dashboardData = remember(expenses, categoriesById) {
+        buildDashboardDataCache(expenses, categoriesById)
     }
 
-    val summary = remember(monthlyExpenses, categoriesById) {
-        buildMonthlySummary(monthlyExpenses, categoriesById)
+    val summary = remember(dashboardData, selectedMonth) {
+        dashboardData.monthlySummaries[selectedMonth] ?: emptyMonthlySummary()
     }
 
-    val chartState = remember(expenses, selectedMonth) {
-        buildCashFlowChartState(expenses, selectedMonth)
+    val chartState = remember(dashboardData, selectedMonth) {
+        buildCashFlowChartState(
+            totalsByMonth = dashboardData.monthlyTotalsByMonth,
+            selectedMonth = selectedMonth
+        )
     }
 
     val dashboardBody: @Composable (Modifier) -> Unit = { modifier ->
@@ -180,13 +146,30 @@ fun DashboardRoute(
             )
 
             if (showFab) {
-                FloatingActionButton(
-                    onClick = onOpenAddExpense,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                ) {
-                    Text("+")
+                if (rememberIsIosPlatform()) {
+                    FloatingActionButton(
+                        onClick = onOpenAddExpense,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                    ) {
+                        Text("+")
+                    }
+                } else {
+                    FloatingActionButton(
+                        onClick = onOpenAddExpense,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        shape = CircleShape,
+                        containerColor = androidAccentButtonContainerColor(),
+                        contentColor = androidAccentButtonContentColor()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Add expense"
+                        )
+                    }
                 }
             }
         }
@@ -235,8 +218,22 @@ private fun DashboardScreenScaffold(
             },
             floatingActionButton = {
                 if (showFab) {
-                    FloatingActionButton(onClick = onOpenAddExpense) {
-                        Text("+")
+                    if (isIos) {
+                        FloatingActionButton(onClick = onOpenAddExpense) {
+                            Text("+")
+                        }
+                    } else {
+                        FloatingActionButton(
+                            onClick = onOpenAddExpense,
+                            shape = CircleShape,
+                            containerColor = androidAccentButtonContainerColor(),
+                            contentColor = androidAccentButtonContentColor()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = "Add expense"
+                            )
+                        }
                     }
                 }
             }
@@ -876,17 +873,7 @@ private fun buildMonthlySummary(
     categoriesById: Map<String, Category>
 ): MonthlySummary {
     if (expenses.isEmpty()) {
-        return MonthlySummary(
-            totalAmount = BigInteger.ZERO,
-            expenseCount = 0,
-            sharedAmount = BigInteger.ZERO,
-            averageAmount = BigInteger.ZERO,
-            topCategory = "-",
-            highestDayLabel = "-",
-            highestDayAmount = BigInteger.ZERO,
-            highestExpenseId = null,
-            categoryTotals = emptyList()
-        )
+        return emptyMonthlySummary()
     }
 
     val totalAmount = expenses.map { it.amount }.sumBigInteger()
@@ -925,13 +912,49 @@ private fun buildMonthlySummary(
     )
 }
 
-private fun buildCashFlowChartState(
+private fun emptyMonthlySummary(): MonthlySummary {
+    return MonthlySummary(
+        totalAmount = BigInteger.ZERO,
+        expenseCount = 0,
+        sharedAmount = BigInteger.ZERO,
+        averageAmount = BigInteger.ZERO,
+        topCategory = "-",
+        highestDayLabel = "-",
+        highestDayAmount = BigInteger.ZERO,
+        highestExpenseId = null,
+        categoryTotals = emptyList()
+    )
+}
+
+private fun buildDashboardDataCache(
     expenses: List<Expense>,
+    categoriesById: Map<String, Category>
+): DashboardDataCache {
+    if (expenses.isEmpty()) {
+        return DashboardDataCache(
+            monthlySummaries = emptyMap(),
+            monthlyTotalsByMonth = emptyMap()
+        )
+    }
+
+    val expensesByMonth = expenses.groupBy { it.date.asMonthCursor() }
+    return DashboardDataCache(
+        monthlySummaries = expensesByMonth.mapValues { (_, monthExpenses) ->
+            buildMonthlySummary(monthExpenses, categoriesById)
+        },
+        monthlyTotalsByMonth = expensesByMonth.mapValues { (_, monthExpenses) ->
+            monthExpenses.map { it.amount }.sumBigInteger().toDisplayDouble()
+        }
+    )
+}
+
+private fun buildCashFlowChartState(
+    totalsByMonth: Map<MonthCursor, Double>,
     selectedMonth: MonthCursor
 ): LineChartState {
     val months = selectedMonth.trailingMonths(count = 6)
 
-    if (expenses.isEmpty()) {
+    if (totalsByMonth.isEmpty()) {
         return LineChartState(
             pointCount = months.size,
             maxValue = 0.0,
@@ -940,12 +963,6 @@ private fun buildCashFlowChartState(
             series = emptyList()
         )
     }
-
-    val totalsByMonth = expenses
-        .groupBy { it.date.asMonthCursor() }
-        .mapValues { (_, monthExpenses) ->
-            monthExpenses.map { it.amount }.sumBigInteger().toDisplayDouble()
-        }
 
     val values = months.map { month ->
         totalsByMonth[month] ?: 0.0
@@ -1115,6 +1132,11 @@ private data class MonthlySummary(
     val highestDayAmount: BigInteger,
     val highestExpenseId: String?,
     val categoryTotals: List<CategoryTotal>
+)
+
+private data class DashboardDataCache(
+    val monthlySummaries: Map<MonthCursor, MonthlySummary>,
+    val monthlyTotalsByMonth: Map<MonthCursor, Double>
 )
 
 private data class CategoryTotal(

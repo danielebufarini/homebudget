@@ -1,24 +1,14 @@
 package it.homebudget.app.ui.screens
 
+import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.di.initKoin
-import com.ionspin.kotlin.bignum.integer.BigInteger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.mp.KoinPlatformTools
@@ -409,25 +399,7 @@ private fun formatDate(epochMillis: Long): String {
 
 private fun formatDateGroupTitle(epochMillis: Long): String {
     val date = epochMillis.toLocalDate()
-    return "${date.day.toString().padStart(2, '0')} ${monthShortName(date.month.ordinal)} ${date.year}"
-}
-
-private fun monthShortName(monthOrdinal: Int): String {
-    val names = listOf(
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-    )
-    return names.getOrElse(monthOrdinal) { "" }
+    return formatExpenseDateGroupTitle(date)
 }
 
 private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)

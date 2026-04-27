@@ -1,43 +1,14 @@
 package it.homebudget.app.ui.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -51,9 +22,9 @@ import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
+import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import kotlin.time.Instant
 
@@ -165,15 +136,10 @@ abstract class BaseGroupedExpensesScreen(
                 .map { it.amount }
                 .sumBigInteger()
         }
-        val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
-            { expenseId: String ->
-                scope.launch {
-                    repository.deleteExpense(expenseId)
-                }
-            }
-        } else {
-            null
-        }
+        val deleteExpenseAction = { expenseId: String ->
+            scope.launch { repository.deleteExpense(expenseId) }
+            Unit
+        }.takeIf { canDeleteExpense() }
 
         if (showNavigationChrome) {
             Scaffold(
@@ -202,9 +168,17 @@ abstract class BaseGroupedExpensesScreen(
                     )
                 },
                 floatingActionButton = {
-                    if (canAddExpense()) {
-                        FloatingActionButton(onClick = onAddExpense) {
-                            Text("+")
+                    if (!isIos && canAddExpense()) {
+                        FloatingActionButton(
+                            onClick = onAddExpense,
+                            shape = CircleShape,
+                            containerColor = androidAccentButtonContainerColor(),
+                            contentColor = androidAccentButtonContentColor()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = "Add expense"
+                            )
                         }
                     }
                 }
@@ -376,18 +350,15 @@ abstract class BaseGroupedExpensesScreen(
                                             )
                                         } else {
                                             val dismissState = rememberSwipeToDismissBoxState(
-                                                confirmValueChange = { value ->
-                                                    if (value == SwipeToDismissBoxValue.EndToStart) {
-                                                        onDeleteExpense(expense.id)
-                                                        true
-                                                    } else {
-                                                        false
-                                                    }
-                                                },
                                                 positionalThreshold = { distance ->
                                                     distance * 0.35f
                                                 }
                                             )
+                                            LaunchedEffect(dismissState.currentValue) {
+                                                if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                                                    onDeleteExpense(expense.id)
+                                                }
+                                            }
 
                                             SwipeToDismissBox(
                                                 state = dismissState,
@@ -421,56 +392,8 @@ abstract class BaseGroupedExpensesScreen(
         return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
     }
 
-    protected fun formatDateGroupTitle(epochMillis: Long): String {
-        return formatDateGroupTitle(epochMillis.toLocalDate())
-    }
-
     protected fun formatDateGroupTitle(date: kotlinx.datetime.LocalDate): String {
-        return "${date.day.toString().padStart(2, '0')} ${monthShortName(date.month.ordinal)} ${date.year}"
-    }
-
-    private fun monthShortName(monthOrdinal: Int): String {
-        val names = listOf(
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec"
-        )
-        return names.getOrElse(monthOrdinal) { "" }
-    }
-
-    @Composable
-    private fun DeleteExpenseBackground() {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.error)
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Delete",
-                    color = MaterialTheme.colorScheme.onError
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = "Delete expense",
-                    tint = MaterialTheme.colorScheme.onError
-                )
-            }
-        }
+        return formatExpenseDateGroupTitle(date)
     }
 
     @Composable
@@ -506,6 +429,7 @@ abstract class BaseGroupedExpensesScreen(
         if (selected) {
             FilledTonalButton(
                 onClick = onClick,
+                colors = homeBudgetFilledTonalButtonColors(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(label)
@@ -513,6 +437,8 @@ abstract class BaseGroupedExpensesScreen(
         } else {
             OutlinedButton(
                 onClick = onClick,
+                colors = homeBudgetOutlinedButtonColors(),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(label)
