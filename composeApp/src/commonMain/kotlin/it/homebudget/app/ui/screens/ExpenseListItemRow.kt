@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ExpenseListItemRow(
     title: String,
-    dateText: String,
+    subtitleText: String,
     amountText: String,
     onClick: () -> Unit
 ) {
@@ -37,10 +37,14 @@ fun ExpenseListItemRow(
         Column(
             modifier = Modifier.fillMaxWidth(0.72f)
         ) {
-            Text(title)
             Text(
-                text = dateText,
-                style = MaterialTheme.typography.bodyMedium
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = subtitleText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(modifier = Modifier.width(16.dp))

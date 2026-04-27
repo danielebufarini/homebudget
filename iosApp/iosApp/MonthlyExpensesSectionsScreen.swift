@@ -31,17 +31,30 @@ enum GroupedExpensesKind: Hashable {
     }
 }
 
+private enum ExpenseGroupingMode: String, Hashable {
+    case byCategory
+    case byDate
+
+    var bridgeValue: String {
+        switch self {
+        case .byCategory:
+            return "category"
+        case .byDate:
+            return "date"
+        }
+    }
+}
+
 private struct GroupedExpenseRowModel: Identifiable {
     let id: String
     let title: String
-    let dateText: String
+    let subtitleText: String
     let amountText: String
 }
 
 private struct GroupedExpenseSectionModel: Identifiable {
     let id: String
     let title: String
-    let countLabel: String
     let totalAmountText: String
     let rows: [GroupedExpenseRowModel]
 }
@@ -57,12 +70,13 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
     private var hasLoadedInitialExpansionState = false
     private var isObserving = false
 
-    init(year: Int, month: Int, kind: GroupedExpensesKind) {
+    init(year: Int, month: Int, kind: GroupedExpensesKind, groupingMode: ExpenseGroupingMode) {
         observer = IosGroupedExpensesObserver(
             year: Int32(year),
             month: Int32(month),
             screenType: kind.screenType,
-            categoryName: kind.categoryName
+            categoryName: kind.categoryName,
+            groupingMode: groupingMode.bridgeValue
         )
     }
 
@@ -107,13 +121,12 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
             GroupedExpenseSectionModel(
                 id: section.id,
                 title: section.title,
-                countLabel: section.countLabel,
                 totalAmountText: section.totalAmountText,
                 rows: section.rows.map { row in
                     GroupedExpenseRowModel(
                         id: row.id,
                         title: row.title,
-                        dateText: row.dateText,
+                        subtitleText: row.subtitleText,
                         amountText: row.amountText
                     )
                 }
@@ -132,15 +145,86 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
 
 struct GroupedExpensesSectionsScreen: View {
     let kind: GroupedExpensesKind
+    let year: Int
+    let month: Int
+    let onOpenExpense: (String) -> Void
+
+    init(kind: GroupedExpensesKind, year: Int, month: Int, onOpenExpense: @escaping (String) -> Void) {
+        self.kind = kind
+        self.year = year
+        self.month = month
+        self.onOpenExpense = onOpenExpense
+    }
+
+    @State private var groupingMode: ExpenseGroupingMode = .byCategory
+
+    var body: some View {
+        GroupedExpensesSectionsList(
+            kind: kind,
+            year: year,
+            month: month,
+            groupingMode: groupingMode,
+            onOpenExpense: onOpenExpense
+        )
+        .id(groupingMode)
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 12) {
+                groupingButton("By Category", mode: .byCategory)
+                groupingButton("By Date", mode: .byDate)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(.thinMaterial)
+        }
+    }
+
+    @ViewBuilder
+    private func groupingButton(_ title: String, mode: ExpenseGroupingMode) -> some View {
+        if mode == groupingMode {
+            Button(title) {
+                groupingMode = mode
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        } else {
+            Button(title) {
+                groupingMode = mode
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+    }
+}
+
+private struct GroupedExpensesSectionsList: View {
+    let kind: GroupedExpensesKind
+    let year: Int
+    let month: Int
+    let groupingMode: ExpenseGroupingMode
     let onOpenExpense: (String) -> Void
 
     @StateObject private var viewModel: GroupedExpensesSectionsViewModel
 
-    init(kind: GroupedExpensesKind, year: Int, month: Int, onOpenExpense: @escaping (String) -> Void) {
+    init(
+        kind: GroupedExpensesKind,
+        year: Int,
+        month: Int,
+        groupingMode: ExpenseGroupingMode,
+        onOpenExpense: @escaping (String) -> Void
+    ) {
         self.kind = kind
+        self.year = year
+        self.month = month
+        self.groupingMode = groupingMode
         self.onOpenExpense = onOpenExpense
         _viewModel = StateObject(
-            wrappedValue: GroupedExpensesSectionsViewModel(year: year, month: month, kind: kind)
+            wrappedValue: GroupedExpensesSectionsViewModel(
+                year: year,
+                month: month,
+                kind: kind,
+                groupingMode: groupingMode
+            )
         )
     }
 
@@ -153,11 +237,6 @@ struct GroupedExpensesSectionsScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                Section {
-                    LabeledContent("Total", value: viewModel.totalAmountText)
-                        .font(.headline)
-                }
-
                 ForEach(viewModel.sections) { section in
                     Section(isExpanded: expansionBinding(for: section.id)) {
                         ForEach(section.rows) { row in
@@ -170,11 +249,33 @@ struct GroupedExpensesSectionsScreen: View {
             }
         }
         .listStyle(.sidebar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 1) {
+                    Text(screenTitle)
+                        .font(.headline)
+                    Text(viewModel.totalAmountText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
         .onAppear {
             viewModel.start()
         }
         .onDisappear {
             viewModel.stop()
+        }
+    }
+
+    private var screenTitle: String {
+        switch kind {
+        case .monthly:
+            return "\(monthName(month)) Expenses"
+        case .shared:
+            return "\(monthName(month)) Shared Expenses"
+        case let .category(name):
+            return "\(monthName(month)) \(name)"
         }
     }
 
@@ -227,12 +328,7 @@ private struct GroupedExpenseSectionHeaderView: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(section.title)
-                Text(section.countLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text(section.title)
 
             Spacer()
 
@@ -251,8 +347,8 @@ private struct GroupedExpenseRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.title)
                     .foregroundStyle(.primary)
-                Text(row.dateText)
-                    .font(.subheadline)
+                Text(row.subtitleText)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
@@ -263,4 +359,28 @@ private struct GroupedExpenseRowView: View {
         }
         .contentShape(Rectangle())
     }
+}
+
+private func monthName(_ month: Int) -> String {
+    let names = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+    ]
+
+    let index = month - 1
+    guard names.indices.contains(index) else {
+        return ""
+    }
+
+    return names[index]
 }

@@ -18,14 +18,13 @@ import kotlin.time.Instant
 class IosGroupedExpenseRow(
     val id: String,
     val title: String,
-    val dateText: String,
+    val subtitleText: String,
     val amountText: String
 )
 
 class IosGroupedExpenseSection(
     val id: String,
     val title: String,
-    val countLabel: String,
     val totalAmountText: String,
     val rows: List<IosGroupedExpenseRow>
 )
@@ -40,7 +39,8 @@ class IosGroupedExpensesObserver(
     private val year: Int,
     private val month: Int,
     private val screenType: String,
-    private val categoryName: String?
+    private val categoryName: String?,
+    private val groupingMode: String
 ) {
     private val scope = MainScope()
     private var updatesJob: Job? = null
@@ -64,30 +64,48 @@ class IosGroupedExpensesObserver(
                 val categoriesById = categories.associateBy { it.id }
                 val filteredExpenses = expenses.filter { expense ->
                     val localDate = expense.date.toLocalDate()
+                    val resolvedCategoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
                     localDate.year == year &&
                         localDate.month.ordinal + 1 == month &&
-                        includeExpense(expense)
+                        includeExpense(expense) &&
+                        includeCategory(resolvedCategoryName)
                 }
 
-                val sections = filteredExpenses
-                    .groupBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
-                    .filterKeys(::includeCategory)
+                val groupedExpenses = when (groupingMode) {
+                    "date" -> filteredExpenses.groupBy { expense ->
+                        formatDate(expense.date)
+                    }
+                    else -> filteredExpenses.groupBy { expense ->
+                        categoriesById[expense.categoryId]?.name ?: "Unknown category"
+                    }
+                }
+
+                val sections = groupedExpenses
                     .toList()
-                    .sortedBy { it.first }
+                    .sortedWith(
+                        when (groupingMode) {
+                            "date" -> compareByDescending<Pair<String, List<Expense>>> { it.first }
+                            else -> compareBy<Pair<String, List<Expense>>> { it.first }
+                        }
+                    )
                     .map { (groupName, groupExpenses) ->
+                        val sortedExpenses = groupExpenses.sortedWith(
+                            compareByDescending<Expense> { it.date }
+                                .thenBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
+                                .thenBy { it.description ?: "" }
+                        )
                         IosGroupedExpenseSection(
                             id = groupName,
                             title = groupName,
-                            countLabel = countLabel(groupExpenses.size),
-                            totalAmountText = formatAmount(groupExpenses.map { it.amount }.sumBigInteger()),
-                            rows = groupExpenses
-                                .sortedByDescending(Expense::date)
-                                .map { expense ->
+                            totalAmountText = formatAmount(sortedExpenses.map { it.amount }.sumBigInteger()),
+                            rows = sortedExpenses.map { expense ->
+                                    val expenseName = expense.description?.ifBlank { expenseFallbackTitle() }
+                                        ?: expenseFallbackTitle()
+                                    val resolvedCategoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
                                     IosGroupedExpenseRow(
                                         id = expense.id,
-                                        title = expense.description?.ifBlank { expenseFallbackTitle() }
-                                            ?: expenseFallbackTitle(),
-                                        dateText = formatDate(expense.date),
+                                        title = if (groupingMode == "date") resolvedCategoryName else expenseName,
+                                        subtitleText = if (groupingMode == "date") expenseName else formatDate(expense.date),
                                         amountText = formatAmount(expense.amount)
                                     )
                                 }
@@ -129,11 +147,6 @@ class IosGroupedExpensesObserver(
     private fun includeCategory(groupName: String): Boolean = when (screenType) {
         "category" -> groupName == categoryName
         else -> true
-    }
-
-    private fun countLabel(count: Int): String = when (screenType) {
-        "shared" -> "$count shared expenses"
-        else -> "$count expenses"
     }
 
     private fun expenseFallbackTitle(): String = when (screenType) {

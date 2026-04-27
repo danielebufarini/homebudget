@@ -12,8 +12,6 @@ class CategoryExpensesScreen(
 
     override fun emptyStateText(): String = "No expenses for $categoryName this month"
 
-    override fun categoryCountLabel(count: Int): String = "$count expenses"
-
     override fun expenseFallbackTitle(): String = "Expense"
 
     override fun includeExpense(expense: Expense): Boolean = true

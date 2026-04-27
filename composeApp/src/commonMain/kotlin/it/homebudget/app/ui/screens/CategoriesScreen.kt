@@ -58,6 +58,7 @@ fun CategoriesRoute(
     addCategoryRequestKey: Int = 0
 ) {
     val repository: ExpenseRepository = koinInject()
+    val isIos = rememberIsIosPlatform()
     var showAddDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
@@ -79,22 +80,41 @@ fun CategoriesRoute(
             onBack = onBack,
             onShowAddDialog = { showAddDialog = true }
         ) { padding ->
-            CategoriesList(
-                categories = categories,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-            )
+            if (isIos) {
+                CategoriesList(
+                    categories = categories,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                )
+            } else {
+                AndroidCategoriesRecyclerView(
+                    categories = categories,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                )
+            }
         }
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
-            CategoriesList(
-                categories = categories,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            )
+            if (isIos) {
+                CategoriesList(
+                    categories = categories,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                )
+            } else {
+                AndroidCategoriesRecyclerView(
+                    categories = categories,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                )
+            }
 
             if (showFab) {
                 FloatingActionButton(

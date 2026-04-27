@@ -11,8 +11,6 @@ class SharedExpensesScreen(
 
     override fun emptyStateText(): String = "No shared expenses for this month"
 
-    override fun categoryCountLabel(count: Int): String = "$count shared expenses"
-
     override fun expenseFallbackTitle(): String = "Shared expense"
 
     override fun includeExpense(expense: Expense): Boolean = expense.isShared == 1L
