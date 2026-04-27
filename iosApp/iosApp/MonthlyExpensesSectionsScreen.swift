@@ -76,7 +76,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
             month: Int32(month),
             screenType: kind.screenType,
             categoryName: kind.categoryName,
-            groupingMode: groupingMode.bridgeValue
+            initialGroupingMode: groupingMode.bridgeValue
         )
     }
 
@@ -112,6 +112,10 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
 
     func deleteExpense(_ expenseID: String) {
         observer.deleteExpense(id: expenseID)
+    }
+
+    func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
+        observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
     }
 
     private func apply(snapshot: IosGroupedExpensesSnapshot) {
@@ -166,7 +170,6 @@ struct GroupedExpensesSectionsScreen: View {
             groupingMode: groupingMode,
             onOpenExpense: onOpenExpense
         )
-        .id(groupingMode)
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 12) {
                 groupingButton("By Category", mode: .byCategory)
@@ -261,7 +264,11 @@ private struct GroupedExpensesSectionsList: View {
             }
         }
         .onAppear {
+            viewModel.updateGroupingMode(groupingMode)
             viewModel.start()
+        }
+        .onChange(of: groupingMode) { _, updatedMode in
+            viewModel.updateGroupingMode(updatedMode)
         }
         .onDisappear {
             viewModel.stop()

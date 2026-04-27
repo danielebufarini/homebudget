@@ -7,6 +7,7 @@ import it.homebudget.app.ui.screens.AddExpenseScreen
 import it.homebudget.app.ui.screens.CategoriesRoute
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DashboardRoute
+import it.homebudget.app.ui.screens.startIosGroupedExpensesStore
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
 import it.homebudget.app.ui.theme.AppTheme
@@ -137,4 +138,5 @@ private fun ensureKoinStarted() {
     if (KoinPlatformTools.defaultContext().getOrNull() == null) {
         initKoin()
     }
+    startIosGroupedExpensesStore()
 }

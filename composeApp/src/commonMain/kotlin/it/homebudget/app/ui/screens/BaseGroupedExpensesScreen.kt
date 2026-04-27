@@ -120,27 +120,39 @@ abstract class BaseGroupedExpensesScreen(
         }
 
         val groupedExpenses = remember(filteredExpenses, categories, groupingMode) {
-            val grouped = when (groupingMode) {
-                ExpenseGroupingMode.ByCategory -> filteredExpenses.groupBy { expense ->
-                    categoriesById[expense.categoryId]?.name ?: "Unknown category"
+            when (groupingMode) {
+                ExpenseGroupingMode.ByCategory -> {
+                    filteredExpenses
+                        .groupBy { expense ->
+                            categoriesById[expense.categoryId]?.name ?: "Unknown category"
+                        }
+                        .toList()
+                        .sortedBy { it.first }
+                        .map { (groupKey, groupExpenses) ->
+                            val sortedExpenses = groupExpenses.sortedWith(
+                                compareByDescending<Expense> { it.date }
+                                    .thenBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
+                                    .thenBy { it.description ?: "" }
+                            )
+                            groupKey to sortedExpenses
+                        }
                 }
-                ExpenseGroupingMode.ByDate -> filteredExpenses.groupBy { expense ->
-                    formatDate(expense.date)
+                ExpenseGroupingMode.ByDate -> {
+                    filteredExpenses
+                        .groupBy { expense -> expense.date.toLocalDate() }
+                        .toList()
+                        .sortedByDescending { (_, groupExpenses) ->
+                            groupExpenses.maxOf { it.date }
+                        }
+                        .map { (groupDate, groupExpenses) ->
+                            val sortedExpenses = groupExpenses.sortedWith(
+                                compareByDescending<Expense> { it.date }
+                                    .thenBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
+                                    .thenBy { it.description ?: "" }
+                            )
+                            formatDateGroupTitle(groupDate) to sortedExpenses
+                        }
                 }
-            }
-
-            val sortedGroups = when (groupingMode) {
-                ExpenseGroupingMode.ByCategory -> grouped.toList().sortedBy { it.first }
-                ExpenseGroupingMode.ByDate -> grouped.toList().sortedByDescending { it.first }
-            }
-
-            sortedGroups.map { (groupKey, groupExpenses) ->
-                val sortedExpenses = groupExpenses.sortedWith(
-                    compareByDescending<Expense> { it.date }
-                        .thenBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
-                        .thenBy { it.description ?: "" }
-                )
-                groupKey to sortedExpenses
             }
         }
         val totalAmount = remember(groupedExpenses) {
@@ -396,6 +408,32 @@ abstract class BaseGroupedExpensesScreen(
     protected fun formatDate(epochMillis: Long): String {
         val date = epochMillis.toLocalDate()
         return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
+    }
+
+    protected fun formatDateGroupTitle(epochMillis: Long): String {
+        return formatDateGroupTitle(epochMillis.toLocalDate())
+    }
+
+    protected fun formatDateGroupTitle(date: kotlinx.datetime.LocalDate): String {
+        return "${date.day.toString().padStart(2, '0')} ${monthShortName(date.month.ordinal)} ${date.year}"
+    }
+
+    private fun monthShortName(monthOrdinal: Int): String {
+        val names = listOf(
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+        )
+        return names.getOrElse(monthOrdinal) { "" }
     }
 
     @Composable
