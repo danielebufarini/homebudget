@@ -147,6 +147,87 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
     }
 }
 
+@MainActor
+private final class MonthlyIncomesSectionsViewModel: ObservableObject {
+    @Published var totalAmountText = "€ 0.00"
+    @Published var emptyStateText = "No income for this month"
+    @Published var sections: [GroupedExpenseSectionModel] = []
+    @Published var expandedSectionIDs = Set<String>()
+
+    private let observer: IosMonthlyIncomesObserver
+    private var hasLoadedInitialExpansionState = false
+    private var isObserving = false
+
+    init(year: Int, month: Int) {
+        observer = IosMonthlyIncomesObserver(
+            year: Int32(year),
+            month: Int32(month)
+        )
+    }
+
+    deinit {
+        observer.dispose()
+    }
+
+    func start() {
+        guard !isObserving else {
+            return
+        }
+
+        isObserving = true
+        observer.start { [weak self] snapshot in
+            guard let self else {
+                return
+            }
+
+            Task { @MainActor in
+                self.apply(snapshot: snapshot)
+            }
+        }
+    }
+
+    func stop() {
+        guard isObserving else {
+            return
+        }
+
+        observer.stop()
+        isObserving = false
+    }
+
+    func deleteIncome(_ incomeID: String) {
+        observer.deleteIncome(id: incomeID)
+    }
+
+    private func apply(snapshot: IosMonthlyIncomesSnapshot) {
+        totalAmountText = snapshot.totalAmountText
+        emptyStateText = snapshot.emptyStateText
+        sections = snapshot.sections.map { section in
+            GroupedExpenseSectionModel(
+                id: section.id,
+                title: section.title,
+                totalAmountText: section.totalAmountText,
+                rows: section.rows.map { row in
+                    GroupedExpenseRowModel(
+                        id: row.id,
+                        title: row.title,
+                        subtitleText: row.subtitleText,
+                        amountText: row.amountText
+                    )
+                }
+            )
+        }
+
+        let incomingIDs = Set(sections.map(\.id))
+        if hasLoadedInitialExpansionState {
+            expandedSectionIDs.formUnion(incomingIDs)
+        } else {
+            expandedSectionIDs = incomingIDs
+            hasLoadedInitialExpansionState = true
+        }
+    }
+}
+
 struct GroupedExpensesSectionsScreen: View {
     let kind: GroupedExpensesKind
     let year: Int
@@ -206,6 +287,99 @@ struct GroupedExpensesSectionsScreen: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
         }
+    }
+}
+
+struct MonthlyIncomesSectionsScreen: View {
+    let year: Int
+    let month: Int
+    let onOpenIncome: (String) -> Void
+
+    @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
+
+    init(
+        year: Int,
+        month: Int,
+        onOpenIncome: @escaping (String) -> Void
+    ) {
+        self.year = year
+        self.month = month
+        self.onOpenIncome = onOpenIncome
+        _viewModel = StateObject(
+            wrappedValue: MonthlyIncomesSectionsViewModel(
+                year: year,
+                month: month
+            )
+        )
+    }
+
+    var body: some View {
+        List {
+            if viewModel.sections.isEmpty {
+                Section {
+                    Text(viewModel.emptyStateText)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                ForEach(viewModel.sections) { section in
+                    Section(isExpanded: expansionBinding(for: section.id)) {
+                        ForEach(section.rows) { row in
+                            Button {
+                                onOpenIncome(row.id)
+                            } label: {
+                                GroupedExpenseRowView(row: row)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.deleteIncome(row.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    } header: {
+                        GroupedExpenseSectionHeaderView(section: section)
+                    }
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 1) {
+                    Text("\(monthName(month)) Income")
+                        .font(.headline)
+                    Text(viewModel.totalAmountText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .onAppear {
+            viewModel.start()
+        }
+        .onDisappear {
+            viewModel.stop()
+        }
+    }
+
+    private func expansionBinding(for sectionID: String) -> Binding<Bool> {
+        Binding(
+            get: {
+                viewModel.expandedSectionIDs.contains(sectionID)
+            },
+            set: { isExpanded in
+                var updated = viewModel.expandedSectionIDs
+                if isExpanded {
+                    updated.insert(sectionID)
+                } else {
+                    updated.remove(sectionID)
+                }
+                viewModel.expandedSectionIDs = updated
+            }
+        )
     }
 }
 

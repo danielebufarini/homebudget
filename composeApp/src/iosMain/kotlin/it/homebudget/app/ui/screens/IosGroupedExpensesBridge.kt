@@ -35,6 +35,26 @@ class IosGroupedExpensesSnapshot(
     val sections: List<IosGroupedExpenseSection>
 )
 
+class IosIncomeRow(
+    val id: String,
+    val title: String,
+    val subtitleText: String,
+    val amountText: String
+)
+
+class IosIncomeSection(
+    val id: String,
+    val title: String,
+    val totalAmountText: String,
+    val rows: List<IosIncomeRow>
+)
+
+class IosMonthlyIncomesSnapshot(
+    val totalAmountText: String,
+    val emptyStateText: String,
+    val sections: List<IosIncomeSection>
+)
+
 internal data class GroupedExpensesCacheKey(
     val year: Int,
     val month: Int,
@@ -250,6 +270,54 @@ class IosGroupedExpensesObserver(
     }
 }
 
+class IosMonthlyIncomesObserver(
+    private val year: Int,
+    private val month: Int
+) {
+    private val scope = MainScope()
+    private var updatesJob: Job? = null
+    private var onUpdate: ((IosMonthlyIncomesSnapshot) -> Unit)? = null
+
+    fun start(onUpdate: (IosMonthlyIncomesSnapshot) -> Unit) {
+        if (updatesJob != null) {
+            return
+        }
+
+        this.onUpdate = onUpdate
+        updatesJob = scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.getAllIncomes().collect { incomes ->
+                val snapshot = withContext(Dispatchers.Default) {
+                    buildMonthlyIncomesSnapshot(
+                        incomes = incomes,
+                        year = year,
+                        month = month
+                    )
+                }
+                onUpdate(snapshot)
+            }
+        }
+    }
+
+    fun deleteIncome(id: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteIncome(id)
+        }
+    }
+
+    fun stop() {
+        updatesJob?.cancel()
+        updatesJob = null
+        onUpdate = null
+    }
+
+    fun dispose() {
+        stop()
+        scope.cancel()
+    }
+}
+
 internal fun startIosGroupedExpensesStore() {
     ensureKoinStartedIfNeeded()
     KoinPlatformTools.defaultContext().get().get<IosGroupedExpensesStore>().start()
@@ -288,6 +356,44 @@ private fun buildSnapshotsCache(
                 screenType = key.screenType
             )
         )
+    )
+}
+
+private fun buildMonthlyIncomesSnapshot(
+    incomes: List<it.homebudget.app.database.Income>,
+    year: Int,
+    month: Int
+): IosMonthlyIncomesSnapshot {
+    val filteredIncomes = incomes.filter { income ->
+        val localDate = income.date.toLocalDate()
+        localDate.year == year && localDate.month.ordinal + 1 == month
+    }
+
+    val sections = filteredIncomes
+        .groupBy { it.date.toLocalDate() }
+        .toList()
+        .sortedByDescending { (_, items) -> items.maxOf { it.date } }
+        .map { (date, items) ->
+            val sortedItems = items.sortedByDescending { it.date }
+            IosIncomeSection(
+                id = formatExpenseDateGroupTitle(date),
+                title = formatExpenseDateGroupTitle(date),
+                totalAmountText = formatAmount(sortedItems.map { it.amount }.sumBigInteger()),
+                rows = sortedItems.map { income ->
+                    IosIncomeRow(
+                        id = income.id,
+                        title = income.description?.ifBlank { "Income" } ?: "Income",
+                        subtitleText = formatDate(income.date),
+                        amountText = formatAmount(income.amount)
+                    )
+                }
+            )
+        }
+
+    return IosMonthlyIncomesSnapshot(
+        totalAmountText = formatAmount(filteredIncomes.map { it.amount }.sumBigInteger()),
+        emptyStateText = "No income for this month",
+        sections = sections
     )
 }
 

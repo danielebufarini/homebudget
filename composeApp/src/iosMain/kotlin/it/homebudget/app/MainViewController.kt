@@ -1,15 +1,8 @@
 package it.homebudget.app
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.ComposeUIViewController
 import it.homebudget.app.di.initKoin
-import it.homebudget.app.ui.screens.AddExpenseScreen
-import it.homebudget.app.ui.screens.CategoriesRoute
-import it.homebudget.app.ui.screens.CategoryExpensesScreen
-import it.homebudget.app.ui.screens.DashboardRoute
-import it.homebudget.app.ui.screens.startIosGroupedExpensesStore
-import it.homebudget.app.ui.screens.MonthlyExpensesScreen
-import it.homebudget.app.ui.screens.SharedExpensesScreen
+import it.homebudget.app.ui.screens.*
 import it.homebudget.app.ui.theme.AppTheme
 import org.koin.mp.KoinPlatformTools
 
@@ -22,6 +15,7 @@ fun MainViewController() = ComposeUIViewController(
 fun DashboardContentViewController(
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
+    onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
     onOpenExpenseDetails: (String, Boolean) -> Unit,
@@ -37,6 +31,7 @@ fun DashboardContentViewController(
             showFab = false,
             onOpenCategories = onOpenCategories,
             onOpenAddExpense = onOpenAddExpense,
+            onOpenMonthlyIncomes = onOpenMonthlyIncomes,
             onOpenMonthlyExpenses = onOpenMonthlyExpenses,
             onOpenSharedExpenses = onOpenSharedExpenses,
             onOpenExpenseDetails = onOpenExpenseDetails,
@@ -79,6 +74,28 @@ fun AddExpenseViewController(
     }
 }
 
+fun AddIncomeViewController(
+    incomeId: String? = null,
+    initialYear: Int? = null,
+    initialMonth: Int? = null,
+    onClose: () -> Unit
+) = ComposeUIViewController(
+    configure = {
+        ensureKoinStarted()
+    }
+) {
+    AppTheme {
+        AddIncomeScreen(
+            incomeId = incomeId,
+            initialYear = initialYear,
+            initialMonth = initialMonth
+        ).RouteContent(
+            showNavigationChrome = false,
+            onClose = onClose
+        )
+    }
+}
+
 fun MonthlyExpensesViewController(
     year: Int,
     month: Int,
@@ -94,6 +111,26 @@ fun MonthlyExpensesViewController(
             onBack = {},
             onAddExpense = {},
             onOpenExpense = onOpenExpense
+        )
+    }
+}
+
+fun MonthlyIncomesViewController(
+    year: Int,
+    month: Int,
+    onAddIncome: () -> Unit,
+    onOpenIncome: (String) -> Unit
+) = ComposeUIViewController(
+    configure = {
+        ensureKoinStarted()
+    }
+) {
+    AppTheme {
+        MonthlyIncomesScreen(year = year, month = month).RouteContent(
+            showNavigationChrome = false,
+            onBack = {},
+            onAddIncome = onAddIncome,
+            onOpenIncome = onOpenIncome
         )
     }
 }

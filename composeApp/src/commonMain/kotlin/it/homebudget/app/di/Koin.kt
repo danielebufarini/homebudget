@@ -1,10 +1,11 @@
 package it.homebudget.app.di
 
+import it.homebudget.app.data.BigIntegerColumnAdapter
 import it.homebudget.app.data.DatabaseDriverFactory
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.BigIntegerColumnAdapter
-import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Expense
+import it.homebudget.app.database.HomeBudgetDatabase
+import it.homebudget.app.database.Income
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -17,6 +18,9 @@ val sharedModule = module {
         HomeBudgetDatabase(
             driver = driverFactory.createDriver(),
             expenseAdapter = Expense.Adapter(
+                amountAdapter = BigIntegerColumnAdapter
+            ),
+            incomeAdapter = Income.Adapter(
                 amountAdapter = BigIntegerColumnAdapter
             )
         )

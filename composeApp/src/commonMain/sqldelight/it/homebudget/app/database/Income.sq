@@ -1,0 +1,19 @@
+CREATE TABLE income (
+    id TEXT NOT NULL PRIMARY KEY,
+    amount TEXT AS com.ionspin.kotlin.bignum.integer.BigInteger NOT NULL,
+    date INTEGER NOT NULL,
+    description TEXT
+);
+
+insertIncome:
+INSERT OR REPLACE INTO income(id, amount, date, description)
+VALUES (?, ?, ?, ?);
+
+getAllIncomes:
+SELECT * FROM income ORDER BY date DESC;
+
+getIncomeById:
+SELECT * FROM income WHERE id = ?;
+
+deleteIncome:
+DELETE FROM income WHERE id = ?;

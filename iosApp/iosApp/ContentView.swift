@@ -5,9 +5,11 @@ import UIKit
 private enum Route: Hashable {
     case categories
     case addExpense(expenseId: String?, readOnly: Bool)
-    case monthlyExpenses(year: Int32, month: Int32)
-    case sharedExpenses(year: Int32, month: Int32)
-    case categoryExpenses(year: Int32, month: Int32, categoryName: String)
+    case addIncome(incomeId: String?, year: Int?, month: Int?)
+    case monthlyIncomes(year: Int, month: Int)
+    case monthlyExpenses(year: Int, month: Int)
+    case sharedExpenses(year: Int, month: Int)
+    case categoryExpenses(year: Int, month: Int, categoryName: String)
 }
 
 private struct KotlinViewControllerHost: UIViewControllerRepresentable {
@@ -89,6 +91,29 @@ struct ContentView: View {
                         }
                         .navigationTitle(addExpenseTitle(expenseId: expenseId, readOnly: readOnly))
                         .navigationBarTitleDisplayMode(.inline)
+                    case let .addIncome(incomeId, year, month):
+                        KotlinViewControllerHost {
+                            MainViewControllerKt.AddIncomeViewController(
+                                incomeId: incomeId,
+                                initialYear: year.map(kotlinInt),
+                                initialMonth: month.map(kotlinInt),
+                                onClose: {
+                                    if !path.isEmpty {
+                                        path.removeLast()
+                                    }
+                                }
+                            )
+                        }
+                        .navigationTitle(incomeId == nil ? "Add Income" : "Edit Income")
+                        .navigationBarTitleDisplayMode(.inline)
+                    case let .monthlyIncomes(year, month):
+                        MonthlyIncomesRootView(
+                            year: Int(year),
+                            month: Int(month),
+                            path: $path
+                        )
+                        .navigationTitle("\(monthName(month)) Income")
+                        .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyExpenses(year, month):
                         GroupedExpensesSectionsScreen(
                             kind: .monthly,
@@ -140,11 +165,14 @@ private struct DashboardRootView: View {
                 onOpenAddExpense: {
                     path.append(Route.addExpense(expenseId: nil, readOnly: false))
                 },
+                onOpenMonthlyIncomes: { year, month in
+                    path.append(Route.monthlyIncomes(year: year.intValue, month: month.intValue))
+                },
                 onOpenMonthlyExpenses: { year, month in
-                    path.append(Route.monthlyExpenses(year: year.int32Value, month: month.int32Value))
+                    path.append(Route.monthlyExpenses(year: year.intValue, month: month.intValue))
                 },
                 onOpenSharedExpenses: { year, month in
-                    path.append(Route.sharedExpenses(year: year.int32Value, month: month.int32Value))
+                    path.append(Route.sharedExpenses(year: year.intValue, month: month.intValue))
                 },
                 onOpenExpenseDetails: { expenseId, readOnly in
                     path.append(Route.addExpense(expenseId: expenseId, readOnly: readOnly.boolValue))
@@ -152,13 +180,43 @@ private struct DashboardRootView: View {
                 onOpenCategoryExpenses: { year, month, categoryName in
                     path.append(
                         Route.categoryExpenses(
-                            year: year.int32Value,
-                            month: month.int32Value,
+                            year: year.intValue,
+                            month: month.intValue,
                             categoryName: categoryName
                         )
                     )
                 }
             )
+        }
+    }
+}
+
+private struct MonthlyIncomesRootView: View {
+    let year: Int
+    let month: Int
+    @Binding var path: NavigationPath
+
+    var body: some View {
+        MonthlyIncomesSectionsScreen(
+            year: year,
+            month: month
+        ) { incomeId in
+            path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    path.append(
+                        Route.addIncome(
+                            incomeId: nil,
+                            year: year,
+                            month: month
+                        )
+                    )
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
         }
     }
 }
@@ -191,7 +249,7 @@ private func addExpenseTitle(expenseId: String?, readOnly: Bool) -> String {
     return expenseId == nil ? "Add Expense" : "Edit Expense"
 }
 
-private func monthName(_ month: Int32) -> String {
+private func monthName(_ month: Int) -> String {
     let names = [
         "January",
         "February",
@@ -213,4 +271,8 @@ private func monthName(_ month: Int32) -> String {
     }
 
     return names[index]
+}
+
+private func kotlinInt(_ value: Int) -> KotlinInt {
+    KotlinInt(int: Int32(value))
 }

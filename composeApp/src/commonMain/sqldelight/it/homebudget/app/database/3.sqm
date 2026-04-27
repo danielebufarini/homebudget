@@ -1,0 +1,6 @@
+CREATE TABLE income (
+    id TEXT NOT NULL PRIMARY KEY,
+    amount TEXT NOT NULL,
+    date INTEGER NOT NULL,
+    description TEXT
+);

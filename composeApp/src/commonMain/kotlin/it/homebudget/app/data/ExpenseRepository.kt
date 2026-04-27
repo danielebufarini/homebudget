@@ -6,6 +6,7 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.HomeBudgetDatabase
+import it.homebudget.app.database.Income
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
     private val expenseQueries = database.expenseQueries
     private val categoryQueries = database.categoryQueries
+    private val incomeQueries = database.incomeQueries
 
     fun getAllCategories(): Flow<List<Category>> {
         return categoryQueries.getAllCategories().asFlow().mapToList(Dispatchers.IO)
@@ -60,15 +62,31 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         return expenseQueries.getAllExpenses().asFlow().mapToList(Dispatchers.IO)
     }
 
+    fun getAllIncomes(): Flow<List<Income>> {
+        return incomeQueries.getAllIncomes().asFlow().mapToList(Dispatchers.IO)
+    }
+
     suspend fun getExpenseById(id: String): Expense? {
         return withContext(Dispatchers.IO) {
             expenseQueries.getExpenseById(id).executeAsOneOrNull()
         }
     }
 
+    suspend fun getIncomeById(id: String): Income? {
+        return withContext(Dispatchers.IO) {
+            incomeQueries.getIncomeById(id).executeAsOneOrNull()
+        }
+    }
+
     suspend fun deleteExpense(id: String) {
         withContext(Dispatchers.IO) {
             expenseQueries.deleteExpense(id)
+        }
+    }
+
+    suspend fun deleteIncome(id: String) {
+        withContext(Dispatchers.IO) {
+            incomeQueries.deleteIncome(id)
         }
     }
 
@@ -93,6 +111,22 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 )
             )
         )
+    }
+
+    suspend fun insertIncome(
+        id: String,
+        amount: BigInteger,
+        date: Long,
+        description: String?
+    ) {
+        withContext(Dispatchers.IO) {
+            incomeQueries.insertIncome(
+                id = id,
+                amount = amount,
+                date = date,
+                description = description
+            )
+        }
     }
 
     suspend fun insertExpenses(expenses: List<PendingExpense>) {
