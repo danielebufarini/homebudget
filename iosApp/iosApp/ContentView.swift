@@ -97,33 +97,24 @@ struct ContentView: View {
                         .navigationTitle(addExpenseTitle(expenseId: expenseId, readOnly: readOnly))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyExpenses(year, month):
-                        MonthlyExpensesSectionsScreen(year: Int(year), month: Int(month)) { expenseId in
+                        GroupedExpensesSectionsScreen(kind: .monthly, year: Int(year), month: Int(month)) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
                         .navigationTitle("\(monthName(month)) Expenses")
                         .navigationBarTitleDisplayMode(.inline)
                     case let .sharedExpenses(year, month):
-                        KotlinViewControllerHost {
-                            MainViewControllerKt.SharedExpensesViewController(
-                                year: year,
-                                month: month,
-                                onOpenExpense: { expenseId in
-                                    path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
-                                }
-                            )
+                        GroupedExpensesSectionsScreen(kind: .shared, year: Int(year), month: Int(month)) { expenseId in
+                            path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
                         .navigationTitle("\(monthName(month)) Shared Expenses")
                         .navigationBarTitleDisplayMode(.inline)
                     case let .categoryExpenses(year, month, categoryName):
-                        KotlinViewControllerHost {
-                            MainViewControllerKt.CategoryExpensesViewController(
-                                year: year,
-                                month: month,
-                                categoryName: categoryName,
-                                onOpenExpense: { expenseId in
-                                    path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
-                                }
-                            )
+                        GroupedExpensesSectionsScreen(
+                            kind: .category(name: categoryName),
+                            year: Int(year),
+                            month: Int(month)
+                        ) { expenseId in
+                            path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
                         .navigationTitle("\(monthName(month)) \(categoryName)")
                         .navigationBarTitleDisplayMode(.inline)

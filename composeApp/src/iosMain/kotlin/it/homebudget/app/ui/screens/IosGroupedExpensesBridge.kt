@@ -15,30 +15,32 @@ import kotlinx.datetime.toLocalDateTime
 import org.koin.mp.KoinPlatformTools
 import kotlin.time.Instant
 
-class IosMonthlyExpenseRow(
+class IosGroupedExpenseRow(
     val id: String,
     val title: String,
     val dateText: String,
     val amountText: String
 )
 
-class IosMonthlyExpenseSection(
+class IosGroupedExpenseSection(
     val id: String,
     val title: String,
     val countLabel: String,
     val totalAmountText: String,
-    val rows: List<IosMonthlyExpenseRow>
+    val rows: List<IosGroupedExpenseRow>
 )
 
-class IosMonthlyExpensesSnapshot(
+class IosGroupedExpensesSnapshot(
     val totalAmountText: String,
     val emptyStateText: String,
-    val sections: List<IosMonthlyExpenseSection>
+    val sections: List<IosGroupedExpenseSection>
 )
 
-class IosMonthlyExpensesObserver(
+class IosGroupedExpensesObserver(
     private val year: Int,
-    private val month: Int
+    private val month: Int,
+    private val screenType: String,
+    private val categoryName: String?
 ) {
     private val scope = MainScope()
     private var updatesJob: Job? = null
@@ -48,7 +50,7 @@ class IosMonthlyExpensesObserver(
         KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
     }
 
-    fun start(onUpdate: (IosMonthlyExpensesSnapshot) -> Unit) {
+    fun start(onUpdate: (IosGroupedExpensesSnapshot) -> Unit) {
         if (updatesJob != null) {
             return
         }
@@ -62,25 +64,29 @@ class IosMonthlyExpensesObserver(
                 val categoriesById = categories.associateBy { it.id }
                 val filteredExpenses = expenses.filter { expense ->
                     val localDate = expense.date.toLocalDate()
-                    localDate.year == year && localDate.month.ordinal + 1 == month
+                    localDate.year == year &&
+                        localDate.month.ordinal + 1 == month &&
+                        includeExpense(expense)
                 }
 
                 val sections = filteredExpenses
                     .groupBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
+                    .filterKeys(::includeCategory)
                     .toList()
                     .sortedBy { it.first }
-                    .map { (categoryName, categoryExpenses) ->
-                        IosMonthlyExpenseSection(
-                            id = categoryName,
-                            title = categoryName,
-                            countLabel = "${categoryExpenses.size} expenses",
-                            totalAmountText = formatAmount(categoryExpenses.map { it.amount }.sumBigInteger()),
-                            rows = categoryExpenses
+                    .map { (groupName, groupExpenses) ->
+                        IosGroupedExpenseSection(
+                            id = groupName,
+                            title = groupName,
+                            countLabel = countLabel(groupExpenses.size),
+                            totalAmountText = formatAmount(groupExpenses.map { it.amount }.sumBigInteger()),
+                            rows = groupExpenses
                                 .sortedByDescending(Expense::date)
                                 .map { expense ->
-                                    IosMonthlyExpenseRow(
+                                    IosGroupedExpenseRow(
                                         id = expense.id,
-                                        title = expense.description?.ifBlank { "Expense" } ?: "Expense",
+                                        title = expense.description?.ifBlank { expenseFallbackTitle() }
+                                            ?: expenseFallbackTitle(),
                                         dateText = formatDate(expense.date),
                                         amountText = formatAmount(expense.amount)
                                     )
@@ -88,9 +94,9 @@ class IosMonthlyExpensesObserver(
                         )
                     }
 
-                IosMonthlyExpensesSnapshot(
+                IosGroupedExpensesSnapshot(
                     totalAmountText = formatAmount(filteredExpenses.map { it.amount }.sumBigInteger()),
-                    emptyStateText = "No expenses for this month",
+                    emptyStateText = emptyStateText(),
                     sections = sections
                 )
             }.collect { snapshot ->
@@ -113,6 +119,32 @@ class IosMonthlyExpensesObserver(
     fun dispose() {
         stop()
         scope.cancel()
+    }
+
+    private fun includeExpense(expense: Expense): Boolean = when (screenType) {
+        "shared" -> expense.isShared == 1L
+        else -> true
+    }
+
+    private fun includeCategory(groupName: String): Boolean = when (screenType) {
+        "category" -> groupName == categoryName
+        else -> true
+    }
+
+    private fun countLabel(count: Int): String = when (screenType) {
+        "shared" -> "$count shared expenses"
+        else -> "$count expenses"
+    }
+
+    private fun expenseFallbackTitle(): String = when (screenType) {
+        "shared" -> "Shared expense"
+        else -> "Expense"
+    }
+
+    private fun emptyStateText(): String = when (screenType) {
+        "shared" -> "No shared expenses for this month"
+        "category" -> "No expenses for ${categoryName ?: "this category"} this month"
+        else -> "No expenses for this month"
     }
 
     private fun formatDate(epochMillis: Long): String {

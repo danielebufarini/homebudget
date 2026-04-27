@@ -1,34 +1,69 @@
 @preconcurrency import ComposeApp
 import SwiftUI
 
-private struct MonthlyExpenseRowModel: Identifiable {
+enum GroupedExpensesKind: Hashable {
+    case monthly
+    case shared
+    case category(name: String)
+
+    var screenType: String {
+        switch self {
+        case .monthly:
+            return "monthly"
+        case .shared:
+            return "shared"
+        case .category:
+            return "category"
+        }
+    }
+
+    var categoryName: String? {
+        switch self {
+        case let .category(name):
+            return name
+        case .monthly, .shared:
+            return nil
+        }
+    }
+
+    var allowsDelete: Bool {
+        true
+    }
+}
+
+private struct GroupedExpenseRowModel: Identifiable {
     let id: String
     let title: String
     let dateText: String
     let amountText: String
 }
 
-private struct MonthlyExpenseSectionModel: Identifiable {
+private struct GroupedExpenseSectionModel: Identifiable {
     let id: String
     let title: String
     let countLabel: String
     let totalAmountText: String
-    let rows: [MonthlyExpenseRowModel]
+    let rows: [GroupedExpenseRowModel]
 }
 
 @MainActor
-private final class MonthlyExpensesSectionsViewModel: ObservableObject {
+private final class GroupedExpensesSectionsViewModel: ObservableObject {
     @Published var totalAmountText = "€ 0.00"
     @Published var emptyStateText = "No expenses for this month"
-    @Published var sections: [MonthlyExpenseSectionModel] = []
+    @Published var sections: [GroupedExpenseSectionModel] = []
     @Published var expandedSectionIDs = Set<String>()
 
-    private let observer: IosMonthlyExpensesObserver
+    private let observer: IosGroupedExpensesObserver
     private var hasLoadedInitialExpansionState = false
     private var isObserving = false
 
-    init(year: Int, month: Int) {
-        observer = IosMonthlyExpensesObserver(year: Int32(year), month: Int32(month))
+    init(year: Int, month: Int, kind: GroupedExpensesKind) {
+        observer = IosGroupedExpensesObserver(
+            year: Int32(year),
+            month: Int32(month),
+            screenType: kind.screenType,
+            categoryName: kind.categoryName
+        )
     }
 
     deinit {
@@ -65,17 +100,17 @@ private final class MonthlyExpensesSectionsViewModel: ObservableObject {
         observer.deleteExpense(id: expenseID)
     }
 
-    private func apply(snapshot: IosMonthlyExpensesSnapshot) {
+    private func apply(snapshot: IosGroupedExpensesSnapshot) {
         totalAmountText = snapshot.totalAmountText
         emptyStateText = snapshot.emptyStateText
         sections = snapshot.sections.map { section in
-            MonthlyExpenseSectionModel(
+            GroupedExpenseSectionModel(
                 id: section.id,
                 title: section.title,
                 countLabel: section.countLabel,
                 totalAmountText: section.totalAmountText,
                 rows: section.rows.map { row in
-                    MonthlyExpenseRowModel(
+                    GroupedExpenseRowModel(
                         id: row.id,
                         title: row.title,
                         dateText: row.dateText,
@@ -95,18 +130,18 @@ private final class MonthlyExpensesSectionsViewModel: ObservableObject {
     }
 }
 
-struct MonthlyExpensesSectionsScreen: View {
-    let year: Int
-    let month: Int
+struct GroupedExpensesSectionsScreen: View {
+    let kind: GroupedExpensesKind
     let onOpenExpense: (String) -> Void
 
-    @StateObject private var viewModel: MonthlyExpensesSectionsViewModel
+    @StateObject private var viewModel: GroupedExpensesSectionsViewModel
 
-    init(year: Int, month: Int, onOpenExpense: @escaping (String) -> Void) {
-        self.year = year
-        self.month = month
+    init(kind: GroupedExpensesKind, year: Int, month: Int, onOpenExpense: @escaping (String) -> Void) {
+        self.kind = kind
         self.onOpenExpense = onOpenExpense
-        _viewModel = StateObject(wrappedValue: MonthlyExpensesSectionsViewModel(year: year, month: month))
+        _viewModel = StateObject(
+            wrappedValue: GroupedExpensesSectionsViewModel(year: year, month: month, kind: kind)
+        )
     }
 
     var body: some View {
@@ -126,22 +161,10 @@ struct MonthlyExpensesSectionsScreen: View {
                 ForEach(viewModel.sections) { section in
                     Section(isExpanded: expansionBinding(for: section.id)) {
                         ForEach(section.rows) { row in
-                            Button {
-                                onOpenExpense(row.id)
-                            } label: {
-                                MonthlyExpenseRowView(row: row)
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    viewModel.deleteExpense(row.id)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
+                            rowView(for: row)
                         }
                     } header: {
-                        MonthlyExpenseSectionHeaderView(section: section)
+                        GroupedExpenseSectionHeaderView(section: section)
                     }
                 }
             }
@@ -171,10 +194,36 @@ struct MonthlyExpensesSectionsScreen: View {
             }
         )
     }
+
+    @ViewBuilder
+    private func rowView(for row: GroupedExpenseRowModel) -> some View {
+        if kind.allowsDelete {
+            Button {
+                onOpenExpense(row.id)
+            } label: {
+                GroupedExpenseRowView(row: row)
+            }
+            .buttonStyle(.plain)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    viewModel.deleteExpense(row.id)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        } else {
+            Button {
+                onOpenExpense(row.id)
+            } label: {
+                GroupedExpenseRowView(row: row)
+            }
+            .buttonStyle(.plain)
+        }
+    }
 }
 
-private struct MonthlyExpenseSectionHeaderView: View {
-    let section: MonthlyExpenseSectionModel
+private struct GroupedExpenseSectionHeaderView: View {
+    let section: GroupedExpenseSectionModel
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -194,8 +243,8 @@ private struct MonthlyExpenseSectionHeaderView: View {
     }
 }
 
-private struct MonthlyExpenseRowView: View {
-    let row: MonthlyExpenseRowModel
+private struct GroupedExpenseRowView: View {
+    let row: GroupedExpenseRowModel
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {

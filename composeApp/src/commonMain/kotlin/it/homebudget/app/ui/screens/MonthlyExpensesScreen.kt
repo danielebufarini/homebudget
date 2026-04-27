@@ -16,8 +16,4 @@ class MonthlyExpensesScreen(
     override fun expenseFallbackTitle(): String = "Expense"
 
     override fun includeExpense(expense: Expense): Boolean = true
-
-    override fun canDeleteExpense(): Boolean = true
-
-    override fun useAndroidExpandableList(): Boolean = true
 }

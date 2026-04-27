@@ -74,8 +74,8 @@ abstract class BaseGroupedExpensesScreen(
     protected open fun centerAlignedTitle(): Boolean = false
     protected open fun groupsExpandedByDefault(): Boolean = false
     protected open fun includeCategory(categoryName: String): Boolean = true
-    protected open fun canDeleteExpense(): Boolean = false
-    protected open fun useAndroidExpandableList(): Boolean = false
+    protected open fun canDeleteExpense(): Boolean = true
+    protected open fun useAndroidExpandableList(): Boolean = true
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
