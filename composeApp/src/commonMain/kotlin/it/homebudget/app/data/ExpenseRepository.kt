@@ -66,6 +66,12 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
+    suspend fun deleteExpense(id: String) {
+        withContext(Dispatchers.IO) {
+            expenseQueries.deleteExpense(id)
+        }
+    }
+
     suspend fun insertExpense(
         id: String,
         amount: BigInteger,

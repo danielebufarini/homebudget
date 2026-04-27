@@ -99,6 +99,12 @@ class IosMonthlyExpensesObserver(
         }
     }
 
+    fun deleteExpense(id: String) {
+        scope.launch {
+            repository.deleteExpense(id)
+        }
+    }
+
     fun stop() {
         updatesJob?.cancel()
         updatesJob = null

@@ -61,6 +61,10 @@ private final class MonthlyExpensesSectionsViewModel: ObservableObject {
         isObserving = false
     }
 
+    func deleteExpense(_ expenseID: String) {
+        observer.deleteExpense(id: expenseID)
+    }
+
     private func apply(snapshot: IosMonthlyExpensesSnapshot) {
         totalAmountText = snapshot.totalAmountText
         emptyStateText = snapshot.emptyStateText
@@ -128,6 +132,13 @@ struct MonthlyExpensesSectionsScreen: View {
                                 MonthlyExpenseRowView(row: row)
                             }
                             .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.deleteExpense(row.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     } header: {
                         MonthlyExpenseSectionHeaderView(section: section)
