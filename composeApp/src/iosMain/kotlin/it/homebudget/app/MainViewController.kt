@@ -92,6 +92,7 @@ fun MonthlyExpensesViewController(
         MonthlyExpensesScreen(year = year, month = month).RouteContent(
             showNavigationChrome = false,
             onBack = {},
+            onAddExpense = {},
             onOpenExpense = onOpenExpense
         )
     }
@@ -110,6 +111,7 @@ fun SharedExpensesViewController(
         SharedExpensesScreen(year = year, month = month).RouteContent(
             showNavigationChrome = false,
             onBack = {},
+            onAddExpense = {},
             onOpenExpense = onOpenExpense
         )
     }
@@ -129,6 +131,7 @@ fun CategoryExpensesViewController(
         CategoryExpensesScreen(year = year, month = month, categoryName = categoryName).RouteContent(
             showNavigationChrome = false,
             onBack = {},
+            onAddExpense = {},
             onOpenExpense = onOpenExpense
         )
     }

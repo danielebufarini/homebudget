@@ -31,7 +31,7 @@ fun buildPendingExpenses(
     idProvider: () -> String,
     timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): List<PendingExpense> {
-    require(installments in 1..10) { "installments must be between 1 and 10" }
+    require(installments in 1..12) { "installments must be between 1 and 12" }
 
     val installmentAmounts = splitAmountIntoInstallments(amount, installments)
 

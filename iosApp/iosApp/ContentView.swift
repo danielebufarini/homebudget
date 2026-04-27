@@ -68,13 +68,6 @@ struct ContentView: View {
                             path.append(Route.categories)
                         }
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            path.append(Route.addExpense(expenseId: nil, readOnly: false))
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                    }
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
@@ -97,13 +90,24 @@ struct ContentView: View {
                         .navigationTitle(addExpenseTitle(expenseId: expenseId, readOnly: readOnly))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyExpenses(year, month):
-                        GroupedExpensesSectionsScreen(kind: .monthly, year: Int(year), month: Int(month)) { expenseId in
+                        GroupedExpensesSectionsScreen(
+                            kind: .monthly,
+                            year: Int(year),
+                            month: Int(month),
+                            onAddExpense: {
+                                path.append(Route.addExpense(expenseId: nil, readOnly: false))
+                            }
+                        ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
                         .navigationTitle("\(monthName(month)) Expenses")
                         .navigationBarTitleDisplayMode(.inline)
                     case let .sharedExpenses(year, month):
-                        GroupedExpensesSectionsScreen(kind: .shared, year: Int(year), month: Int(month)) { expenseId in
+                        GroupedExpensesSectionsScreen(
+                            kind: .shared,
+                            year: Int(year),
+                            month: Int(month)
+                        ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
                         .navigationTitle("\(monthName(month)) Shared Expenses")

@@ -98,7 +98,7 @@ class AddExpenseScreen(
 
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val selectedCategory = categories.find { it.name == category }
-        val installmentOptions = remember { (1..10).toList() }
+        val installmentOptions = remember { (1..12).toList() }
         val installmentLabels = remember(installmentOptions) {
             installmentOptions.associateWith { count ->
                 if (count == 1) "Single payment" else "$count installments"

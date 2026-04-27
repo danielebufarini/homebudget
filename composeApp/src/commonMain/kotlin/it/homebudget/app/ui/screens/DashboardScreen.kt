@@ -62,6 +62,7 @@ import it.homebudget.app.database.Expense
 import org.koin.compose.koinInject
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -73,7 +74,7 @@ class DashboardScreen : Screen {
 
         DashboardRoute(
             showNavigationChrome = true,
-            showFab = true,
+            showFab = false,
             onOpenCategories = { navigator?.push(CategoriesScreen()) },
             onOpenAddExpense = { navigator?.push(AddExpenseScreen()) },
             onOpenMonthlyExpenses = { year, month ->
@@ -130,8 +131,8 @@ fun DashboardRoute(
         buildMonthlySummary(monthlyExpenses, categoriesById)
     }
 
-    val chartState = remember(monthlyExpenses, categoriesById, selectedMonth) {
-        buildChartState(monthlyExpenses, categoriesById, selectedMonth)
+    val chartState = remember(expenses, selectedMonth) {
+        buildCashFlowChartState(expenses, selectedMonth)
     }
 
     val dashboardBody: @Composable (Modifier) -> Unit = { modifier ->
@@ -575,7 +576,7 @@ private fun DashboardCharts(
     categoryTotals: List<CategoryTotal>
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
-    val pageTitles = listOf("Category Trends", "By Category")
+    val pageTitles = listOf("Cash Flow", "By Category")
 
     PlatformCard(modifier = modifier, contentPadding = PaddingValues(0.dp)) {
         Column(
@@ -617,7 +618,7 @@ private fun DashboardCharts(
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 when (page) {
-                    0 -> CategoryLineChartPage(state = lineChartState)
+                    0 -> LineChartPage(state = lineChartState)
                     else -> CategoryBreakdownPage(categoryTotals = categoryTotals)
                 }
             }
@@ -626,11 +627,12 @@ private fun DashboardCharts(
 }
 
 @Composable
-private fun CategoryLineChartPage(
+private fun LineChartPage(
     state: LineChartState
 ) {
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val xAxisLabelBandHeight = 28.dp
 
     Column(
         modifier = Modifier
@@ -640,7 +642,7 @@ private fun CategoryLineChartPage(
     ) {
         if (state.series.isEmpty()) {
             Text(
-                text = "No expenses for this month",
+                text = "No expenses in this period",
                 style = MaterialTheme.typography.bodyLarge
             )
             return@Column
@@ -655,16 +657,21 @@ private fun CategoryLineChartPage(
                 modifier = Modifier
                     .fillMaxHeight()
                     .padding(end = 8.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.End
             ) {
-                state.yAxisLabels.forEach { label ->
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = onSurfaceVariant
-                    )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    state.yAxisLabels.forEach { label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onSurfaceVariant
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(xAxisLabelBandHeight))
             }
 
             Column(
@@ -681,11 +688,13 @@ private fun CategoryLineChartPage(
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val width = size.width
                         val height = size.height
+                        val topInset = 8.dp.toPx()
+                        val plotHeight = (height - topInset).coerceAtLeast(1f)
                         val maxValue = state.maxValue.coerceAtLeast(1.0)
-                        val lineWidth = 2.dp.toPx()
+                        val lineWidth = 2.75.dp.toPx()
 
                         listOf(0f, 0.5f, 1f).forEach { marker ->
-                            val y = height - (height * marker)
+                            val y = topInset + (plotHeight - (plotHeight * marker))
                             drawLine(
                                 color = outlineVariant,
                                 start = Offset(0f, y),
@@ -694,15 +703,29 @@ private fun CategoryLineChartPage(
                             )
                         }
 
+                        repeat(state.pointCount) { index ->
+                            val x = if (state.pointCount == 1) {
+                                width / 2f
+                            } else {
+                                width * index / (state.pointCount - 1).toFloat()
+                            }
+                            drawLine(
+                                color = outlineVariant,
+                                start = Offset(x, 0f),
+                                end = Offset(x, height),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
+
                         state.series.forEach { series ->
                             val path = Path()
                             series.values.forEachIndexed { index, value ->
-                                val x = if (state.daysInMonth == 1) {
+                                val x = if (state.pointCount == 1) {
                                     width / 2f
                                 } else {
-                                    width * index / (state.daysInMonth - 1).toFloat()
+                                    width * index / (state.pointCount - 1).toFloat()
                                 }
-                                val y = height - ((value / maxValue).toFloat() * height)
+                                val y = topInset + (plotHeight - ((value / maxValue).toFloat() * plotHeight))
                                 if (index == 0) {
                                     path.moveTo(x, y)
                                 } else {
@@ -717,16 +740,16 @@ private fun CategoryLineChartPage(
                             )
 
                             series.values.forEachIndexed { index, value ->
-                                if (value > 0.0) {
-                                    val x = if (state.daysInMonth == 1) {
+                                if (series.markerDays.contains(index)) {
+                                    val x = if (state.pointCount == 1) {
                                         width / 2f
                                     } else {
-                                        width * index / (state.daysInMonth - 1).toFloat()
+                                        width * index / (state.pointCount - 1).toFloat()
                                     }
-                                    val y = height - ((value / maxValue).toFloat() * height)
+                                    val y = topInset + (plotHeight - ((value / maxValue).toFloat() * plotHeight))
                                     drawCircle(
                                         color = series.color,
-                                        radius = 3.5.dp.toPx(),
+                                        radius = 5.75.dp.toPx(),
                                         center = Offset(x, y)
                                     )
                                 }
@@ -736,37 +759,47 @@ private fun CategoryLineChartPage(
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(xAxisLabelBandHeight),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     state.xAxisLabels.forEach { label ->
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = onSurfaceVariant
+                            color = onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.CenterVertically)
                         )
                     }
                 }
             }
         }
 
-        HorizontalDivider()
+        if (state.series.size > 1) {
+            HorizontalDivider()
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            state.series.forEach { series ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                state.series.forEach { series ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
                             .size(10.dp)
                             .background(series.color, CircleShape)
-                    )
-                    Text(
-                        text = series.label,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                        )
+                        Text(
+                            text = series.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -892,56 +925,60 @@ private fun buildMonthlySummary(
     )
 }
 
-private fun buildChartState(
+private fun buildCashFlowChartState(
     expenses: List<Expense>,
-    categoriesById: Map<String, Category>,
-    month: MonthCursor
+    selectedMonth: MonthCursor
 ): LineChartState {
+    val months = selectedMonth.trailingMonths(count = 6)
+
     if (expenses.isEmpty()) {
         return LineChartState(
-            daysInMonth = daysInMonth(month.year, month.month),
+            pointCount = months.size,
             maxValue = 0.0,
-            xAxisLabels = listOf("1", "", ""),
-            yAxisLabels = listOf("EUR 0.00", "EUR 0.00", "EUR 0.00"),
+            xAxisLabels = months.map { it.shortLabel() },
+            yAxisLabels = listOf("0", "0", "0"),
             series = emptyList()
         )
     }
 
-    val daysInMonth = daysInMonth(month.year, month.month)
-    val categoriesInMonth = expenses
-        .groupBy { categoryName(it.categoryId, categoriesById) }
-        .toList()
-        .sortedByDescending { (_, list) -> list.map { it.amount }.sumBigInteger() }
-
-    val palette = chartPalette()
-    val series = categoriesInMonth.mapIndexed { index, (label, groupedExpenses) ->
-        val values = MutableList(daysInMonth) { 0.0 }
-        groupedExpenses.forEach { expense ->
-            val dayIndex = expense.date.dayOfMonth() - 1
-            if (dayIndex in values.indices) {
-                values[dayIndex] += expense.amount.toDisplayDouble()
-            }
+    val totalsByMonth = expenses
+        .groupBy { it.date.asMonthCursor() }
+        .mapValues { (_, monthExpenses) ->
+            monthExpenses.map { it.amount }.sumBigInteger().toDisplayDouble()
         }
-        LineSeries(
-            label = label,
-            color = palette[index % palette.size],
-            values = values
-        )
-    }
 
-    val maxValue = series.flatMap { it.values }.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
-    val middleDay = max(1, ((daysInMonth + 1) / 2))
+    val values = months.map { month ->
+        totalsByMonth[month] ?: 0.0
+    }
+    val markerDays = months.mapIndexedNotNull { index, month ->
+        index.takeIf { totalsByMonth[month] != null }
+    }.toSet()
+
+    val maxValue = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
 
     return LineChartState(
-        daysInMonth = daysInMonth,
+        pointCount = months.size,
         maxValue = maxValue,
-        xAxisLabels = listOf("1", middleDay.toString(), daysInMonth.toString()),
+        xAxisLabels = months.map { it.shortLabel() },
         yAxisLabels = listOf(
-            formatChartAmount(maxValue),
-            formatChartAmount(maxValue / 2),
-            formatChartAmount(0.0)
+            formatAxisAmount(maxValue),
+            formatAxisAmount(maxValue / 2),
+            formatAxisAmount(0.0)
         ),
-        series = series
+        series = listOf(
+            LineSeries(
+                label = "Expenses",
+                color = Color(0xFFC62828),
+                values = values,
+                markerDays = markerDays
+            ),
+            LineSeries(
+                label = "Income",
+                color = Color(0xFF5BC98A),
+                values = List(months.size) { 0.0 },
+                markerDays = months.indices.toSet()
+            )
+        )
     )
 }
 
@@ -999,9 +1036,9 @@ private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
 
-private fun formatChartAmount(amount: Double): String {
-    val cents = (amount * 100).toLong().toString()
-    return formatAmount(BigInteger.parseString(cents))
+private fun formatAxisAmount(amount: Double): String {
+    val rounded = floor(amount + 0.5).toInt()
+    return rounded.toString()
 }
 
 private data class MonthCursor(
@@ -1014,6 +1051,20 @@ private data class MonthCursor(
 
     fun next(): MonthCursor {
         return if (month == 12) MonthCursor(year + 1, 1) else MonthCursor(year, month + 1)
+    }
+
+    fun trailingMonths(count: Int): List<MonthCursor> {
+        if (count <= 0) {
+            return emptyList()
+        }
+
+        val months = ArrayDeque<MonthCursor>(count)
+        var cursor = this
+        repeat(count) {
+            months.addFirst(cursor)
+            cursor = cursor.previous()
+        }
+        return months.toList()
     }
 
     fun label(): String {
@@ -1032,6 +1083,25 @@ private data class MonthCursor(
             "December"
         )
         return "${monthNames[month - 1]} $year"
+    }
+
+    fun shortLabel(): String {
+        val monthNames = listOf(
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+        )
+        val shortYear = (year % 100).toString().padStart(2, '0')
+        return "${monthNames[month - 1]} $shortYear"
     }
 }
 
@@ -1064,7 +1134,7 @@ private data class SummaryMetricUi(
 )
 
 private data class LineChartState(
-    val daysInMonth: Int,
+    val pointCount: Int,
     val maxValue: Double,
     val xAxisLabels: List<String>,
     val yAxisLabels: List<String>,
@@ -1074,7 +1144,8 @@ private data class LineChartState(
 private data class LineSeries(
     val label: String,
     val color: Color,
-    val values: List<Double>
+    val values: List<Double>,
+    val markerDays: Set<Int> = emptySet()
 )
 
 private enum class ArrowDirection {

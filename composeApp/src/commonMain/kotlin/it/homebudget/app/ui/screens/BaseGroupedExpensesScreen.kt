@@ -27,6 +27,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,6 +76,7 @@ abstract class BaseGroupedExpensesScreen(
     protected open fun groupsExpandedByDefault(): Boolean = false
     protected open fun includeCategory(categoryName: String): Boolean = true
     protected open fun canDeleteExpense(): Boolean = true
+    protected open fun canAddExpense(): Boolean = false
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -83,6 +85,7 @@ abstract class BaseGroupedExpensesScreen(
         RouteContent(
             showNavigationChrome = true,
             onBack = { navigator?.pop() },
+            onAddExpense = { navigator?.push(AddExpenseScreen()) },
             onOpenExpense = { expenseId ->
                 navigator?.push(AddExpenseScreen(expenseId))
             }
@@ -94,6 +97,7 @@ abstract class BaseGroupedExpensesScreen(
     fun RouteContent(
         showNavigationChrome: Boolean,
         onBack: () -> Unit,
+        onAddExpense: () -> Unit,
         onOpenExpense: (String) -> Unit
     ) {
         val repository: ExpenseRepository = koinInject()
@@ -196,6 +200,13 @@ abstract class BaseGroupedExpensesScreen(
                             }
                         }
                     )
+                },
+                floatingActionButton = {
+                    if (canAddExpense()) {
+                        FloatingActionButton(onClick = onAddExpense) {
+                            Text("+")
+                        }
+                    }
                 }
             ) { padding ->
                 GroupedExpensesContent(

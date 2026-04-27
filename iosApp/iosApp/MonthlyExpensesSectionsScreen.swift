@@ -151,12 +151,20 @@ struct GroupedExpensesSectionsScreen: View {
     let kind: GroupedExpensesKind
     let year: Int
     let month: Int
+    let onAddExpense: (() -> Void)?
     let onOpenExpense: (String) -> Void
 
-    init(kind: GroupedExpensesKind, year: Int, month: Int, onOpenExpense: @escaping (String) -> Void) {
+    init(
+        kind: GroupedExpensesKind,
+        year: Int,
+        month: Int,
+        onAddExpense: (() -> Void)? = nil,
+        onOpenExpense: @escaping (String) -> Void
+    ) {
         self.kind = kind
         self.year = year
         self.month = month
+        self.onAddExpense = onAddExpense
         self.onOpenExpense = onOpenExpense
     }
 
@@ -168,6 +176,7 @@ struct GroupedExpensesSectionsScreen: View {
             year: year,
             month: month,
             groupingMode: groupingMode,
+            onAddExpense: onAddExpense,
             onOpenExpense: onOpenExpense
         )
         .safeAreaInset(edge: .bottom) {
@@ -205,6 +214,7 @@ private struct GroupedExpensesSectionsList: View {
     let year: Int
     let month: Int
     let groupingMode: ExpenseGroupingMode
+    let onAddExpense: (() -> Void)?
     let onOpenExpense: (String) -> Void
 
     @StateObject private var viewModel: GroupedExpensesSectionsViewModel
@@ -214,12 +224,14 @@ private struct GroupedExpensesSectionsList: View {
         year: Int,
         month: Int,
         groupingMode: ExpenseGroupingMode,
+        onAddExpense: (() -> Void)?,
         onOpenExpense: @escaping (String) -> Void
     ) {
         self.kind = kind
         self.year = year
         self.month = month
         self.groupingMode = groupingMode
+        self.onAddExpense = onAddExpense
         self.onOpenExpense = onOpenExpense
         _viewModel = StateObject(
             wrappedValue: GroupedExpensesSectionsViewModel(
@@ -262,6 +274,13 @@ private struct GroupedExpensesSectionsList: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            if let onAddExpense, canAddExpense {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: onAddExpense) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
         }
         .onAppear {
             viewModel.updateGroupingMode(groupingMode)
@@ -283,6 +302,15 @@ private struct GroupedExpensesSectionsList: View {
             return "\(monthName(month)) Shared Expenses"
         case let .category(name):
             return "\(monthName(month)) \(name)"
+        }
+    }
+
+    private var canAddExpense: Bool {
+        switch kind {
+        case .monthly:
+            return true
+        case .shared, .category:
+            return false
         }
     }
 
