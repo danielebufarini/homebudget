@@ -97,14 +97,8 @@ struct ContentView: View {
                         .navigationTitle(addExpenseTitle(expenseId: expenseId, readOnly: readOnly))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyExpenses(year, month):
-                        KotlinViewControllerHost {
-                            MainViewControllerKt.MonthlyExpensesViewController(
-                                year: year,
-                                month: month,
-                                onOpenExpense: { expenseId in
-                                    path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
-                                }
-                            )
+                        MonthlyExpensesSectionsScreen(year: Int(year), month: Int(month)) { expenseId in
+                            path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
                         .navigationTitle("\(monthName(month)) Expenses")
                         .navigationBarTitleDisplayMode(.inline)
