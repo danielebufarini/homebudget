@@ -1034,19 +1034,6 @@ private fun currentMonthCursor(): MonthCursor {
     return MonthCursor(now.year, now.month.ordinal + 1)
 }
 
-private fun daysInMonth(year: Int, month: Int): Int {
-    return when (month) {
-        1, 3, 5, 7, 8, 10, 12 -> 31
-        4, 6, 9, 11 -> 30
-        2 -> if (isLeapYear(year)) 29 else 28
-        else -> 30
-    }
-}
-
-private fun isLeapYear(year: Int): Boolean {
-    return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
-}
-
 private fun formatAxisAmount(amount: Double): String {
     val rounded = floor(amount + 0.5).toInt()
     return rounded.toString()

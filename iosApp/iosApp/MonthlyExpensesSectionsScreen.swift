@@ -406,15 +406,15 @@ private struct MonthlyIncomesSectionsContent: View {
                                 .tint(.red)
                             }
                             .confirmationDialog(
-                                "Delete recurring income",
+                                "Delete",
                                 isPresented: recurringIncomeDialogBinding(for: row),
                                 titleVisibility: .visible
                             ) {
-                                Button("Delete This Instance Only", role: .destructive) {
+                                Button("This instance only", role: .destructive) {
                                     viewModel.deleteIncome(row.id)
                                     recurringIncomeToDelete = nil
                                 }
-                                Button("Delete Whole Series", role: .destructive) {
+                                Button("Whole series", role: .destructive) {
                                     if let seriesID = row.recurringSeriesId {
                                         viewModel.deleteRecurringIncomeSeries(seriesID)
                                     }
@@ -652,15 +652,15 @@ private struct GroupedExpensesSectionsList: View {
                 .tint(.red)
             }
             .confirmationDialog(
-                "Delete recurring expense",
+                "Delete",
                 isPresented: recurringExpenseDialogBinding(for: row),
                 titleVisibility: .visible
             ) {
-                Button("Delete This Instance Only", role: .destructive) {
+                Button("This instance only", role: .destructive) {
                     viewModel.deleteExpense(row.id)
                     recurringExpenseToDelete = nil
                 }
-                Button("Delete Whole Series", role: .destructive) {
+                Button("Whole series", role: .destructive) {
                     if let seriesID = row.recurringSeriesId {
                         viewModel.deleteRecurringExpenseSeries(seriesID)
                     }

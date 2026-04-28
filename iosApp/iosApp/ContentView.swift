@@ -304,12 +304,12 @@ private struct ExpenseEditorRootView: View {
             }
         }
         .confirmationDialog(
-            "Delete recurring expense",
+            "Delete",
             isPresented: recurringDialogBinding,
             titleVisibility: .visible
         ) {
             if let expenseId {
-                Button("Delete This Instance Only", role: .destructive) {
+                Button("This instance only", role: .destructive) {
                     deletionViewModel.pendingSeriesId = nil
                     deletionViewModel.deleteExpense(
                         expenseId: expenseId,
@@ -317,7 +317,7 @@ private struct ExpenseEditorRootView: View {
                     )
                 }
             }
-            Button("Delete Whole Series", role: .destructive) {
+            Button("Whole series", role: .destructive) {
                 deletionViewModel.deleteWholeSeries(onClose: onClose)
             }
         }
@@ -372,12 +372,12 @@ private struct IncomeEditorRootView: View {
             }
         }
         .confirmationDialog(
-            "Delete recurring income",
+            "Delete",
             isPresented: recurringDialogBinding,
             titleVisibility: .visible
         ) {
             if let incomeId {
-                Button("Delete This Instance Only", role: .destructive) {
+                Button("This instance only", role: .destructive) {
                     deletionViewModel.pendingSeriesId = nil
                     deletionViewModel.deleteIncome(
                         incomeId: incomeId,
@@ -385,7 +385,7 @@ private struct IncomeEditorRootView: View {
                     )
                 }
             }
-            Button("Delete Whole Series", role: .destructive) {
+            Button("Whole series", role: .destructive) {
                 deletionViewModel.deleteWholeSeries(onClose: onClose)
             }
         }
