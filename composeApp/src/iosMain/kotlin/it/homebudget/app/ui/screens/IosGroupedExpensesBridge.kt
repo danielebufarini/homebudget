@@ -19,7 +19,8 @@ class IosGroupedExpenseRow(
     val id: String,
     val title: String,
     val subtitleText: String,
-    val amountText: String
+    val amountText: String,
+    val recurringSeriesId: String?
 )
 
 class IosGroupedExpenseSection(
@@ -39,7 +40,8 @@ class IosIncomeRow(
     val id: String,
     val title: String,
     val subtitleText: String,
-    val amountText: String
+    val amountText: String,
+    val recurringSeriesId: String?
 )
 
 class IosIncomeSection(
@@ -68,6 +70,7 @@ private data class PreparedIosExpense(
     val amountText: String,
     val categoryName: String,
     val description: String?,
+    val recurringSeriesId: String?,
     val dateText: String,
     val dateGroupTitleText: String,
     val dateMillis: Long,
@@ -252,6 +255,13 @@ class IosGroupedExpensesObserver(
         }
     }
 
+    fun deleteRecurringExpenseSeries(seriesId: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteRecurringExpenseSeries(seriesId)
+        }
+    }
+
     fun stop() {
         updatesJob?.cancel()
         updatesJob = null
@@ -303,6 +313,13 @@ class IosMonthlyIncomesObserver(
         scope.launch {
             val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
             repository.deleteIncome(id)
+        }
+    }
+
+    fun deleteRecurringIncomeSeries(seriesId: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteRecurringIncomeSeries(seriesId)
         }
     }
 
@@ -384,7 +401,8 @@ private fun buildMonthlyIncomesSnapshot(
                         id = income.id,
                         title = income.description?.ifBlank { "Income" } ?: "Income",
                         subtitleText = formatDate(income.date),
-                        amountText = formatAmount(income.amount)
+                        amountText = formatAmount(income.amount),
+                        recurringSeriesId = income.recurringSeriesId
                     )
                 }
             )
@@ -428,7 +446,8 @@ private fun buildSections(
                     id = expense.id,
                     title = if (groupingMode == "date") expense.categoryName else expenseName,
                     subtitleText = if (groupingMode == "date") expenseName else expense.dateText,
-                    amountText = expense.amountText
+                    amountText = expense.amountText,
+                    recurringSeriesId = expense.recurringSeriesId
                 )
             }
         )
@@ -445,6 +464,7 @@ private fun prepareExpense(
         amountText = formatAmount(expense.amount),
         categoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category",
         description = expense.description,
+        recurringSeriesId = expense.recurringSeriesId,
         dateText = formatDate(expense.date),
         dateGroupTitleText = formatDateGroupTitle(expense.date),
         dateMillis = expense.date,

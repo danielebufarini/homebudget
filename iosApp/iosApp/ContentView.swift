@@ -78,31 +78,25 @@ struct ContentView: View {
                             .navigationTitle("Categories")
                             .navigationBarTitleDisplayMode(.inline)
                     case let .addExpense(expenseId, readOnly):
-                        KotlinViewControllerHost {
-                            MainViewControllerKt.AddExpenseViewController(
-                                expenseId: expenseId,
-                                readOnly: readOnly,
-                                onClose: {
-                                    if !path.isEmpty {
-                                        path.removeLast()
-                                    }
-                                }
-                            )
+                        ExpenseEditorRootView(
+                            expenseId: expenseId,
+                            readOnly: readOnly
+                        ) {
+                            if !path.isEmpty {
+                                path.removeLast()
+                            }
                         }
                         .navigationTitle(addExpenseTitle(expenseId: expenseId, readOnly: readOnly))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .addIncome(incomeId, year, month):
-                        KotlinViewControllerHost {
-                            MainViewControllerKt.AddIncomeViewController(
-                                incomeId: incomeId,
-                                initialYear: year.map(kotlinInt),
-                                initialMonth: month.map(kotlinInt),
-                                onClose: {
-                                    if !path.isEmpty {
-                                        path.removeLast()
-                                    }
-                                }
-                            )
+                        IncomeEditorRootView(
+                            incomeId: incomeId,
+                            initialYear: year,
+                            initialMonth: month
+                        ) {
+                            if !path.isEmpty {
+                                path.removeLast()
+                            }
                         }
                         .navigationTitle(incomeId == nil ? "Add Income" : "Edit Income")
                         .navigationBarTitleDisplayMode(.inline)
@@ -150,6 +144,274 @@ struct ContentView: View {
                     }
                 }
         }
+    }
+}
+
+@MainActor
+private final class ExpenseEditorDeletionViewModel: ObservableObject {
+    @Published var pendingSeriesId: String?
+
+    private let controller = IosEditItemDeletionController()
+
+    func disposeController() {
+        controller.dispose()
+    }
+
+    func requestDelete(
+        expenseId: String,
+        onClose: @escaping () -> Void
+    ) {
+        controller.loadExpenseMetadata(id: expenseId) { [weak self] metadata in
+            guard let self, let metadata else {
+                return
+            }
+
+            Task { @MainActor in
+                if let seriesId = metadata.recurringSeriesId, !seriesId.isEmpty {
+                    self.pendingSeriesId = seriesId
+                } else {
+                    self.deleteExpense(expenseId: metadata.id, onClose: onClose)
+                }
+            }
+        }
+    }
+
+    func deleteExpense(
+        expenseId: String,
+        onClose: @escaping () -> Void
+    ) {
+        controller.deleteExpense(id: expenseId) { success in
+            guard success.boolValue else {
+                return
+            }
+
+            Task { @MainActor in
+                onClose()
+            }
+        }
+    }
+
+    func deleteWholeSeries(onClose: @escaping () -> Void) {
+        guard let pendingSeriesId else {
+            return
+        }
+
+        controller.deleteRecurringExpenseSeries(seriesId: pendingSeriesId) { success in
+            guard success.boolValue else {
+                return
+            }
+
+            Task { @MainActor in
+                self.pendingSeriesId = nil
+                onClose()
+            }
+        }
+    }
+}
+
+@MainActor
+private final class IncomeEditorDeletionViewModel: ObservableObject {
+    @Published var pendingSeriesId: String?
+
+    private let controller = IosEditItemDeletionController()
+
+    func disposeController() {
+        controller.dispose()
+    }
+
+    func requestDelete(
+        incomeId: String,
+        onClose: @escaping () -> Void
+    ) {
+        controller.loadIncomeMetadata(id: incomeId) { [weak self] metadata in
+            guard let self, let metadata else {
+                return
+            }
+
+            Task { @MainActor in
+                if let seriesId = metadata.recurringSeriesId, !seriesId.isEmpty {
+                    self.pendingSeriesId = seriesId
+                } else {
+                    self.deleteIncome(incomeId: metadata.id, onClose: onClose)
+                }
+            }
+        }
+    }
+
+    func deleteIncome(
+        incomeId: String,
+        onClose: @escaping () -> Void
+    ) {
+        controller.deleteIncome(id: incomeId) { success in
+            guard success.boolValue else {
+                return
+            }
+
+            Task { @MainActor in
+                onClose()
+            }
+        }
+    }
+
+    func deleteWholeSeries(onClose: @escaping () -> Void) {
+        guard let pendingSeriesId else {
+            return
+        }
+
+        controller.deleteRecurringIncomeSeries(seriesId: pendingSeriesId) { success in
+            guard success.boolValue else {
+                return
+            }
+
+            Task { @MainActor in
+                self.pendingSeriesId = nil
+                onClose()
+            }
+        }
+    }
+}
+
+private struct ExpenseEditorRootView: View {
+    let expenseId: String?
+    let readOnly: Bool
+    let onClose: () -> Void
+
+    @StateObject private var deletionViewModel = ExpenseEditorDeletionViewModel()
+
+    var body: some View {
+        KotlinViewControllerHost {
+            MainViewControllerKt.AddExpenseViewController(
+                expenseId: expenseId,
+                readOnly: readOnly,
+                onClose: onClose
+            )
+        }
+        .onDisappear {
+            deletionViewModel.disposeController()
+        }
+        .toolbar {
+            if let expenseId, !readOnly {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        deletionViewModel.requestDelete(
+                            expenseId: expenseId,
+                            onClose: onClose
+                        )
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete recurring expense?",
+            isPresented: recurringDialogBinding,
+            titleVisibility: .visible
+        ) {
+            if let expenseId {
+                Button("This Instance Only", role: .destructive) {
+                    deletionViewModel.pendingSeriesId = nil
+                    deletionViewModel.deleteExpense(
+                        expenseId: expenseId,
+                        onClose: onClose
+                    )
+                }
+            }
+            Button("Whole Series", role: .destructive) {
+                deletionViewModel.deleteWholeSeries(onClose: onClose)
+            }
+            Button("Cancel", role: .cancel) {
+                deletionViewModel.pendingSeriesId = nil
+            }
+        } message: {
+            Text("Choose whether to delete only this expense or the whole recurring series.")
+        }
+    }
+
+    private var recurringDialogBinding: Binding<Bool> {
+        Binding(
+            get: {
+                deletionViewModel.pendingSeriesId != nil
+            },
+            set: { isPresented in
+                if !isPresented {
+                    deletionViewModel.pendingSeriesId = nil
+                }
+            }
+        )
+    }
+}
+
+private struct IncomeEditorRootView: View {
+    let incomeId: String?
+    let initialYear: Int?
+    let initialMonth: Int?
+    let onClose: () -> Void
+
+    @StateObject private var deletionViewModel = IncomeEditorDeletionViewModel()
+
+    var body: some View {
+        KotlinViewControllerHost {
+            MainViewControllerKt.AddIncomeViewController(
+                incomeId: incomeId,
+                initialYear: initialYear.map(kotlinInt),
+                initialMonth: initialMonth.map(kotlinInt),
+                onClose: onClose
+            )
+        }
+        .onDisappear {
+            deletionViewModel.disposeController()
+        }
+        .toolbar {
+            if let incomeId {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        deletionViewModel.requestDelete(
+                            incomeId: incomeId,
+                            onClose: onClose
+                        )
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete recurring income?",
+            isPresented: recurringDialogBinding,
+            titleVisibility: .visible
+        ) {
+            if let incomeId {
+                Button("This Instance Only", role: .destructive) {
+                    deletionViewModel.pendingSeriesId = nil
+                    deletionViewModel.deleteIncome(
+                        incomeId: incomeId,
+                        onClose: onClose
+                    )
+                }
+            }
+            Button("Whole Series", role: .destructive) {
+                deletionViewModel.deleteWholeSeries(onClose: onClose)
+            }
+            Button("Cancel", role: .cancel) {
+                deletionViewModel.pendingSeriesId = nil
+            }
+        } message: {
+            Text("Choose whether to delete only this income or the whole recurring series.")
+        }
+    }
+
+    private var recurringDialogBinding: Binding<Bool> {
+        Binding(
+            get: {
+                deletionViewModel.pendingSeriesId != nil
+            },
+            set: { isPresented in
+                if !isPresented {
+                    deletionViewModel.pendingSeriesId = nil
+                }
+            }
+        )
     }
 }
 

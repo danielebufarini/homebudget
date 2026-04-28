@@ -23,6 +23,19 @@ import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Instant
 
+private data class PendingRecurringExpenseUpdate(
+    val amount: BigInteger,
+    val date: Long,
+    val categoryId: String,
+    val description: String?,
+    val isShared: Boolean
+)
+
+private enum class RecurringExpenseAction {
+    Update,
+    Delete
+}
+
 class AddExpenseScreen(
     private val expenseId: String? = null,
     private val readOnly: Boolean = false
@@ -57,11 +70,12 @@ class AddExpenseScreen(
         var isRecurringMonthly by remember { mutableStateOf(false) }
         var recurringSeriesId by remember { mutableStateOf<String?>(null) }
         var isShared by remember { mutableStateOf(false) }
-        var initialIsShared by remember { mutableStateOf(false) }
         var categoryExpanded by remember { mutableStateOf(false) }
         var installmentExpanded by remember { mutableStateOf(false) }
         var isSaving by remember { mutableStateOf(false) }
         var isInitialized by remember(expenseId) { mutableStateOf(expenseId == null) }
+        var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringExpenseUpdate?>(null) }
+        var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
 
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val selectedCategory = categories.find { it.name == category }
@@ -88,8 +102,85 @@ class AddExpenseScreen(
             selectedDateMillis = expense.date
             recurringSeriesId = expense.recurringSeriesId
             isShared = expense.isShared == 1L
-            initialIsShared = expense.isShared == 1L
             isInitialized = true
+        }
+
+        fun dismissRecurringDialog() {
+            pendingRecurringUpdate = null
+            pendingRecurringAction = null
+        }
+
+        fun closeAfterRecurringAction() {
+            dismissRecurringDialog()
+            onClose()
+        }
+
+        suspend fun saveExpenseUpdate(
+            updateWholeSeries: Boolean,
+            payload: PendingRecurringExpenseUpdate
+        ) {
+            runCatching {
+                val currentExpenseId = expenseId ?: return@runCatching
+                val seriesId = recurringSeriesId
+                if (updateWholeSeries && !seriesId.isNullOrBlank()) {
+                    repository.updateRecurringExpenseSeries(
+                        anchorExpenseId = currentExpenseId,
+                        seriesId = seriesId,
+                        amount = payload.amount,
+                        date = payload.date,
+                        categoryId = payload.categoryId,
+                        description = payload.description,
+                        isShared = payload.isShared
+                    )
+                } else {
+                    repository.insertExpenses(
+                        expenses = listOf(
+                            PendingExpense(
+                                id = currentExpenseId,
+                                amount = payload.amount,
+                                date = payload.date,
+                                categoryId = payload.categoryId,
+                                description = payload.description,
+                                isShared = payload.isShared,
+                                recurringSeriesId = recurringSeriesId
+                            )
+                        )
+                    )
+                }
+            }.onSuccess {
+                closeAfterRecurringAction()
+            }.onFailure {
+                snackbarHostState.showSnackbar("Unable to save expense")
+            }
+            isSaving = false
+        }
+
+        suspend fun deleteExpense(deleteWholeSeries: Boolean) {
+            runCatching {
+                val currentExpenseId = expenseId ?: return@runCatching
+                val seriesId = recurringSeriesId
+                if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
+                    repository.deleteRecurringExpenseSeries(seriesId)
+                } else {
+                    repository.deleteExpense(currentExpenseId)
+                }
+            }.onSuccess {
+                closeAfterRecurringAction()
+            }.onFailure {
+                snackbarHostState.showSnackbar("Unable to delete expense")
+            }
+            isSaving = false
+        }
+
+        fun requestDeleteExpense() {
+            if (recurringSeriesId != null) {
+                pendingRecurringAction = RecurringExpenseAction.Delete
+            } else {
+                scope.launch {
+                    isSaving = true
+                    deleteExpense(deleteWholeSeries = false)
+                }
+            }
         }
 
         Scaffold(
@@ -117,6 +208,15 @@ class AddExpenseScreen(
                         }
                     )
                 }
+            },
+            floatingActionButton = {
+                if (!isIos && !readOnly && expenseId != null) {
+                    DeleteEditItemFab(
+                        label = "Delete expense",
+                        enabled = !isSaving,
+                        onClick = ::requestDeleteExpense
+                    )
+                }
             }
         ) { padding ->
             Column(
@@ -124,6 +224,7 @@ class AddExpenseScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(16.dp)
+                    .padding(bottom = if (!isIos && !readOnly && expenseId != null) 88.dp else 0.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -376,32 +477,6 @@ class AddExpenseScreen(
                         Text("Close")
                     }
                 } else {
-                    if (recurringSeriesId != null && selectedDateMillis != null) {
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    isSaving = true
-                                    runCatching {
-                                        repository.cancelRecurringExpenses(
-                                            seriesId = recurringSeriesId.orEmpty(),
-                                            fromDate = selectedDateMillis ?: return@runCatching
-                                        )
-                                    }.onSuccess {
-                                        onClose()
-                                    }.onFailure {
-                                        snackbarHostState.showSnackbar("Unable to cancel recurring expense")
-                                    }
-                                    isSaving = false
-                                }
-                            },
-                            colors = homeBudgetButtonColors(),
-                            enabled = !isSaving,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Cancel recurring from this month")
-                        }
-                    }
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -434,57 +509,62 @@ class AddExpenseScreen(
                                         }
                                         else -> {
                                             isSaving = true
-                                            runCatching {
-                                                val expenses = if (expenseId == null) {
-                                                    if (isRecurringMonthly) {
-                                                        buildRecurringMonthlyExpenses(
-                                                            amount = parsedAmount,
-                                                            firstDate = expenseDate,
-                                                            categoryId = selectedCategory.id,
-                                                            description = description,
-                                                            isShared = isShared,
-                                                            recurringSeriesId = buildRecurringSeriesId(),
-                                                            idProvider = ::buildExpenseId
-                                                        )
-                                                    } else {
-                                                        buildPendingExpenses(
-                                                            amount = parsedAmount,
-                                                            firstDate = expenseDate,
-                                                            installments = installmentCount,
-                                                            categoryId = selectedCategory.id,
-                                                            description = description,
-                                                            isShared = isShared,
-                                                            idProvider = ::buildExpenseId
-                                                        )
-                                                    }
-                                                } else {
-                                                    recurringSeriesId?.takeIf { initialIsShared != isShared }?.let { seriesId ->
-                                                        repository.updateRecurringExpenseShared(
-                                                            seriesId = seriesId,
-                                                            isShared = isShared
-                                                        )
-                                                    }
-                                                    listOf(
-                                                        PendingExpense(
-                                                            id = expenseId,
-                                                            amount = parsedAmount,
-                                                            date = expenseDate,
-                                                            categoryId = selectedCategory.id,
-                                                            description = description.ifBlank { null },
-                                                            isShared = isShared,
-                                                            recurringSeriesId = recurringSeriesId
-                                                        )
-                                                    )
-                                                }
-                                                repository.insertExpenses(
-                                                    expenses = expenses
+                                            val normalizedDescription = description.ifBlank { null }
+                                            if (expenseId != null && recurringSeriesId != null) {
+                                                pendingRecurringUpdate = PendingRecurringExpenseUpdate(
+                                                    amount = parsedAmount,
+                                                    date = expenseDate,
+                                                    categoryId = selectedCategory.id,
+                                                    description = normalizedDescription,
+                                                    isShared = isShared
                                                 )
-                                            }.onSuccess {
-                                                onClose()
-                                            }.onFailure {
-                                                snackbarHostState.showSnackbar("Unable to save expense")
+                                                pendingRecurringAction = RecurringExpenseAction.Update
+                                                isSaving = false
+                                            } else {
+                                                runCatching {
+                                                    val expenses = if (expenseId == null) {
+                                                        if (isRecurringMonthly) {
+                                                            buildRecurringMonthlyExpenses(
+                                                                amount = parsedAmount,
+                                                                firstDate = expenseDate,
+                                                                categoryId = selectedCategory.id,
+                                                                description = description,
+                                                                isShared = isShared,
+                                                                recurringSeriesId = buildRecurringSeriesId(),
+                                                                idProvider = ::buildExpenseId
+                                                            )
+                                                        } else {
+                                                            buildPendingExpenses(
+                                                                amount = parsedAmount,
+                                                                firstDate = expenseDate,
+                                                                installments = installmentCount,
+                                                                categoryId = selectedCategory.id,
+                                                                description = description,
+                                                                isShared = isShared,
+                                                                idProvider = ::buildExpenseId
+                                                            )
+                                                        }
+                                                    } else {
+                                                        listOf(
+                                                            PendingExpense(
+                                                                id = expenseId,
+                                                                amount = parsedAmount,
+                                                                date = expenseDate,
+                                                                categoryId = selectedCategory.id,
+                                                                description = normalizedDescription,
+                                                                isShared = isShared,
+                                                                recurringSeriesId = recurringSeriesId
+                                                            )
+                                                        )
+                                                    }
+                                                    repository.insertExpenses(expenses = expenses)
+                                                }.onSuccess {
+                                                    onClose()
+                                                }.onFailure {
+                                                    snackbarHostState.showSnackbar("Unable to save expense")
+                                                }
+                                                isSaving = false
                                             }
-                                            isSaving = false
                                         }
                                     }
                                 }
@@ -500,6 +580,73 @@ class AddExpenseScreen(
                     }
                 }
             }
+        }
+
+        if (pendingRecurringAction != null) {
+            RecurringSeriesActionDialog(
+                title = when (pendingRecurringAction) {
+                    RecurringExpenseAction.Update -> "Update recurring expense?"
+                    RecurringExpenseAction.Delete -> "Delete recurring expense?"
+                    null -> ""
+                },
+                message = when (pendingRecurringAction) {
+                    RecurringExpenseAction.Update -> "Do you want to update only this expense or the whole recurring series?"
+                    RecurringExpenseAction.Delete -> "Do you want to delete only this expense or the whole recurring series?"
+                    null -> ""
+                },
+                onThisInstanceOnly = {
+                    scope.launch {
+                        isSaving = true
+                        when (pendingRecurringAction) {
+                            RecurringExpenseAction.Update -> {
+                                val payload = pendingRecurringUpdate
+                                if (payload == null) {
+                                    isSaving = false
+                                } else {
+                                    saveExpenseUpdate(
+                                        updateWholeSeries = false,
+                                        payload = payload
+                                    )
+                                }
+                            }
+                            RecurringExpenseAction.Delete -> {
+                                deleteExpense(deleteWholeSeries = false)
+                            }
+                            null -> {
+                                isSaving = false
+                            }
+                        }
+                    }
+                },
+                onWholeSeries = {
+                    scope.launch {
+                        isSaving = true
+                        when (pendingRecurringAction) {
+                            RecurringExpenseAction.Update -> {
+                                val payload = pendingRecurringUpdate
+                                if (payload == null) {
+                                    isSaving = false
+                                } else {
+                                    saveExpenseUpdate(
+                                        updateWholeSeries = true,
+                                        payload = payload
+                                    )
+                                }
+                            }
+                            RecurringExpenseAction.Delete -> {
+                                deleteExpense(deleteWholeSeries = true)
+                            }
+                            null -> {
+                                isSaving = false
+                            }
+                        }
+                    }
+                },
+                onDismiss = {
+                    dismissRecurringDialog()
+                    isSaving = false
+                }
+            )
         }
     }
 

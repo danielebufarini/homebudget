@@ -59,6 +59,7 @@ class MonthlyIncomesScreen(
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
+        var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
         val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
 
         val filteredIncomes: List<Income> = remember(incomes, selectedMonth) {
@@ -79,8 +80,13 @@ class MonthlyIncomesScreen(
         val totalAmount = remember(filteredIncomes) {
             filteredIncomes.map { it.amount }.sumBigInteger()
         }
-        val deleteIncomeAction = { incomeId: String ->
-            scope.launch { repository.deleteIncome(incomeId) }
+        val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
+            val income = filteredIncomes.find { it.id == incomeId } ?: return@deleteAction
+            if (income.recurringSeriesId.isNullOrBlank()) {
+                scope.launch { repository.deleteIncome(incomeId) }
+            } else {
+                recurringIncomeToDelete = income
+            }
             Unit
         }
 
@@ -191,6 +197,28 @@ class MonthlyIncomesScreen(
         } else {
             content(PaddingValues(0.dp))
         }
+
+        recurringIncomeToDelete?.let { income ->
+            RecurringSeriesActionDialog(
+                title = "Delete recurring income?",
+                message = "Do you want to delete only this income or the whole recurring series?",
+                onThisInstanceOnly = {
+                    recurringIncomeToDelete = null
+                    scope.launch {
+                        repository.deleteIncome(income.id)
+                    }
+                },
+                onWholeSeries = {
+                    recurringIncomeToDelete = null
+                    scope.launch {
+                        repository.deleteRecurringIncomeSeries(income.recurringSeriesId.orEmpty())
+                    }
+                },
+                onDismiss = {
+                    recurringIncomeToDelete = null
+                }
+            )
+        }
     }
 }
 
@@ -202,15 +230,18 @@ private fun MonthlyIncomeRow(
     onDeleteIncome: (String) -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                onDeleteIncome(income.id)
+                false
+            } else {
+                true
+            }
+        },
         positionalThreshold = { distance ->
             distance * 0.35f
         }
     )
-    LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-            onDeleteIncome(income.id)
-        }
-    }
 
     SwipeToDismissBox(
         state = dismissState,

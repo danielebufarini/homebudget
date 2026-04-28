@@ -77,6 +77,7 @@ abstract class BaseGroupedExpensesScreen(
         val scope = rememberCoroutineScope()
         var selectedMonth by remember { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
+        var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
         val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
@@ -138,10 +139,19 @@ abstract class BaseGroupedExpensesScreen(
                 .map { it.amount }
                 .sumBigInteger()
         }
-        val deleteExpenseAction = { expenseId: String ->
-            scope.launch { repository.deleteExpense(expenseId) }
-            Unit
-        }.takeIf { canDeleteExpense() }
+        val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
+            deleteAction@{ expenseId ->
+                val expense = filteredExpenses.find { it.id == expenseId } ?: return@deleteAction
+                if (expense.recurringSeriesId.isNullOrBlank()) {
+                    scope.launch { repository.deleteExpense(expenseId) }
+                } else {
+                    recurringExpenseToDelete = expense
+                }
+                Unit
+            }
+        } else {
+            null
+        }
         val monthNavigationDescriptor = monthNavigationDescriptor()
 
         if (showNavigationChrome) {
@@ -221,6 +231,28 @@ abstract class BaseGroupedExpensesScreen(
                 onGroupingModeChange = { groupingMode = it },
                 onOpenExpense = onOpenExpense,
                 onDeleteExpense = deleteExpenseAction
+            )
+        }
+
+        recurringExpenseToDelete?.let { expense ->
+            RecurringSeriesActionDialog(
+                title = "Delete recurring expense?",
+                message = "Do you want to delete only this expense or the whole recurring series?",
+                onThisInstanceOnly = {
+                    recurringExpenseToDelete = null
+                    scope.launch {
+                        repository.deleteExpense(expense.id)
+                    }
+                },
+                onWholeSeries = {
+                    recurringExpenseToDelete = null
+                    scope.launch {
+                        repository.deleteRecurringExpenseSeries(expense.recurringSeriesId.orEmpty())
+                    }
+                },
+                onDismiss = {
+                    recurringExpenseToDelete = null
+                }
             )
         }
     }
@@ -362,15 +394,18 @@ abstract class BaseGroupedExpensesScreen(
                                             )
                                         } else {
                                             val dismissState = rememberSwipeToDismissBoxState(
+                                                confirmValueChange = { dismissValue ->
+                                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                                        onDeleteExpense(expense.id)
+                                                        false
+                                                    } else {
+                                                        true
+                                                    }
+                                                },
                                                 positionalThreshold = { distance ->
                                                     distance * 0.35f
                                                 }
                                             )
-                                            LaunchedEffect(dismissState.currentValue) {
-                                                if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                                                    onDeleteExpense(expense.id)
-                                                }
-                                            }
 
                                             SwipeToDismissBox(
                                                 state = dismissState,

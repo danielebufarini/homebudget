@@ -16,8 +16,14 @@ SELECT * FROM income ORDER BY date DESC;
 getIncomeById:
 SELECT * FROM income WHERE id = ?;
 
+getRecurringIncomesBySeries:
+SELECT * FROM income WHERE recurringSeriesId = ? ORDER BY date ASC;
+
 deleteIncome:
 DELETE FROM income WHERE id = ?;
+
+deleteRecurringIncomeSeries:
+DELETE FROM income WHERE recurringSeriesId = ?;
 
 deleteRecurringIncomesFrom:
 DELETE FROM income

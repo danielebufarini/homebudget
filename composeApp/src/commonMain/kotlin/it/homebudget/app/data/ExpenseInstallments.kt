@@ -23,6 +23,16 @@ data class PendingIncome(
     val recurringSeriesId: String? = null
 )
 
+data class ExistingRecurringExpenseItem(
+    val id: String,
+    val date: Long
+)
+
+data class ExistingRecurringIncomeItem(
+    val id: String,
+    val date: Long
+)
+
 const val RECURRING_MONTHLY_OCCURRENCES = 240
 
 fun buildPendingExpenses(
@@ -100,6 +110,64 @@ fun buildRecurringMonthlyIncomes(
     }
 }
 
+fun buildUpdatedRecurringExpenseSeries(
+    existingItems: List<ExistingRecurringExpenseItem>,
+    anchorItemId: String,
+    anchorDate: Long,
+    amount: BigInteger,
+    categoryId: String,
+    description: String?,
+    isShared: Boolean,
+    recurringSeriesId: String,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): List<PendingExpense> {
+    val anchorItem = existingItems.firstOrNull { it.id == anchorItemId }
+        ?: error("Anchor recurring expense item not found")
+
+    return existingItems.map { item ->
+        PendingExpense(
+            id = item.id,
+            amount = amount,
+            date = monthlyOccurrenceDate(
+                firstDate = anchorDate,
+                monthOffset = monthDifference(anchorItem.date, item.date, timeZone),
+                timeZone = timeZone
+            ),
+            categoryId = categoryId,
+            description = description.ifBlankToNull(),
+            isShared = isShared,
+            recurringSeriesId = recurringSeriesId
+        )
+    }
+}
+
+fun buildUpdatedRecurringIncomeSeries(
+    existingItems: List<ExistingRecurringIncomeItem>,
+    anchorItemId: String,
+    anchorDate: Long,
+    amount: BigInteger,
+    description: String?,
+    recurringSeriesId: String,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): List<PendingIncome> {
+    val anchorItem = existingItems.firstOrNull { it.id == anchorItemId }
+        ?: error("Anchor recurring income item not found")
+
+    return existingItems.map { item ->
+        PendingIncome(
+            id = item.id,
+            amount = amount,
+            date = monthlyOccurrenceDate(
+                firstDate = anchorDate,
+                monthOffset = monthDifference(anchorItem.date, item.date, timeZone),
+                timeZone = timeZone
+            ),
+            description = description.ifBlankToNull(),
+            recurringSeriesId = recurringSeriesId
+        )
+    }
+}
+
 fun splitAmountIntoInstallments(amount: BigInteger, installments: Int): List<BigInteger> {
     require(installments > 0) { "installments must be greater than 0" }
 
@@ -125,6 +193,22 @@ private fun monthlyOccurrenceDate(
         .plus(DatePeriod(months = monthOffset))
         .atStartOfDayIn(timeZone)
         .toEpochMilliseconds()
+}
+
+private fun monthDifference(
+    firstDate: Long,
+    secondDate: Long,
+    timeZone: TimeZone
+): Int {
+    val firstLocalDate = Instant.fromEpochMilliseconds(firstDate)
+        .toLocalDateTime(timeZone)
+        .date
+    val secondLocalDate = Instant.fromEpochMilliseconds(secondDate)
+        .toLocalDateTime(timeZone)
+        .date
+
+    return (secondLocalDate.year - firstLocalDate.year) * 12 +
+        (secondLocalDate.month.ordinal - firstLocalDate.month.ordinal)
 }
 
 private fun String?.ifBlankToNull(): String? = this?.takeIf { it.isNotBlank() }

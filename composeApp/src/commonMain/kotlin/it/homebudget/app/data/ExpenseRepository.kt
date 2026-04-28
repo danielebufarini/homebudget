@@ -84,9 +84,21 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
+    suspend fun deleteRecurringExpenseSeries(seriesId: String) {
+        withContext(Dispatchers.IO) {
+            expenseQueries.deleteRecurringExpenseSeries(seriesId)
+        }
+    }
+
     suspend fun deleteIncome(id: String) {
         withContext(Dispatchers.IO) {
             incomeQueries.deleteIncome(id)
+        }
+    }
+
+    suspend fun deleteRecurringIncomeSeries(seriesId: String) {
+        withContext(Dispatchers.IO) {
+            incomeQueries.deleteRecurringIncomeSeries(seriesId)
         }
     }
 
@@ -158,6 +170,36 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
+    suspend fun updateRecurringIncomeSeries(
+        anchorIncomeId: String,
+        seriesId: String,
+        amount: BigInteger,
+        date: Long,
+        description: String?
+    ) {
+        withContext(Dispatchers.IO) {
+            val seriesItems = incomeQueries.getRecurringIncomesBySeries(seriesId)
+                .executeAsList()
+                .map { income ->
+                    ExistingRecurringIncomeItem(
+                        id = income.id,
+                        date = income.date
+                    )
+                }
+
+            insertIncomes(
+                buildUpdatedRecurringIncomeSeries(
+                    existingItems = seriesItems,
+                    anchorItemId = anchorIncomeId,
+                    anchorDate = date,
+                    amount = amount,
+                    description = description,
+                    recurringSeriesId = seriesId
+                )
+            )
+        }
+    }
+
     suspend fun insertExpenses(expenses: List<PendingExpense>) {
         withContext(Dispatchers.IO) {
             database.transaction {
@@ -181,6 +223,40 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
             expenseQueries.deleteRecurringExpensesFrom(
                 recurringSeriesId = seriesId,
                 date = fromDate
+            )
+        }
+    }
+
+    suspend fun updateRecurringExpenseSeries(
+        anchorExpenseId: String,
+        seriesId: String,
+        amount: BigInteger,
+        date: Long,
+        categoryId: String,
+        description: String?,
+        isShared: Boolean
+    ) {
+        withContext(Dispatchers.IO) {
+            val seriesItems = expenseQueries.getRecurringExpensesBySeries(seriesId)
+                .executeAsList()
+                .map { expense ->
+                    ExistingRecurringExpenseItem(
+                        id = expense.id,
+                        date = expense.date
+                    )
+                }
+
+            insertExpenses(
+                buildUpdatedRecurringExpenseSeries(
+                    existingItems = seriesItems,
+                    anchorItemId = anchorExpenseId,
+                    anchorDate = date,
+                    amount = amount,
+                    categoryId = categoryId,
+                    description = description,
+                    isShared = isShared,
+                    recurringSeriesId = seriesId
+                )
             )
         }
     }

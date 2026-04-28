@@ -25,6 +25,17 @@ import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Instant
 
+private data class PendingRecurringIncomeUpdate(
+    val amount: BigInteger,
+    val date: Long,
+    val description: String?
+)
+
+private enum class RecurringIncomeAction {
+    Update,
+    Delete
+}
+
 class AddIncomeScreen(
     private val incomeId: String? = null,
     private val initialYear: Int? = null,
@@ -70,6 +81,8 @@ class AddIncomeScreen(
         var recurringSeriesId by remember { mutableStateOf<String?>(null) }
         var isSaving by remember { mutableStateOf(false) }
         var isInitialized by remember(incomeId) { mutableStateOf(incomeId == null) }
+        var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringIncomeUpdate?>(null) }
+        var pendingRecurringAction by remember { mutableStateOf<RecurringIncomeAction?>(null) }
 
         LaunchedEffect(incomeId) {
             if (incomeId == null || isInitialized) {
@@ -82,6 +95,80 @@ class AddIncomeScreen(
             selectedDateMillis = income.date
             recurringSeriesId = income.recurringSeriesId
             isInitialized = true
+        }
+
+        fun dismissRecurringDialog() {
+            pendingRecurringUpdate = null
+            pendingRecurringAction = null
+        }
+
+        fun closeAfterRecurringAction() {
+            dismissRecurringDialog()
+            onClose()
+        }
+
+        suspend fun saveIncomeUpdate(
+            updateWholeSeries: Boolean,
+            payload: PendingRecurringIncomeUpdate
+        ) {
+            runCatching {
+                val currentIncomeId = incomeId ?: return@runCatching
+                val seriesId = recurringSeriesId
+                if (updateWholeSeries && !seriesId.isNullOrBlank()) {
+                    repository.updateRecurringIncomeSeries(
+                        anchorIncomeId = currentIncomeId,
+                        seriesId = seriesId,
+                        amount = payload.amount,
+                        date = payload.date,
+                        description = payload.description
+                    )
+                } else {
+                    repository.insertIncomes(
+                        incomes = listOf(
+                            PendingIncome(
+                                id = currentIncomeId,
+                                amount = payload.amount,
+                                date = payload.date,
+                                description = payload.description,
+                                recurringSeriesId = recurringSeriesId
+                            )
+                        )
+                    )
+                }
+            }.onSuccess {
+                closeAfterRecurringAction()
+            }.onFailure {
+                snackbarHostState.showSnackbar("Unable to save income")
+            }
+            isSaving = false
+        }
+
+        suspend fun deleteIncome(deleteWholeSeries: Boolean) {
+            runCatching {
+                val currentIncomeId = incomeId ?: return@runCatching
+                val seriesId = recurringSeriesId
+                if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
+                    repository.deleteRecurringIncomeSeries(seriesId)
+                } else {
+                    repository.deleteIncome(currentIncomeId)
+                }
+            }.onSuccess {
+                closeAfterRecurringAction()
+            }.onFailure {
+                snackbarHostState.showSnackbar("Unable to delete income")
+            }
+            isSaving = false
+        }
+
+        fun requestDeleteIncome() {
+            if (recurringSeriesId != null) {
+                pendingRecurringAction = RecurringIncomeAction.Delete
+            } else {
+                scope.launch {
+                    isSaving = true
+                    deleteIncome(deleteWholeSeries = false)
+                }
+            }
         }
 
         Scaffold(
@@ -103,6 +190,15 @@ class AddIncomeScreen(
                         }
                     )
                 }
+            },
+            floatingActionButton = {
+                if (!isIos && incomeId != null) {
+                    DeleteEditItemFab(
+                        label = "Delete income",
+                        enabled = !isSaving,
+                        onClick = ::requestDeleteIncome
+                    )
+                }
             }
         ) { padding ->
             Column(
@@ -110,6 +206,7 @@ class AddIncomeScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(16.dp)
+                    .padding(bottom = if (!isIos && incomeId != null) 88.dp else 0.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -185,32 +282,6 @@ class AddIncomeScreen(
                     )
                 }
 
-                if (recurringSeriesId != null) {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isSaving = true
-                                runCatching {
-                                    repository.cancelRecurringIncomes(
-                                        seriesId = recurringSeriesId.orEmpty(),
-                                        fromDate = selectedDateMillis
-                                    )
-                                }.onSuccess {
-                                    onClose()
-                                }.onFailure {
-                                    snackbarHostState.showSnackbar("Unable to cancel recurring income")
-                                }
-                                isSaving = false
-                            }
-                        },
-                        colors = homeBudgetButtonColors(),
-                        enabled = !isSaving,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Cancel recurring from this month")
-                    }
-                }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -236,47 +307,56 @@ class AddIncomeScreen(
                                     }
                                     else -> {
                                         isSaving = true
-                                        runCatching {
-                                            val incomes = if (incomeId == null) {
-                                                if (isRecurringMonthly) {
-                                                    buildRecurringMonthlyIncomes(
-                                                        amount = parsedAmount,
-                                                        firstDate = selectedDateMillis,
-                                                        description = description.trim(),
-                                                        recurringSeriesId = buildRecurringIncomeSeriesId(),
-                                                        idProvider = ::buildIncomeId
-                                                    )
+                                        val normalizedDescription = description.trim().ifBlank { null }
+                                        if (incomeId != null && recurringSeriesId != null) {
+                                            pendingRecurringUpdate = PendingRecurringIncomeUpdate(
+                                                amount = parsedAmount,
+                                                date = selectedDateMillis,
+                                                description = normalizedDescription
+                                            )
+                                            pendingRecurringAction = RecurringIncomeAction.Update
+                                            isSaving = false
+                                        } else {
+                                            runCatching {
+                                                val incomes = if (incomeId == null) {
+                                                    if (isRecurringMonthly) {
+                                                        buildRecurringMonthlyIncomes(
+                                                            amount = parsedAmount,
+                                                            firstDate = selectedDateMillis,
+                                                            description = description.trim(),
+                                                            recurringSeriesId = buildRecurringIncomeSeriesId(),
+                                                            idProvider = ::buildIncomeId
+                                                        )
+                                                    } else {
+                                                        listOf(
+                                                            PendingIncome(
+                                                                id = buildIncomeId(),
+                                                                amount = parsedAmount,
+                                                                date = selectedDateMillis,
+                                                                description = normalizedDescription,
+                                                                recurringSeriesId = null
+                                                            )
+                                                        )
+                                                    }
                                                 } else {
                                                     listOf(
                                                         PendingIncome(
-                                                            id = buildIncomeId(),
+                                                            id = incomeId,
                                                             amount = parsedAmount,
                                                             date = selectedDateMillis,
-                                                            description = description.trim().ifBlank { null },
-                                                            recurringSeriesId = null
+                                                            description = normalizedDescription,
+                                                            recurringSeriesId = recurringSeriesId
                                                         )
                                                     )
                                                 }
-                                            } else {
-                                                listOf(
-                                                    PendingIncome(
-                                                        id = incomeId,
-                                                        amount = parsedAmount,
-                                                        date = selectedDateMillis,
-                                                        description = description.trim().ifBlank { null },
-                                                        recurringSeriesId = recurringSeriesId
-                                                    )
-                                                )
+                                                repository.insertIncomes(incomes = incomes)
+                                            }.onSuccess {
+                                                onClose()
+                                            }.onFailure {
+                                                snackbarHostState.showSnackbar("Unable to save income")
                                             }
-                                            repository.insertIncomes(
-                                                incomes = incomes
-                                            )
-                                        }.onSuccess {
-                                            onClose()
-                                        }.onFailure {
-                                            snackbarHostState.showSnackbar("Unable to save income")
+                                            isSaving = false
                                         }
-                                        isSaving = false
                                     }
                                 }
                             }
@@ -287,6 +367,73 @@ class AddIncomeScreen(
                     }
                 }
             }
+        }
+
+        if (pendingRecurringAction != null) {
+            RecurringSeriesActionDialog(
+                title = when (pendingRecurringAction) {
+                    RecurringIncomeAction.Update -> "Update recurring income?"
+                    RecurringIncomeAction.Delete -> "Delete recurring income?"
+                    null -> ""
+                },
+                message = when (pendingRecurringAction) {
+                    RecurringIncomeAction.Update -> "Do you want to update only this income or the whole recurring series?"
+                    RecurringIncomeAction.Delete -> "Do you want to delete only this income or the whole recurring series?"
+                    null -> ""
+                },
+                onThisInstanceOnly = {
+                    scope.launch {
+                        isSaving = true
+                        when (pendingRecurringAction) {
+                            RecurringIncomeAction.Update -> {
+                                val payload = pendingRecurringUpdate
+                                if (payload == null) {
+                                    isSaving = false
+                                } else {
+                                    saveIncomeUpdate(
+                                        updateWholeSeries = false,
+                                        payload = payload
+                                    )
+                                }
+                            }
+                            RecurringIncomeAction.Delete -> {
+                                deleteIncome(deleteWholeSeries = false)
+                            }
+                            null -> {
+                                isSaving = false
+                            }
+                        }
+                    }
+                },
+                onWholeSeries = {
+                    scope.launch {
+                        isSaving = true
+                        when (pendingRecurringAction) {
+                            RecurringIncomeAction.Update -> {
+                                val payload = pendingRecurringUpdate
+                                if (payload == null) {
+                                    isSaving = false
+                                } else {
+                                    saveIncomeUpdate(
+                                        updateWholeSeries = true,
+                                        payload = payload
+                                    )
+                                }
+                            }
+                            RecurringIncomeAction.Delete -> {
+                                deleteIncome(deleteWholeSeries = true)
+                            }
+                            null -> {
+                                isSaving = false
+                            }
+                        }
+                    }
+                },
+                onDismiss = {
+                    dismissRecurringDialog()
+                    isSaving = false
+                }
+            )
         }
     }
 }

@@ -340,15 +340,18 @@ private fun AndroidGroupedExpenseRow(
     }
 
     val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                onDeleteExpense(row.id)
+                false
+            } else {
+                true
+            }
+        },
         positionalThreshold = { distance ->
             distance * 0.35f
         }
     )
-    LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-            onDeleteExpense(row.id)
-        }
-    }
 
     SwipeToDismissBox(
         state = dismissState,
