@@ -45,6 +45,27 @@ private enum ExpenseGroupingMode: String, Hashable {
     }
 }
 
+private struct MonthCursor: Hashable {
+    let year: Int
+    let month: Int
+
+    func previous() -> MonthCursor {
+        month == 1 ? MonthCursor(year: year - 1, month: 12) : MonthCursor(year: year, month: month - 1)
+    }
+
+    func next() -> MonthCursor {
+        month == 12 ? MonthCursor(year: year + 1, month: 1) : MonthCursor(year: year, month: month + 1)
+    }
+
+    var label: String {
+        "\(monthName(month)) \(year)"
+    }
+
+    var id: String {
+        "\(year)-\(month)"
+    }
+}
+
 private struct GroupedExpenseRowModel: Identifiable {
     let id: String
     let title: String
@@ -230,10 +251,10 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
 
 struct GroupedExpensesSectionsScreen: View {
     let kind: GroupedExpensesKind
-    let year: Int
-    let month: Int
     let onAddExpense: (() -> Void)?
     let onOpenExpense: (String) -> Void
+    @State private var selectedMonth: MonthCursor
+    @State private var groupingMode: ExpenseGroupingMode = .byCategory
 
     init(
         kind: GroupedExpensesKind,
@@ -243,23 +264,24 @@ struct GroupedExpensesSectionsScreen: View {
         onOpenExpense: @escaping (String) -> Void
     ) {
         self.kind = kind
-        self.year = year
-        self.month = month
         self.onAddExpense = onAddExpense
         self.onOpenExpense = onOpenExpense
+        _selectedMonth = State(initialValue: MonthCursor(year: year, month: month))
     }
-
-    @State private var groupingMode: ExpenseGroupingMode = .byCategory
 
     var body: some View {
         GroupedExpensesSectionsList(
             kind: kind,
-            year: year,
-            month: month,
+            year: selectedMonth.year,
+            month: selectedMonth.month,
+            selectedMonth: selectedMonth,
             groupingMode: groupingMode,
             onAddExpense: onAddExpense,
+            onPreviousMonth: supportsMonthNavigation ? { selectedMonth = selectedMonth.previous() } : nil,
+            onNextMonth: supportsMonthNavigation ? { selectedMonth = selectedMonth.next() } : nil,
             onOpenExpense: onOpenExpense
         )
+        .id("\(kind.screenType)-\(selectedMonth.id)-\(groupingMode.rawValue)")
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 12) {
                 groupingButton("By Category", mode: .byCategory)
@@ -269,6 +291,15 @@ struct GroupedExpensesSectionsScreen: View {
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(.thinMaterial)
+        }
+    }
+
+    private var supportsMonthNavigation: Bool {
+        switch kind {
+        case .monthly, .shared:
+            return true
+        case .category:
+            return false
         }
     }
 
@@ -291,24 +322,51 @@ struct GroupedExpensesSectionsScreen: View {
 }
 
 struct MonthlyIncomesSectionsScreen: View {
-    let year: Int
-    let month: Int
     let onOpenIncome: (String) -> Void
-
-    @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
+    @State private var selectedMonth: MonthCursor
 
     init(
         year: Int,
         month: Int,
         onOpenIncome: @escaping (String) -> Void
     ) {
-        self.year = year
-        self.month = month
+        self.onOpenIncome = onOpenIncome
+        _selectedMonth = State(initialValue: MonthCursor(year: year, month: month))
+    }
+
+    var body: some View {
+        MonthlyIncomesSectionsContent(
+            selectedMonth: selectedMonth,
+            onPreviousMonth: { selectedMonth = selectedMonth.previous() },
+            onNextMonth: { selectedMonth = selectedMonth.next() },
+            onOpenIncome: onOpenIncome
+        )
+        .id(selectedMonth.id)
+    }
+}
+
+private struct MonthlyIncomesSectionsContent: View {
+    let selectedMonth: MonthCursor
+    let onPreviousMonth: () -> Void
+    let onNextMonth: () -> Void
+    let onOpenIncome: (String) -> Void
+
+    @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
+
+    init(
+        selectedMonth: MonthCursor,
+        onPreviousMonth: @escaping () -> Void,
+        onNextMonth: @escaping () -> Void,
+        onOpenIncome: @escaping (String) -> Void
+    ) {
+        self.selectedMonth = selectedMonth
+        self.onPreviousMonth = onPreviousMonth
+        self.onNextMonth = onNextMonth
         self.onOpenIncome = onOpenIncome
         _viewModel = StateObject(
             wrappedValue: MonthlyIncomesSectionsViewModel(
-                year: year,
-                month: month
+                year: selectedMonth.year,
+                month: selectedMonth.month
             )
         )
     }
@@ -348,13 +406,12 @@ struct MonthlyIncomesSectionsScreen: View {
         .listStyle(.sidebar)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 1) {
-                    Text("\(monthName(month)) Income")
-                        .font(.headline)
-                    Text(viewModel.totalAmountText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                MonthNavigationToolbarTitle(
+                    selectedMonth: selectedMonth,
+                    subtitle: "Income • \(viewModel.totalAmountText)",
+                    onPreviousMonth: onPreviousMonth,
+                    onNextMonth: onNextMonth
+                )
             }
         }
         .onAppear {
@@ -387,8 +444,11 @@ private struct GroupedExpensesSectionsList: View {
     let kind: GroupedExpensesKind
     let year: Int
     let month: Int
+    let selectedMonth: MonthCursor
     let groupingMode: ExpenseGroupingMode
     let onAddExpense: (() -> Void)?
+    let onPreviousMonth: (() -> Void)?
+    let onNextMonth: (() -> Void)?
     let onOpenExpense: (String) -> Void
 
     @StateObject private var viewModel: GroupedExpensesSectionsViewModel
@@ -397,15 +457,21 @@ private struct GroupedExpensesSectionsList: View {
         kind: GroupedExpensesKind,
         year: Int,
         month: Int,
+        selectedMonth: MonthCursor,
         groupingMode: ExpenseGroupingMode,
         onAddExpense: (() -> Void)?,
+        onPreviousMonth: (() -> Void)?,
+        onNextMonth: (() -> Void)?,
         onOpenExpense: @escaping (String) -> Void
     ) {
         self.kind = kind
         self.year = year
         self.month = month
+        self.selectedMonth = selectedMonth
         self.groupingMode = groupingMode
         self.onAddExpense = onAddExpense
+        self.onPreviousMonth = onPreviousMonth
+        self.onNextMonth = onNextMonth
         self.onOpenExpense = onOpenExpense
         _viewModel = StateObject(
             wrappedValue: GroupedExpensesSectionsViewModel(
@@ -440,12 +506,21 @@ private struct GroupedExpensesSectionsList: View {
         .listStyle(.sidebar)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 1) {
-                    Text(screenTitle)
-                        .font(.headline)
-                    Text(viewModel.totalAmountText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if let onPreviousMonth, let onNextMonth {
+                    MonthNavigationToolbarTitle(
+                        selectedMonth: selectedMonth,
+                        subtitle: "\(screenDescriptor) • \(viewModel.totalAmountText)",
+                        onPreviousMonth: onPreviousMonth,
+                        onNextMonth: onNextMonth
+                    )
+                } else {
+                    VStack(spacing: 1) {
+                        Text(screenTitle)
+                            .font(.headline)
+                        Text(viewModel.totalAmountText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             if let onAddExpense, canAddExpense {
@@ -471,11 +546,22 @@ private struct GroupedExpensesSectionsList: View {
     private var screenTitle: String {
         switch kind {
         case .monthly:
-            return "\(monthName(month)) Expenses"
+            return "\(monthName(selectedMonth.month)) Expenses"
         case .shared:
-            return "\(monthName(month)) Shared Expenses"
+            return "\(monthName(selectedMonth.month)) Shared Expenses"
         case let .category(name):
-            return "\(monthName(month)) \(name)"
+            return "\(monthName(selectedMonth.month)) \(name)"
+        }
+    }
+
+    private var screenDescriptor: String {
+        switch kind {
+        case .monthly:
+            return "Expenses"
+        case .shared:
+            return "Shared Expenses"
+        case let .category(name):
+            return name
         }
     }
 
@@ -544,6 +630,38 @@ private struct GroupedExpenseSectionHeaderView: View {
             Text(section.totalAmountText)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
+        }
+    }
+}
+
+private struct MonthNavigationToolbarTitle: View {
+    let selectedMonth: MonthCursor
+    let subtitle: String
+    let onPreviousMonth: () -> Void
+    let onNextMonth: () -> Void
+
+    var body: some View {
+        VStack(spacing: 1) {
+            HStack(spacing: 4) {
+                Button(action: onPreviousMonth) {
+                    Image(systemName: "chevron.left")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+
+                Text(selectedMonth.label)
+                    .font(.headline)
+
+                Button(action: onNextMonth) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

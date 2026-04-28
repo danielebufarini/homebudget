@@ -48,6 +48,7 @@ abstract class BaseGroupedExpensesScreen(
     protected open fun includeCategory(categoryName: String): Boolean = true
     protected open fun canDeleteExpense(): Boolean = true
     protected open fun canAddExpense(): Boolean = false
+    protected open fun monthNavigationDescriptor(): String? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -74,6 +75,7 @@ abstract class BaseGroupedExpensesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = remember { getPlatform().isIos }
         val scope = rememberCoroutineScope()
+        var selectedMonth by remember { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
@@ -83,12 +85,12 @@ abstract class BaseGroupedExpensesScreen(
             repository.insertDefaultCategoriesIfEmpty()
         }
 
-        val filteredExpenses = remember(expenses, categories, year, month) {
+        val filteredExpenses = remember(expenses, categories, selectedMonth) {
             expenses.filter { expense ->
                 val localDate = expense.date.toLocalDate()
                 val categoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
-                localDate.year == year &&
-                    localDate.month.ordinal + 1 == month &&
+                localDate.year == selectedMonth.year &&
+                    localDate.month.ordinal + 1 == selectedMonth.month &&
                     includeExpense(expense) &&
                     includeCategory(categoryName)
             }
@@ -140,22 +142,32 @@ abstract class BaseGroupedExpensesScreen(
             scope.launch { repository.deleteExpense(expenseId) }
             Unit
         }.takeIf { canDeleteExpense() }
+        val monthNavigationDescriptor = monthNavigationDescriptor()
 
         if (showNavigationChrome) {
             Scaffold(
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(screenTitle(monthName(month)))
-                                Text(
-                                    text = formatAmount(totalAmount),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            if (monthNavigationDescriptor != null) {
+                                MonthNavigationTitle(
+                                    selectedMonth = selectedMonth,
+                                    subtitle = "$monthNavigationDescriptor • ${formatAmount(totalAmount)}",
+                                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                                    onNextMonth = { selectedMonth = selectedMonth.next() }
                                 )
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(screenTitle(monthName(selectedMonth.month)))
+                                    Text(
+                                        text = formatAmount(totalAmount),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         },
                         navigationIcon = {
@@ -446,21 +458,24 @@ abstract class BaseGroupedExpensesScreen(
         }
     }
 
+    val months = listOf(
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+    )
+
     protected fun monthName(month: Int): String {
-        return listOf(
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December"
-        )[month - 1]
+
+        return months[month - 1]
     }
 
     private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)

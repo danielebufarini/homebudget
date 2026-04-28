@@ -1,10 +1,7 @@
 package it.homebudget.app
 
 import com.ionspin.kotlin.bignum.integer.toBigInteger
-import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
-import it.homebudget.app.data.buildPendingExpenses
-import it.homebudget.app.data.buildRecurringMonthlyExpenses
-import it.homebudget.app.data.splitAmountIntoInstallments
+import it.homebudget.app.data.*
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -72,6 +69,36 @@ class ComposeAppCommonTest {
         assertEquals(firstDate, expenses[0].date)
         assertEquals(LocalDate(2026, 2, 28).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[1].date)
         assertEquals(LocalDate(2026, 3, 31).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[2].date)
+    }
+
+    @Test
+    fun buildRecurringMonthlyIncomes_repeatsFullAmountAcrossMonths() {
+        val timeZone = TimeZone.UTC
+        val firstDate = LocalDate(2026, 1, 31).atStartOfDayIn(timeZone).toEpochMilliseconds()
+        var nextId = 0
+
+        val incomes = buildRecurringMonthlyIncomes(
+            amount = 3200.toBigInteger(),
+            firstDate = firstDate,
+            description = "Salary",
+            recurringSeriesId = "income-series-1",
+            idProvider = { "income-${nextId++}" },
+            occurrences = 3,
+            timeZone = timeZone
+        )
+
+        assertEquals(3, incomes.size)
+        assertEquals(
+            listOf(3200.toBigInteger(), 3200.toBigInteger(), 3200.toBigInteger()),
+            incomes.map { it.amount }
+        )
+        assertEquals(
+            listOf("income-series-1", "income-series-1", "income-series-1"),
+            incomes.map { it.recurringSeriesId }
+        )
+        assertEquals(firstDate, incomes[0].date)
+        assertEquals(LocalDate(2026, 2, 28).atStartOfDayIn(timeZone).toEpochMilliseconds(), incomes[1].date)
+        assertEquals(LocalDate(2026, 3, 31).atStartOfDayIn(timeZone).toEpochMilliseconds(), incomes[2].date)
     }
 
     @Test

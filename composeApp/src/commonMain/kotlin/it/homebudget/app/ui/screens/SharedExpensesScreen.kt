@@ -16,4 +16,6 @@ class SharedExpensesScreen(
     override fun includeExpense(expense: Expense): Boolean = expense.isShared == 1L
 
     override fun centerAlignedTitle(): Boolean = true
+
+    override fun monthNavigationDescriptor(): String = "Shared Expenses"
 }

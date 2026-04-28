@@ -7,14 +7,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.formatAmountInput
-import it.homebudget.app.data.parseAmountInput
+import com.ionspin.kotlin.bignum.integer.BigInteger
+import it.homebudget.app.data.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -66,6 +66,8 @@ class AddIncomeScreen(
         var selectedDateMillis by remember(incomeId, defaultDateMillis) {
             mutableStateOf(defaultDateMillis ?: Clock.System.now().toEpochMilliseconds())
         }
+        var isRecurringMonthly by remember { mutableStateOf(false) }
+        var recurringSeriesId by remember { mutableStateOf<String?>(null) }
         var isSaving by remember { mutableStateOf(false) }
         var isInitialized by remember(incomeId) { mutableStateOf(incomeId == null) }
 
@@ -78,6 +80,7 @@ class AddIncomeScreen(
             amount = formatAmountInput(income.amount)
             description = income.description.orEmpty()
             selectedDateMillis = income.date
+            recurringSeriesId = income.recurringSeriesId
             isInitialized = true
         }
 
@@ -135,13 +138,77 @@ class AddIncomeScreen(
                         }
                 ) {
                     PlatformTextField(
-                        value = selectedDateMillis?.formatDateLabel().orEmpty(),
+                        value = selectedDateMillis.formatDateLabel(),
                         onValueChange = {},
                         readOnly = true,
                         enabled = false,
                         label = "Date",
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                if (incomeId == null) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isIos) {
+                                Switch(
+                                    checked = isRecurringMonthly,
+                                    onCheckedChange = { isRecurringMonthly = it }
+                                )
+                            } else {
+                                Checkbox(
+                                    checked = isRecurringMonthly,
+                                    onCheckedChange = { isRecurringMonthly = it }
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text("Recurring Monthly")
+                        }
+                        if (isRecurringMonthly) {
+                            Text(
+                                text = "Creates the same income every month on this day for the next ${RECURRING_MONTHLY_OCCURRENCES / 12} years.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                if (recurringSeriesId != null) {
+                    Text(
+                        text = "This income is part of a recurring monthly series.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (recurringSeriesId != null) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isSaving = true
+                                runCatching {
+                                    repository.cancelRecurringIncomes(
+                                        seriesId = recurringSeriesId.orEmpty(),
+                                        fromDate = selectedDateMillis
+                                    )
+                                }.onSuccess {
+                                    onClose()
+                                }.onFailure {
+                                    snackbarHostState.showSnackbar("Unable to cancel recurring income")
+                                }
+                                isSaving = false
+                            }
+                        },
+                        colors = homeBudgetButtonColors(),
+                        enabled = !isSaving,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancel recurring from this month")
+                    }
                 }
 
                 Row(
@@ -164,17 +231,45 @@ class AddIncomeScreen(
                                 val parsedAmount = parseAmountInput(amount)
 
                                 when {
-                                    parsedAmount == null || parsedAmount <= com.ionspin.kotlin.bignum.integer.BigInteger.ZERO -> {
+                                    parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
                                         snackbarHostState.showSnackbar("Enter a valid amount greater than 0")
                                     }
                                     else -> {
                                         isSaving = true
                                         runCatching {
-                                            repository.insertIncome(
-                                                id = incomeId ?: buildIncomeId(),
-                                                amount = parsedAmount,
-                                                date = selectedDateMillis,
-                                                description = description.trim().ifBlank { null }
+                                            val incomes = if (incomeId == null) {
+                                                if (isRecurringMonthly) {
+                                                    buildRecurringMonthlyIncomes(
+                                                        amount = parsedAmount,
+                                                        firstDate = selectedDateMillis,
+                                                        description = description.trim(),
+                                                        recurringSeriesId = buildRecurringIncomeSeriesId(),
+                                                        idProvider = ::buildIncomeId
+                                                    )
+                                                } else {
+                                                    listOf(
+                                                        PendingIncome(
+                                                            id = buildIncomeId(),
+                                                            amount = parsedAmount,
+                                                            date = selectedDateMillis,
+                                                            description = description.trim().ifBlank { null },
+                                                            recurringSeriesId = null
+                                                        )
+                                                    )
+                                                }
+                                            } else {
+                                                listOf(
+                                                    PendingIncome(
+                                                        id = incomeId,
+                                                        amount = parsedAmount,
+                                                        date = selectedDateMillis,
+                                                        description = description.trim().ifBlank { null },
+                                                        recurringSeriesId = recurringSeriesId
+                                                    )
+                                                )
+                                            }
+                                            repository.insertIncomes(
+                                                incomes = incomes
                                             )
                                         }.onSuccess {
                                             onClose()
@@ -198,6 +293,10 @@ class AddIncomeScreen(
 
 private fun buildIncomeId(): String {
     return "income_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
+}
+
+private fun buildRecurringIncomeSeriesId(): String {
+    return "recurring-income_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
 }
 
 private fun buildInitialIncomeDateMillis(

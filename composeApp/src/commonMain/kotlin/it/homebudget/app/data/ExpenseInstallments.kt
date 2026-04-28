@@ -2,11 +2,7 @@ package it.homebudget.app.data
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
-import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.plus
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.*
 import kotlin.time.Instant
 
 data class PendingExpense(
@@ -16,6 +12,14 @@ data class PendingExpense(
     val categoryId: String,
     val description: String?,
     val isShared: Boolean,
+    val recurringSeriesId: String? = null
+)
+
+data class PendingIncome(
+    val id: String,
+    val amount: BigInteger,
+    val date: Long,
+    val description: String?,
     val recurringSeriesId: String? = null
 )
 
@@ -69,6 +73,28 @@ fun buildRecurringMonthlyExpenses(
             categoryId = categoryId,
             description = description.ifBlankToNull(),
             isShared = isShared,
+            recurringSeriesId = recurringSeriesId
+        )
+    }
+}
+
+fun buildRecurringMonthlyIncomes(
+    amount: BigInteger,
+    firstDate: Long,
+    description: String?,
+    recurringSeriesId: String,
+    idProvider: () -> String,
+    occurrences: Int = RECURRING_MONTHLY_OCCURRENCES,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): List<PendingIncome> {
+    require(occurrences > 0) { "occurrences must be greater than 0" }
+
+    return List(occurrences) { index ->
+        PendingIncome(
+            id = idProvider(),
+            amount = amount,
+            date = monthlyOccurrenceDate(firstDate, index, timeZone),
+            description = description.ifBlankToNull(),
             recurringSeriesId = recurringSeriesId
         )
     }

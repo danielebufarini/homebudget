@@ -353,27 +353,12 @@ private fun DashboardMonthHeader(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ArrowButton(direction = ArrowDirection.Left, onClick = onPreviousMonth)
-            Text(
-                text = selectedMonth.label(),
-                style = MaterialTheme.typography.titleLarge
-            )
-            ArrowButton(direction = ArrowDirection.Right, onClick = onNextMonth)
-        }
-        Text(
-            text = formatAmount(totalAmount),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    MonthNavigationTitle(
+        selectedMonth = selectedMonth,
+        subtitle = formatAmount(totalAmount),
+        onPreviousMonth = onPreviousMonth,
+        onNextMonth = onNextMonth
+    )
 }
 
 @Composable
@@ -549,44 +534,13 @@ private fun SummaryMetric(
 }
 
 @Composable
-private fun ArrowButton(
-    direction: ArrowDirection,
-    onClick: () -> Unit
-) {
-    val arrowColor = MaterialTheme.colorScheme.onSurface
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(24.dp)
-    ) {
-        Canvas(modifier = Modifier.size(10.dp)) {
-            val path = Path().apply {
-                if (direction == ArrowDirection.Left) {
-                    moveTo(size.width * 0.75f, size.height * 0.15f)
-                    lineTo(size.width * 0.3f, size.height * 0.5f)
-                    lineTo(size.width * 0.75f, size.height * 0.85f)
-                } else {
-                    moveTo(size.width * 0.25f, size.height * 0.15f)
-                    lineTo(size.width * 0.7f, size.height * 0.5f)
-                    lineTo(size.width * 0.25f, size.height * 0.85f)
-                }
-            }
-            drawPath(
-                path = path,
-                color = arrowColor,
-                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
-            )
-        }
-    }
-}
-
-@Composable
 private fun DashboardCharts(
     modifier: Modifier,
     lineChartState: LineChartState,
     categoryTotals: List<CategoryTotal>
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
-    val pageTitles = listOf("Cash Flow", "By Category")
+    val pageTitles = listOf("Cash Flow", "Expenses by category")
 
     PlatformCard(modifier = modifier, contentPadding = PaddingValues(0.dp)) {
         Column(
@@ -1098,70 +1052,6 @@ private fun formatAxisAmount(amount: Double): String {
     return rounded.toString()
 }
 
-private data class MonthCursor(
-    val year: Int,
-    val month: Int
-) {
-    fun previous(): MonthCursor {
-        return if (month == 1) MonthCursor(year - 1, 12) else MonthCursor(year, month - 1)
-    }
-
-    fun next(): MonthCursor {
-        return if (month == 12) MonthCursor(year + 1, 1) else MonthCursor(year, month + 1)
-    }
-
-    fun trailingMonths(count: Int): List<MonthCursor> {
-        if (count <= 0) {
-            return emptyList()
-        }
-
-        val months = ArrayDeque<MonthCursor>(count)
-        var cursor = this
-        repeat(count) {
-            months.addFirst(cursor)
-            cursor = cursor.previous()
-        }
-        return months.toList()
-    }
-
-    fun label(): String {
-        val monthNames = listOf(
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December"
-        )
-        return "${monthNames[month - 1]} $year"
-    }
-
-    fun shortLabel(): String {
-        val monthNames = listOf(
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec"
-        )
-        val shortYear = (year % 100).toString().padStart(2, '0')
-        return "${monthNames[month - 1]} $shortYear"
-    }
-}
-
 private data class MonthlySummary(
     val totalAmount: BigInteger,
     val expenseCount: Int,
@@ -1211,7 +1101,3 @@ private data class LineSeries(
     val values: List<Double>,
     val markerDays: Set<Int> = emptySet()
 )
-
-private enum class ArrowDirection {
-    Left, Right
-}

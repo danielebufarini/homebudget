@@ -117,14 +117,43 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         id: String,
         amount: BigInteger,
         date: Long,
-        description: String?
+        description: String?,
+        recurringSeriesId: String? = null
     ) {
+        insertIncomes(
+            listOf(
+                PendingIncome(
+                    id = id,
+                    amount = amount,
+                    date = date,
+                    description = description,
+                    recurringSeriesId = recurringSeriesId
+                )
+            )
+        )
+    }
+
+    suspend fun insertIncomes(incomes: List<PendingIncome>) {
         withContext(Dispatchers.IO) {
-            incomeQueries.insertIncome(
-                id = id,
-                amount = amount,
-                date = date,
-                description = description
+            database.transaction {
+                incomes.forEach { income ->
+                    incomeQueries.insertIncome(
+                        id = income.id,
+                        amount = income.amount,
+                        date = income.date,
+                        description = income.description,
+                        recurringSeriesId = income.recurringSeriesId
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun cancelRecurringIncomes(seriesId: String, fromDate: Long) {
+        withContext(Dispatchers.IO) {
+            incomeQueries.deleteRecurringIncomesFrom(
+                recurringSeriesId = seriesId,
+                date = fromDate
             )
         }
     }

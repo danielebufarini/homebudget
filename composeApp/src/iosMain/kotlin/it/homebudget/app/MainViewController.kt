@@ -127,9 +127,10 @@ fun MonthlyIncomesViewController(
 ) {
     AppTheme {
         MonthlyIncomesScreen(year = year, month = month).RouteContent(
+            initialMonth = MonthCursor(year = year, month = month),
             showNavigationChrome = false,
             onBack = {},
-            onAddIncome = onAddIncome,
+            onAddIncome = { _, _ -> onAddIncome() },
             onOpenIncome = onOpenIncome
         )
     }

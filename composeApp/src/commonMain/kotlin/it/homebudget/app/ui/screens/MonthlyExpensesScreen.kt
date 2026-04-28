@@ -16,4 +16,6 @@ class MonthlyExpensesScreen(
     override fun includeExpense(expense: Expense): Boolean = true
 
     override fun canAddExpense(): Boolean = true
+
+    override fun monthNavigationDescriptor(): String = "Expenses"
 }

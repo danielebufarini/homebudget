@@ -2,12 +2,13 @@ CREATE TABLE income (
     id TEXT NOT NULL PRIMARY KEY,
     amount TEXT AS com.ionspin.kotlin.bignum.integer.BigInteger NOT NULL,
     date INTEGER NOT NULL,
-    description TEXT
+    description TEXT,
+    recurringSeriesId TEXT
 );
 
 insertIncome:
-INSERT OR REPLACE INTO income(id, amount, date, description)
-VALUES (?, ?, ?, ?);
+INSERT OR REPLACE INTO income(id, amount, date, description, recurringSeriesId)
+VALUES (?, ?, ?, ?, ?);
 
 getAllIncomes:
 SELECT * FROM income ORDER BY date DESC;
@@ -17,3 +18,8 @@ SELECT * FROM income WHERE id = ?;
 
 deleteIncome:
 DELETE FROM income WHERE id = ?;
+
+deleteRecurringIncomesFrom:
+DELETE FROM income
+WHERE recurringSeriesId = ?
+  AND date >= ?;

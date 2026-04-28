@@ -29,13 +29,14 @@ class MonthlyIncomesScreen(
     override fun Content() {
         val navigator = LocalNavigator.current
         RouteContent(
+            initialMonth = MonthCursor(year, month),
             showNavigationChrome = true,
             onBack = { navigator?.pop() },
-            onAddIncome = {
+            onAddIncome = { selectedYear, selectedMonth ->
                 navigator?.push(
                     AddIncomeScreen(
-                        initialYear = year,
-                        initialMonth = month
+                        initialYear = selectedYear,
+                        initialMonth = selectedMonth
                     )
                 )
             },
@@ -48,20 +49,22 @@ class MonthlyIncomesScreen(
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun RouteContent(
+        initialMonth: MonthCursor,
         showNavigationChrome: Boolean,
         onBack: () -> Unit,
-        onAddIncome: () -> Unit,
+        onAddIncome: (Int, Int) -> Unit,
         onOpenIncome: (String) -> Unit
     ) {
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
+        var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
         val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
 
-        val filteredIncomes: List<Income> = remember(incomes, year, month) {
+        val filteredIncomes: List<Income> = remember(incomes, selectedMonth) {
             incomes.filter { income ->
                 val localDate = income.date.toLocalDate()
-                localDate.year == year && localDate.month.ordinal + 1 == month
+                localDate.year == selectedMonth.year && localDate.month.ordinal + 1 == selectedMonth.month
             }
         }
         val groupedIncomes: List<Pair<String, List<Income>>> = remember(filteredIncomes) {
@@ -151,17 +154,12 @@ class MonthlyIncomesScreen(
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text("${monthName(month)} Income")
-                                Text(
-                                    text = formatAmount(totalAmount),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            MonthNavigationTitle(
+                                selectedMonth = selectedMonth,
+                                subtitle = "Income • ${formatAmount(totalAmount)}",
+                                onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                                onNextMonth = { selectedMonth = selectedMonth.next() }
+                            )
                         },
                         navigationIcon = {
                             if (isIos) {
@@ -175,7 +173,7 @@ class MonthlyIncomesScreen(
                 floatingActionButton = {
                     if (!isIos) {
                         FloatingActionButton(
-                            onClick = onAddIncome,
+                            onClick = { onAddIncome(selectedMonth.year, selectedMonth.month) },
                             shape = androidx.compose.foundation.shape.CircleShape,
                             containerColor = androidAccentButtonContainerColor(),
                             contentColor = androidAccentButtonContentColor()
