@@ -62,8 +62,20 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         return expenseQueries.getAllExpenses().asFlow().mapToList(Dispatchers.IO)
     }
 
+    suspend fun getAllExpensesSnapshot(): List<Expense> {
+        return withContext(Dispatchers.IO) {
+            expenseQueries.getAllExpenses().executeAsList()
+        }
+    }
+
     fun getAllIncomes(): Flow<List<Income>> {
         return incomeQueries.getAllIncomes().asFlow().mapToList(Dispatchers.IO)
+    }
+
+    suspend fun getAllCategoriesSnapshot(): List<Category> {
+        return withContext(Dispatchers.IO) {
+            categoryQueries.getAllCategories().executeAsList()
+        }
     }
 
     suspend fun getExpenseById(id: String): Expense? {

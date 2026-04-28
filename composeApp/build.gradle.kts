@@ -34,6 +34,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.recyclerview)
+            implementation(libs.mlkit.genai.prompt)
             implementation(libs.sqldelight.android)
         }
         iosMain.dependencies {

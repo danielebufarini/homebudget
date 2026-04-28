@@ -223,6 +223,9 @@ private fun DashboardScreenScaffold(
                         ) {
                             Text("≡", style = MaterialTheme.typography.titleLarge)
                         }
+                    },
+                    actions = {
+                        DashboardVoiceExpenseAction()
                     }
                 )
             },

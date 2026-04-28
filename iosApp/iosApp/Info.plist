@@ -4,5 +4,9 @@
     <dict>
         <key>CADisableMinimumFrameDurationOnPhone</key>
         <true/>
+        <key>NSMicrophoneUsageDescription</key>
+        <string>Record a spoken expense command.</string>
+        <key>NSSpeechRecognitionUsageDescription</key>
+        <string>Convert your spoken expense command into text.</string>
     </dict>
 </plist>
