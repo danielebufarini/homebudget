@@ -296,16 +296,21 @@ struct GroupedExpensesSectionsScreen: View {
             onNextMonth: supportsMonthNavigation ? { selectedMonth = selectedMonth.next() } : nil,
             onOpenExpense: onOpenExpense
         )
-        .id("\(kind.screenType)-\(selectedMonth.id)-\(groupingMode.rawValue)")
+        .id("\(kind.screenType)-\(selectedMonth.id)")
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                groupingButton("By Category", mode: .byCategory)
-                groupingButton("By Date", mode: .byDate)
+            Color.clear
+                .frame(height: 64)
+                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottom) {
+            Picker("Expense Grouping", selection: $groupingMode) {
+                Text("By Category").tag(ExpenseGroupingMode.byCategory)
+                Text("By Date").tag(ExpenseGroupingMode.byDate)
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(.thinMaterial)
+            .padding(.bottom, 10)
         }
     }
 
@@ -315,23 +320,6 @@ struct GroupedExpensesSectionsScreen: View {
             return true
         case .category:
             return false
-        }
-    }
-
-    @ViewBuilder
-    private func groupingButton(_ title: String, mode: ExpenseGroupingMode) -> some View {
-        if mode == groupingMode {
-            Button(title) {
-                groupingMode = mode
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-        } else {
-            Button(title) {
-                groupingMode = mode
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
     }
 }
@@ -405,8 +393,8 @@ private struct MonthlyIncomesSectionsContent: View {
                                 GroupedExpenseRowView(row: row)
                             }
                             .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
+                            .swipeActions(edge: .trailing, allowsFullSwipe: !row.isRecurring) {
+                                Button {
                                     if row.isRecurring {
                                         recurringIncomeToDelete = row
                                     } else {
@@ -414,6 +402,23 @@ private struct MonthlyIncomesSectionsContent: View {
                                     }
                                 } label: {
                                     Label("Delete", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+                            .confirmationDialog(
+                                "Delete recurring income",
+                                isPresented: recurringIncomeDialogBinding(for: row),
+                                titleVisibility: .visible
+                            ) {
+                                Button("Delete This Instance Only", role: .destructive) {
+                                    viewModel.deleteIncome(row.id)
+                                    recurringIncomeToDelete = nil
+                                }
+                                Button("Delete Whole Series", role: .destructive) {
+                                    if let seriesID = row.recurringSeriesId {
+                                        viewModel.deleteRecurringIncomeSeries(seriesID)
+                                    }
+                                    recurringIncomeToDelete = nil
                                 }
                             }
                         }
@@ -440,29 +445,6 @@ private struct MonthlyIncomesSectionsContent: View {
         .onDisappear {
             viewModel.stop()
         }
-        .confirmationDialog(
-            "Delete recurring income?",
-            isPresented: recurringIncomeDialogBinding,
-            titleVisibility: .visible
-        ) {
-            if let row = recurringIncomeToDelete {
-                Button("This Instance Only", role: .destructive) {
-                    viewModel.deleteIncome(row.id)
-                    recurringIncomeToDelete = nil
-                }
-                Button("Whole Series", role: .destructive) {
-                    if let seriesID = row.recurringSeriesId {
-                        viewModel.deleteRecurringIncomeSeries(seriesID)
-                    }
-                    recurringIncomeToDelete = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                recurringIncomeToDelete = nil
-            }
-        } message: {
-            Text("Choose whether to delete only this income or the whole recurring series.")
-        }
     }
 
     private func expansionBinding(for sectionID: String) -> Binding<Bool> {
@@ -482,10 +464,10 @@ private struct MonthlyIncomesSectionsContent: View {
         )
     }
 
-    private var recurringIncomeDialogBinding: Binding<Bool> {
+    private func recurringIncomeDialogBinding(for row: GroupedExpenseRowModel) -> Binding<Bool> {
         Binding(
             get: {
-                recurringIncomeToDelete != nil
+                recurringIncomeToDelete?.id == row.id
             },
             set: { isPresented in
                 if !isPresented {
@@ -598,29 +580,6 @@ private struct GroupedExpensesSectionsList: View {
         .onDisappear {
             viewModel.stop()
         }
-        .confirmationDialog(
-            "Delete recurring expense?",
-            isPresented: recurringExpenseDialogBinding,
-            titleVisibility: .visible
-        ) {
-            if let row = recurringExpenseToDelete {
-                Button("This Instance Only", role: .destructive) {
-                    viewModel.deleteExpense(row.id)
-                    recurringExpenseToDelete = nil
-                }
-                Button("Whole Series", role: .destructive) {
-                    if let seriesID = row.recurringSeriesId {
-                        viewModel.deleteRecurringExpenseSeries(seriesID)
-                    }
-                    recurringExpenseToDelete = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                recurringExpenseToDelete = nil
-            }
-        } message: {
-            Text("Choose whether to delete only this expense or the whole recurring series.")
-        }
     }
 
     private var screenTitle: String {
@@ -680,8 +639,8 @@ private struct GroupedExpensesSectionsList: View {
                 GroupedExpenseRowView(row: row)
             }
             .buttonStyle(.plain)
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
+            .swipeActions(edge: .trailing, allowsFullSwipe: !row.isRecurring) {
+                Button {
                     if row.isRecurring {
                         recurringExpenseToDelete = row
                     } else {
@@ -689,6 +648,23 @@ private struct GroupedExpensesSectionsList: View {
                     }
                 } label: {
                     Label("Delete", systemImage: "trash")
+                }
+                .tint(.red)
+            }
+            .confirmationDialog(
+                "Delete recurring expense",
+                isPresented: recurringExpenseDialogBinding(for: row),
+                titleVisibility: .visible
+            ) {
+                Button("Delete This Instance Only", role: .destructive) {
+                    viewModel.deleteExpense(row.id)
+                    recurringExpenseToDelete = nil
+                }
+                Button("Delete Whole Series", role: .destructive) {
+                    if let seriesID = row.recurringSeriesId {
+                        viewModel.deleteRecurringExpenseSeries(seriesID)
+                    }
+                    recurringExpenseToDelete = nil
                 }
             }
         } else {
@@ -701,10 +677,10 @@ private struct GroupedExpensesSectionsList: View {
         }
     }
 
-    private var recurringExpenseDialogBinding: Binding<Bool> {
+    private func recurringExpenseDialogBinding(for row: GroupedExpenseRowModel) -> Binding<Bool> {
         Binding(
             get: {
-                recurringExpenseToDelete != nil
+                recurringExpenseToDelete?.id == row.id
             },
             set: { isPresented in
                 if !isPresented {
@@ -713,6 +689,7 @@ private struct GroupedExpensesSectionsList: View {
             }
         )
     }
+
 }
 
 private struct GroupedExpenseSectionHeaderView: View {

@@ -304,12 +304,12 @@ private struct ExpenseEditorRootView: View {
             }
         }
         .confirmationDialog(
-            "Delete recurring expense?",
+            "Delete recurring expense",
             isPresented: recurringDialogBinding,
             titleVisibility: .visible
         ) {
             if let expenseId {
-                Button("This Instance Only", role: .destructive) {
+                Button("Delete This Instance Only", role: .destructive) {
                     deletionViewModel.pendingSeriesId = nil
                     deletionViewModel.deleteExpense(
                         expenseId: expenseId,
@@ -317,14 +317,9 @@ private struct ExpenseEditorRootView: View {
                     )
                 }
             }
-            Button("Whole Series", role: .destructive) {
+            Button("Delete Whole Series", role: .destructive) {
                 deletionViewModel.deleteWholeSeries(onClose: onClose)
             }
-            Button("Cancel", role: .cancel) {
-                deletionViewModel.pendingSeriesId = nil
-            }
-        } message: {
-            Text("Choose whether to delete only this expense or the whole recurring series.")
         }
     }
 
@@ -377,12 +372,12 @@ private struct IncomeEditorRootView: View {
             }
         }
         .confirmationDialog(
-            "Delete recurring income?",
+            "Delete recurring income",
             isPresented: recurringDialogBinding,
             titleVisibility: .visible
         ) {
             if let incomeId {
-                Button("This Instance Only", role: .destructive) {
+                Button("Delete This Instance Only", role: .destructive) {
                     deletionViewModel.pendingSeriesId = nil
                     deletionViewModel.deleteIncome(
                         incomeId: incomeId,
@@ -390,14 +385,9 @@ private struct IncomeEditorRootView: View {
                     )
                 }
             }
-            Button("Whole Series", role: .destructive) {
+            Button("Delete Whole Series", role: .destructive) {
                 deletionViewModel.deleteWholeSeries(onClose: onClose)
             }
-            Button("Cancel", role: .cancel) {
-                deletionViewModel.pendingSeriesId = nil
-            }
-        } message: {
-            Text("Choose whether to delete only this income or the whole recurring series.")
         }
     }
 
