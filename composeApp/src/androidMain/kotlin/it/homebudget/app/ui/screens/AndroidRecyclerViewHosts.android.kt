@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +26,7 @@ import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
+import kotlinx.coroutines.launch
 import kotlinx.datetime.toLocalDateTime
 
 @Composable
@@ -274,7 +274,7 @@ private fun AndroidGroupedExpenseSectionCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFFFF4F7))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .clickable(onClick = onToggleExpanded)
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -308,12 +308,14 @@ private fun AndroidGroupedExpenseSectionCard(
                 Column {
                     HorizontalDivider()
                     section.rows.forEach { row ->
-                        AndroidGroupedExpenseRow(
-                            row = row,
-                            onOpenExpense = onOpenExpense,
-                            onDeleteExpense = onDeleteExpense
-                        )
-                        HorizontalDivider()
+                        key(row.id) {
+                            AndroidGroupedExpenseRow(
+                                row = row,
+                                onOpenExpense = onOpenExpense,
+                                onDeleteExpense = onDeleteExpense
+                            )
+                            HorizontalDivider()
+                        }
                     }
                 }
             }
@@ -339,23 +341,28 @@ private fun AndroidGroupedExpenseRow(
         return
     }
 
+    val scope = rememberCoroutineScope()
+    val currentOnDeleteExpense by rememberUpdatedState(onDeleteExpense)
     val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                onDeleteExpense(row.id)
-                false
-            } else {
-                true
-            }
-        },
         positionalThreshold = { distance ->
             distance * 0.35f
         }
     )
+    val handleDismiss = remember(row.id, dismissState, scope) {
+        { dismissValue: SwipeToDismissBoxValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                currentOnDeleteExpense(row.id)
+                scope.launch {
+                    dismissState.reset()
+                }
+            }
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
+        onDismiss = handleDismiss,
         backgroundContent = {
             DeleteExpenseBackground()
         }

@@ -1,12 +1,12 @@
 package it.homebudget.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import it.homebudget.app.getPlatform
 
 private val LightColors = lightColorScheme(
@@ -101,6 +101,21 @@ private val IosDarkColors = darkColorScheme(
     onSurface = Color(0xFFF5F5F7),
 )
 
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(28.dp)
+)
+
+@Composable
+internal expect fun platformColorScheme(
+    useDarkTheme: Boolean,
+    lightColors: ColorScheme,
+    darkColors: ColorScheme
+): ColorScheme
+
 @Composable
 fun AppTheme(
     useDarkTheme: Boolean = isSystemInDarkTheme(),
@@ -112,13 +127,22 @@ fun AppTheme(
     } else if (isIos) {
         IosDarkColors
     } else if (!useDarkTheme) {
-        LightColors
+        platformColorScheme(
+            useDarkTheme = false,
+            lightColors = LightColors,
+            darkColors = DarkColors
+        )
     } else {
-        DarkColors
+        platformColorScheme(
+            useDarkTheme = true,
+            lightColors = LightColors,
+            darkColors = DarkColors
+        )
     }
 
     MaterialTheme(
         colorScheme = colors,
+        shapes = AppShapes,
         typography = appTypography(),
         content = content
     )

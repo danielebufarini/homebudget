@@ -3,9 +3,9 @@ package it.homebudget.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -113,10 +113,7 @@ fun CategoriesRoute(
                         onClick = { showAddDialog = true },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        shape = CircleShape,
-                        containerColor = androidAccentButtonContainerColor(),
-                        contentColor = androidAccentButtonContentColor()
+                            .padding(16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
@@ -199,7 +196,10 @@ private fun CategoriesScreenScaffold(
                                     }
                                 }
                             ) {
-                                Text("≡", style = MaterialTheme.typography.titleLarge)
+                                Icon(
+                                    imageVector = Icons.Filled.Menu,
+                                    contentDescription = "Open navigation menu"
+                                )
                             }
                         }
                     )
@@ -213,10 +213,7 @@ private fun CategoriesScreenScaffold(
                         }
                     } else {
                         FloatingActionButton(
-                            onClick = onShowAddDialog,
-                            shape = CircleShape,
-                            containerColor = androidAccentButtonContainerColor(),
-                            contentColor = androidAccentButtonContentColor()
+                            onClick = onShowAddDialog
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,

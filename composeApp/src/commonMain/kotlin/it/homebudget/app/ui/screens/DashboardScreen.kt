@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -170,10 +171,7 @@ fun DashboardRoute(
                         onClick = onOpenAddExpense,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        shape = CircleShape,
-                        containerColor = androidAccentButtonContainerColor(),
-                        contentColor = androidAccentButtonContentColor()
+                            .padding(16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
@@ -221,7 +219,10 @@ private fun DashboardScreenScaffold(
                                 }
                             }
                         ) {
-                            Text("≡", style = MaterialTheme.typography.titleLarge)
+                            Icon(
+                                imageVector = Icons.Filled.Menu,
+                                contentDescription = "Open navigation menu"
+                            )
                         }
                     },
                     actions = {
@@ -237,10 +238,7 @@ private fun DashboardScreenScaffold(
                         }
                     } else {
                         FloatingActionButton(
-                            onClick = onOpenAddExpense,
-                            shape = CircleShape,
-                            containerColor = androidAccentButtonContainerColor(),
-                            contentColor = androidAccentButtonContentColor()
+                            onClick = onOpenAddExpense
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
@@ -484,7 +482,7 @@ private fun SummaryMetric(
             contentColor = contentColor
         ),
         border = if (isIos) {
-            androidx.compose.foundation.BorderStroke(
+            BorderStroke(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
             )

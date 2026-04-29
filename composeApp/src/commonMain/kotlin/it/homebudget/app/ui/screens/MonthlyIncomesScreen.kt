@@ -140,12 +140,14 @@ class MonthlyIncomesScreen(
 
                                     HorizontalDivider()
                                     for (income in incomesForDate) {
-                                        MonthlyIncomeRow(
-                                            income = income,
-                                            onOpenIncome = onOpenIncome,
-                                            onDeleteIncome = deleteIncomeAction
-                                        )
-                                        HorizontalDivider()
+                                        key(income.id) {
+                                            MonthlyIncomeRow(
+                                                income = income,
+                                                onOpenIncome = onOpenIncome,
+                                                onDeleteIncome = deleteIncomeAction
+                                            )
+                                            HorizontalDivider()
+                                        }
                                     }
                                 }
                             }
@@ -179,10 +181,7 @@ class MonthlyIncomesScreen(
                 floatingActionButton = {
                     if (!isIos) {
                         FloatingActionButton(
-                            onClick = { onAddIncome(selectedMonth.year, selectedMonth.month) },
-                            shape = androidx.compose.foundation.shape.CircleShape,
-                            containerColor = androidAccentButtonContainerColor(),
-                            contentColor = androidAccentButtonContentColor()
+                            onClick = { onAddIncome(selectedMonth.year, selectedMonth.month) }
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
@@ -229,23 +228,28 @@ private fun MonthlyIncomeRow(
     onOpenIncome: (String) -> Unit,
     onDeleteIncome: (String) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val currentOnDeleteIncome by rememberUpdatedState(onDeleteIncome)
     val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                onDeleteIncome(income.id)
-                false
-            } else {
-                true
-            }
-        },
         positionalThreshold = { distance ->
             distance * 0.35f
         }
     )
+    val handleDismiss = remember(income.id, dismissState, scope) {
+        { dismissValue: SwipeToDismissBoxValue ->
+            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                currentOnDeleteIncome(income.id)
+                scope.launch {
+                    dismissState.reset()
+                }
+            }
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
+        onDismiss = handleDismiss,
         backgroundContent = {
             DeleteExpenseBackground()
         }

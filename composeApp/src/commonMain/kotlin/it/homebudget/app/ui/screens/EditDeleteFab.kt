@@ -1,7 +1,6 @@
 package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.FloatingActionButton
@@ -22,7 +21,7 @@ internal fun DeleteEditItemFab(
 
     FloatingActionButton(
         onClick = onFabClick,
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.large,
         containerColor = containerColor,
         contentColor = contentColor,
         modifier = Modifier.navigationBarsPadding()

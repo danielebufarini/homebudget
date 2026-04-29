@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -192,10 +191,7 @@ abstract class BaseGroupedExpensesScreen(
                 floatingActionButton = {
                     if (!isIos && canAddExpense()) {
                         FloatingActionButton(
-                            onClick = onAddExpense,
-                            shape = CircleShape,
-                            containerColor = androidAccentButtonContainerColor(),
-                            contentColor = androidAccentButtonContentColor()
+                            onClick = onAddExpense
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
@@ -368,6 +364,7 @@ abstract class BaseGroupedExpensesScreen(
                             if (expanded) {
                                 HorizontalDivider()
                                 categoryExpenses.forEach { expense ->
+                                    key(expense.id) {
                                         val expenseName = expense.description?.ifBlank { expenseFallbackTitle() }
                                             ?: expenseFallbackTitle()
                                         val categoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
@@ -393,23 +390,28 @@ abstract class BaseGroupedExpensesScreen(
                                                 }
                                             )
                                         } else {
+                                            val scope = rememberCoroutineScope()
+                                            val currentOnDeleteExpense by rememberUpdatedState(onDeleteExpense)
                                             val dismissState = rememberSwipeToDismissBoxState(
-                                                confirmValueChange = { dismissValue ->
-                                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                                        onDeleteExpense(expense.id)
-                                                        false
-                                                    } else {
-                                                        true
-                                                    }
-                                                },
                                                 positionalThreshold = { distance ->
                                                     distance * 0.35f
                                                 }
                                             )
+                                            val handleDismiss = remember(expense.id, dismissState, scope) {
+                                                { dismissValue: SwipeToDismissBoxValue ->
+                                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                                        currentOnDeleteExpense(expense.id)
+                                                        scope.launch {
+                                                            dismissState.reset()
+                                                        }
+                                                    }
+                                                }
+                                            }
 
                                             SwipeToDismissBox(
                                                 state = dismissState,
                                                 enableDismissFromStartToEnd = false,
+                                                onDismiss = handleDismiss,
                                                 backgroundContent = {
                                                     DeleteExpenseBackground()
                                                 }
@@ -426,6 +428,7 @@ abstract class BaseGroupedExpensesScreen(
                                         }
                                         HorizontalDivider()
                                     }
+                                }
                             }
                         }
                     }
@@ -449,6 +452,15 @@ abstract class BaseGroupedExpensesScreen(
         onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
         modifier: Modifier = Modifier
     ) {
+        if (!rememberIsIosPlatform()) {
+            AndroidGroupingModeSegmentedButtons(
+                groupingMode = groupingMode,
+                onGroupingModeChange = onGroupingModeChange,
+                modifier = modifier
+            )
+            return
+        }
+
         Row(
             modifier = modifier,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -464,6 +476,34 @@ abstract class BaseGroupedExpensesScreen(
                 selected = groupingMode == ExpenseGroupingMode.ByDate,
                 onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
             )
+        }
+    }
+
+    @Composable
+    private fun AndroidGroupingModeSegmentedButtons(
+        groupingMode: ExpenseGroupingMode,
+        onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        val options = listOf(
+            ExpenseGroupingMode.ByCategory to "By Category",
+            ExpenseGroupingMode.ByDate to "By Date"
+        )
+
+        SingleChoiceSegmentedButtonRow(modifier = modifier) {
+            options.forEachIndexed { index, (mode, label) ->
+                SegmentedButton(
+                    selected = groupingMode == mode,
+                    onClick = { onGroupingModeChange(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = options.size
+                    ),
+                    icon = {}
+                ) {
+                    Text(label)
+                }
+            }
         }
     }
 
