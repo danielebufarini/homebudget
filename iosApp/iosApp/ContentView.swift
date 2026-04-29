@@ -1,4 +1,4 @@
-import ComposeApp
+@preconcurrency import ComposeApp
 import AVFoundation
 import FoundationModels
 import Speech
@@ -62,7 +62,6 @@ private final class SafeAreaContainerViewController: UIViewController {
 struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
-    @State private var systemLanguageModel = SystemLanguageModel.default
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -75,13 +74,11 @@ struct ContentView: View {
                             path.append(Route.categories)
                         }
                     }
-                    if foundationModelsAvailable {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button {
-                                showVoiceExpenseSheet = true
-                            } label: {
-                                Image(systemName: "waveform.badge.mic")
-                            }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showVoiceExpenseSheet = true
+                        } label: {
+                            Image(systemName: "waveform.badge.mic")
                         }
                     }
                 }
@@ -163,13 +160,6 @@ struct ContentView: View {
                     }
                 }
         }
-    }
-
-    private var foundationModelsAvailable: Bool {
-        if case .available = systemLanguageModel.availability {
-            return true
-        }
-        return false
     }
 }
 
@@ -592,8 +582,8 @@ private struct VoiceExpenseEntrySheet: View {
                 }
 
                 if let draft = viewModel.draft {
-                    Section("Parsed Action") {
-                        Text(draft.summary)
+                    Section("Ready to Save") {
+                        Text(draft.intent == .create ? "Ready to save a new expense." : "Ready to update the matched expense.")
                         LabeledContent("Action", value: draft.actionLabel)
                         if let amountLabel = draft.amountLabel {
                             LabeledContent("Amount", value: amountLabel)
@@ -645,6 +635,7 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
 
     private let controller = IosVoiceExpenseController()
     private let recorder = VoiceExpenseRecorder()
+    private let languageModel = SystemLanguageModel.default
     private var categoriesById: [String: VoiceExpenseCategory] = [:]
     private var expensesById: [String: VoiceExpenseCandidate] = [:]
     private var snapshotLoaded = false
@@ -654,7 +645,7 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
     }
 
     var canStartCapture: Bool {
-        snapshotLoaded
+        snapshotLoaded && languageModel.isAvailable
     }
 
     var canCommit: Bool {
@@ -684,13 +675,20 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
 
         Task {
             let result = await persist(draft: draft)
+            let finalResult: (success: Bool, message: String?)
+            if result.success {
+                await refreshSnapshotAfterSave()
+                finalResult = result
+            } else {
+                finalResult = result
+            }
             await MainActor.run {
                 isBusy = false
                 busyLabel = ""
-                if result.success {
+                if finalResult.success {
                     onSuccess()
                 } else {
-                    statusMessage = result.message ?? "Unable to save expense."
+                    statusMessage = finalResult.message ?? "Unable to save expense."
                 }
             }
         }
@@ -704,41 +702,18 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
     private func loadSnapshot() {
         statusMessage = "Loading budget data..."
         controller.loadSnapshot { [weak self] snapshot in
+            let snapshotData = snapshot.map(buildVoiceExpenseSnapshotData(from:))
             Task { @MainActor in
                 guard let self else {
                     return
                 }
 
-                guard let snapshot else {
+                guard let snapshotData else {
                     self.statusMessage = "Unable to load expenses and categories."
                     return
                 }
 
-                self.categoriesById = Dictionary(
-                    uniqueKeysWithValues: snapshot.categories.map { category in
-                        let item = VoiceExpenseCategory(
-                            id: category.id,
-                            name: category.name
-                        )
-                        return (item.id, item)
-                    }
-                )
-                self.expensesById = Dictionary(
-                    uniqueKeysWithValues: snapshot.recentExpenses.map { expense in
-                        let item = VoiceExpenseCandidate(
-                            id: expense.id,
-                            amountInput: expense.amountInput,
-                            categoryId: expense.categoryId,
-                            categoryName: expense.categoryName,
-                            description: expense.description,
-                            date: Date(timeIntervalSince1970: TimeInterval(expense.date) / 1000.0),
-                            isShared: expense.isShared
-                        )
-                        return (item.id, item)
-                    }
-                )
-                self.snapshotLoaded = true
-                self.statusMessage = nil
+                self.apply(snapshot: snapshotData)
             }
         }
     }
@@ -785,9 +760,8 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
             return
         }
 
-        let model = SystemLanguageModel.default
-        guard model.isAvailable else {
-            statusMessage = availabilityMessage(for: model.availability)
+        guard languageModel.isAvailable else {
+            statusMessage = availabilityMessage(for: languageModel.availability)
             return
         }
 
@@ -807,10 +781,12 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
                         .map { $0 }
                 )
 
-                let nextDraft = buildDraft(from: interpretation)
+                let nextDraft = buildDraft(from: interpretation, transcript: text)
                 await MainActor.run {
                     draft = nextDraft
-                    statusMessage = nextDraft == nil ? interpretation.summary : nil
+                    statusMessage = nextDraft == nil
+                        ? unresolvedDraftMessage(for: interpretation, transcript: text)
+                        : nil
                     isBusy = false
                     busyLabel = ""
                 }
@@ -824,24 +800,33 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
         }
     }
 
-    private func buildDraft(from interpretation: VoiceExpenseInterpretation) -> VoiceExpenseDraft? {
+    private func buildDraft(from interpretation: VoiceExpenseInterpretation, transcript: String) -> VoiceExpenseDraft? {
         switch interpretation.intent {
         case .create:
             guard
                 let amountInput = normalizeAmountInput(interpretation.amount),
-                let categoryId = interpretation.categoryId,
-                let category = categoriesById[categoryId]
+                let category = resolveExpenseCategory(
+                    categoryId: interpretation.categoryId,
+                    categoryName: interpretation.categoryName,
+                    transcript: transcript,
+                    summary: interpretation.summary
+                )
             else {
                 return nil
             }
 
-            let resolvedDate = parseISODate(interpretation.date) ?? Calendar.current.startOfDay(for: Date())
+            let resolvedDate = resolveExpenseDate(
+                isoValue: interpretation.date,
+                transcript: transcript,
+                summary: interpretation.summary,
+                defaultDate: Calendar.current.startOfDay(for: Date())
+            )
 
             return VoiceExpenseDraft(
                 intent: .create,
                 expenseId: nil,
                 amountInput: amountInput,
-                categoryId: categoryId,
+                categoryId: category.id,
                 categoryName: category.name,
                 description: interpretation.description.trimmedNilIfBlank,
                 date: resolvedDate,
@@ -857,8 +842,13 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
                 return nil
             }
 
-            let resolvedCategoryId = interpretation.categoryId ?? existingExpense.categoryId
-            guard let category = categoriesById[resolvedCategoryId] else {
+            let category = resolveExpenseCategory(
+                categoryId: interpretation.categoryId,
+                categoryName: interpretation.categoryName,
+                transcript: transcript,
+                summary: interpretation.summary
+            ) ?? categoriesById[existingExpense.categoryId]
+            guard let category else {
                 return nil
             }
 
@@ -866,10 +856,15 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
                 intent: .update,
                 expenseId: expenseId,
                 amountInput: normalizeAmountInput(interpretation.amount) ?? existingExpense.amountInput,
-                categoryId: resolvedCategoryId,
+                categoryId: category.id,
                 categoryName: category.name,
                 description: interpretation.description ?? existingExpense.description,
-                date: parseISODate(interpretation.date) ?? existingExpense.date,
+                date: resolveExpenseDate(
+                    isoValue: interpretation.date,
+                    transcript: transcript,
+                    summary: interpretation.summary,
+                    defaultDate: existingExpense.date
+                ),
                 isShared: interpretation.isShared ?? existingExpense.isShared,
                 summary: interpretation.summary
             )
@@ -915,11 +910,95 @@ private final class VoiceExpenseEntryViewModel: ObservableObject {
             }
         }
     }
+
+    private func reloadSnapshot() async -> VoiceExpenseSnapshotData? {
+        await withCheckedContinuation { continuation in
+            controller.loadSnapshot { snapshot in
+                continuation.resume(returning: snapshot.map(buildVoiceExpenseSnapshotData(from:)))
+            }
+        }
+    }
+
+    private func refreshSnapshotAfterSave() async {
+        guard let snapshot = await reloadSnapshot() else {
+            return
+        }
+
+        await MainActor.run {
+            apply(snapshot: snapshot)
+        }
+    }
+
+    private func apply(snapshot: VoiceExpenseSnapshotData) {
+        categoriesById = Dictionary(uniqueKeysWithValues: snapshot.categories.map { ($0.id, $0) })
+        expensesById = Dictionary(uniqueKeysWithValues: snapshot.recentExpenses.map { ($0.id, $0) })
+        snapshotLoaded = true
+        statusMessage = languageModel.isAvailable
+            ? nil
+            : availabilityMessage(for: languageModel.availability)
+    }
+
+    private func resolveExpenseCategory(
+        categoryId: String?,
+        categoryName: String?,
+        transcript: String,
+        summary: String?
+    ) -> VoiceExpenseCategory? {
+        if let categoryId, let category = categoriesById[categoryId] {
+            return category
+        }
+
+        if let categoryName {
+            if let exactMatch = categoriesById.values.first(where: { $0.name.caseInsensitiveCompare(categoryName) == .orderedSame }) {
+                return exactMatch
+            }
+            let normalizedCategoryName = normalizeVoiceExpenseToken(categoryName)
+            if let normalizedMatch = categoriesById.values.first(where: {
+                normalizeVoiceExpenseToken($0.name) == normalizedCategoryName
+            }) {
+                return normalizedMatch
+            }
+        }
+
+        let searchText = [transcript, summary]
+            .compactMap { $0 }
+            .joined(separator: " ")
+        return categoriesById.values.first(where: { category in
+            voiceExpenseCategoryAliases(for: category).contains { alias in
+                searchText.localizedCaseInsensitiveContains(alias)
+            }
+        })
+    }
+
+    private func unresolvedDraftMessage(for interpretation: VoiceExpenseInterpretation, transcript: String) -> String {
+        switch interpretation.intent {
+        case .needClarification:
+            return interpretation.summary
+        case .create, .update:
+            if normalizeAmountInput(interpretation.amount) == nil {
+                return "I could not understand the amount well enough to prepare the expense."
+            }
+            if resolveExpenseCategory(
+                categoryId: interpretation.categoryId,
+                categoryName: interpretation.categoryName,
+                transcript: transcript,
+                summary: interpretation.summary
+            ) == nil {
+                return "I could not match the spoken category to one of your categories."
+            }
+            return "I understood the request, but I could not prepare a saveable expense draft."
+        }
+    }
 }
 
 private struct VoiceExpenseCategory: Identifiable {
     let id: String
     let name: String
+}
+
+private struct VoiceExpenseSnapshotData {
+    let categories: [VoiceExpenseCategory]
+    let recentExpenses: [VoiceExpenseCandidate]
 }
 
 private struct VoiceExpenseCandidate: Identifiable {
@@ -981,10 +1060,13 @@ private struct VoiceExpenseInterpretation {
     @Guide(description: "Category id from the provided categories. Use null only when clarification is needed or the category is unchanged in an update.")
     var categoryId: String?
 
+    @Guide(description: "Category name that exactly matches one of the provided categories whenever possible. Use null only when clarification is needed or the category is unchanged in an update.")
+    var categoryName: String?
+
     @Guide(description: "Short expense description. Use null when omitted.")
     var description: String?
 
-    @Guide(description: "Date in yyyy-MM-dd format. For new expenses with no spoken date, use today's date.")
+    @Guide(description: "Date in yyyy-MM-dd format. Resolve relative dates like yesterday, today, and tomorrow to a concrete date. For new expenses with no spoken date, use today's date.")
     var date: String?
 
     @Guide(description: "Whether the expense is shared. Use null when not mentioned for updates.")
@@ -1156,11 +1238,13 @@ private func parseExpenseIntent(
         model: SystemLanguageModel.default,
         instructions: """
         You convert a spoken budget command into one structured expense action.
+        The input may be in Italian or English.
         Prefer create when the user is adding a new expense.
         Prefer update only when one listed expense is a clear match.
         If the command is ambiguous, return needClarification.
-        Use only category ids from the provided category list.
+        Use only category ids and category names from the provided category list.
         For update, keep omitted fields as null so the app can preserve the existing value.
+        Resolve relative dates like yesterday, today, and tomorrow into yyyy-MM-dd dates.
         For create, if no date is spoken, use today's date.
         Return short summaries.
         """
@@ -1222,6 +1306,62 @@ private func parseISODate(_ value: String?) -> Date? {
     return voiceExpenseISODateFormatter.date(from: value)
 }
 
+private func resolveExpenseDate(isoValue: String?, transcript: String, summary: String?, defaultDate: Date) -> Date {
+    if let relativeDate = parseRelativeSpokenDate(from: transcript) {
+        return relativeDate
+    }
+
+    if let summary, let relativeDate = parseRelativeSpokenDate(from: summary) {
+        return relativeDate
+    }
+
+    if let parsedDate = parseISODate(isoValue) {
+        return parsedDate
+    }
+
+    return defaultDate
+}
+
+private func parseRelativeSpokenDate(from transcript: String) -> Date? {
+    let normalizedTranscript = " \(transcript.lowercased()) "
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+
+    let relativeOffsets: [(phrases: [String], days: Int)] = [
+        (["the day before yesterday", "day before yesterday", "l'altro ieri", "altro ieri"], -2),
+        (["dopodomani"], 2),
+        (["yesterday", "ieri"], -1),
+        (["tomorrow", "domani"], 1),
+        (["today", "oggi"], 0)
+    ]
+
+    for entry in relativeOffsets {
+        if entry.phrases.contains(where: { normalizedTranscript.contains(" \($0) ") }) {
+            return calendar.date(byAdding: .day, value: entry.days, to: today)
+        }
+    }
+
+    return nil
+}
+
+private func normalizeVoiceExpenseToken(_ value: String) -> String {
+    let normalized = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+    return String(normalized.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
+}
+
+private func voiceExpenseCategoryAliases(for category: VoiceExpenseCategory) -> [String] {
+    let normalizedName = normalizeVoiceExpenseToken(category.name)
+    let defaultAliases: [String: [String]] = [
+        "cibo": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
+        "bollette": ["bollette", "bills", "bill", "utilities", "utility"],
+        "speseauto": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
+        "spesecasa": ["spese casa", "casa", "home", "house", "rent", "affitto"],
+        "varie": ["varie", "misc", "miscellaneous", "other", "others"]
+    ]
+
+    return [category.name] + (defaultAliases[normalizedName] ?? [])
+}
+
 private func availabilityMessage(for availability: SystemLanguageModel.Availability) -> String {
     switch availability {
     case .available:
@@ -1272,4 +1412,33 @@ private extension Optional where Wrapped == String {
         }
         return value
     }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private func buildVoiceExpenseSnapshotData(from snapshot: IosVoiceExpenseSnapshot) -> VoiceExpenseSnapshotData {
+    VoiceExpenseSnapshotData(
+        categories: snapshot.categories.map { category in
+            VoiceExpenseCategory(
+                id: category.id,
+                name: category.name
+            )
+        },
+        recentExpenses: snapshot.recentExpenses.map { expense in
+            VoiceExpenseCandidate(
+                id: expense.id,
+                amountInput: expense.amountInput,
+                categoryId: expense.categoryId,
+                categoryName: expense.categoryName,
+                description: expense.description,
+                date: Date(timeIntervalSince1970: TimeInterval(expense.date) / 1000.0),
+                isShared: expense.isShared
+            )
+        }
+    )
 }

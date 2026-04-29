@@ -1,5 +1,6 @@
 package it.homebudget.app.ui.screens
 
+import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.formatAmountInput
@@ -161,24 +162,23 @@ class IosVoiceExpenseController {
     private suspend fun runExpenseSave(
         amountInput: String,
         categoryId: String,
-        block: suspend (com.ionspin.kotlin.bignum.integer.BigInteger) -> Unit
+        block: suspend (BigInteger) -> Unit
     ): Pair<Boolean, String?> {
         val parsedAmount = parseAmountInput(amountInput)
             ?: return false to "Invalid amount"
-        if (parsedAmount <= com.ionspin.kotlin.bignum.integer.BigInteger.ZERO) {
-            return false to "Amount must be greater than zero"
+        val error = when {
+            parsedAmount <= BigInteger.ZERO -> "Amount must be greater than zero"
+            categoryId.isBlank() -> "Category is required"
+            else -> null
         }
-        if (categoryId.isBlank()) {
-            return false to "Category is required"
-        }
-
-        return runCatching {
-            block(parsedAmount)
-        }.fold(
-            onSuccess = { true to null },
-            onFailure = { false to (it.message ?: "Unable to save expense") }
-        )
+        if (error != null) return false to error
+        return runCatching { block(parsedAmount) }
+            .fold(
+                onSuccess = { true to null },
+                onFailure = { false to (it.message ?: "Unable to save expense") }
+            )
     }
+
 
     private fun buildExpenseId(): String {
         return "${Clock.System.now().toEpochMilliseconds()}-${Random.nextLong()}"
