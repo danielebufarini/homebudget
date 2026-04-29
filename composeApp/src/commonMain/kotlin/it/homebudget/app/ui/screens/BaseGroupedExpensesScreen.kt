@@ -390,28 +390,14 @@ abstract class BaseGroupedExpensesScreen(
                                                 }
                                             )
                                         } else {
-                                            val scope = rememberCoroutineScope()
-                                            val currentOnDeleteExpense by rememberUpdatedState(onDeleteExpense)
-                                            val dismissState = rememberSwipeToDismissBoxState(
-                                                positionalThreshold = { distance ->
-                                                    distance * 0.35f
-                                                }
+                                            val dismissState = rememberExpenseSwipeToDeleteBoxState(
+                                                itemId = expense.id,
+                                                onDeleteExpense = onDeleteExpense
                                             )
-                                            val handleDismiss = remember(expense.id, dismissState, scope) {
-                                                { dismissValue: SwipeToDismissBoxValue ->
-                                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                                        currentOnDeleteExpense(expense.id)
-                                                        scope.launch {
-                                                            dismissState.reset()
-                                                        }
-                                                    }
-                                                }
-                                            }
 
                                             SwipeToDismissBox(
                                                 state = dismissState,
                                                 enableDismissFromStartToEnd = false,
-                                                onDismiss = handleDismiss,
                                                 backgroundContent = {
                                                     DeleteExpenseBackground()
                                                 }

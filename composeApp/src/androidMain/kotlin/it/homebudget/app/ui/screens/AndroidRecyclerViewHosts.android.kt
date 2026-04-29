@@ -26,7 +26,6 @@ import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
-import kotlinx.coroutines.launch
 import kotlinx.datetime.toLocalDateTime
 
 @Composable
@@ -341,28 +340,14 @@ private fun AndroidGroupedExpenseRow(
         return
     }
 
-    val scope = rememberCoroutineScope()
-    val currentOnDeleteExpense by rememberUpdatedState(onDeleteExpense)
-    val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance ->
-            distance * 0.35f
-        }
+    val dismissState = rememberExpenseSwipeToDeleteBoxState(
+        itemId = row.id,
+        onDeleteExpense = onDeleteExpense
     )
-    val handleDismiss = remember(row.id, dismissState, scope) {
-        { dismissValue: SwipeToDismissBoxValue ->
-            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                currentOnDeleteExpense(row.id)
-                scope.launch {
-                    dismissState.reset()
-                }
-            }
-        }
-    }
 
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
-        onDismiss = handleDismiss,
         backgroundContent = {
             DeleteExpenseBackground()
         }
