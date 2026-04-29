@@ -5,6 +5,8 @@
 xcuserdata
 !src/**/build/
 local.properties
+iosApp/Configuration/Config.xcconfig
+.tmp/
 .idea
 .DS_Store
 captures
