@@ -514,30 +514,6 @@ private func addExpenseTitle(expenseId: String?, readOnly: Bool) -> String {
     return expenseId == nil ? "Add Expense" : "Edit Expense"
 }
 
-private func monthName(_ month: Int) -> String {
-    let names = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    ]
-
-    let index = Int(month) - 1
-    guard names.indices.contains(index) else {
-        return ""
-    }
-
-    return names[index]
-}
-
 private func kotlinInt(_ value: Int) -> KotlinInt {
     KotlinInt(int: Int32(value))
 }

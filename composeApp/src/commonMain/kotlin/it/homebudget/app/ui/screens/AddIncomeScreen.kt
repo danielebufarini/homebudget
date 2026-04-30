@@ -50,7 +50,7 @@ class AddIncomeScreen(
         )
     }
 
-    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun RouteContent(
         showNavigationChrome: Boolean,
@@ -225,7 +225,7 @@ class AddIncomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                androidx.compose.foundation.layout.Box(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
@@ -457,8 +457,8 @@ private fun buildInitialIncomeDateMillis(
     val dayOfMonth = now.day.coerceAtMost(daysInMonth(targetYear, targetMonth))
     return LocalDate(
         year = targetYear,
-        monthNumber = targetMonth,
-        dayOfMonth = dayOfMonth
+        month = targetMonth,
+        day = dayOfMonth
     ).atStartOfDayIn(timeZone).toEpochMilliseconds()
 }
 
@@ -479,9 +479,5 @@ private fun Long.formatDateLabel(): String {
     val date = Instant.fromEpochMilliseconds(this)
         .toLocalDateTime(TimeZone.currentSystemDefault())
         .date
-    val monthNames = listOf(
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    )
-    return "${date.day.toString().padStart(2, '0')} ${monthNames[date.month.ordinal]} ${date.year}"
+    return "${date.day.toString().padStart(2, '0')} ${shortMonthName(date.month.ordinal + 1)} ${date.year}"
 }

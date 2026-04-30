@@ -16,6 +16,44 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
+private val FullMonthNames = listOf(
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+)
+
+private val ShortMonthNames = listOf(
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+)
+
+internal fun fullMonthName(month: Int): String {
+    return FullMonthNames[month - 1]
+}
+
+internal fun shortMonthName(month: Int): String {
+    return ShortMonthNames[month - 1]
+}
+
 data class MonthCursor(
     val year: Int,
     val month: Int
@@ -43,40 +81,12 @@ data class MonthCursor(
     }
 
     fun label(): String {
-        val monthNames = listOf(
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December"
-        )
-        return "${monthNames[month - 1]} $year"
+        return "${fullMonthName(month)} $year"
     }
 
     fun shortLabel(): String {
-        val monthNames = listOf(
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec"
-        )
         val shortYear = (year % 100).toString().padStart(2, '0')
-        return "${monthNames[month - 1]} $shortYear"
+        return "${shortMonthName(month)} $shortYear"
     }
 }
 

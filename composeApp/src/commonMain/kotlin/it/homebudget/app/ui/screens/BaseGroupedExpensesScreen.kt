@@ -146,7 +146,6 @@ abstract class BaseGroupedExpensesScreen(
                 } else {
                     recurringExpenseToDelete = expense
                 }
-                Unit
             }
         } else {
             null
@@ -519,24 +518,8 @@ abstract class BaseGroupedExpensesScreen(
         }
     }
 
-    val months = listOf(
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    )
-
     protected fun monthName(month: Int): String {
-
-        return months[month - 1]
+        return fullMonthName(month)
     }
 
     private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)

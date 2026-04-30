@@ -761,27 +761,3 @@ private struct GroupedExpenseRowView: View {
         .contentShape(Rectangle())
     }
 }
-
-private func monthName(_ month: Int) -> String {
-    let names = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    ]
-
-    let index = month - 1
-    guard names.indices.contains(index) else {
-        return ""
-    }
-
-    return names[index]
-}

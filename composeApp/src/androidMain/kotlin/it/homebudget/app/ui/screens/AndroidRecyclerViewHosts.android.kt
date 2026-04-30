@@ -20,13 +20,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 @Composable
 internal actual fun AndroidGroupedExpensesRecyclerView(
@@ -155,10 +158,17 @@ private class GroupedExpensesRecyclerAdapter(
                 }
             }
 
+        val previousSections = this.sections
         this.sections = sections
         this.onOpenExpense = onOpenExpense
         this.onDeleteExpense = onDeleteExpense
-        notifyDataSetChanged()
+
+        DiffUtil.calculateDiff(
+            GroupedExpensesDiffCallback(
+                oldSections = previousSections,
+                newSections = sections
+            )
+        ).dispatchUpdatesTo(this)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ComposeViewHolder {
@@ -203,8 +213,15 @@ private class CategoriesRecyclerAdapter(
     private var categories: List<Category> = emptyList()
 
     fun submit(categories: List<Category>) {
+        val previousCategories = this.categories
         this.categories = categories
-        notifyDataSetChanged()
+
+        DiffUtil.calculateDiff(
+            CategoriesDiffCallback(
+                oldCategories = previousCategories,
+                newCategories = categories
+            )
+        ).dispatchUpdatesTo(this)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ComposeViewHolder {
@@ -249,6 +266,40 @@ private class CategoriesRecyclerAdapter(
 private class ComposeViewHolder(
     val composeView: ComposeView
 ) : RecyclerView.ViewHolder(composeView)
+
+private class GroupedExpensesDiffCallback(
+    private val oldSections: List<AndroidGroupedExpenseSectionModel>,
+    private val newSections: List<AndroidGroupedExpenseSectionModel>
+) : DiffUtil.Callback() {
+    override fun getOldListSize(): Int = oldSections.size
+
+    override fun getNewListSize(): Int = newSections.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldSections[oldItemPosition].id == newSections[newItemPosition].id
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldSections[oldItemPosition] == newSections[newItemPosition]
+    }
+}
+
+private class CategoriesDiffCallback(
+    private val oldCategories: List<Category>,
+    private val newCategories: List<Category>
+) : DiffUtil.Callback() {
+    override fun getOldListSize(): Int = oldCategories.size
+
+    override fun getNewListSize(): Int = newCategories.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldCategories[oldItemPosition].id == newCategories[newItemPosition].id
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldCategories[oldItemPosition] == newCategories[newItemPosition]
+    }
+}
 
 @Composable
 private fun AndroidGroupedExpenseSectionCard(
@@ -363,8 +414,8 @@ private fun AndroidGroupedExpenseRow(
 }
 
 private fun formatDate(epochMillis: Long): String {
-    val date = kotlinx.datetime.Instant.fromEpochMilliseconds(epochMillis)
-        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+    val date = Instant.fromEpochMilliseconds(epochMillis)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
         .date
     return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
 }

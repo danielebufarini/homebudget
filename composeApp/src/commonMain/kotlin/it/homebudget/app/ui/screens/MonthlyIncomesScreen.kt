@@ -87,7 +87,6 @@ class MonthlyIncomesScreen(
             } else {
                 recurringIncomeToDelete = income
             }
-            Unit
         }
 
         val content: @Composable (PaddingValues) -> Unit = { padding ->
@@ -118,7 +117,7 @@ class MonthlyIncomesScreen(
                         item(key = groupTitle) {
                             PlatformCard(contentPadding = PaddingValues(0.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    androidx.compose.foundation.layout.Row(
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -262,23 +261,6 @@ private fun MonthlyIncomeRow(
             onClick = { onOpenIncome(income.id) }
         )
     }
-}
-
-private fun monthName(month: Int): String {
-    return listOf(
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    )[month - 1]
 }
 
 private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)
