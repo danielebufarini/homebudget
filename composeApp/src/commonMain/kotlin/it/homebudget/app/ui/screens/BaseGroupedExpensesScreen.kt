@@ -21,6 +21,7 @@ import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
+import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -74,6 +75,7 @@ abstract class BaseGroupedExpensesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = remember { getPlatform().isIos }
         val scope = rememberCoroutineScope()
+        val strings = LocalStrings.current
         var selectedMonth by remember { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
@@ -85,10 +87,12 @@ abstract class BaseGroupedExpensesScreen(
             repository.insertDefaultCategoriesIfEmpty()
         }
 
-        val filteredExpenses = remember(expenses, categories, selectedMonth) {
+        val filteredExpenses = remember(expenses, categories, selectedMonth, strings) {
             expenses.filter { expense ->
                 val localDate = expense.date.toLocalDate()
-                val categoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
+                val categoryName = categoriesById[expense.categoryId]
+                    ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+                    ?: strings.unknownCategory
                 localDate.year == selectedMonth.year &&
                     localDate.month.ordinal + 1 == selectedMonth.month &&
                     includeExpense(expense) &&
@@ -96,19 +100,25 @@ abstract class BaseGroupedExpensesScreen(
             }
         }
 
-        val groupedExpenses = remember(filteredExpenses, categories, groupingMode) {
+        val groupedExpenses = remember(filteredExpenses, categories, groupingMode, strings) {
             when (groupingMode) {
                 ExpenseGroupingMode.ByCategory -> {
                     filteredExpenses
                         .groupBy { expense ->
-                            categoriesById[expense.categoryId]?.name ?: "Unknown category"
+                            categoriesById[expense.categoryId]
+                                ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+                                ?: strings.unknownCategory
                         }
                         .toList()
                         .sortedBy { it.first }
                         .map { (groupKey, groupExpenses) ->
                             val sortedExpenses = groupExpenses.sortedWith(
                                 compareByDescending<Expense> { it.date }
-                                    .thenBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
+                                    .thenBy { expense ->
+                                        categoriesById[expense.categoryId]
+                                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+                                            ?: strings.unknownCategory
+                                    }
                                     .thenBy { it.description ?: "" }
                             )
                             groupKey to sortedExpenses
@@ -124,7 +134,11 @@ abstract class BaseGroupedExpensesScreen(
                         .map { (groupDate, groupExpenses) ->
                             val sortedExpenses = groupExpenses.sortedWith(
                                 compareByDescending<Expense> { it.date }
-                                    .thenBy { categoriesById[it.categoryId]?.name ?: "Unknown category" }
+                                    .thenBy { expense ->
+                                        categoriesById[expense.categoryId]
+                                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+                                            ?: strings.unknownCategory
+                                    }
                                     .thenBy { it.description ?: "" }
                             )
                             formatDateGroupTitle(groupDate) to sortedExpenses
@@ -181,7 +195,7 @@ abstract class BaseGroupedExpensesScreen(
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onBack) {
-                                    Text("Back")
+                                    Text(strings.back)
                                 }
                             }
                         }
@@ -194,7 +208,7 @@ abstract class BaseGroupedExpensesScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = "Add expense"
+                                contentDescription = strings.addExpense
                             )
                         }
                     }
@@ -231,8 +245,8 @@ abstract class BaseGroupedExpensesScreen(
 
         recurringExpenseToDelete?.let { expense ->
             RecurringSeriesActionDialog(
-                title = "Delete recurring expense?",
-                message = "Do you want to delete only this expense or the whole recurring series?",
+                title = strings.deleteRecurringExpenseTitle,
+                message = strings.recurringExpenseActionMessage(isUpdate = false),
                 onThisInstanceOnly = {
                     recurringExpenseToDelete = null
                     scope.launch {
@@ -311,6 +325,7 @@ abstract class BaseGroupedExpensesScreen(
         onOpenExpense: (String) -> Unit,
         onDeleteExpense: ((String) -> Unit)?
     ) {
+        val strings = LocalStrings.current
         val expandedState = remember { mutableStateMapOf<String, Boolean>() }
 
         LazyColumn(
@@ -366,7 +381,9 @@ abstract class BaseGroupedExpensesScreen(
                                     key(expense.id) {
                                         val expenseName = expense.description?.ifBlank { expenseFallbackTitle() }
                                             ?: expenseFallbackTitle()
-                                        val categoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
+                                        val categoryName = categoriesById[expense.categoryId]
+                                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+                                            ?: strings.unknownCategory
                                         val rowTitle = if (groupingMode == ExpenseGroupingMode.ByDate) {
                                             categoryName
                                         } else {
@@ -437,6 +454,7 @@ abstract class BaseGroupedExpensesScreen(
         onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
         modifier: Modifier = Modifier
     ) {
+        val strings = LocalStrings.current
         if (!rememberIsIosPlatform()) {
             AndroidGroupingModeSegmentedButtons(
                 groupingMode = groupingMode,
@@ -452,12 +470,12 @@ abstract class BaseGroupedExpensesScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             GroupingModeButton(
-                label = "By Category",
+                label = strings.byCategory,
                 selected = groupingMode == ExpenseGroupingMode.ByCategory,
                 onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
             )
             GroupingModeButton(
-                label = "By Date",
+                label = strings.byDate,
                 selected = groupingMode == ExpenseGroupingMode.ByDate,
                 onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
             )
@@ -470,9 +488,10 @@ abstract class BaseGroupedExpensesScreen(
         onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
         modifier: Modifier = Modifier
     ) {
+        val strings = LocalStrings.current
         val options = listOf(
-            ExpenseGroupingMode.ByCategory to "By Category",
-            ExpenseGroupingMode.ByDate to "By Date"
+            ExpenseGroupingMode.ByCategory to strings.byCategory,
+            ExpenseGroupingMode.ByDate to strings.byDate
         )
 
         SingleChoiceSegmentedButtonRow(modifier = modifier) {

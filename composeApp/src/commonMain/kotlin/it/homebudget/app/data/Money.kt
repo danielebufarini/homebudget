@@ -3,6 +3,7 @@ package it.homebudget.app.data
 import app.cash.sqldelight.ColumnAdapter
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
+import it.homebudget.app.localization.currentCurrencySymbol
 
 private val ZERO = BigInteger.ZERO
 private val ONE_HUNDRED = 100.toBigInteger()
@@ -43,7 +44,7 @@ fun parseAmountInput(value: String): BigInteger? {
 
 fun formatAmount(amount: BigInteger): String {
     val (units, cents, sign) = amountComponents(amount)
-    return "€ $sign$units.$cents"
+    return "${currentCurrencySymbol()} $sign$units.$cents"
 }
 
 fun formatAmountInput(amount: BigInteger): String {
@@ -65,14 +66,15 @@ fun Iterable<BigInteger>.sumBigInteger(): BigInteger = fold(ZERO) { acc, value -
 fun BigInteger.toDisplayDouble(): Double = toString().toDouble() / 100.0
 
 fun averageAmount(total: BigInteger, count: Int): BigInteger {
-    if (count <= 0) {
-        return ZERO
-    }
+    if (count <= 0) return ZERO
 
     val divisor = count.toBigInteger()
+    val halfDivisor = divisor / 2.toBigInteger()
+
     return if (total >= ZERO) {
-        (total + divisor / 2.toBigInteger()) / divisor
+        (total + halfDivisor) / divisor
     } else {
-        (total - divisor / 2.toBigInteger()) / divisor
+        (total - halfDivisor) / divisor
     }
 }
+

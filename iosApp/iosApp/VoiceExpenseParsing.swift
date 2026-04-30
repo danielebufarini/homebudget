@@ -34,15 +34,15 @@ struct VoiceExpenseDraft {
     let summary: String
 
     var actionLabel: String {
-        intent == .create ? "Create new expense" : "Update existing expense"
+        intent == .create ? appLocalized("Create new expense") : appLocalized("Update existing expense")
     }
 
     var actionButtonTitle: String {
-        intent == .create ? "Save Expense" : "Update Expense"
+        intent == .create ? appLocalized("Save Expense") : appLocalized("Update Expense")
     }
 
     var amountLabel: String? {
-        "€ \(amountInput)"
+        appAmountLabel(amountInput)
     }
 
     var dateLabel: String? {
@@ -155,7 +155,7 @@ func parseSimpleExpenseIntent(transcript: String) -> VoiceExpenseInterpretation?
         description: nil,
         date: nil,
         isShared: nil,
-        summary: "Ready to save a new expense."
+        summary: appLocalized("Ready to save a new expense.")
     )
 }
 
@@ -192,7 +192,7 @@ func expenseParsingFailureMessage(for error: Error) -> String {
     let errorDescription = error.localizedDescription
     let debugDescription = String(describing: error)
     if errorDescription.contains("FoundationModels") || debugDescription.contains("FoundationModels") {
-        return "The on-device language model could not parse this command. Try again, or use a simpler phrase like \"20 euros yesterday food\"."
+        return appLocalized("The on-device language model could not parse this command. Try again, or use a simpler phrase like \"20 euros yesterday food\".")
     }
 
     return errorDescription
@@ -223,10 +223,15 @@ func voiceExpenseCategoryAliases(for category: VoiceExpenseCategory) -> [String]
     let normalizedName = normalizeVoiceExpenseToken(category.name)
     let defaultAliases: [String: [String]] = [
         "cibo": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
+        "food": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
         "bollette": ["bollette", "bills", "bill", "utilities", "utility"],
+        "bills": ["bollette", "bills", "bill", "utilities", "utility"],
         "speseauto": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
+        "carexpenses": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
         "spesecasa": ["spese casa", "casa", "home", "house", "rent", "affitto"],
-        "varie": ["varie", "misc", "miscellaneous", "other", "others"]
+        "homeexpenses": ["spese casa", "casa", "home", "house", "rent", "affitto"],
+        "varie": ["varie", "misc", "miscellaneous", "other", "others"],
+        "miscellaneous": ["varie", "misc", "miscellaneous", "other", "others"]
     ]
 
     return [category.name] + (defaultAliases[normalizedName] ?? [])
@@ -239,13 +244,13 @@ func availabilityMessage(for availability: SystemLanguageModel.Availability) -> 
     case let .unavailable(reason):
         switch reason {
         case .deviceNotEligible:
-            return "Foundation Models are unavailable on this device."
+            return appLocalized("Foundation Models are unavailable on this device.")
         case .appleIntelligenceNotEnabled:
-            return "Apple Intelligence must be enabled to use voice expense parsing."
+            return appLocalized("Apple Intelligence must be enabled to use voice expense parsing.")
         case .modelNotReady:
-            return "The on-device model is still preparing. Try again in a moment."
+            return appLocalized("The on-device model is still preparing. Try again in a moment.")
         @unknown default:
-            return "Foundation Models are currently unavailable."
+            return appLocalized("Foundation Models are currently unavailable.")
         }
     }
 }
@@ -281,8 +286,8 @@ private func parseISODate(_ value: String?) -> Date? {
 
 private func parseSimpleExpenseAmount(from transcript: String) -> String? {
     let patterns = [
-        #"(?<![\d.,])(?:€|eur|euro|euros)\s*(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#,
-        #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur|euro|euros)(?![\d.,])"#,
+        #"(?<![\d.,])(?:€|\$|eur|euro|euros|usd|dollar|dollars)\s*(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#,
+        #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)\s*(?:€|\$|eur|euro|euros|usd|dollar|dollars)(?![\d.,])"#,
         #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#
     ]
 

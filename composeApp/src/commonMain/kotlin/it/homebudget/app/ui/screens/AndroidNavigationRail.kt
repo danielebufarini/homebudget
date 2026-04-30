@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 
 internal enum class AndroidNavigationDestination {
@@ -26,6 +27,7 @@ internal fun AndroidNavigationRailOverlay(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
+    val strings = LocalStrings.current
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -50,11 +52,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = selectedDestination == AndroidNavigationDestination.Dashboard,
-                        label = { Text("Dashboard") },
+                        label = { Text(strings.dashboard) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.Dashboard,
-                                contentDescription = "Dashboard",
+                                contentDescription = strings.dashboard,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
@@ -70,11 +72,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = selectedDestination == AndroidNavigationDestination.Categories,
-                        label = { Text("Categories") },
+                        label = { Text(strings.categories) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.Category,
-                                contentDescription = "Categories",
+                                contentDescription = strings.categories,
                                 modifier = Modifier.size(22.dp)
                             )
                         },

@@ -33,7 +33,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
     }
 
     var commitButtonTitle: String {
-        draft?.actionButtonTitle ?? "Save"
+        draft?.actionButtonTitle ?? appLocalized("Save")
     }
 
     func toggleRecording() {
@@ -50,7 +50,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         }
 
         isBusy = true
-        busyLabel = draft.intent == .create ? "Saving expense..." : "Updating expense..."
+        busyLabel = draft.intent == .create ? appLocalized("Saving expense...") : appLocalized("Updating expense...")
         statusMessage = nil
 
         Task {
@@ -68,7 +68,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 if finalResult.success {
                     onSuccess()
                 } else {
-                    statusMessage = finalResult.message ?? "Unable to save expense."
+                    statusMessage = finalResult.message ?? appLocalized("Unable to save expense.")
                 }
             }
         }
@@ -80,7 +80,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
     }
 
     private func loadSnapshot() {
-        statusMessage = "Loading budget data..."
+        statusMessage = appLocalized("Loading budget data...")
         controller.loadSnapshot { [weak self] snapshot in
             let snapshotData = snapshot.map(buildVoiceExpenseSnapshotData(from:))
             Task { @MainActor in
@@ -89,7 +89,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 }
 
                 guard let snapshotData else {
-                    self.statusMessage = "Unable to load expenses and categories."
+                    self.statusMessage = appLocalized("Unable to load expenses and categories.")
                     return
                 }
 
@@ -103,7 +103,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         draft = nil
         transcript = ""
         isBusy = true
-        busyLabel = "Starting microphone..."
+        busyLabel = appLocalized("Starting microphone...")
 
         Task { @MainActor in
             do {
@@ -126,7 +126,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         isRecording = false
 
         guard !capturedTranscript.isEmpty else {
-            statusMessage = "No speech was captured."
+            statusMessage = appLocalized("No speech was captured.")
             return
         }
 
@@ -136,7 +136,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
 
     private func interpretTranscript(_ text: String) {
         guard snapshotLoaded else {
-            statusMessage = "Budget data is still loading."
+            statusMessage = appLocalized("Budget data is still loading.")
             return
         }
 
@@ -146,7 +146,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         }
 
         isBusy = true
-        busyLabel = "Understanding expense..."
+        busyLabel = appLocalized("Understanding expense...")
         statusMessage = nil
         draft = nil
 
@@ -283,7 +283,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 )
             case .update:
                 guard let expenseId = draft.expenseId else {
-                    continuation.resume(returning: (false, "Expense not found."))
+                    continuation.resume(returning: (false, appLocalized("Expense not found.")))
                     return
                 }
 
@@ -297,7 +297,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                     onComplete: completion
                 )
             case .needClarification:
-                continuation.resume(returning: (false, "The spoken command still needs clarification."))
+                continuation.resume(returning: (false, appLocalized("The spoken command still needs clarification.")))
             }
         }
     }
@@ -367,7 +367,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
             return interpretation.summary
         case .create, .update:
             if normalizeAmountInput(interpretation.amount) == nil {
-                return "I could not understand the amount well enough to prepare the expense."
+                return appLocalized("I could not understand the amount well enough to prepare the expense.")
             }
             if resolveExpenseCategory(
                 categoryId: interpretation.categoryId,
@@ -375,9 +375,9 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 transcript: transcript,
                 summary: interpretation.summary
             ) == nil {
-                return "I could not match the spoken category to one of your categories."
+                return appLocalized("I could not match the spoken category to one of your categories.")
             }
-            return "I understood the request, but I could not prepare a saveable expense draft."
+            return appLocalized("I understood the request, but I could not prepare a saveable expense draft.")
         }
     }
 }
@@ -511,13 +511,13 @@ private enum VoiceExpenseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .speechPermissionDenied:
-            return "Speech recognition permission is required."
+            return appLocalized("Speech recognition permission is required.")
         case .microphonePermissionDenied:
-            return "Microphone permission is required."
+            return appLocalized("Microphone permission is required.")
         case .microphoneUnavailable:
-            return "No usable microphone input is available."
+            return appLocalized("No usable microphone input is available.")
         case .transcriptionUnavailable:
-            return "Speech transcription is unavailable on this device."
+            return appLocalized("Speech transcription is unavailable on this device.")
         }
     }
 }

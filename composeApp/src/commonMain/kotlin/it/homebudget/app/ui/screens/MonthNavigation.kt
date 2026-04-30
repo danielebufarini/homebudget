@@ -15,43 +15,14 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-
-private val FullMonthNames = listOf(
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-)
-
-private val ShortMonthNames = listOf(
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-)
+import it.homebudget.app.localization.AppStrings
 
 internal fun fullMonthName(month: Int): String {
-    return FullMonthNames[month - 1]
+    return AppStrings.fullMonthName(month)
 }
 
 internal fun shortMonthName(month: Int): String {
-    return ShortMonthNames[month - 1]
+    return AppStrings.shortMonthName(month)
 }
 
 data class MonthCursor(

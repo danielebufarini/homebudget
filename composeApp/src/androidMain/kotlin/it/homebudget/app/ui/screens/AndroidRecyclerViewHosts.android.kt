@@ -27,6 +27,7 @@ import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
+import it.homebudget.app.localization.LocalStrings
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
@@ -44,7 +45,8 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
     onDeleteExpense: ((String) -> Unit)?
 ) {
     val compositionContext = rememberCompositionContext()
-    val sections = remember(groupedExpenses, categoriesById, isGroupedByDate, expenseFallbackTitle) {
+    val strings = LocalStrings.current
+    val sections = remember(groupedExpenses, categoriesById, isGroupedByDate, expenseFallbackTitle, strings) {
         groupedExpenses.map { (categoryName, categoryExpenses) ->
             AndroidGroupedExpenseSectionModel(
                 id = categoryName,
@@ -53,7 +55,9 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
                 rows = categoryExpenses
                     .map { expense ->
                         val expenseName = expense.description?.ifBlank { expenseFallbackTitle } ?: expenseFallbackTitle
-                        val resolvedCategoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category"
+                        val resolvedCategoryName = categoriesById[expense.categoryId]
+                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+                            ?: strings.unknownCategory
                         AndroidGroupedExpenseRowModel(
                             id = expense.id,
                             title = if (isGroupedByDate) resolvedCategoryName else expenseName,
@@ -240,6 +244,8 @@ private class CategoriesRecyclerAdapter(
     override fun onBindViewHolder(holder: ComposeViewHolder, position: Int) {
         val category = categories[position]
         holder.composeView.setContent {
+            val strings = LocalStrings.current
+
             PlatformCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -249,9 +255,9 @@ private class CategoriesRecyclerAdapter(
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(category.name)
+                    Text(strings.categoryName(category.id, category.name, category.isCustom))
                     Text(
-                        text = if (category.isCustom == 1L) "Custom category" else "Default category",
+                        text = if (category.isCustom == 1L) strings.customCategory else strings.defaultCategory,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

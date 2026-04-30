@@ -15,6 +15,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.*
+import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -61,6 +62,7 @@ class AddIncomeScreen(
         val platformDatePicker = rememberPlatformDatePicker()
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
+        val strings = LocalStrings.current
         val defaultDateMillis = remember(incomeId, initialYear, initialMonth) {
             if (incomeId != null) {
                 null
@@ -138,7 +140,7 @@ class AddIncomeScreen(
             }.onSuccess {
                 closeAfterRecurringAction()
             }.onFailure {
-                snackbarHostState.showSnackbar("Unable to save income")
+                snackbarHostState.showSnackbar(strings.unableToSaveIncome)
             }
             isSaving = false
         }
@@ -155,7 +157,7 @@ class AddIncomeScreen(
             }.onSuccess {
                 closeAfterRecurringAction()
             }.onFailure {
-                snackbarHostState.showSnackbar("Unable to delete income")
+                snackbarHostState.showSnackbar(strings.unableToDeleteIncome)
             }
             isSaving = false
         }
@@ -179,12 +181,12 @@ class AddIncomeScreen(
                 if (showNavigationChrome) {
                     TopAppBar(
                         title = {
-                            Text(if (incomeId == null) "Add Income" else "Edit Income")
+                            Text(if (incomeId == null) strings.addIncome else strings.editIncome)
                         },
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onClose) {
-                                    Text("back")
+                                    Text(strings.back)
                                 }
                             }
                         }
@@ -194,7 +196,7 @@ class AddIncomeScreen(
             floatingActionButton = {
                 if (!isIos && incomeId != null) {
                     DeleteEditItemFab(
-                        label = "Delete income",
+                        label = strings.deleteIncome,
                         enabled = !isSaving,
                         onClick = ::requestDeleteIncome
                     )
@@ -213,7 +215,7 @@ class AddIncomeScreen(
                 PlatformTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = "Amount",
+                    label = strings.amount,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -221,7 +223,7 @@ class AddIncomeScreen(
                 PlatformTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = "Description",
+                    label = strings.description,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -239,7 +241,7 @@ class AddIncomeScreen(
                         onValueChange = {},
                         readOnly = true,
                         enabled = false,
-                        label = "Date",
+                        label = strings.date,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -264,11 +266,11 @@ class AddIncomeScreen(
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text("Recurring Monthly")
+                            Text(strings.recurringMonthly)
                         }
                         if (isRecurringMonthly) {
                             Text(
-                                text = "Creates the same income every month on this day for the next ${RECURRING_MONTHLY_OCCURRENCES / 12} years.",
+                                text = strings.recurringIncomeInfo(RECURRING_MONTHLY_OCCURRENCES / 12),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -277,7 +279,7 @@ class AddIncomeScreen(
 
                 if (recurringSeriesId != null) {
                     Text(
-                        text = "This income is part of a recurring monthly series.",
+                        text = strings.recurringIncomeSeriesInfo(),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -291,7 +293,7 @@ class AddIncomeScreen(
                         colors = homeBudgetButtonColors(),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel")
+                        Text(strings.cancel)
                     }
 
                     Button(
@@ -303,7 +305,7 @@ class AddIncomeScreen(
 
                                 when {
                                     parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
-                                        snackbarHostState.showSnackbar("Enter a valid amount greater than 0")
+                                        snackbarHostState.showSnackbar(strings.enterValidAmount)
                                     }
                                     else -> {
                                         isSaving = true
@@ -353,7 +355,7 @@ class AddIncomeScreen(
                                             }.onSuccess {
                                                 onClose()
                                             }.onFailure {
-                                                snackbarHostState.showSnackbar("Unable to save income")
+                                                snackbarHostState.showSnackbar(strings.unableToSaveIncome)
                                             }
                                             isSaving = false
                                         }
@@ -363,7 +365,7 @@ class AddIncomeScreen(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(if (incomeId == null) "Save" else "Update")
+                        Text(if (incomeId == null) strings.save else strings.update)
                     }
                 }
             }
@@ -372,13 +374,13 @@ class AddIncomeScreen(
         if (pendingRecurringAction != null) {
             RecurringSeriesActionDialog(
                 title = when (pendingRecurringAction) {
-                    RecurringIncomeAction.Update -> "Update recurring income?"
-                    RecurringIncomeAction.Delete -> "Delete recurring income?"
+                    RecurringIncomeAction.Update -> strings.updateRecurringIncomeTitle
+                    RecurringIncomeAction.Delete -> strings.deleteRecurringIncomeTitle
                     null -> ""
                 },
                 message = when (pendingRecurringAction) {
-                    RecurringIncomeAction.Update -> "Do you want to update only this income or the whole recurring series?"
-                    RecurringIncomeAction.Delete -> "Do you want to delete only this income or the whole recurring series?"
+                    RecurringIncomeAction.Update -> strings.recurringIncomeActionMessage(isUpdate = true)
+                    RecurringIncomeAction.Delete -> strings.recurringIncomeActionMessage(isUpdate = false)
                     null -> ""
                 },
                 onThisInstanceOnly = {

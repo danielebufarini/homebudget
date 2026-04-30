@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import kotlin.random.Random
@@ -44,6 +45,7 @@ fun CategoriesRoute(
     var showAddDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
+    val strings = LocalStrings.current
 
     LaunchedEffect(repository) {
         repository.insertDefaultCategoriesIfEmpty()
@@ -117,7 +119,7 @@ fun CategoriesRoute(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = "Add category"
+                            contentDescription = strings.addCategory
                         )
                     }
                 }
@@ -129,12 +131,12 @@ fun CategoriesRoute(
         var newCategoryName by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Add Category") },
+            title = { Text(strings.addCategory) },
             text = {
                 PlatformTextField(
                     value = newCategoryName,
                     onValueChange = { newCategoryName = it },
-                    label = "Category Name",
+                    label = strings.categoryName,
                     modifier = Modifier.fillMaxWidth()
                 )
             },
@@ -155,7 +157,7 @@ fun CategoriesRoute(
                         }
                     }
                 ) {
-                    Text("Add")
+                    Text(strings.add)
                 }
             },
             dismissButton = {
@@ -163,7 +165,7 @@ fun CategoriesRoute(
                     onClick = { showAddDialog = false },
                     colors = homeBudgetTextButtonColors()
                 ) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -181,13 +183,14 @@ private fun CategoriesScreenScaffold(
 ) {
     val isIos = rememberIsIosPlatform()
     var showNavigationRail by remember { mutableStateOf(false) }
+    val strings = LocalStrings.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 if (showNavigationChrome) {
                     CenterAlignedTopAppBar(
-                        title = { Text("Categories") },
+                        title = { Text(strings.categories) },
                         navigationIcon = {
                             IconButton(
                                 onClick = {
@@ -198,7 +201,7 @@ private fun CategoriesScreenScaffold(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Menu,
-                                    contentDescription = "Open navigation menu"
+                                    contentDescription = strings.categories
                                 )
                             }
                         }
@@ -217,7 +220,7 @@ private fun CategoriesScreenScaffold(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = "Add category"
+                                contentDescription = strings.addCategory
                             )
                         }
                     }
@@ -243,6 +246,8 @@ private fun CategoriesList(
     categories: List<it.homebudget.app.database.Category>,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalStrings.current
+
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -252,9 +257,9 @@ private fun CategoriesList(
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(category.name)
+                    Text(strings.categoryName(category.id, category.name, category.isCustom))
                     Text(
-                        text = if (category.isCustom == 1L) "Custom category" else "Default category",
+                        text = if (category.isCustom == 1L) strings.customCategory else strings.defaultCategory,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

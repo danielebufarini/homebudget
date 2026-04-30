@@ -111,7 +111,7 @@ struct ContentView: View {
                                 path.removeLast()
                             }
                         }
-                        .navigationTitle(incomeId == nil ? "Add Income" : "Edit Income")
+                        .navigationTitle(incomeId == nil ? appLocalized("Add Income") : appLocalized("Edit Income"))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyIncomes(year, month):
                         MonthlyIncomesRootView(
@@ -119,7 +119,7 @@ struct ContentView: View {
                             month: Int(month),
                             path: $path
                         )
-                        .navigationTitle("\(monthName(month)) Income")
+                        .navigationTitle(appMonthlyTitle(month: month, key: "Income"))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyExpenses(year, month):
                         GroupedExpensesSectionsScreen(
@@ -132,7 +132,7 @@ struct ContentView: View {
                         ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
-                        .navigationTitle("\(monthName(month)) Expenses")
+                        .navigationTitle(appMonthlyTitle(month: month, key: "Expenses"))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .sharedExpenses(year, month):
                         GroupedExpensesSectionsScreen(
@@ -142,7 +142,7 @@ struct ContentView: View {
                         ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
-                        .navigationTitle("\(monthName(month)) Shared Expenses")
+                        .navigationTitle(appMonthlyTitle(month: month, key: "Shared Expenses"))
                         .navigationBarTitleDisplayMode(.inline)
                     case let .categoryExpenses(year, month, categoryName):
                         GroupedExpensesSectionsScreen(
@@ -508,10 +508,10 @@ private struct CategoriesRootView: View {
 
 private func addExpenseTitle(expenseId: String?, readOnly: Bool) -> String {
     if readOnly {
-        return "Expense Details"
+        return appLocalized("Expense Details")
     }
 
-    return expenseId == nil ? "Add Expense" : "Edit Expense"
+    return expenseId == nil ? appLocalized("Add Expense") : appLocalized("Edit Expense")
 }
 
 private func kotlinInt(_ value: Int) -> KotlinInt {

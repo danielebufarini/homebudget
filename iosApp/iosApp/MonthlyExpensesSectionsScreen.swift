@@ -87,8 +87,8 @@ private struct GroupedExpenseSectionModel: Identifiable {
 
 @MainActor
 private final class GroupedExpensesSectionsViewModel: ObservableObject {
-    @Published var totalAmountText = "€ 0.00"
-    @Published var emptyStateText = "No expenses for this month"
+    @Published var totalAmountText = appAmountLabel("0.00")
+    @Published var emptyStateText = appLocalized("No expenses for this month")
     @Published var sections: [GroupedExpenseSectionModel] = []
     @Published var expandedSectionIDs = Set<String>()
 
@@ -180,8 +180,8 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
 
 @MainActor
 private final class MonthlyIncomesSectionsViewModel: ObservableObject {
-    @Published var totalAmountText = "€ 0.00"
-    @Published var emptyStateText = "No income for this month"
+    @Published var totalAmountText = appAmountLabel("0.00")
+    @Published var emptyStateText = appLocalized("No income for this month")
     @Published var sections: [GroupedExpenseSectionModel] = []
     @Published var expandedSectionIDs = Set<String>()
 
@@ -433,7 +433,7 @@ private struct MonthlyIncomesSectionsContent: View {
             ToolbarItem(placement: .principal) {
                 MonthNavigationToolbarTitle(
                     selectedMonth: selectedMonth,
-                    subtitle: "Income • \(viewModel.totalAmountText)",
+                    subtitle: "\(appLocalized("Income")) • \(viewModel.totalAmountText)",
                     onPreviousMonth: onPreviousMonth,
                     onNextMonth: onNextMonth
                 )
@@ -585,9 +585,9 @@ private struct GroupedExpensesSectionsList: View {
     private var screenTitle: String {
         switch kind {
         case .monthly:
-            return "\(monthName(selectedMonth.month)) Expenses"
+            return appMonthlyTitle(month: selectedMonth.month, key: "Expenses")
         case .shared:
-            return "\(monthName(selectedMonth.month)) Shared Expenses"
+            return appMonthlyTitle(month: selectedMonth.month, key: "Shared Expenses")
         case let .category(name):
             return "\(monthName(selectedMonth.month)) \(name)"
         }
@@ -596,9 +596,9 @@ private struct GroupedExpensesSectionsList: View {
     private var screenDescriptor: String {
         switch kind {
         case .monthly:
-            return "Expenses"
+            return appLocalized("Expenses")
         case .shared:
-            return "Shared Expenses"
+            return appLocalized("Shared Expenses")
         case let .category(name):
             return name
         }

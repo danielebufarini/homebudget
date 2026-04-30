@@ -21,7 +21,7 @@ struct VoiceExpenseEntrySheet: View {
                     } label: {
                         HStack {
                             Image(systemName: viewModel.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                            Text(viewModel.isRecording ? "Stop Recording" : "Start Recording")
+                            Text(viewModel.isRecording ? appLocalized("Stop Recording") : appLocalized("Start Recording"))
                         }
                     }
                     .disabled(viewModel.isBusy || !viewModel.canStartCapture)
@@ -32,13 +32,13 @@ struct VoiceExpenseEntrySheet: View {
                 }
 
                 Section("Transcript") {
-                    Text(viewModel.transcript.isEmpty ? "Speak an expense command." : viewModel.transcript)
+                    Text(viewModel.transcript.isEmpty ? appLocalized("Speak an expense command.") : viewModel.transcript)
                         .foregroundStyle(viewModel.transcript.isEmpty ? .secondary : .primary)
                 }
 
                 if let draft = viewModel.draft {
                     Section("Ready to Save") {
-                        Text(draft.intent == .create ? "Ready to save a new expense." : "Ready to update the matched expense.")
+                        Text(draft.intent == .create ? appLocalized("Ready to save a new expense.") : appLocalized("Ready to update the matched expense."))
                         LabeledContent("Action", value: draft.actionLabel)
                         if let amountLabel = draft.amountLabel {
                             LabeledContent("Amount", value: amountLabel)
@@ -50,7 +50,7 @@ struct VoiceExpenseEntrySheet: View {
                         if let description = draft.description, !description.isEmpty {
                             LabeledContent("Description", value: description)
                         }
-                        LabeledContent("Shared", value: draft.isShared ? "Yes" : "No")
+                        LabeledContent("Shared", value: draft.isShared ? appLocalized("Yes") : appLocalized("No"))
                     }
 
                     Section {

@@ -16,6 +16,7 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Income
+import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
@@ -58,6 +59,7 @@ class MonthlyIncomesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
+        val strings = LocalStrings.current
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
         var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
         val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
@@ -100,7 +102,7 @@ class MonthlyIncomesScreen(
                 ) {
                     PlatformCard {
                         Text(
-                            text = "No income for this month",
+                            text = strings.noIncomeForMonth,
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -163,7 +165,7 @@ class MonthlyIncomesScreen(
                         title = {
                             MonthNavigationTitle(
                                 selectedMonth = selectedMonth,
-                                subtitle = "Income • ${formatAmount(totalAmount)}",
+                                subtitle = "${strings.income} • ${formatAmount(totalAmount)}",
                                 onPreviousMonth = { selectedMonth = selectedMonth.previous() },
                                 onNextMonth = { selectedMonth = selectedMonth.next() }
                             )
@@ -171,7 +173,7 @@ class MonthlyIncomesScreen(
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onBack) {
-                                    Text("Back")
+                                    Text(strings.back)
                                 }
                             }
                         }
@@ -184,7 +186,7 @@ class MonthlyIncomesScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = "Add income"
+                                contentDescription = strings.addIncome
                             )
                         }
                     }
@@ -198,8 +200,8 @@ class MonthlyIncomesScreen(
 
         recurringIncomeToDelete?.let { income ->
             RecurringSeriesActionDialog(
-                title = "Delete recurring income?",
-                message = "Do you want to delete only this income or the whole recurring series?",
+                title = strings.deleteRecurringIncomeTitle,
+                message = strings.recurringIncomeActionMessage(isUpdate = false),
                 onThisInstanceOnly = {
                     recurringIncomeToDelete = null
                     scope.launch {
@@ -228,6 +230,7 @@ private fun MonthlyIncomeRow(
     onDeleteIncome: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val strings = LocalStrings.current
     val currentOnDeleteIncome by rememberUpdatedState(onDeleteIncome)
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance ->
@@ -254,7 +257,7 @@ private fun MonthlyIncomeRow(
         }
     ) {
         ExpenseListItemRow(
-            title = income.description?.ifBlank { "Income" } ?: "Income",
+            title = income.description?.ifBlank { strings.income } ?: strings.income,
             subtitleText = formatExpenseDateGroupTitle(income.date.toLocalDate()),
             amountText = formatAmount(income.amount),
             subtitleFontSizeOffsetSp = -2,

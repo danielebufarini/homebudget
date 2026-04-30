@@ -28,6 +28,8 @@ import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
+import it.homebudget.app.localization.LocalStrings
+import it.homebudget.app.localization.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -100,6 +102,7 @@ internal actual fun DashboardVoiceExpenseAction() {
     val repository: ExpenseRepository = koinInject()
     val scope = rememberCoroutineScope()
     val generativeModel = remember { Generation.getClient() }
+    val strings = LocalStrings.current
 
     var availability by remember { mutableStateOf<Int?>(null) }
     var showDialog by remember { mutableStateOf(false) }
@@ -176,7 +179,7 @@ internal actual fun DashboardVoiceExpenseAction() {
         scope.launch {
             isParsing = true
             val parseResult = runCatching {
-                val snapshot = loadAndroidVoiceExpenseSnapshot(repository)
+                val snapshot = loadAndroidVoiceExpenseSnapshot(repository, strings)
                 val interpretation = interpretAndroidVoiceExpense(
                     transcript = spokenText,
                     snapshot = snapshot,
@@ -416,17 +419,18 @@ private fun VoiceExpenseSection(
 }
 
 private suspend fun loadAndroidVoiceExpenseSnapshot(
-    repository: ExpenseRepository
+    repository: ExpenseRepository,
+    strings: Strings
 ): AndroidVoiceExpenseSnapshot {
     repository.insertDefaultCategoriesIfEmpty()
 
     val categorySnapshot = repository.getAllCategoriesSnapshot()
     val categories = categorySnapshot
-        .sortedBy { it.name.lowercase(Locale.getDefault()) }
+        .sortedBy { strings.categoryName(it.id, it.name, it.isCustom).lowercase(Locale.getDefault()) }
         .map { category ->
             AndroidVoiceExpenseCategory(
                 id = category.id,
-                name = category.name
+                name = strings.categoryName(category.id, category.name, category.isCustom)
             )
         }
 
@@ -441,7 +445,7 @@ private suspend fun loadAndroidVoiceExpenseSnapshot(
                 id = expense.id,
                 amountInput = formatAmountInput(expense.amount),
                 categoryId = expense.categoryId,
-                categoryName = category.name,
+                categoryName = strings.categoryName(category.id, category.name, category.isCustom),
                 description = expense.description,
                 date = expense.date,
                 isShared = expense.isShared == 1L

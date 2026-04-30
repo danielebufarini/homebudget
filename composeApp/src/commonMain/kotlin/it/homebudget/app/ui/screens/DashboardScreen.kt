@@ -28,6 +28,8 @@ import it.homebudget.app.data.*
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
+import it.homebudget.app.localization.LocalStrings
+import it.homebudget.app.localization.Strings
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
@@ -88,24 +90,26 @@ fun DashboardRoute(
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
     val categoriesById = remember(categories) { categories.associateBy { it.id } }
     var selectedMonth by remember { mutableStateOf(currentMonthCursor()) }
+    val strings = LocalStrings.current
 
     LaunchedEffect(repository) {
         repository.insertDefaultCategoriesIfEmpty()
     }
 
-    val dashboardData = remember(expenses, incomes, categoriesById) {
-        buildDashboardDataCache(expenses, incomes, categoriesById)
+    val dashboardData = remember(expenses, incomes, categoriesById, strings) {
+        buildDashboardDataCache(expenses, incomes, categoriesById, strings)
     }
 
     val summary = remember(dashboardData, selectedMonth) {
         dashboardData.monthlySummaries[selectedMonth] ?: emptyMonthlySummary()
     }
 
-    val chartState = remember(dashboardData, selectedMonth) {
+    val chartState = remember(dashboardData, selectedMonth, strings) {
         buildCashFlowChartState(
             expenseTotalsByMonth = dashboardData.monthlyExpenseTotalsByMonth,
             incomeTotalsByMonth = dashboardData.monthlyIncomeTotalsByMonth,
-            selectedMonth = selectedMonth
+            selectedMonth = selectedMonth,
+            strings = strings
         )
     }
 
@@ -175,7 +179,7 @@ fun DashboardRoute(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = "Add expense"
+                            contentDescription = strings.addExpense
                         )
                     }
                 }
@@ -198,6 +202,7 @@ private fun DashboardScreenScaffold(
 ) {
     val isIos = rememberIsIosPlatform()
     var showNavigationRail by remember { mutableStateOf(false) }
+    val strings = LocalStrings.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -221,7 +226,7 @@ private fun DashboardScreenScaffold(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
-                                contentDescription = "Open navigation menu"
+                                contentDescription = strings.dashboard
                             )
                         }
                     },
@@ -242,7 +247,7 @@ private fun DashboardScreenScaffold(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = "Add expense"
+                                contentDescription = strings.addExpense
                             )
                         }
                     }
@@ -332,7 +337,10 @@ private fun DashboardMonthHeaderCard(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
-    PlatformCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
+    PlatformCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+    ) {
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
@@ -371,36 +379,37 @@ private fun ExpenseSummary(
     onHighestDayClick: () -> Unit,
     onTopCategoryClick: () -> Unit
 ) {
+    val strings = LocalStrings.current
     val metrics = listOf(
         SummaryMetricUi(
-            label = "Expenses",
+            label = strings.expenses,
             value = summary.expenseCount.toString(),
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         SummaryMetricUi(
-            label = "Shared",
+            label = strings.shared,
             value = formatAmount(summary.sharedAmount),
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             onClick = onSharedClick
         ),
         SummaryMetricUi(
-            label = "Income",
+            label = strings.income,
             value = formatAmount(summary.incomeAmount),
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
             onClick = onIncomeClick
         ),
         SummaryMetricUi(
-            label = "Top Category",
+            label = strings.topCategory,
             value = summary.topCategory,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
             onClick = onTopCategoryClick
         ),
         SummaryMetricUi(
-            label = "Highest Day",
+            label = strings.highestDay,
             value = summary.highestDayLabel,
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -417,13 +426,13 @@ private fun ExpenseSummary(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Monthly Summary",
+                text = strings.monthlySummary,
                 style = MaterialTheme.typography.titleLarge
             )
 
             if (summary.expenseCount == 0) {
                 Text(
-                    text = "No expenses for this month",
+                    text = strings.noExpensesForMonth,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -541,7 +550,8 @@ private fun DashboardCharts(
     categoryTotals: List<CategoryTotal>
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
-    val pageTitles = listOf("Cash Flow", "Expenses by category")
+    val strings = LocalStrings.current
+    val pageTitles = listOf(strings.cashFlow, strings.expensesByCategory)
 
     PlatformCard(modifier = modifier, contentPadding = PaddingValues(0.dp)) {
         Column(
@@ -598,6 +608,7 @@ private fun LineChartPage(
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val xAxisLabelBandHeight = 28.dp
+    val strings = LocalStrings.current
 
     Column(
         modifier = Modifier
@@ -607,7 +618,7 @@ private fun LineChartPage(
     ) {
         if (state.series.isEmpty()) {
             Text(
-                text = "No expenses in this period",
+                text = strings.noExpensesInPeriod,
                 style = MaterialTheme.typography.bodyLarge
             )
             return@Column
@@ -618,6 +629,8 @@ private fun LineChartPage(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
+            val strings = LocalStrings.current
+
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -756,8 +769,8 @@ private fun LineChartPage(
                     ) {
                         Box(
                             modifier = Modifier
-                            .size(10.dp)
-                            .background(series.color, CircleShape)
+                                .size(10.dp)
+                                .background(series.color, CircleShape)
                         )
                         Text(
                             text = series.label,
@@ -773,6 +786,8 @@ private fun LineChartPage(
 
 @Composable
 private fun CategoryBreakdownPage(categoryTotals: List<CategoryTotal>) {
+    val strings = LocalStrings.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -781,7 +796,7 @@ private fun CategoryBreakdownPage(categoryTotals: List<CategoryTotal>) {
     ) {
         if (categoryTotals.isEmpty()) {
             Text(
-                text = "No expenses for this month",
+                text = strings.noExpensesForMonth,
                 style = MaterialTheme.typography.bodyLarge
             )
             return@Column
@@ -839,7 +854,8 @@ private fun CategoryBreakdownPage(categoryTotals: List<CategoryTotal>) {
 private fun buildMonthlySummary(
     expenses: List<Expense>,
     incomes: List<Income>,
-    categoriesById: Map<String, Category>
+    categoriesById: Map<String, Category>,
+    strings: Strings
 ): MonthlySummary {
     val incomeAmount = incomes.map { it.amount }.sumBigInteger()
 
@@ -849,7 +865,7 @@ private fun buildMonthlySummary(
 
     val totalAmount = expenses.map { it.amount }.sumBigInteger()
     val sharedAmount = expenses.filter { it.isShared == 1L }.map { it.amount }.sumBigInteger()
-    val categoryGroups = expenses.groupBy { categoryName(it.categoryId, categoriesById) }
+    val categoryGroups = expenses.groupBy { categoryName(it.categoryId, categoriesById, strings) }
     val topCategory = categoryGroups.maxByOrNull { (_, list) -> list.map { it.amount }.sumBigInteger() }?.key ?: "-"
     val highestDay = expenses
         .groupBy { it.date.dayOfMonth() }
@@ -902,7 +918,8 @@ private fun emptyMonthlySummary(): MonthlySummary {
 private fun buildDashboardDataCache(
     expenses: List<Expense>,
     incomes: List<Income>,
-    categoriesById: Map<String, Category>
+    categoriesById: Map<String, Category>,
+    strings: Strings
 ): DashboardDataCache {
     if (expenses.isEmpty() && incomes.isEmpty()) {
         return DashboardDataCache(
@@ -920,7 +937,8 @@ private fun buildDashboardDataCache(
             buildMonthlySummary(
                 expenses = expensesByMonth[month].orEmpty(),
                 incomes = incomesByMonth[month].orEmpty(),
-                categoriesById = categoriesById
+                categoriesById = categoriesById,
+                strings = strings
             )
         },
         monthlyExpenseTotalsByMonth = expensesByMonth.mapValues { (_, monthExpenses) ->
@@ -935,7 +953,8 @@ private fun buildDashboardDataCache(
 private fun buildCashFlowChartState(
     expenseTotalsByMonth: Map<MonthCursor, Double>,
     incomeTotalsByMonth: Map<MonthCursor, Double>,
-    selectedMonth: MonthCursor
+    selectedMonth: MonthCursor,
+    strings: Strings
 ): LineChartState {
     val months = selectedMonth.trailingMonths(count = 6)
 
@@ -979,13 +998,13 @@ private fun buildCashFlowChartState(
         ),
         series = listOf(
             LineSeries(
-                label = "Expenses",
+                label = strings.expenses,
                 color = Color(0xFFC62828),
                 values = expenseValues,
                 markerDays = expenseMarkerDays
             ),
             LineSeries(
-                label = "Income",
+                label = strings.income,
                 color = Color(0xFF5BC98A),
                 values = incomeValues,
                 markerDays = incomeMarkerDays
@@ -1012,8 +1031,10 @@ private fun Long.toDayNameAndNumber(): String {
     return "$dayName ${date.day}"
 }
 
-private fun categoryName(categoryId: String, categoriesById: Map<String, Category>): String {
-    return categoriesById[categoryId]?.name ?: "Unknown category"
+private fun categoryName(categoryId: String, categoriesById: Map<String, Category>, strings: Strings): String {
+    return categoriesById[categoryId]
+        ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
+        ?: strings.unknownCategory
 }
 
 private fun Long.dayOfMonth(): Int {

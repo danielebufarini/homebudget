@@ -6,6 +6,7 @@ import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.di.initKoin
+import it.homebudget.app.localization.AppStrings
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -54,11 +55,11 @@ class IosVoiceExpenseController {
 
                 val categorySnapshot = repository.getAllCategoriesSnapshot()
                 val categories = categorySnapshot
-                    .sortedBy { it.name.lowercase() }
+                    .sortedBy { AppStrings.categoryName(it.id, it.name, it.isCustom).lowercase() }
                     .map { category ->
                         IosVoiceExpenseCategory(
                             id = category.id,
-                            name = category.name
+                            name = AppStrings.categoryName(category.id, category.name, category.isCustom)
                         )
                     }
 
@@ -73,7 +74,7 @@ class IosVoiceExpenseController {
                             id = expense.id,
                             amountInput = formatAmountInput(expense.amount),
                             categoryId = expense.categoryId,
-                            categoryName = category.name,
+                            categoryName = AppStrings.categoryName(category.id, category.name, category.isCustom),
                             description = expense.description,
                             date = expense.date,
                             isShared = expense.isShared == 1L

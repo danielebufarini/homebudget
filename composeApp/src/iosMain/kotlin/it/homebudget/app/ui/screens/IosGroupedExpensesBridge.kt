@@ -7,6 +7,7 @@ import it.homebudget.app.data.sumBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.di.initKoin
+import it.homebudget.app.localization.AppStrings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.datetime.TimeZone
@@ -399,7 +400,7 @@ private fun buildMonthlyIncomesSnapshot(
                 rows = sortedItems.map { income ->
                     IosIncomeRow(
                         id = income.id,
-                        title = income.description?.ifBlank { "Income" } ?: "Income",
+                        title = income.description?.ifBlank { AppStrings.income } ?: AppStrings.income,
                         subtitleText = formatDate(income.date),
                         amountText = formatAmount(income.amount),
                         recurringSeriesId = income.recurringSeriesId
@@ -410,7 +411,7 @@ private fun buildMonthlyIncomesSnapshot(
 
     return IosMonthlyIncomesSnapshot(
         totalAmountText = formatAmount(filteredIncomes.map { it.amount }.sumBigInteger()),
-        emptyStateText = "No income for this month",
+        emptyStateText = AppStrings.noIncomeForMonth,
         sections = sections
     )
 }
@@ -462,7 +463,9 @@ private fun prepareExpense(
         id = expense.id,
         amount = expense.amount,
         amountText = formatAmount(expense.amount),
-        categoryName = categoriesById[expense.categoryId]?.name ?: "Unknown category",
+        categoryName = categoriesById[expense.categoryId]
+            ?.let { AppStrings.categoryName(it.id, it.name, it.isCustom) }
+            ?: AppStrings.unknownCategory,
         description = expense.description,
         recurringSeriesId = expense.recurringSeriesId,
         dateText = formatDate(expense.date),
@@ -508,14 +511,14 @@ private fun includeCategory(groupName: String, screenType: String, categoryName:
 }
 
 private fun expenseFallbackTitle(screenType: String): String = when (screenType) {
-    "shared" -> "Shared expense"
-    else -> "Expense"
+    "shared" -> AppStrings.sharedExpense
+    else -> AppStrings.expense
 }
 
 private fun emptyStateText(screenType: String, categoryName: String?): String = when (screenType) {
-    "shared" -> "No shared expenses for this month"
-    "category" -> "No expenses for ${categoryName ?: "this category"} this month"
-    else -> "No expenses for this month"
+    "shared" -> AppStrings.noSharedExpensesForMonth()
+    "category" -> AppStrings.noExpensesForCategoryThisMonth(categoryName ?: AppStrings.category)
+    else -> AppStrings.noExpensesForMonth
 }
 
 private fun formatDate(epochMillis: Long): String {

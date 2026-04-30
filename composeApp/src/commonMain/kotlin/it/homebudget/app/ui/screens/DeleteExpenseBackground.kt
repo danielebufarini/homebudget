@@ -11,9 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.homebudget.app.localization.LocalStrings
 
 @Composable
 internal fun DeleteExpenseBackground() {
+    val strings = LocalStrings.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -25,13 +28,13 @@ internal fun DeleteExpenseBackground() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Delete",
+                text = strings.delete,
                 color = MaterialTheme.colorScheme.onError
             )
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Filled.Delete,
-                contentDescription = "Delete expense",
+                contentDescription = strings.deleteExpense,
                 tint = MaterialTheme.colorScheme.onError
             )
         }
