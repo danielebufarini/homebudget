@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <dict>
-        <key>CADisableMinimumFrameDurationOnPhone</key>
-        <true/>
-        <key>NSMicrophoneUsageDescription</key>
-        <string>Record a spoken expense command.</string>
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>it</string>
+	</array>
+	<key>UIPrefersShowingLanguageSettings</key>
+	<true/>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record a spoken expense command.</string>
         <key>NSSpeechRecognitionUsageDescription</key>
         <string>Convert your spoken expense command into text.</string>
     </dict>
