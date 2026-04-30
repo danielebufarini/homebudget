@@ -61,8 +61,6 @@ private fun amountComponents(amount: BigInteger): Triple<BigInteger, String, Str
     return Triple(units, cents, sign)
 }
 
-fun Iterable<BigInteger>.sumBigInteger(): BigInteger = fold(ZERO) { acc, value -> acc + value }
-
 fun <T> Iterable<T>.sumBigIntegerOf(selector: (T) -> BigInteger): BigInteger =
     fold(BigInteger.ZERO) { acc, value -> acc + selector(value) }
 

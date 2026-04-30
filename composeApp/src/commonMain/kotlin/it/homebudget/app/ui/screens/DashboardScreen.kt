@@ -668,8 +668,6 @@ private fun LineChartPage(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            val strings = LocalStrings.current
-
             Column(
                 modifier = Modifier
                     .fillMaxHeight()

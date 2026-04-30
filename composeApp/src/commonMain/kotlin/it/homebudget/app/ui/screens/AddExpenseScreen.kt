@@ -379,7 +379,7 @@ class AddExpenseScreen(
                                     enabled = !readOnly
                                 )
                             } else {
-                                androidx.compose.material3.Checkbox(
+                                Checkbox(
                                     checked = isRecurringMonthly,
                                     onCheckedChange = {
                                         isRecurringMonthly = it
@@ -396,7 +396,7 @@ class AddExpenseScreen(
                         if (isRecurringMonthly) {
                             Text(
                                 text = strings.recurringExpenseInfo(RECURRING_MONTHLY_OCCURRENCES / 12),
-                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
@@ -419,7 +419,7 @@ class AddExpenseScreen(
                             enabled = !readOnly
                         )
                     } else {
-                        androidx.compose.material3.Checkbox(
+                        Checkbox(
                             checked = isShared,
                             onCheckedChange = { if (!readOnly) isShared = it },
                             enabled = !readOnly

@@ -178,16 +178,15 @@ private fun parseSemicolonSeparatedRow(line: String): List<String> {
     var index = 0
 
     while (index < line.length) {
-        val char = line[index]
-        when {
-            char == '"' && index + 1 < line.length && line[index + 1] == '"' -> {
+        when (val char = line[index]) {
+            '"' if index + 1 < line.length && line[index + 1] == '"' -> {
                 current.append('"')
                 index += 1
             }
-            char == '"' -> {
+            '"' -> {
                 inQuotes = !inQuotes
             }
-            char == ';' && !inQuotes -> {
+            ';' if !inQuotes -> {
                 columns += current.toString()
                 current.clear()
             }

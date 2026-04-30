@@ -287,8 +287,6 @@ private fun CategoriesList(
     modifier: Modifier = Modifier,
     onDeleteCategory: (String) -> Unit
 ) {
-    val strings = LocalStrings.current
-
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
