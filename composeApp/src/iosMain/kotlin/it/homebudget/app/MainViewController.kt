@@ -192,6 +192,24 @@ fun CategoryExpensesViewController(
     }
 }
 
+fun CalendarExpensesViewController(
+    onOpenExpense: (String) -> Unit
+) = ComposeUIViewController(
+    configure = {
+        ensureKoinStarted()
+    }
+) {
+    ProvideAppStrings {
+        AppTheme {
+            CalendarExpensesScreen().RouteContent(
+                showNavigationChrome = false,
+                onBack = {},
+                onOpenExpense = onOpenExpense
+            )
+        }
+    }
+}
+
 private fun ensureKoinStarted() {
     if (KoinPlatformTools.defaultContext().getOrNull() == null) {
         initKoin()

@@ -2,8 +2,10 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 
 internal enum class AndroidNavigationDestination {
     Dashboard,
+    Calendar,
     Categories
 }
 
@@ -23,7 +26,9 @@ internal fun AndroidNavigationRailOverlay(
     selectedDestination: AndroidNavigationDestination,
     onDismiss: () -> Unit,
     onOpenDashboard: () -> Unit,
-    onOpenCategories: () -> Unit
+    onOpenCalendar: () -> Unit,
+    onOpenCategories: () -> Unit,
+    onImportCsv: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
@@ -71,6 +76,26 @@ internal fun AndroidNavigationRailOverlay(
                     )
 
                     NavigationDrawerItem(
+                        selected = selectedDestination == AndroidNavigationDestination.Calendar,
+                        label = { Text(strings.calendar) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.CalendarMonth,
+                                contentDescription = strings.calendar,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                if (selectedDestination != AndroidNavigationDestination.Calendar) {
+                                    onOpenCalendar()
+                                }
+                            }
+                        }
+                    )
+
+                    NavigationDrawerItem(
                         selected = selectedDestination == AndroidNavigationDestination.Categories,
                         label = { Text(strings.categories) },
                         icon = {
@@ -86,6 +111,24 @@ internal fun AndroidNavigationRailOverlay(
                                 if (selectedDestination != AndroidNavigationDestination.Categories) {
                                     onOpenCategories()
                                 }
+                            }
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        selected = false,
+                        label = { Text(strings.importCsv) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.FileUpload,
+                                contentDescription = strings.importCsv,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onImportCsv()
                             }
                         }
                     )

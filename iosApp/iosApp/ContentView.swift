@@ -1,9 +1,11 @@
 @preconcurrency import ComposeApp
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 private enum Route: Hashable {
     case categories
+    case calendar
     case addExpense(expenseId: String?, readOnly: Bool)
     case addIncome(incomeId: String?, year: Int?, month: Int?)
     case monthlyIncomes(year: Int, month: Int)
@@ -59,6 +61,9 @@ private final class SafeAreaContainerViewController: UIViewController {
 struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
+    @State private var showCsvImporter = false
+    @State private var csvImportMessage: String?
+    @State private var csvImportController = IosCsvImportController()
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -67,15 +72,30 @@ struct ContentView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Categories") {
-                            path.append(Route.categories)
+                        Menu {
+                            Button(appLocalized("Categories")) {
+                                path.append(Route.categories)
+                            }
+                            Button(appLocalized("Import CSV")) {
+                                showCsvImporter = true
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.circle")
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showVoiceExpenseSheet = true
-                        } label: {
-                            Image(systemName: "waveform.badge.mic")
+                        HStack(spacing: 16) {
+                            Button {
+                                path.append(Route.calendar)
+                            } label: {
+                                Image(systemName: "calendar")
+                            }
+
+                            Button {
+                                showVoiceExpenseSheet = true
+                            } label: {
+                                Image(systemName: "waveform.badge.mic")
+                            }
                         }
                     }
                 }
@@ -84,11 +104,36 @@ struct ContentView: View {
                         showVoiceExpenseSheet = false
                     }
                 }
+                .fileImporter(
+                    isPresented: $showCsvImporter,
+                    allowedContentTypes: [.commaSeparatedText, .plainText, .text]
+                ) { result in
+                    handleCsvImport(result: result)
+                }
+                .alert(
+                    appLocalized("Import CSV"),
+                    isPresented: Binding(
+                        get: { csvImportMessage != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                csvImportMessage = nil
+                            }
+                        }
+                    )
+                ) {
+                    Button(appLocalized("Close"), role: .cancel) {}
+                } message: {
+                    Text(csvImportMessage ?? "")
+                }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .categories:
                         CategoriesRootView()
                             .navigationTitle("Categories")
+                            .navigationBarTitleDisplayMode(.inline)
+                    case .calendar:
+                        CalendarRootView(path: $path)
+                            .navigationTitle(appLocalized("Calendar"))
                             .navigationBarTitleDisplayMode(.inline)
                     case let .addExpense(expenseId, readOnly):
                         ExpenseEditorRootView(
@@ -156,6 +201,35 @@ struct ContentView: View {
                         .navigationBarTitleDisplayMode(.inline)
                     }
                 }
+        }
+        .onDisappear {
+            csvImportController.dispose()
+        }
+    }
+
+    private func handleCsvImport(result: Result<URL, Error>) {
+        switch result {
+        case let .success(url):
+            let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccessSecurityScope {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                let data = try Data(contentsOf: url)
+                let text = String(decoding: data, as: UTF8.self)
+                csvImportController.importCsv(text: text) { successMessage, errorMessage in
+                    Task { @MainActor in
+                        csvImportMessage = successMessage ?? errorMessage
+                    }
+                }
+            } catch {
+                csvImportMessage = error.localizedDescription
+            }
+        case let .failure(error):
+            csvImportMessage = error.localizedDescription
         }
     }
 }
@@ -501,6 +575,18 @@ private struct CategoriesRootView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+            }
+        }
+    }
+}
+
+private struct CalendarRootView: View {
+    @Binding var path: NavigationPath
+
+    var body: some View {
+        KotlinViewControllerHost {
+            MainViewControllerKt.CalendarExpensesViewController { expenseId in
+                path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
             }
         }
     }

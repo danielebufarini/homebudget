@@ -33,6 +33,7 @@ interface Strings {
     val back: String
     val byCategory: String
     val byDate: String
+    val calendar: String
     val cancel: String
     val cashFlow: String
     val categories: String
@@ -59,8 +60,12 @@ interface Strings {
     val expensesByCategory: String
     val highestDay: String
     val income: String
+    val importCsv: String
     val installments: String
     val monthlySummary: String
+    val csvImportFailed: String
+    val csvImportNoRows: String
+    val noExpensesForDay: String
     val noExpensesForMonth: String
     val noExpensesInPeriod: String
     val noIncomeForMonth: String
@@ -98,9 +103,11 @@ interface Strings {
     fun noExpensesForCategoryThisMonth(categoryName: String): String
     fun noSharedExpensesForMonth(): String
     fun installmentLabel(count: Int): String
+    fun csvImportSuccess(importedCount: Int, skippedCount: Int): String
     fun categoryName(id: String, storedName: String, isCustom: Long): String
     fun fullMonthName(month: Int): String
     fun shortMonthName(month: Int): String
+    fun shortWeekdayName(dayIndex: Int): String
 }
 
 private object ItStrings : Strings {
@@ -113,6 +120,7 @@ private object ItStrings : Strings {
     override val back = "Indietro"
     override val byCategory = "Per categoria"
     override val byDate = "Per data"
+    override val calendar = "Calendario"
     override val cancel = "Annulla"
     override val cashFlow = "Flusso di cassa"
     override val categories = "Categorie"
@@ -139,8 +147,12 @@ private object ItStrings : Strings {
     override val expensesByCategory = "Spese per categoria"
     override val highestDay = "Giorno più alto"
     override val income = "Entrate"
+    override val importCsv = "Importa CSV"
     override val installments = "Rate"
     override val monthlySummary = "Riepilogo mensile"
+    override val csvImportFailed = "Impossibile importare il file CSV"
+    override val csvImportNoRows = "Nessuna riga importabile trovata nel file CSV"
+    override val noExpensesForDay = "Nessuna spesa per questo giorno"
     override val noExpensesForMonth = "Nessuna spesa per questo mese"
     override val noExpensesInPeriod = "Nessuna spesa in questo periodo"
     override val noIncomeForMonth = "Nessuna entrata per questo mese"
@@ -184,6 +196,7 @@ private object ItStrings : Strings {
         "Dicembre"
     )
     private val shortMonthNames = listOf("Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic")
+    private val shortWeekdayNames = listOf("Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab")
 
     override fun recurringExpenseInfo(years: Int): String =
         "Crea la stessa spesa ogni mese in questo giorno per i prossimi $years anni."
@@ -220,6 +233,13 @@ private object ItStrings : Strings {
     override fun installmentLabel(count: Int): String =
         if (count == 1) singlePayment else "$count rate"
 
+    override fun csvImportSuccess(importedCount: Int, skippedCount: Int): String =
+        if (skippedCount == 0) {
+            "Importate $importedCount voci dal CSV"
+        } else {
+            "Importate $importedCount voci dal CSV, saltate $skippedCount"
+        }
+
     override fun categoryName(id: String, storedName: String, isCustom: Long): String =
         if (isCustom == 1L) {
             storedName
@@ -237,6 +257,8 @@ private object ItStrings : Strings {
     override fun fullMonthName(month: Int): String = fullMonthNames[month - 1]
 
     override fun shortMonthName(month: Int): String = shortMonthNames[month - 1]
+
+    override fun shortWeekdayName(dayIndex: Int): String = shortWeekdayNames[dayIndex]
 }
 
 private object EnStrings : Strings {
@@ -249,6 +271,7 @@ private object EnStrings : Strings {
     override val back = "Back"
     override val byCategory = "By Category"
     override val byDate = "By Date"
+    override val calendar = "Calendar"
     override val cancel = "Cancel"
     override val cashFlow = "Cash Flow"
     override val categories = "Categories"
@@ -275,8 +298,12 @@ private object EnStrings : Strings {
     override val expensesByCategory = "Expenses by category"
     override val highestDay = "Highest Day"
     override val income = "Income"
+    override val importCsv = "Import CSV"
     override val installments = "Installments"
     override val monthlySummary = "Monthly Summary"
+    override val csvImportFailed = "Unable to import the CSV file"
+    override val csvImportNoRows = "No importable rows were found in the CSV file"
+    override val noExpensesForDay = "No expenses for this day"
     override val noExpensesForMonth = "No expenses for this month"
     override val noExpensesInPeriod = "No expenses in this period"
     override val noIncomeForMonth = "No income for this month"
@@ -320,6 +347,7 @@ private object EnStrings : Strings {
         "December"
     )
     private val shortMonthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    private val shortWeekdayNames = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
     override fun recurringExpenseInfo(years: Int): String =
         "Creates the same expense every month on this day for the next $years years."
@@ -356,6 +384,13 @@ private object EnStrings : Strings {
     override fun installmentLabel(count: Int): String =
         if (count == 1) singlePayment else "$count installments"
 
+    override fun csvImportSuccess(importedCount: Int, skippedCount: Int): String =
+        if (skippedCount == 0) {
+            "Imported $importedCount items from CSV"
+        } else {
+            "Imported $importedCount items from CSV, skipped $skippedCount"
+        }
+
     override fun categoryName(id: String, storedName: String, isCustom: Long): String =
         if (isCustom == 1L) {
             storedName
@@ -373,4 +408,6 @@ private object EnStrings : Strings {
     override fun fullMonthName(month: Int): String = fullMonthNames[month - 1]
 
     override fun shortMonthName(month: Int): String = shortMonthNames[month - 1]
+
+    override fun shortWeekdayName(dayIndex: Int): String = shortWeekdayNames[dayIndex]
 }

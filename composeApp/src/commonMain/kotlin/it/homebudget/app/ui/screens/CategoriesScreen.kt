@@ -207,6 +207,13 @@ private fun CategoriesScreenScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
+    val navigator = LocalNavigator.current
+    val scope = rememberCoroutineScope()
+    val openCsvImport = rememberCsvImportLauncher { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
     var showNavigationRail by remember { mutableStateOf(false) }
     val strings = LocalStrings.current
 
@@ -263,7 +270,11 @@ private fun CategoriesScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Categories,
                 onDismiss = { showNavigationRail = false },
                 onOpenDashboard = onBack,
-                onOpenCategories = {}
+                onOpenCalendar = {
+                    navigator?.push(CalendarExpensesScreen())
+                },
+                onOpenCategories = {},
+                onImportCsv = openCsvImport
             )
         }
     }

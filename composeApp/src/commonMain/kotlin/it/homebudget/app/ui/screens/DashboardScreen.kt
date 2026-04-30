@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +31,7 @@ import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.LocalStrings
 import it.homebudget.app.localization.Strings
+import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
@@ -201,6 +203,14 @@ private fun DashboardScreenScaffold(
     content: @Composable (Modifier) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
+    val navigator = LocalNavigator.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val openCsvImport = rememberCsvImportLauncher { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
     var showNavigationRail by remember { mutableStateOf(false) }
     val strings = LocalStrings.current
 
@@ -231,6 +241,16 @@ private fun DashboardScreenScaffold(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = {
+                                navigator?.push(CalendarExpensesScreen())
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CalendarMonth,
+                                contentDescription = strings.calendar
+                            )
+                        }
                         DashboardVoiceExpenseAction()
                     }
                 )
@@ -252,6 +272,9 @@ private fun DashboardScreenScaffold(
                         }
                     }
                 }
+            },
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
             }
         ) { padding ->
             content(
@@ -267,7 +290,11 @@ private fun DashboardScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
                 onDismiss = { showNavigationRail = false },
                 onOpenDashboard = {},
-                onOpenCategories = onOpenCategories
+                onOpenCalendar = {
+                    navigator?.push(CalendarExpensesScreen())
+                },
+                onOpenCategories = onOpenCategories,
+                onImportCsv = openCsvImport
             )
         }
     }
