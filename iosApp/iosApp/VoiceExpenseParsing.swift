@@ -94,9 +94,11 @@ func parseExpenseIntent(
 ) async throws -> VoiceExpenseInterpretation {
     let today = voiceExpenseISODateFormatter.string(from: Date())
     let categoriesText = categories
+        .lazy
         .map { "- id=\($0.id), name=\($0.name)" }
         .joined(separator: "\n")
     let expensesText = expenses
+        .lazy
         .map { expense in
             let dateText = voiceExpenseISODateFormatter.string(from: expense.date)
             let description = expense.description.ifEmptyNil
@@ -221,20 +223,7 @@ func normalizeVoiceExpenseToken(_ value: String) -> String {
 
 func voiceExpenseCategoryAliases(for category: VoiceExpenseCategory) -> [String] {
     let normalizedName = normalizeVoiceExpenseToken(category.name)
-    let defaultAliases: [String: [String]] = [
-        "cibo": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
-        "food": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
-        "bollette": ["bollette", "bills", "bill", "utilities", "utility"],
-        "bills": ["bollette", "bills", "bill", "utilities", "utility"],
-        "speseauto": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
-        "carexpenses": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
-        "spesecasa": ["spese casa", "casa", "home", "house", "rent", "affitto"],
-        "homeexpenses": ["spese casa", "casa", "home", "house", "rent", "affitto"],
-        "varie": ["varie", "misc", "miscellaneous", "other", "others"],
-        "miscellaneous": ["varie", "misc", "miscellaneous", "other", "others"]
-    ]
-
-    return [category.name] + (defaultAliases[normalizedName] ?? [])
+    return [category.name] + (voiceExpenseDefaultCategoryAliases[normalizedName] ?? [])
 }
 
 func availabilityMessage(for availability: SystemLanguageModel.Availability) -> String {
@@ -285,19 +274,7 @@ private func parseISODate(_ value: String?) -> Date? {
 }
 
 private func parseSimpleExpenseAmount(from transcript: String) -> String? {
-    let patterns = [
-        #"(?<![\d.,])(?:€|\$|eur|euro|euros|usd|dollar|dollars)\s*(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#,
-        #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)\s*(?:€|\$|eur|euro|euros|usd|dollar|dollars)(?![\d.,])"#,
-        #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#
-    ]
-
-    for pattern in patterns {
-        guard
-            let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
-        else {
-            continue
-        }
-
+    for regex in simpleExpenseAmountRegexes {
         let nsRange = NSRange(transcript.startIndex..<transcript.endIndex, in: transcript)
         guard
             let match = regex.firstMatch(in: transcript, range: nsRange),
@@ -320,15 +297,7 @@ private func parseRelativeSpokenDate(from transcript: String) -> Date? {
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: Date())
 
-    let relativeOffsets: [(phrases: [String], days: Int)] = [
-        (["the day before yesterday", "day before yesterday", "l'altro ieri", "altro ieri"], -2),
-        (["dopodomani"], 2),
-        (["yesterday", "ieri"], -1),
-        (["tomorrow", "domani"], 1),
-        (["today", "oggi"], 0)
-    ]
-
-    for entry in relativeOffsets {
+    for entry in relativeSpokenDateOffsets {
         if entry.phrases.contains(where: { normalizedTranscript.contains(" \($0) ") }) {
             return calendar.date(byAdding: .day, value: entry.days, to: today)
         }
@@ -336,6 +305,35 @@ private func parseRelativeSpokenDate(from transcript: String) -> Date? {
 
     return nil
 }
+
+private let simpleExpenseAmountRegexes: [NSRegularExpression] = [
+    #"(?<![\d.,])(?:€|\$|eur|euro|euros|usd|dollar|dollars)\s*(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#,
+    #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)\s*(?:€|\$|eur|euro|euros|usd|dollar|dollars)(?![\d.,])"#,
+    #"(?<![\d.,])(\d+(?:[.,]\d{1,2})?)(?![\d.,])"#
+].compactMap { pattern in
+    try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+}
+
+private let relativeSpokenDateOffsets: [(phrases: [String], days: Int)] = [
+    (["the day before yesterday", "day before yesterday", "l'altro ieri", "altro ieri"], -2),
+    (["dopodomani"], 2),
+    (["yesterday", "ieri"], -1),
+    (["tomorrow", "domani"], 1),
+    (["today", "oggi"], 0)
+]
+
+private let voiceExpenseDefaultCategoryAliases: [String: [String]] = [
+    "cibo": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
+    "food": ["cibo", "food", "groceries", "grocery", "meal", "meals", "ristorante", "restaurant"],
+    "bollette": ["bollette", "bills", "bill", "utilities", "utility"],
+    "bills": ["bollette", "bills", "bill", "utilities", "utility"],
+    "speseauto": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
+    "carexpenses": ["spese auto", "auto", "car", "fuel", "gas", "gasoline", "parking", "parcheggio"],
+    "spesecasa": ["spese casa", "casa", "home", "house", "rent", "affitto"],
+    "homeexpenses": ["spese casa", "casa", "home", "house", "rent", "affitto"],
+    "varie": ["varie", "misc", "miscellaneous", "other", "others"],
+    "miscellaneous": ["varie", "misc", "miscellaneous", "other", "others"]
+]
 
 private let voiceExpenseISODateFormatter: DateFormatter = {
     let formatter = DateFormatter()

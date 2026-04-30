@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -72,9 +75,9 @@ class AddExpenseScreen(
         var isRecurringMonthly by remember { mutableStateOf(false) }
         var recurringSeriesId by remember { mutableStateOf<String?>(null) }
         var isShared by remember { mutableStateOf(false) }
-        var categoryExpanded by remember { mutableStateOf(false) }
         var installmentExpanded by remember { mutableStateOf(false) }
         var isSaving by remember { mutableStateOf(false) }
+        var showAddCategorySheet by remember { mutableStateOf(false) }
         var isInitialized by remember(expenseId) { mutableStateOf(expenseId == null) }
         var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringExpenseUpdate?>(null) }
         var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
@@ -82,7 +85,9 @@ class AddExpenseScreen(
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val selectedCategory = categories.find { it.id == selectedCategoryId }
         val installmentOptions = remember { (1..12).toList() }
-        val installmentLabels = installmentOptions.associateWith(strings::installmentLabel)
+        val installmentLabels = remember(installmentOptions, strings) {
+            installmentOptions.associateWith(strings::installmentLabel)
+        }
 
         LaunchedEffect(repository) {
             repository.insertDefaultCategoriesIfEmpty()
@@ -262,72 +267,28 @@ class AddExpenseScreen(
                     )
                 }
 
-                if (isIos) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = !readOnly && categories.isNotEmpty()) {
-                                platformOptionPicker.show(
-                                    title = strings.selectCategory,
-                                    options = categories.map { strings.categoryName(it.id, it.name, it.isCustom) },
-                                    selectedOption = selectedCategory?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                                ) { selectedOption ->
-                                    selectedCategoryId = categories
-                                        .firstOrNull { strings.categoryName(it.id, it.name, it.isCustom) == selectedOption }
-                                        ?.id
-                                        .orEmpty()
+                CategorySelectorRow(
+                    categoryName = selectedCategory?.let { strings.categoryName(it.id, it.name, it.isCustom) },
+                    enabled = !readOnly,
+                    canSelectCategory = categories.isNotEmpty(),
+                    onSelectCategory = {
+                        platformOptionPicker.show(
+                            title = strings.selectCategory,
+                            options = categories.map { strings.categoryName(it.id, it.name, it.isCustom) },
+                            selectedOption = selectedCategory?.let {
+                                strings.categoryName(it.id, it.name, it.isCustom)
+                            }
+                        ) { selectedOption ->
+                            selectedCategoryId = categories
+                                .firstOrNull {
+                                    strings.categoryName(it.id, it.name, it.isCustom) == selectedOption
                                 }
-                            }
-                    ) {
-                        PlatformTextField(
-                            value = selectedCategory?.let { strings.categoryName(it.id, it.name, it.isCustom) }.orEmpty(),
-                            onValueChange = {},
-                            readOnly = true,
-                            enabled = false,
-                            label = strings.category,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                } else {
-                    ExposedDropdownMenuBox(
-                        expanded = categoryExpanded && !readOnly,
-                        onExpandedChange = {
-                            if (!readOnly) {
-                                categoryExpanded = !categoryExpanded
-                            }
+                                ?.id
+                                .orEmpty()
                         }
-                    ) {
-                        PlatformTextField(
-                            value = selectedCategory?.let { strings.categoryName(it.id, it.name, it.isCustom) }.orEmpty(),
-                            onValueChange = {},
-                            readOnly = true,
-                            label = strings.category,
-                            trailingIcon = {
-                                if (!readOnly) {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-                                }
-                            },
-                            enabled = !readOnly,
-                            modifier = Modifier
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = categoryExpanded && !readOnly,
-                            onDismissRequest = { categoryExpanded = false }
-                        ) {
-                            categories.forEach { selectionOption ->
-                                DropdownMenuItem(
-                                    text = { Text(strings.categoryName(selectionOption.id, selectionOption.name, selectionOption.isCustom)) },
-                                    onClick = {
-                                        selectedCategoryId = selectionOption.id
-                                        categoryExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+                    },
+                    onAddCategory = { showAddCategorySheet = true }
+                )
 
                 if (expenseId == null && !isRecurringMonthly) {
                     if (isIos) {
@@ -442,9 +403,8 @@ class AddExpenseScreen(
                 }
 
                 if (recurringSeriesId != null) {
-                    Text(
-                        text = strings.recurringExpenseSeriesInfo(),
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                    RecurringSeriesNotice(
+                        text = strings.recurringExpenseSeriesInfo()
                     )
                 }
 
@@ -502,7 +462,7 @@ class AddExpenseScreen(
                                         parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
                                             snackbarHostState.showSnackbar(strings.enterValidAmount)
                                         }
-                                        selectedCategory == null -> {
+                                        selectedCategoryId.isBlank() -> {
                                             snackbarHostState.showSnackbar(strings.selectCategory)
                                         }
                                         expenseDate == null -> {
@@ -515,7 +475,7 @@ class AddExpenseScreen(
                                                 pendingRecurringUpdate = PendingRecurringExpenseUpdate(
                                                     amount = parsedAmount,
                                                     date = expenseDate,
-                                                    categoryId = selectedCategory.id,
+                                                    categoryId = selectedCategoryId,
                                                     description = normalizedDescription,
                                                     isShared = isShared
                                                 )
@@ -528,7 +488,7 @@ class AddExpenseScreen(
                                                             buildRecurringMonthlyExpenses(
                                                                 amount = parsedAmount,
                                                                 firstDate = expenseDate,
-                                                                categoryId = selectedCategory.id,
+                                                                categoryId = selectedCategoryId,
                                                                 description = description,
                                                                 isShared = isShared,
                                                                 recurringSeriesId = buildRecurringSeriesId(),
@@ -539,7 +499,7 @@ class AddExpenseScreen(
                                                                 amount = parsedAmount,
                                                                 firstDate = expenseDate,
                                                                 installments = installmentCount,
-                                                                categoryId = selectedCategory.id,
+                                                                categoryId = selectedCategoryId,
                                                                 description = description,
                                                                 isShared = isShared,
                                                                 idProvider = ::buildExpenseId
@@ -551,7 +511,7 @@ class AddExpenseScreen(
                                                                 id = expenseId,
                                                                 amount = parsedAmount,
                                                                 date = expenseDate,
-                                                                categoryId = selectedCategory.id,
+                                                                categoryId = selectedCategoryId,
                                                                 description = normalizedDescription,
                                                                 isShared = isShared,
                                                                 recurringSeriesId = recurringSeriesId
@@ -581,6 +541,30 @@ class AddExpenseScreen(
                     }
                 }
             }
+        }
+
+        if (showAddCategorySheet) {
+            AddCategorySheet(
+                onDismiss = { showAddCategorySheet = false },
+                onAddCategory = { name ->
+                    scope.launch {
+                        val categoryId = buildCategoryId()
+                        runCatching {
+                            repository.insertCategory(
+                                id = categoryId,
+                                name = name,
+                                icon = "category",
+                                isCustom = true
+                            )
+                        }.onSuccess {
+                            selectedCategoryId = categoryId
+                            showAddCategorySheet = false
+                        }.onFailure {
+                            snackbarHostState.showSnackbar(strings.unableToSaveExpense)
+                        }
+                    }
+                }
+            )
         }
 
         if (pendingRecurringAction != null) {
@@ -659,10 +643,151 @@ class AddExpenseScreen(
         return "recurring-${buildExpenseId()}"
     }
 
+    private fun buildCategoryId(): String {
+        return "custom_${Clock.System.now().toEpochMilliseconds()}_${Random.nextLong()}"
+    }
+
     private fun Long.formatDateLabel(): String {
         val date = Instant.fromEpochMilliseconds(this)
             .toLocalDateTime(TimeZone.currentSystemDefault())
             .date
         return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CategorySelectorRow(
+    categoryName: String?,
+    enabled: Boolean,
+    canSelectCategory: Boolean,
+    onSelectCategory: () -> Unit,
+    onAddCategory: () -> Unit
+) {
+    val strings = LocalStrings.current
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = strings.category,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(end = 16.dp)
+        )
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            CategorySplitButton(
+                categoryName = categoryName,
+                enabled = enabled,
+                canSelectCategory = canSelectCategory,
+                onSelectCategory = onSelectCategory,
+                onAddCategory = onAddCategory,
+                modifier = Modifier.widthIn(max = 240.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CategorySplitButton(
+    categoryName: String?,
+    enabled: Boolean,
+    canSelectCategory: Boolean,
+    onSelectCategory: () -> Unit,
+    onAddCategory: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalStrings.current
+
+    SplitButtonLayout(
+        modifier = modifier,
+        leadingButton = {
+            SplitButtonDefaults.LeadingButton(
+                onClick = onSelectCategory,
+                enabled = enabled && canSelectCategory,
+                colors = homeBudgetButtonColors()
+            ) {
+                Text(
+                    text = categoryName ?: strings.selectCategory,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        trailingButton = {
+            SplitButtonDefaults.TrailingButton(
+                onClick = onAddCategory,
+                enabled = enabled,
+                colors = homeBudgetButtonColors()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    modifier = Modifier.size(SplitButtonDefaults.TrailingIconSize),
+                    contentDescription = strings.addCategory
+                )
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddCategorySheet(
+    onDismiss: () -> Unit,
+    onAddCategory: (String) -> Unit
+) {
+    val strings = LocalStrings.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var categoryName by remember { mutableStateOf("") }
+    val trimmedCategoryName = categoryName.trim()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = strings.addCategory,
+                style = MaterialTheme.typography.titleLarge
+            )
+            PlatformTextField(
+                value = categoryName,
+                onValueChange = { categoryName = it },
+                label = strings.categoryName,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onDismiss,
+                    colors = homeBudgetTextButtonColors()
+                ) {
+                    Text(strings.cancel)
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    enabled = trimmedCategoryName.isNotEmpty(),
+                    onClick = { onAddCategory(trimmedCategoryName) },
+                    colors = homeBudgetButtonColors()
+                ) {
+                    Text(strings.add)
+                }
+            }
+        }
     }
 }

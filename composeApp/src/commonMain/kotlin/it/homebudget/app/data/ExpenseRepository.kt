@@ -96,6 +96,12 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
+    suspend fun deleteCategory(id: String) {
+        withContext(Dispatchers.IO) {
+            categoryQueries.deleteCategory(id)
+        }
+    }
+
     suspend fun deleteRecurringExpenseSeries(seriesId: String) {
         withContext(Dispatchers.IO) {
             expenseQueries.deleteRecurringExpenseSeries(seriesId)

@@ -24,7 +24,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigInteger
+import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.localization.LocalStrings
@@ -51,7 +51,7 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
             AndroidGroupedExpenseSectionModel(
                 id = categoryName,
                 title = categoryName,
-                totalAmountText = formatAmount(categoryExpenses.map { it.amount }.sumBigInteger()),
+                totalAmountText = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount)),
                 rows = categoryExpenses
                     .map { expense ->
                         val expenseName = expense.description?.ifBlank { expenseFallbackTitle } ?: expenseFallbackTitle
@@ -62,7 +62,8 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
                             id = expense.id,
                             title = if (isGroupedByDate) resolvedCategoryName else expenseName,
                             subtitleText = if (isGroupedByDate) expenseName else formatDate(epochMillis = expense.date),
-                            amountText = formatAmount(expense.amount)
+                            amountText = formatAmount(expense.amount),
+                            isRecurring = !expense.recurringSeriesId.isNullOrBlank()
                         )
                     }
             )
@@ -103,7 +104,8 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
 @Composable
 internal actual fun AndroidCategoriesRecyclerView(
     categories: List<Category>,
-    modifier: Modifier
+    modifier: Modifier,
+    onDeleteCategory: (String) -> Unit
 ) {
     val compositionContext = rememberCompositionContext()
 
@@ -118,7 +120,10 @@ internal actual fun AndroidCategoriesRecyclerView(
             }
         },
         update = { recyclerView ->
-            (recyclerView.adapter as CategoriesRecyclerAdapter).submit(categories)
+            (recyclerView.adapter as CategoriesRecyclerAdapter).submit(
+                categories = categories,
+                onDeleteCategory = onDeleteCategory
+            )
         }
     )
 }
@@ -134,7 +139,8 @@ private data class AndroidGroupedExpenseRowModel(
     val id: String,
     val title: String,
     val subtitleText: String,
-    val amountText: String
+    val amountText: String,
+    val isRecurring: Boolean
 )
 
 private class GroupedExpensesRecyclerAdapter(
@@ -188,6 +194,7 @@ private class GroupedExpensesRecyclerAdapter(
         )
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onBindViewHolder(holder: ComposeViewHolder, position: Int) {
         val section = sections[position]
         holder.composeView.setContent {
@@ -200,7 +207,10 @@ private class GroupedExpensesRecyclerAdapter(
                     } else {
                         expandedSectionIds.add(section.id)
                     }
-                    notifyItemChanged(position)
+                    val adapterPosition = holder.bindingAdapterPosition
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        notifyItemChanged(adapterPosition)
+                    }
                 },
                 onOpenExpense = onOpenExpense,
                 onDeleteExpense = onDeleteExpense
@@ -215,10 +225,15 @@ private class CategoriesRecyclerAdapter(
     private val parentCompositionContext: CompositionContext
 ) : RecyclerView.Adapter<ComposeViewHolder>() {
     private var categories: List<Category> = emptyList()
+    private var onDeleteCategory: (String) -> Unit = {}
 
-    fun submit(categories: List<Category>) {
+    fun submit(
+        categories: List<Category>,
+        onDeleteCategory: (String) -> Unit
+    ) {
         val previousCategories = this.categories
         this.categories = categories
+        this.onDeleteCategory = onDeleteCategory
 
         DiffUtil.calculateDiff(
             CategoriesDiffCallback(
@@ -244,24 +259,32 @@ private class CategoriesRecyclerAdapter(
     override fun onBindViewHolder(holder: ComposeViewHolder, position: Int) {
         val category = categories[position]
         holder.composeView.setContent {
-            val strings = LocalStrings.current
+            if (category.isCustom == 1L) {
+                val dismissState = rememberSwipeToDeleteBoxState(
+                    itemId = category.id,
+                    onDeleteItem = onDeleteCategory
+                )
 
-            PlatformCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(strings.categoryName(category.id, category.name, category.isCustom))
-                    Text(
-                        text = if (category.isCustom == 1L) strings.customCategory else strings.defaultCategory,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Box(modifier = Modifier.padding(bottom = 12.dp)) {
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = {
+                            if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) {
+                                Spacer(modifier = Modifier.fillMaxSize())
+                            } else {
+                                DeleteCategoryBackground()
+                            }
+                        }
+                    ) {
+                        CategoryListItem(category = category)
+                    }
                 }
+            } else {
+                CategoryListItem(
+                    category = category,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
             }
         }
     }
@@ -391,6 +414,7 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            isRecurring = row.isRecurring,
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenExpense(row.id) }
         )
@@ -413,6 +437,7 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            isRecurring = row.isRecurring,
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenExpense(row.id) }
         )

@@ -2,7 +2,7 @@ import Foundation
 
 func monthName(_ month: Int) -> String {
     var components = DateComponents()
-    components.calendar = Calendar(identifier: .gregorian)
+    components.calendar = monthNameCalendar
     components.year = 2024
     components.month = month
     components.day = 1
@@ -11,9 +11,15 @@ func monthName(_ month: Int) -> String {
         return ""
     }
 
+    return monthNameFormatter.string(from: date).capitalized(with: .current)
+}
+
+private let monthNameCalendar = Calendar(identifier: .gregorian)
+
+private let monthNameFormatter: DateFormatter = {
     let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.calendar = monthNameCalendar
     formatter.locale = .current
     formatter.dateFormat = "LLLL"
-    return formatter.string(from: date).capitalized(with: .current)
-}
+    return formatter
+}()

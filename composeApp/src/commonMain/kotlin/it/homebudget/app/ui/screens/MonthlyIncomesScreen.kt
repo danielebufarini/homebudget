@@ -14,7 +14,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigInteger
+import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
@@ -80,7 +80,7 @@ class MonthlyIncomesScreen(
                 }
         }
         val totalAmount = remember(filteredIncomes) {
-            filteredIncomes.map { it.amount }.sumBigInteger()
+            filteredIncomes.sumBigIntegerOf(Income::amount)
         }
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
             val income = filteredIncomes.find { it.id == incomeId } ?: return@deleteAction
@@ -134,7 +134,7 @@ class MonthlyIncomesScreen(
                                         )
                                         Spacer(modifier = Modifier.width(16.dp))
                                         Text(
-                                            text = formatAmount(incomesForDate.map { it.amount }.sumBigInteger()),
+                                            text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount)),
                                             textAlign = TextAlign.End
                                         )
                                     }
@@ -260,6 +260,7 @@ private fun MonthlyIncomeRow(
             title = income.description?.ifBlank { strings.income } ?: strings.income,
             subtitleText = formatExpenseDateGroupTitle(income.date.toLocalDate()),
             amountText = formatAmount(income.amount),
+            isRecurring = !income.recurringSeriesId.isNullOrBlank(),
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenIncome(income.id) }
         )

@@ -3,9 +3,10 @@ package it.homebudget.app.ui.screens
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigInteger
+import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
+import it.homebudget.app.database.Income
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.AppStrings
 import kotlinx.coroutines.*
@@ -352,7 +353,7 @@ private fun buildSnapshotsCache(
             includeCategory(expense.categoryName, key.screenType, key.categoryName)
     }
 
-    val totalAmountText = formatAmount(filteredExpenses.map { it.amount }.sumBigInteger())
+    val totalAmountText = formatAmount(filteredExpenses.sumBigIntegerOf(PreparedIosExpense::amount))
     val emptyStateText = emptyStateText(key.screenType, key.categoryName)
 
     return IosGroupedSnapshotsCache(
@@ -378,7 +379,7 @@ private fun buildSnapshotsCache(
 }
 
 private fun buildMonthlyIncomesSnapshot(
-    incomes: List<it.homebudget.app.database.Income>,
+    incomes: List<Income>,
     year: Int,
     month: Int
 ): IosMonthlyIncomesSnapshot {
@@ -396,7 +397,7 @@ private fun buildMonthlyIncomesSnapshot(
             IosIncomeSection(
                 id = formatExpenseDateGroupTitle(date),
                 title = formatExpenseDateGroupTitle(date),
-                totalAmountText = formatAmount(sortedItems.map { it.amount }.sumBigInteger()),
+                totalAmountText = formatAmount(sortedItems.sumBigIntegerOf(Income::amount)),
                 rows = sortedItems.map { income ->
                     IosIncomeRow(
                         id = income.id,
@@ -410,7 +411,7 @@ private fun buildMonthlyIncomesSnapshot(
         }
 
     return IosMonthlyIncomesSnapshot(
-        totalAmountText = formatAmount(filteredIncomes.map { it.amount }.sumBigInteger()),
+        totalAmountText = formatAmount(filteredIncomes.sumBigIntegerOf(Income::amount)),
         emptyStateText = AppStrings.noIncomeForMonth,
         sections = sections
     )
@@ -439,7 +440,7 @@ private fun buildSections(
         IosGroupedExpenseSection(
             id = groupName,
             title = groupName,
-            totalAmountText = formatAmount(sortedExpenses.map { it.amount }.sumBigInteger()),
+            totalAmountText = formatAmount(sortedExpenses.sumBigIntegerOf(PreparedIosExpense::amount)),
             rows = sortedExpenses.map { expense ->
                 val expenseName = expense.description?.ifBlank { expenseFallbackTitle(screenType) }
                     ?: expenseFallbackTitle(screenType)

@@ -3,6 +3,7 @@ package it.homebudget.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
@@ -44,8 +45,19 @@ fun CategoriesRoute(
     val isIos = rememberIsIosPlatform()
     var showAddDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
     val strings = LocalStrings.current
+
+    fun deleteCategory(categoryId: String) {
+        scope.launch {
+            runCatching {
+                repository.deleteCategory(categoryId)
+            }.onFailure {
+                snackbarHostState.showSnackbar(strings.unableToDeleteCategory)
+            }
+        }
+    }
 
     LaunchedEffect(repository) {
         repository.insertDefaultCategoriesIfEmpty()
@@ -62,7 +74,8 @@ fun CategoriesRoute(
             showNavigationChrome = true,
             showFab = showFab,
             onBack = onBack,
-            onShowAddDialog = { showAddDialog = true }
+            onShowAddDialog = { showAddDialog = true },
+            snackbarHostState = snackbarHostState
         ) { padding ->
             if (isIos) {
                 CategoriesList(
@@ -70,7 +83,8 @@ fun CategoriesRoute(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    onDeleteCategory = ::deleteCategory
                 )
             } else {
                 AndroidCategoriesRecyclerView(
@@ -78,7 +92,8 @@ fun CategoriesRoute(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    onDeleteCategory = ::deleteCategory
                 )
             }
         }
@@ -89,14 +104,16 @@ fun CategoriesRoute(
                     categories = categories,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    onDeleteCategory = ::deleteCategory
                 )
             } else {
                 AndroidCategoriesRecyclerView(
                     categories = categories,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    onDeleteCategory = ::deleteCategory
                 )
             }
 
@@ -124,6 +141,13 @@ fun CategoriesRoute(
                     }
                 }
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+            )
         }
     }
 
@@ -179,6 +203,7 @@ private fun CategoriesScreenScaffold(
     showFab: Boolean,
     onBack: () -> Unit,
     onShowAddDialog: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
@@ -225,6 +250,9 @@ private fun CategoriesScreenScaffold(
                         }
                     }
                 }
+            },
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
             }
         ) { padding ->
             content(padding)
@@ -241,10 +269,12 @@ private fun CategoriesScreenScaffold(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoriesList(
     categories: List<it.homebudget.app.database.Category>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDeleteCategory: (String) -> Unit
 ) {
     val strings = LocalStrings.current
 
@@ -252,19 +282,67 @@ private fun CategoriesList(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(categories) { category ->
-            PlatformCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
+        items(
+            items = categories,
+            key = { category -> category.id }
+        ) { category ->
+            if (category.isCustom == 1L) {
+                val dismissState = rememberSwipeToDeleteBoxState(
+                    itemId = category.id,
+                    onDeleteItem = onDeleteCategory
+                )
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    enableDismissFromStartToEnd = false,
+                    backgroundContent = {
+                        if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) {
+                            Spacer(modifier = Modifier.fillMaxSize())
+                        } else {
+                            DeleteCategoryBackground()
+                        }
+                    }
                 ) {
-                    Text(strings.categoryName(category.id, category.name, category.isCustom))
-                    Text(
-                        text = if (category.isCustom == 1L) strings.customCategory else strings.defaultCategory,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    CategoryListItem(category = category)
                 }
+            } else {
+                CategoryListItem(category = category)
             }
+        }
+    }
+}
+
+@Composable
+internal fun DeleteCategoryBackground() {
+    val isIos = rememberIsIosPlatform()
+    val strings = LocalStrings.current
+
+    DeleteSwipeBackground(
+        contentDescription = strings.deleteCategory,
+        shape = if (isIos) RoundedCornerShape(20.dp) else MaterialTheme.shapes.medium
+    )
+}
+
+@Composable
+internal fun CategoryListItem(
+    category: it.homebudget.app.database.Category,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalStrings.current
+
+    PlatformCard(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(strings.categoryName(category.id, category.name, category.isCustom))
+            Text(
+                text = if (category.isCustom == 1L) strings.customCategory else strings.defaultCategory,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -21,5 +21,6 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
 @Composable
 internal actual fun AndroidCategoriesRecyclerView(
     categories: List<Category>,
-    modifier: Modifier
+    modifier: Modifier,
+    onDeleteCategory: (String) -> Unit
 ) = Unit

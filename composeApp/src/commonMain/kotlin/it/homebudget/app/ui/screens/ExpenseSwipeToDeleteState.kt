@@ -15,15 +15,27 @@ internal fun rememberExpenseSwipeToDeleteBoxState(
     itemId: String,
     onDeleteExpense: (String) -> Unit
 ): SwipeToDismissBoxState {
-    val currentOnDeleteExpense by rememberUpdatedState(onDeleteExpense)
+    return rememberSwipeToDeleteBoxState(
+        itemId = itemId,
+        onDeleteItem = onDeleteExpense
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun rememberSwipeToDeleteBoxState(
+    itemId: String,
+    onDeleteItem: (String) -> Unit
+): SwipeToDismissBoxState {
+    val currentOnDeleteItem by rememberUpdatedState(onDeleteItem)
 
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance -> distance * 0.35f }
     )
 
-    LaunchedEffect(dismissState.settledValue) {
+    LaunchedEffect(itemId, dismissState.settledValue) {
         if (dismissState.settledValue == SwipeToDismissBoxValue.EndToStart) {
-            currentOnDeleteExpense(itemId)
+            currentOnDeleteItem(itemId)
             dismissState.snapTo(SwipeToDismissBoxValue.Settled)
         }
     }

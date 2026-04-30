@@ -302,7 +302,6 @@ private fun DashboardBody(
 
         ExpenseSummary(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
                 .clickable(onClick = onOpenMonthlyExpenses),
             summary = summary,
@@ -379,6 +378,7 @@ private fun ExpenseSummary(
     onHighestDayClick: () -> Unit,
     onTopCategoryClick: () -> Unit
 ) {
+    val isIos = rememberIsIosPlatform()
     val strings = LocalStrings.current
     val metrics = listOf(
         SummaryMetricUi(
@@ -418,29 +418,41 @@ private fun ExpenseSummary(
         )
     )
 
-    PlatformCard(modifier = modifier, contentPadding = PaddingValues(16.dp)) {
+    PlatformCard(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            horizontal = if (isIos) 16.dp else 16.dp,
+            vertical = if (isIos) 14.dp else 16.dp
+        )
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(if (isIos) 12.dp else 14.dp)
         ) {
             Text(
                 text = strings.monthlySummary,
-                style = MaterialTheme.typography.titleLarge
+                style = if (isIos) {
+                    MaterialTheme.typography.titleLarge
+                } else {
+                    MaterialTheme.typography.titleLarge
+                }
             )
 
             if (summary.expenseCount == 0) {
                 Text(
                     text = strings.noExpensesForMonth,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = if (isIos) {
+                        MaterialTheme.typography.bodyMedium
+                    } else {
+                        MaterialTheme.typography.bodyLarge
+                    }
                 )
             }
 
             metrics.chunked(2).forEach { rowMetrics ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (isIos) 12.dp else 12.dp)
                 ) {
                     if (rowMetrics.size == 1) {
                         val item = rowMetrics.single()
@@ -503,18 +515,18 @@ private fun SummaryMetric(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(if (isIos) 12.dp else 12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isIos) 3.dp else 4.dp)
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = if (isIos) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelMedium,
                 color = contentColor.copy(alpha = 0.8f)
             )
             if (trailingValue == null) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleMedium
+                    style = if (isIos) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleMedium
                 )
             } else {
                 Row(
@@ -524,15 +536,15 @@ private fun SummaryMetric(
                 ) {
                     Text(
                         text = value,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (isIos) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleMedium,
                         modifier = Modifier.fillMaxWidth(0.62f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(if (isIos) 10.dp else 12.dp))
                     Text(
                         text = trailingValue,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (isIos) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         textAlign = TextAlign.End
@@ -857,27 +869,34 @@ private fun buildMonthlySummary(
     categoriesById: Map<String, Category>,
     strings: Strings
 ): MonthlySummary {
-    val incomeAmount = incomes.map { it.amount }.sumBigInteger()
+    val incomeAmount = incomes.sumBigIntegerOf(Income::amount)
 
     if (expenses.isEmpty()) {
         return emptyMonthlySummary().copy(incomeAmount = incomeAmount)
     }
 
-    val totalAmount = expenses.map { it.amount }.sumBigInteger()
-    val sharedAmount = expenses.filter { it.isShared == 1L }.map { it.amount }.sumBigInteger()
+    val totalAmount = expenses.sumBigIntegerOf(Expense::amount)
+    val sharedAmount = expenses.sumBigIntegerOf { expense ->
+        if (expense.isShared == 1L) expense.amount else BigInteger.ZERO
+    }
     val categoryGroups = expenses.groupBy { categoryName(it.categoryId, categoriesById, strings) }
-    val topCategory = categoryGroups.maxByOrNull { (_, list) -> list.map { it.amount }.sumBigInteger() }?.key ?: "-"
-    val highestDay = expenses
-        .groupBy { it.date.dayOfMonth() }
-        .maxByOrNull { (_, list) -> list.map { it.amount }.sumBigInteger() }
-    val highestExpense = highestDay?.value?.maxByOrNull { it.amount }
+    val categoryAmounts = categoryGroups.mapValues { (_, groupedExpenses) ->
+        groupedExpenses.sumBigIntegerOf(Expense::amount)
+    }
+    val topCategory = categoryAmounts.maxByOrNull { (_, amount) -> amount }?.key ?: "-"
+    val dayGroups = expenses.groupBy { it.date.dayOfMonth() }
+    val dayAmounts = dayGroups.mapValues { (_, dayExpenses) ->
+        dayExpenses.sumBigIntegerOf(Expense::amount)
+    }
+    val highestDay = dayAmounts.maxByOrNull { (_, amount) -> amount }
+    val highestDayExpenses = highestDay?.key?.let(dayGroups::get).orEmpty()
+    val highestExpense = highestDayExpenses.maxByOrNull { it.amount }
 
     val palette = chartPalette()
-    val categoryTotals = categoryGroups
+    val categoryTotals = categoryAmounts
         .toList()
-        .sortedByDescending { (_, list) -> list.map { it.amount }.sumBigInteger() }
-        .mapIndexed { index, (name, groupedExpenses) ->
-            val amount = groupedExpenses.map { it.amount }.sumBigInteger()
+        .sortedByDescending { (_, amount) -> amount }
+        .mapIndexed { index, (name, amount) ->
             CategoryTotal(
                 name = name,
                 amount = amount,
@@ -893,8 +912,8 @@ private fun buildMonthlySummary(
         sharedAmount = sharedAmount,
         averageAmount = averageAmount(totalAmount, expenses.size),
         topCategory = topCategory,
-        highestDayLabel = highestDay?.value?.firstOrNull()?.date?.toDayNameAndNumber() ?: "-",
-        highestDayAmount = highestDay?.value?.map { it.amount }?.sumBigInteger() ?: BigInteger.ZERO,
+        highestDayLabel = highestDayExpenses.firstOrNull()?.date?.toDayNameAndNumber() ?: "-",
+        highestDayAmount = highestDay?.value ?: BigInteger.ZERO,
         highestExpenseId = highestExpense?.id,
         categoryTotals = categoryTotals
     )
@@ -942,10 +961,10 @@ private fun buildDashboardDataCache(
             )
         },
         monthlyExpenseTotalsByMonth = expensesByMonth.mapValues { (_, monthExpenses) ->
-            monthExpenses.map { it.amount }.sumBigInteger().toDisplayDouble()
+            monthExpenses.sumBigIntegerOf(Expense::amount).toDisplayDouble()
         },
         monthlyIncomeTotalsByMonth = incomesByMonth.mapValues { (_, monthIncomes) ->
-            monthIncomes.map { it.amount }.sumBigInteger().toDisplayDouble()
+            monthIncomes.sumBigIntegerOf(Income::amount).toDisplayDouble()
         }
     )
 }

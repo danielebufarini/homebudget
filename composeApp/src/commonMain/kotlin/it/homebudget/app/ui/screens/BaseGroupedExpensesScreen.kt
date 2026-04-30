@@ -17,7 +17,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigInteger
+import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
@@ -87,7 +87,7 @@ abstract class BaseGroupedExpensesScreen(
             repository.insertDefaultCategoriesIfEmpty()
         }
 
-        val filteredExpenses = remember(expenses, categories, selectedMonth, strings) {
+        val filteredExpenses = remember(expenses, categoriesById, selectedMonth, strings) {
             expenses.filter { expense ->
                 val localDate = expense.date.toLocalDate()
                 val categoryName = categoriesById[expense.categoryId]
@@ -100,7 +100,7 @@ abstract class BaseGroupedExpensesScreen(
             }
         }
 
-        val groupedExpenses = remember(filteredExpenses, categories, groupingMode, strings) {
+        val groupedExpenses = remember(filteredExpenses, categoriesById, groupingMode, strings) {
             when (groupingMode) {
                 ExpenseGroupingMode.ByCategory -> {
                     filteredExpenses
@@ -147,10 +147,9 @@ abstract class BaseGroupedExpensesScreen(
             }
         }
         val totalAmount = remember(groupedExpenses) {
-            groupedExpenses
-                .flatMap { it.second }
-                .map { it.amount }
-                .sumBigInteger()
+            groupedExpenses.sumBigIntegerOf { (_, expenses) ->
+                expenses.sumBigIntegerOf(Expense::amount)
+            }
         }
         val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
             deleteAction@{ expenseId ->
@@ -371,7 +370,7 @@ abstract class BaseGroupedExpensesScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = formatAmount(categoryExpenses.map { it.amount }.sumBigInteger()),
+                                    text = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount)),
                                     textAlign = TextAlign.End
                                 )
                             }
@@ -401,6 +400,7 @@ abstract class BaseGroupedExpensesScreen(
                                                 title = rowTitle,
                                                 subtitleText = rowSubtitleText,
                                                 amountText = rowAmountText,
+                                                isRecurring = !expense.recurringSeriesId.isNullOrBlank(),
                                                 onClick = {
                                                     onOpenExpense(expense.id)
                                                 }
@@ -422,6 +422,7 @@ abstract class BaseGroupedExpensesScreen(
                                                     title = rowTitle,
                                                     subtitleText = rowSubtitleText,
                                                     amountText = rowAmountText,
+                                                    isRecurring = !expense.recurringSeriesId.isNullOrBlank(),
                                                     onClick = {
                                                         onOpenExpense(expense.id)
                                                     }

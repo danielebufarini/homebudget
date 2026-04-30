@@ -63,6 +63,9 @@ private fun amountComponents(amount: BigInteger): Triple<BigInteger, String, Str
 
 fun Iterable<BigInteger>.sumBigInteger(): BigInteger = fold(ZERO) { acc, value -> acc + value }
 
+fun <T> Iterable<T>.sumBigIntegerOf(selector: (T) -> BigInteger): BigInteger =
+    fold(BigInteger.ZERO) { acc, value -> acc + selector(value) }
+
 fun BigInteger.toDisplayDouble(): Double = toString().toDouble() / 100.0
 
 fun averageAmount(total: BigInteger, count: Int): BigInteger {
@@ -77,4 +80,3 @@ fun averageAmount(total: BigInteger, count: Int): BigInteger {
         (total - halfDivisor) / divisor
     }
 }
-

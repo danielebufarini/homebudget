@@ -74,7 +74,11 @@ private struct GroupedExpenseRowModel: Identifiable {
     let recurringSeriesId: String?
 
     var isRecurring: Bool {
-        recurringSeriesId != nil
+        if let recurringSeriesId {
+            !recurringSeriesId.isEmpty
+        } else {
+            false
+        }
     }
 }
 
@@ -94,6 +98,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
 
     private let observer: IosGroupedExpensesObserver
     private var hasLoadedInitialExpansionState = false
+    private var knownSectionIDs = Set<String>()
     private var isObserving = false
 
     init(year: Int, month: Int, kind: GroupedExpensesKind, groupingMode: ExpenseGroupingMode) {
@@ -168,13 +173,16 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
             )
         }
 
-        let incomingIDs = Set(sections.map(\.id))
+        let incomingIDs = Set(sections.lazy.map(\.id))
         if hasLoadedInitialExpansionState {
-            expandedSectionIDs.formUnion(incomingIDs)
+            let newSectionIDs = incomingIDs.subtracting(knownSectionIDs)
+            expandedSectionIDs.formIntersection(incomingIDs)
+            expandedSectionIDs.formUnion(newSectionIDs)
         } else {
             expandedSectionIDs = incomingIDs
             hasLoadedInitialExpansionState = true
         }
+        knownSectionIDs = incomingIDs
     }
 }
 
@@ -187,6 +195,7 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
 
     private let observer: IosMonthlyIncomesObserver
     private var hasLoadedInitialExpansionState = false
+    private var knownSectionIDs = Set<String>()
     private var isObserving = false
 
     init(year: Int, month: Int) {
@@ -254,13 +263,16 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
             )
         }
 
-        let incomingIDs = Set(sections.map(\.id))
+        let incomingIDs = Set(sections.lazy.map(\.id))
         if hasLoadedInitialExpansionState {
-            expandedSectionIDs.formUnion(incomingIDs)
+            let newSectionIDs = incomingIDs.subtracting(knownSectionIDs)
+            expandedSectionIDs.formIntersection(incomingIDs)
+            expandedSectionIDs.formUnion(newSectionIDs)
         } else {
             expandedSectionIDs = incomingIDs
             hasLoadedInitialExpansionState = true
         }
+        knownSectionIDs = incomingIDs
     }
 }
 
@@ -746,8 +758,15 @@ private struct GroupedExpenseRowView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(row.title)
-                    .foregroundStyle(.primary)
+                HStack(alignment: .center, spacing: 8) {
+                    if row.isRecurring {
+                        RecurringBadgeView()
+                    }
+
+                    Text(row.title)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
                 Text(row.subtitleText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -759,5 +778,17 @@ private struct GroupedExpenseRowView: View {
                 .foregroundStyle(.primary)
         }
         .contentShape(Rectangle())
+    }
+}
+
+private struct RecurringBadgeView: View {
+    var body: some View {
+        Text("R")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.red, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .fixedSize()
     }
 }

@@ -155,10 +155,11 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 let interpretation = try await parseExpenseIntent(
                     transcript: text,
                     categories: Array(categoriesById.values).sorted { $0.name < $1.name },
-                    expenses: Array(expensesById.values)
+                    expenses: Array(
+                        expensesById.values
                         .sorted { $0.date > $1.date }
                         .prefix(80)
-                        .map { $0 }
+                    )
                 )
 
                 let nextDraft = buildDraft(from: interpretation, transcript: text)
@@ -321,8 +322,8 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
     }
 
     private func apply(snapshot: VoiceExpenseSnapshotData) {
-        categoriesById = Dictionary(uniqueKeysWithValues: snapshot.categories.map { ($0.id, $0) })
-        expensesById = Dictionary(uniqueKeysWithValues: snapshot.recentExpenses.map { ($0.id, $0) })
+        categoriesById = Dictionary(uniqueKeysWithValues: snapshot.categories.lazy.map { ($0.id, $0) })
+        expensesById = Dictionary(uniqueKeysWithValues: snapshot.recentExpenses.lazy.map { ($0.id, $0) })
         snapshotLoaded = true
         statusMessage = languageModel.isAvailable
             ? nil
@@ -351,9 +352,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
             }
         }
 
-        let searchText = [transcript, summary]
-            .compactMap { $0 }
-            .joined(separator: " ")
+        let searchText = summary.map { "\(transcript) \($0)" } ?? transcript
         return categoriesById.values.first(where: { category in
             voiceExpenseCategoryAliases(for: category).contains { alias in
                 searchText.localizedCaseInsensitiveContains(alias)

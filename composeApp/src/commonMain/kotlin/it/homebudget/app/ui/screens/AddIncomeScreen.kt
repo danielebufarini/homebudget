@@ -278,9 +278,8 @@ class AddIncomeScreen(
                 }
 
                 if (recurringSeriesId != null) {
-                    Text(
-                        text = strings.recurringIncomeSeriesInfo(),
-                        style = MaterialTheme.typography.bodySmall
+                    RecurringSeriesNotice(
+                        text = strings.recurringIncomeSeriesInfo()
                     )
                 }
 

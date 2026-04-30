@@ -19,7 +19,7 @@ fun ProvideAppStrings(content: @Composable () -> Unit) {
 }
 
 private val isItalian: Boolean
-    get() = currentAppLanguageCode().lowercase().startsWith("it")
+    get() = currentAppLanguageCode().startsWith("it", ignoreCase = true)
 
 fun currentCurrencySymbol(): String = AppStrings.currencySymbol
 
@@ -44,6 +44,7 @@ interface Strings {
     val date: String
     val defaultCategory: String
     val delete: String
+    val deleteCategory: String
     val deleteExpense: String
     val deleteIncome: String
     val deleteRecurringExpenseTitle: String
@@ -76,6 +77,7 @@ interface Strings {
     val singlePayment: String
     val thisInstanceOnly: String
     val topCategory: String
+    val unableToDeleteCategory: String
     val unableToDeleteExpense: String
     val unableToDeleteIncome: String
     val unableToSaveExpense: String
@@ -122,6 +124,7 @@ private object ItStrings : Strings {
     override val date = "Data"
     override val defaultCategory = "Categoria predefinita"
     override val delete = "Elimina"
+    override val deleteCategory = "Elimina categoria"
     override val deleteExpense = "Elimina spesa"
     override val deleteIncome = "Elimina entrata"
     override val deleteRecurringExpenseTitle = "Eliminare la spesa ricorrente?"
@@ -154,6 +157,7 @@ private object ItStrings : Strings {
     override val singlePayment = "Pagamento singolo"
     override val thisInstanceOnly = "Solo questa occorrenza"
     override val topCategory = "Categoria principale"
+    override val unableToDeleteCategory = "Impossibile eliminare la categoria"
     override val unableToDeleteExpense = "Impossibile eliminare la spesa"
     override val unableToDeleteIncome = "Impossibile eliminare l'entrata"
     override val unableToSaveExpense = "Impossibile salvare la spesa"
@@ -216,18 +220,19 @@ private object ItStrings : Strings {
     override fun installmentLabel(count: Int): String =
         if (count == 1) singlePayment else "$count rate"
 
-    override fun categoryName(id: String, storedName: String, isCustom: Long): String {
-        if (isCustom == 1L) return storedName
-
-        return when (id) {
-            "default_0" -> "Spese casa"
-            "default_1" -> "Cibo"
-            "default_2" -> "Bollette"
-            "default_3" -> "Spese auto"
-            "default_4" -> "Varie"
-            else -> storedName
+    override fun categoryName(id: String, storedName: String, isCustom: Long): String =
+        if (isCustom == 1L) {
+            storedName
+        } else {
+            when (id) {
+                "default_0" -> "Spese casa"
+                "default_1" -> "Cibo"
+                "default_2" -> "Bollette"
+                "default_3" -> "Spese auto"
+                "default_4" -> "Varie"
+                else -> storedName
+            }
         }
-    }
 
     override fun fullMonthName(month: Int): String = fullMonthNames[month - 1]
 
@@ -255,6 +260,7 @@ private object EnStrings : Strings {
     override val date = "Date"
     override val defaultCategory = "Default category"
     override val delete = "Delete"
+    override val deleteCategory = "Delete category"
     override val deleteExpense = "Delete expense"
     override val deleteIncome = "Delete income"
     override val deleteRecurringExpenseTitle = "Delete recurring expense?"
@@ -287,6 +293,7 @@ private object EnStrings : Strings {
     override val singlePayment = "Single payment"
     override val thisInstanceOnly = "This instance only"
     override val topCategory = "Top Category"
+    override val unableToDeleteCategory = "Unable to delete category"
     override val unableToDeleteExpense = "Unable to delete expense"
     override val unableToDeleteIncome = "Unable to delete income"
     override val unableToSaveExpense = "Unable to save expense"
@@ -349,18 +356,19 @@ private object EnStrings : Strings {
     override fun installmentLabel(count: Int): String =
         if (count == 1) singlePayment else "$count installments"
 
-    override fun categoryName(id: String, storedName: String, isCustom: Long): String {
-        if (isCustom == 1L) return storedName
-
-        return when (id) {
-            "default_0" -> "Home expenses"
-            "default_1" -> "Food"
-            "default_2" -> "Bills"
-            "default_3" -> "Car expenses"
-            "default_4" -> "Miscellaneous"
-            else -> storedName
+    override fun categoryName(id: String, storedName: String, isCustom: Long): String =
+        if (isCustom == 1L) {
+            storedName
+        } else {
+            when (id) {
+                "default_0" -> "Home expenses"
+                "default_1" -> "Food"
+                "default_2" -> "Bills"
+                "default_3" -> "Car expenses"
+                "default_4" -> "Miscellaneous"
+                else -> storedName
+            }
         }
-    }
 
     override fun fullMonthName(month: Int): String = fullMonthNames[month - 1]
 

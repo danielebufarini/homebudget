@@ -21,5 +21,6 @@ internal expect fun AndroidGroupedExpensesRecyclerView(
 @Composable
 internal expect fun AndroidCategoriesRecyclerView(
     categories: List<Category>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDeleteCategory: (String) -> Unit
 )
