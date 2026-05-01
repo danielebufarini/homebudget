@@ -11,6 +11,8 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlin.random.Random
 import kotlin.time.Clock
 
+private val nonAlphanumericRegex = Regex("[^a-z0-9]+")
+
 data class CsvImportResult(
     val importedCount: Int,
     val skippedCount: Int
@@ -29,14 +31,10 @@ suspend fun importBudgetItemsFromCsv(
 
     val categoriesById = repository.getAllCategoriesSnapshot()
         .associateByTo(mutableMapOf(), Category::id)
+
     val categoriesByNormalizedName = mutableMapOf<String, Category>()
     categoriesById.values.forEach { category ->
-        categoriesByNormalizedName[normalizeCategoryToken(category.name)] = category
-        categoriesByNormalizedName[
-            normalizeCategoryToken(
-                AppStrings.categoryName(category.id, category.name, category.isCustom)
-            )
-        ] = category
+        registerCategoryNames(category, categoriesByNormalizedName)
     }
 
     val existingExpenseKeys = repository.getAllExpensesSnapshot()
@@ -78,12 +76,7 @@ suspend fun importBudgetItemsFromCsv(
                         isCustom = category.isCustom == 1L
                     )
                     categoriesById[category.id] = category
-                    categoriesByNormalizedName[normalizeCategoryToken(category.name)] = category
-                    categoriesByNormalizedName[
-                        normalizeCategoryToken(
-                            AppStrings.categoryName(category.id, category.name, category.isCustom)
-                        )
-                    ] = category
+                    registerCategoryNames(category, categoriesByNormalizedName)
                 }
 
                 val expenseKey = CsvImportedExpenseKey(
@@ -130,17 +123,18 @@ suspend fun importBudgetItemsFromCsv(
         }
     }
 
-    if (expensesToInsert.isNotEmpty()) {
-        repository.insertExpenses(expensesToInsert)
-    }
-    if (incomesToInsert.isNotEmpty()) {
-        repository.insertIncomes(incomesToInsert)
-    }
+    if (expensesToInsert.isNotEmpty()) repository.insertExpenses(expensesToInsert)
+    if (incomesToInsert.isNotEmpty()) repository.insertIncomes(incomesToInsert)
 
     return CsvImportResult(
         importedCount = expensesToInsert.size + incomesToInsert.size,
         skippedCount = skippedCount
     )
+}
+
+private fun registerCategoryNames(category: Category, map: MutableMap<String, Category>) {
+    map[normalizeCategoryToken(category.name)] = category
+    map[normalizeCategoryToken(AppStrings.categoryName(category.id, category.name, category.isCustom))] = category
 }
 
 private data class ParsedUnifiedCsvRow(
@@ -154,9 +148,7 @@ private data class ParsedUnifiedCsvRow(
     val recurringSeriesId: String?
 ) {
     fun buildRecurringSeriesId(index: Int): String? {
-        if (!isRecurring) {
-            return null
-        }
+        if (!isRecurring) return null
         return recurringSeriesId?.takeIf { it.isNotBlank() }
             ?: "csv-series-${type.name.lowercase()}-${Clock.System.now().toEpochMilliseconds()}-$index"
     }
@@ -183,21 +175,19 @@ private fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
         .split('\n')
         .filter(String::isNotBlank)
 
-    if (lines.isEmpty()) {
-        return emptyList()
-    }
+    if (lines.isEmpty()) return emptyList()
 
     val headerColumns = parseSemicolonSeparatedRow(lines.first())
     val indices = UnifiedCsvColumnIndices.fromHeader(headerColumns) ?: return emptyList()
 
-    return lines.drop(1).mapNotNull { line ->
+    return lines.subList(1, lines.size).mapNotNull { line ->
         val columns = parseSemicolonSeparatedRow(line)
-        val type = columns.getOrNull(indices.typeIndex)?.trim()?.lowercase()?.toCsvRowType() ?: return@mapNotNull null
-        val date = parseCsvDate(columns.getOrNull(indices.dateIndex)?.trim().orEmpty()) ?: return@mapNotNull null
+        val type = columns.getOrNull(indices.typeIndex)?.trim()?.lowercase()?.toCsvRowType()
+            ?: return@mapNotNull null
+        val date = parseCsvDate(columns.getOrNull(indices.dateIndex)?.trim().orEmpty())
+            ?: return@mapNotNull null
         val amountText = columns.getOrNull(indices.amountIndex)?.trim().orEmpty()
-        if (amountText.isBlank()) {
-            return@mapNotNull null
-        }
+        if (amountText.isBlank()) return@mapNotNull null
 
         ParsedUnifiedCsvRow(
             type = type,
@@ -213,9 +203,7 @@ private fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
 }
 
 private fun parseSemicolonSeparatedRow(line: String): List<String> {
-    if (line.isEmpty()) {
-        return emptyList()
-    }
+    if (line.isEmpty()) return emptyList()
 
     val columns = mutableListOf<String>()
     val current = StringBuilder()
@@ -244,17 +232,12 @@ private fun parseSemicolonSeparatedRow(line: String): List<String> {
 
 private fun parseCsvDate(value: String): LocalDate? {
     val parts = value.split('-')
-    if (parts.size != 3) {
-        return null
-    }
-
-    val year = parts[0].toIntOrNull() ?: return null
-    val month = parts[1].toIntOrNull() ?: return null
-    val day = parts[2].toIntOrNull() ?: return null
-
-    return runCatching {
-        LocalDate(year = year, month = month, day = day)
-    }.getOrNull()
+    if (parts.size != 3) return null
+    val (yearStr, monthStr, dayStr) = parts
+    val year = yearStr.toIntOrNull() ?: return null
+    val month = monthStr.toIntOrNull() ?: return null
+    val day = dayStr.toIntOrNull() ?: return null
+    return runCatching { LocalDate(year = year, month = month, day = day) }.getOrNull()
 }
 
 private fun resolveImportCategory(
@@ -272,62 +255,43 @@ private fun resolveImportCategory(
     )
 }
 
-private fun normalizeCategoryToken(value: String): String {
-    return value
-        .trim()
-        .lowercase()
-        .replace("[^a-z0-9]+".toRegex(), " ")
-        .replace("\\s+".toRegex(), " ")
-        .trim()
-}
+private fun normalizeCategoryToken(value: String): String =
+    value.trim().lowercase().replace(nonAlphanumericRegex, " ").trim()
 
-private fun normalizeDescription(value: String?): String {
-    return value?.trim()?.lowercase().orEmpty()
-}
+private fun normalizeDescription(value: String?): String = value?.trim()?.lowercase().orEmpty()
 
-private fun String.toCsvBoolean(): Boolean {
-    return when (trim().lowercase()) {
+private fun String.toCsvBoolean(): Boolean =
+    when (trim().lowercase()) {
         "true", "yes", "1" -> true
         else -> false
     }
-}
 
-private fun String.toCsvRowType(): CsvRowType? {
-    return when (this) {
+private fun String.toCsvRowType(): CsvRowType? =
+    when (this) {
         "expense" -> CsvRowType.Expense
         "income" -> CsvRowType.Income
         else -> null
     }
-}
 
-private fun Expense.asImportKey(): CsvImportedExpenseKey {
-    return CsvImportedExpenseKey(
-        date = date,
-        categoryId = categoryId,
-        amount = amount,
-        description = normalizeDescription(description)
-    )
-}
+private fun Expense.asImportKey() = CsvImportedExpenseKey(
+    date = date,
+    categoryId = categoryId,
+    amount = amount,
+    description = normalizeDescription(description)
+)
 
-private fun Income.asImportKey(): CsvImportedIncomeKey {
-    return CsvImportedIncomeKey(
-        date = date,
-        amount = amount,
-        description = normalizeDescription(description)
-    )
-}
+private fun Income.asImportKey() = CsvImportedIncomeKey(
+    date = date,
+    amount = amount,
+    description = normalizeDescription(description)
+)
 
-private fun buildImportedExpenseId(): String {
-    return "csv-expense_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
-}
+private fun buildImportedId(prefix: String): String =
+    "csv-${prefix}_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
 
-private fun buildImportedIncomeId(): String {
-    return "csv-income_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
-}
-
-private fun buildImportedCategoryId(): String {
-    return "csv-category_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
-}
+private fun buildImportedExpenseId() = buildImportedId("expense")
+private fun buildImportedIncomeId() = buildImportedId("income")
+private fun buildImportedCategoryId() = buildImportedId("category")
 
 private data class UnifiedCsvColumnIndices(
     val typeIndex: Int,
@@ -341,25 +305,28 @@ private data class UnifiedCsvColumnIndices(
 ) {
     companion object {
         fun fromHeader(columns: List<String>): UnifiedCsvColumnIndices? {
-            val normalized = columns.map { it.trim().lowercase() }
+            val indexByName = buildMap {
+                columns.forEachIndexed { i, col -> put(col.trim().lowercase(), i) }
+            }
+
             return UnifiedCsvColumnIndices(
-                typeIndex = normalized.indexOf("type"),
-                dateIndex = normalized.indexOf("date"),
-                categoryIndex = normalized.indexOf("category"),
-                amountIndex = normalized.indexOf("amount"),
-                descriptionIndex = normalized.indexOf("description"),
-                sharedIndex = normalized.indexOf("shared"),
-                recurringIndex = normalized.indexOf("recurring"),
-                recurringSeriesIdIndex = normalized.indexOf("recurring_series_id")
+                typeIndex = indexByName["type"] ?: -1,
+                dateIndex = indexByName["date"] ?: -1,
+                categoryIndex = indexByName["category"] ?: -1,
+                amountIndex = indexByName["amount"] ?: -1,
+                descriptionIndex = indexByName["description"] ?: -1,
+                sharedIndex = indexByName["shared"] ?: -1,
+                recurringIndex = indexByName["recurring"] ?: -1,
+                recurringSeriesIdIndex = indexByName["recurring_series_id"] ?: -1
             ).takeIf { indices ->
                 indices.typeIndex >= 0 &&
-                    indices.dateIndex >= 0 &&
-                    indices.categoryIndex >= 0 &&
-                    indices.amountIndex >= 0 &&
-                    indices.descriptionIndex >= 0 &&
-                    indices.sharedIndex >= 0 &&
-                    indices.recurringIndex >= 0 &&
-                    indices.recurringSeriesIdIndex >= 0
+                indices.dateIndex >= 0 &&
+                indices.categoryIndex >= 0 &&
+                indices.amountIndex >= 0 &&
+                indices.descriptionIndex >= 0 &&
+                indices.sharedIndex >= 0 &&
+                indices.recurringIndex >= 0 &&
+                indices.recurringSeriesIdIndex >= 0
             }
         }
     }
