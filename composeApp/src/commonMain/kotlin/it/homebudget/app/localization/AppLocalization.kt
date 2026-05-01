@@ -3,6 +3,7 @@ package it.homebudget.app.localization
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.datetime.DayOfWeek
 
 expect fun currentAppLanguageCode(): String
 
@@ -118,6 +119,7 @@ interface Strings {
     fun fullMonthName(month: Int): String
     fun shortMonthName(month: Int): String
     fun shortWeekdayName(dayIndex: Int): String
+    fun weekdayNames(dayOfWeek: DayOfWeek): String
 }
 
 private object ItStrings : Strings {
@@ -157,7 +159,7 @@ private object ItStrings : Strings {
     override val export = "Esporta"
     override val exportCsv = "Esporta CSV"
     override val expensesByCategory = "Spese per categoria"
-    override val highestDay = "Giorno con le spese maggiori"
+    override val highestDay = "Giorno in cui si è speso di più"
     override val income = "Entrate"
     override val importAction = "Importa"
     override val importCsv = "Importa CSV"
@@ -215,6 +217,17 @@ private object ItStrings : Strings {
         "Novembre",
         "Dicembre"
     )
+
+    private val italianDayNames = mapOf(
+        DayOfWeek.MONDAY    to "Lunedì",
+        DayOfWeek.TUESDAY   to "Martedì",
+        DayOfWeek.WEDNESDAY to "Mercoledì",
+        DayOfWeek.THURSDAY  to "Giovedì",
+        DayOfWeek.FRIDAY    to "Venerdì",
+        DayOfWeek.SATURDAY  to "Sabato",
+        DayOfWeek.SUNDAY    to "Domenica"
+    )
+
     private val shortMonthNames = listOf("Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic")
     private val shortWeekdayNames = listOf("Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab")
 
@@ -279,6 +292,8 @@ private object ItStrings : Strings {
     override fun shortMonthName(month: Int): String = shortMonthNames[month - 1]
 
     override fun shortWeekdayName(dayIndex: Int): String = shortWeekdayNames[dayIndex]
+
+    override fun weekdayNames(dayOfWeek: DayOfWeek): String = italianDayNames[dayOfWeek] ?: dayOfWeek.name
 }
 
 private object EnStrings : Strings {
@@ -440,4 +455,6 @@ private object EnStrings : Strings {
     override fun shortMonthName(month: Int): String = shortMonthNames[month - 1]
 
     override fun shortWeekdayName(dayIndex: Int): String = shortWeekdayNames[dayIndex]
+    override fun weekdayNames(dayOfWeek: DayOfWeek): String =
+        dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
 }
