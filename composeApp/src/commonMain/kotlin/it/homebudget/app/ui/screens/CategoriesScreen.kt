@@ -209,7 +209,12 @@ private fun CategoriesScreenScaffold(
     val isIos = rememberIsIosPlatform()
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
-    val openCsvImport = rememberCsvImportLauncher { message ->
+    val importCsvLauncher = rememberCsvImportLauncher { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+    val exportCsvLauncher = rememberCsvExportLauncher { message ->
         scope.launch {
             snackbarHostState.showSnackbar(message)
         }
@@ -218,6 +223,9 @@ private fun CategoriesScreenScaffold(
     val strings = LocalStrings.current
 
     Box(modifier = Modifier.fillMaxSize()) {
+        importCsvLauncher.Render()
+        exportCsvLauncher.Render()
+
         Scaffold(
             topBar = {
                 if (showNavigationChrome) {
@@ -274,7 +282,8 @@ private fun CategoriesScreenScaffold(
                     navigator?.push(CalendarExpensesScreen())
                 },
                 onOpenCategories = {},
-                onImportCsv = openCsvImport
+                onImportCsv = { importCsvLauncher.open() },
+                onExportCsv = { exportCsvLauncher.open() }
             )
         }
     }

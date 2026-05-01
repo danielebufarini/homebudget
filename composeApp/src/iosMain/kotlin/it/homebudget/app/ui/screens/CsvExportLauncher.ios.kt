@@ -2,7 +2,7 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.runtime.Composable
 
-internal actual class CsvImportLauncher {
+internal actual class CsvExportLauncher {
     actual fun open() = Unit
 
     @Composable
@@ -10,6 +10,6 @@ internal actual class CsvImportLauncher {
 }
 
 @Composable
-internal actual fun rememberCsvImportLauncher(
-    onImportMessage: (String) -> Unit
-): CsvImportLauncher = CsvImportLauncher()
+internal actual fun rememberCsvExportLauncher(
+    onExportMessage: (String) -> Unit
+): CsvExportLauncher = CsvExportLauncher()

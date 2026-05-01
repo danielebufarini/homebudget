@@ -2,10 +2,7 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +25,8 @@ internal fun AndroidNavigationRailOverlay(
     onOpenDashboard: () -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenCategories: () -> Unit,
-    onImportCsv: () -> Unit
+    onImportCsv: () -> Unit,
+    onExportCsv: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
@@ -129,6 +127,24 @@ internal fun AndroidNavigationRailOverlay(
                             scope.launch {
                                 drawerState.close()
                                 onImportCsv()
+                            }
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        selected = false,
+                        label = { Text(strings.exportCsv) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.FileDownload,
+                                contentDescription = strings.exportCsv,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onExportCsv()
                             }
                         }
                     )

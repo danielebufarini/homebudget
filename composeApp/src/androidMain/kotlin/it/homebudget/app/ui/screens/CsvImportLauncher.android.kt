@@ -7,15 +7,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.importExpensesFromCsv
+import it.homebudget.app.data.importBudgetItemsFromCsv
 import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+internal actual class CsvImportLauncher(
+    private val onOpen: () -> Unit,
+    private val renderContent: @Composable () -> Unit
+) {
+    actual fun open() {
+        onOpen()
+    }
+
+    @Composable
+    actual fun Render() {
+        renderContent()
+    }
+}
+
 @Composable
 internal actual fun rememberCsvImportLauncher(
     onImportMessage: (String) -> Unit
-): () -> Unit {
+): CsvImportLauncher {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository: ExpenseRepository = koinInject()
@@ -29,35 +43,38 @@ internal actual fun rememberCsvImportLauncher(
         }
 
         scope.launch {
-            val message = runCatching {
-                val csvText = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     inputStream.readBytes().decodeToString()
                 } ?: error(strings.csvImportFailed)
-
-                val result = importExpensesFromCsv(
+            }.onSuccess { csvText ->
+                val result = importBudgetItemsFromCsv(
                     repository = repository,
                     csvText = csvText
                 )
 
-                if (result.importedCount == 0 && result.skippedCount == 0) {
-                    strings.csvImportNoRows
-                } else {
-                    strings.csvImportSuccess(
-                        importedCount = result.importedCount,
-                        skippedCount = result.skippedCount
-                    )
-                }
-            }.getOrElse {
-                strings.csvImportFailed
+                onImportMessage(
+                    if (result.importedCount == 0 && result.skippedCount == 0) {
+                        strings.csvImportNoRows
+                    } else {
+                        strings.csvImportSuccess(
+                            importedCount = result.importedCount,
+                            skippedCount = result.skippedCount
+                        )
+                    }
+                )
+            }.onFailure {
+                onImportMessage(strings.csvImportFailed)
             }
-
-            onImportMessage(message)
         }
     }
 
     return remember(launcher) {
-        {
-            launcher.launch(arrayOf("text/*", "text/csv", "application/csv", "application/vnd.ms-excel"))
-        }
+        CsvImportLauncher(
+            onOpen = {
+                launcher.launch(arrayOf("text/*", "text/csv", "application/csv"))
+            },
+            renderContent = {}
+        )
     }
 }

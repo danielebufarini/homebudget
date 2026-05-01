@@ -1,7 +1,7 @@
 package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.importExpensesFromCsv
+import it.homebudget.app.data.importBudgetItemsFromCsv
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.AppStrings
 import kotlinx.coroutines.MainScope
@@ -24,7 +24,7 @@ class IosCsvImportController {
     ) {
         scope.launch {
             val result = runCatching {
-                val importResult = importExpensesFromCsv(
+                val importResult = importBudgetItemsFromCsv(
                     repository = repository,
                     csvText = text
                 )

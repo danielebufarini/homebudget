@@ -206,7 +206,12 @@ private fun DashboardScreenScaffold(
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val openCsvImport = rememberCsvImportLauncher { message ->
+    val importCsvLauncher = rememberCsvImportLauncher { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+    val exportCsvLauncher = rememberCsvExportLauncher { message ->
         scope.launch {
             snackbarHostState.showSnackbar(message)
         }
@@ -215,6 +220,9 @@ private fun DashboardScreenScaffold(
     val strings = LocalStrings.current
 
     Box(modifier = Modifier.fillMaxSize()) {
+        importCsvLauncher.Render()
+        exportCsvLauncher.Render()
+
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
@@ -294,7 +302,8 @@ private fun DashboardScreenScaffold(
                     navigator?.push(CalendarExpensesScreen())
                 },
                 onOpenCategories = onOpenCategories,
-                onImportCsv = openCsvImport
+                onImportCsv = { importCsvLauncher.open() },
+                onExportCsv = { exportCsvLauncher.open() }
             )
         }
     }

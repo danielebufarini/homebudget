@@ -57,14 +57,20 @@ interface Strings {
     val expense: String
     val expenseDetails: String
     val expenses: String
+    val export: String
+    val exportCsv: String
     val expensesByCategory: String
     val highestDay: String
     val income: String
+    val importAction: String
     val importCsv: String
+    val invalidDateRange: String
     val installments: String
     val monthlySummary: String
     val csvImportFailed: String
     val csvImportNoRows: String
+    val csvExportFailed: String
+    val csvExportSaved: String
     val noExpensesForDay: String
     val noExpensesForMonth: String
     val noExpensesInPeriod: String
@@ -75,6 +81,8 @@ interface Strings {
     val saving: String
     val selectCategory: String
     val selectDate: String
+    val startDate: String
+    val endDate: String
     val selectInstallments: String
     val shared: String
     val sharedExpense: String
@@ -93,6 +101,8 @@ interface Strings {
     val updateRecurringExpenseTitle: String
     val updateRecurringIncomeTitle: String
     val wholeSeries: String
+    val yes: String
+    val no: String
 
     fun recurringExpenseInfo(years: Int): String
     fun recurringIncomeInfo(years: Int): String
@@ -144,14 +154,20 @@ private object ItStrings : Strings {
     override val expense = "Spesa"
     override val expenseDetails = "Dettagli spesa"
     override val expenses = "Spese"
+    override val export = "Esporta"
+    override val exportCsv = "Esporta CSV"
     override val expensesByCategory = "Spese per categoria"
-    override val highestDay = "Giorno più alto"
+    override val highestDay = "Giorno con le spese maggiori"
     override val income = "Entrate"
+    override val importAction = "Importa"
     override val importCsv = "Importa CSV"
+    override val invalidDateRange = "La data iniziale deve essere precedente o uguale a quella finale"
     override val installments = "Rate"
     override val monthlySummary = "Riepilogo mensile"
     override val csvImportFailed = "Impossibile importare il file CSV"
     override val csvImportNoRows = "Nessuna riga importabile trovata nel file CSV"
+    override val csvExportFailed = "Impossibile esportare il file CSV"
+    override val csvExportSaved = "File CSV esportato"
     override val noExpensesForDay = "Nessuna spesa per questo giorno"
     override val noExpensesForMonth = "Nessuna spesa per questo mese"
     override val noExpensesInPeriod = "Nessuna spesa in questo periodo"
@@ -162,6 +178,8 @@ private object ItStrings : Strings {
     override val saving = "Salvataggio..."
     override val selectCategory = "Seleziona categoria"
     override val selectDate = "Seleziona una data"
+    override val startDate = "Data iniziale"
+    override val endDate = "Data finale"
     override val selectInstallments = "Seleziona rate"
     override val shared = "Condivise"
     override val sharedExpense = "Spesa condivisa"
@@ -180,6 +198,8 @@ private object ItStrings : Strings {
     override val updateRecurringExpenseTitle = "Aggiornare la spesa ricorrente?"
     override val updateRecurringIncomeTitle = "Aggiornare l'entrata ricorrente?"
     override val wholeSeries = "Tutta la serie"
+    override val yes = "Sì"
+    override val no = "No"
 
     private val fullMonthNames = listOf(
         "Gennaio",
@@ -295,14 +315,20 @@ private object EnStrings : Strings {
     override val expense = "Expense"
     override val expenseDetails = "Expense Details"
     override val expenses = "Expenses"
+    override val export = "Export"
+    override val exportCsv = "Export CSV"
     override val expensesByCategory = "Expenses by category"
     override val highestDay = "Highest Day"
     override val income = "Income"
+    override val importAction = "Import"
     override val importCsv = "Import CSV"
+    override val invalidDateRange = "Start date must be on or before end date"
     override val installments = "Installments"
     override val monthlySummary = "Monthly Summary"
     override val csvImportFailed = "Unable to import the CSV file"
     override val csvImportNoRows = "No importable rows were found in the CSV file"
+    override val csvExportFailed = "Unable to export the CSV file"
+    override val csvExportSaved = "CSV file exported"
     override val noExpensesForDay = "No expenses for this day"
     override val noExpensesForMonth = "No expenses for this month"
     override val noExpensesInPeriod = "No expenses in this period"
@@ -313,6 +339,8 @@ private object EnStrings : Strings {
     override val saving = "Saving..."
     override val selectCategory = "Select Category"
     override val selectDate = "Select a date"
+    override val startDate = "Start Date"
+    override val endDate = "End Date"
     override val selectInstallments = "Select Installments"
     override val shared = "Shared"
     override val sharedExpense = "Shared Expense"
@@ -331,6 +359,8 @@ private object EnStrings : Strings {
     override val updateRecurringExpenseTitle = "Update recurring expense?"
     override val updateRecurringIncomeTitle = "Update recurring income?"
     override val wholeSeries = "Whole series"
+    override val yes = "Yes"
+    override val no = "No"
 
     private val fullMonthNames = listOf(
         "January",

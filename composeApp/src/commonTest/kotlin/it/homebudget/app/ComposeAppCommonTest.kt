@@ -2,6 +2,9 @@ package it.homebudget.app
 
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.data.*
+import it.homebudget.app.database.Category
+import it.homebudget.app.database.Expense
+import it.homebudget.app.database.Income
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -105,4 +108,97 @@ class ComposeAppCommonTest {
     fun recurringMonthlyOccurrences_defaultMatchesTwentyYears() {
         assertEquals(240, RECURRING_MONTHLY_OCCURRENCES)
     }
+
+    @Test
+    fun exportBudgetItemsToCsv_exportsExpenseFlagsAndFiltersRange() {
+        val export = buildExpensesCsvExport(
+            expenses = listOf(
+                expense(
+                    id = "expense-in-range",
+                    amount = 1234.toBigInteger(),
+                    date = LocalDate(2026, 5, 10).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+                    categoryId = "default_1",
+                    description = "Groceries",
+                    isShared = 1L,
+                    recurringSeriesId = "series-1"
+                ),
+                expense(
+                    id = "expense-out-of-range",
+                    amount = 500.toBigInteger(),
+                    date = LocalDate(2026, 6, 1).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+                    categoryId = "default_4",
+                    description = null,
+                    isShared = 0L,
+                    recurringSeriesId = null
+                )
+            ),
+            categories = listOf(
+                Category("default_1", "Cibo", "restaurant", 0L)
+            ),
+            startDate = LocalDate(2026, 5, 1),
+            endDate = LocalDate(2026, 5, 31)
+        )
+
+        assertEquals("expenses_2026-05-01_2026-05-31.csv", export.fileName)
+        assertEquals(
+            "\"type\";\"date\";\"category\";\"amount\";\"description\";\"shared\";\"recurring\";\"recurring_series_id\"\n" +
+                "\"expense\";\"2026-05-10\";\"Food\";\"12.34\";\"Groceries\";\"true\";\"true\";\"series-1\"\n",
+            export.content
+        )
+    }
+
+    @Test
+    fun exportBudgetItemsToCsv_exportsIncomeFlags() {
+        val export = buildIncomesCsvExport(
+            incomes = listOf(
+                income(
+                    id = "income-1",
+                    amount = 320000.toBigInteger(),
+                    date = LocalDate(2026, 5, 15).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+                    description = "Salary",
+                    recurringSeriesId = "income-series"
+                )
+            ),
+            startDate = LocalDate(2026, 5, 1),
+            endDate = LocalDate(2026, 5, 31)
+        )
+
+        assertEquals(
+            "\"type\";\"date\";\"category\";\"amount\";\"description\";\"shared\";\"recurring\";\"recurring_series_id\"\n" +
+                "\"income\";\"2026-05-15\";\"\";\"3200.00\";\"Salary\";\"false\";\"true\";\"income-series\"\n",
+            export.content
+        )
+    }
 }
+
+private fun expense(
+    id: String,
+    amount: com.ionspin.kotlin.bignum.integer.BigInteger,
+    date: Long,
+    categoryId: String,
+    description: String?,
+    isShared: Long,
+    recurringSeriesId: String?
+) = Expense(
+    id = id,
+    amount = amount,
+    date = date,
+    categoryId = categoryId,
+    description = description,
+    isShared = isShared,
+    recurringSeriesId = recurringSeriesId
+)
+
+private fun income(
+    id: String,
+    amount: com.ionspin.kotlin.bignum.integer.BigInteger,
+    date: Long,
+    description: String?,
+    recurringSeriesId: String?
+) = Income(
+    id = id,
+    amount = amount,
+    date = date,
+    description = description,
+    recurringSeriesId = recurringSeriesId
+)

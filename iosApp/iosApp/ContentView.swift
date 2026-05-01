@@ -14,6 +14,24 @@ private enum Route: Hashable {
     case categoryExpenses(year: Int, month: Int, categoryName: String)
 }
 
+private struct CsvExportDocument: FileDocument {
+    static let readableContentTypes: [UTType] = [.commaSeparatedText, .plainText]
+
+    var text: String
+
+    init(text: String = "") {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        text = String(decoding: configuration.file.regularFileContents ?? Data(), as: UTF8.self)
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+
 private struct KotlinViewControllerHost: UIViewControllerRepresentable {
     let makeViewController: () -> UIViewController
 
@@ -62,8 +80,16 @@ struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
     @State private var showCsvImporter = false
+    @State private var showCsvExportSheet = false
+    @State private var showCsvExporter = false
     @State private var csvImportMessage: String?
+    @State private var csvExportMessage: String?
+    @State private var csvExportDocument = CsvExportDocument()
+    @State private var csvExportFilename = "budget.csv"
+    @State private var csvExportStartDate = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
+    @State private var csvExportEndDate = Date()
     @State private var csvImportController = IosCsvImportController()
+    @State private var csvExportController = IosCsvExportController()
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -78,6 +104,9 @@ struct ContentView: View {
                             }
                             Button(appLocalized("Import CSV")) {
                                 showCsvImporter = true
+                            }
+                            Button(appLocalized("Export CSV")) {
+                                showCsvExportSheet = true
                             }
                         } label: {
                             Image(systemName: "line.3.horizontal.circle")
@@ -104,11 +133,27 @@ struct ContentView: View {
                         showVoiceExpenseSheet = false
                     }
                 }
+                .sheet(isPresented: $showCsvExportSheet) {
+                    CsvExportSheet(
+                        startDate: $csvExportStartDate,
+                        endDate: $csvExportEndDate,
+                        onCancel: { showCsvExportSheet = false },
+                        onExport: exportCsv
+                    )
+                }
                 .fileImporter(
                     isPresented: $showCsvImporter,
                     allowedContentTypes: [.commaSeparatedText, .plainText, .text]
                 ) { result in
-                    handleCsvImport(result: result)
+                    handleCsvSelection(result: result)
+                }
+                .fileExporter(
+                    isPresented: $showCsvExporter,
+                    document: csvExportDocument,
+                    contentType: .commaSeparatedText,
+                    defaultFilename: csvExportFilename
+                ) { result in
+                    handleCsvExport(result: result)
                 }
                 .alert(
                     appLocalized("Import CSV"),
@@ -124,6 +169,21 @@ struct ContentView: View {
                     Button(appLocalized("Close"), role: .cancel) {}
                 } message: {
                     Text(csvImportMessage ?? "")
+                }
+                .alert(
+                    appLocalized("Export CSV"),
+                    isPresented: Binding(
+                        get: { csvExportMessage != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                csvExportMessage = nil
+                            }
+                        }
+                    )
+                ) {
+                    Button(appLocalized("Close"), role: .cancel) {}
+                } message: {
+                    Text(csvExportMessage ?? "")
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
@@ -204,10 +264,11 @@ struct ContentView: View {
         }
         .onDisappear {
             csvImportController.dispose()
+            csvExportController.dispose()
         }
     }
 
-    private func handleCsvImport(result: Result<URL, Error>) {
+    private func handleCsvSelection(result: Result<URL, Error>) {
         switch result {
         case let .success(url):
             let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
@@ -219,17 +280,92 @@ struct ContentView: View {
 
             do {
                 let data = try Data(contentsOf: url)
-                let text = String(decoding: data, as: UTF8.self)
-                csvImportController.importCsv(text: text) { successMessage, errorMessage in
-                    Task { @MainActor in
-                        csvImportMessage = successMessage ?? errorMessage
-                    }
-                }
+                importCsv(text: String(decoding: data, as: UTF8.self))
             } catch {
                 csvImportMessage = error.localizedDescription
             }
         case let .failure(error):
             csvImportMessage = error.localizedDescription
+        }
+    }
+
+    private func importCsv(text: String) {
+        guard !text.isEmpty else {
+            csvImportMessage = appLocalized("Unable to import the CSV file")
+            return
+        }
+
+        csvImportController.importCsv(text: text) { successMessage, errorMessage in
+            Task { @MainActor in
+                csvImportMessage = successMessage ?? errorMessage
+            }
+        }
+    }
+
+    private func exportCsv() {
+        guard csvExportStartDate <= csvExportEndDate else {
+            csvExportMessage = appLocalized("Start date must be on or before end date")
+            return
+        }
+
+        csvExportController.exportCsv(
+            startDateMillis: Int64(csvExportStartDate.timeIntervalSince1970 * 1000),
+            endDateMillis: Int64(csvExportEndDate.timeIntervalSince1970 * 1000)
+        ) { fileName, content, errorMessage in
+            Task { @MainActor in
+                if let fileName, let content {
+                    csvExportFilename = fileName
+                    csvExportDocument = CsvExportDocument(text: content)
+                    showCsvExportSheet = false
+                    showCsvExporter = true
+                } else {
+                    csvExportMessage = errorMessage ?? appLocalized("Unable to export the CSV file")
+                }
+            }
+        }
+    }
+
+    private func handleCsvExport(result: Result<URL, Error>) {
+        switch result {
+        case .success:
+            csvExportMessage = appLocalized("CSV file exported")
+        case let .failure(error):
+            csvExportMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct CsvExportSheet: View {
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    let onCancel: () -> Void
+    let onExport: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                DatePicker(
+                    appLocalized("Start Date"),
+                    selection: $startDate,
+                    displayedComponents: .date
+                )
+
+                DatePicker(
+                    appLocalized("End Date"),
+                    selection: $endDate,
+                    displayedComponents: .date
+                )
+            }
+            .navigationTitle(appLocalized("Export CSV"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(appLocalized("Close"), action: onCancel)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(appLocalized("Export"), action: onExport)
+                }
+            }
         }
     }
 }
