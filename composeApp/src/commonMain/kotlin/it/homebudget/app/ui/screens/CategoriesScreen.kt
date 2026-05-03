@@ -370,6 +370,7 @@ internal fun CategoryListItem(
             ) {
                 CategoryLabel(
                     iconKey = category.icon,
+                    colorKey = category.id,
                     text = localizedCategoryName(category),
                     maxLines = 1
                 )

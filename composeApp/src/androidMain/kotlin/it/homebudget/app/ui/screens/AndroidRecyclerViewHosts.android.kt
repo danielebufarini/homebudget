@@ -56,6 +56,11 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
             AndroidGroupedExpenseSectionModel(
                 id = categoryName,
                 title = categoryName,
+                categoryColorKey = if (isGroupedByDate) {
+                    null
+                } else {
+                    categoryExpenses.firstOrNull()?.categoryId
+                },
                 categoryIconKey = if (isGroupedByDate) {
                     null
                 } else {
@@ -80,6 +85,7 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
                             title = row.title,
                             subtitleText = row.subtitleText,
                             amountText = formatAmount(expense.amount, currencySymbol),
+                            categoryColorKey = row.categoryColorKey,
                             categoryIconKey = row.categoryIconKey,
                             isRecurring = row.isRecurring
                         )
@@ -151,6 +157,7 @@ internal actual fun AndroidCategoriesRecyclerView(
 private data class AndroidGroupedExpenseSectionModel(
     val id: String,
     val title: String,
+    val categoryColorKey: String?,
     val categoryIconKey: String?,
     val totalAmountText: String,
     val rows: List<AndroidGroupedExpenseRowModel>
@@ -161,6 +168,7 @@ private data class AndroidGroupedExpenseRowModel(
     val title: String,
     val subtitleText: String,
     val amountText: String,
+    val categoryColorKey: String?,
     val categoryIconKey: String?,
     val isRecurring: Boolean
 )
@@ -388,10 +396,10 @@ private fun AndroidGroupedExpenseSectionCard(
             ) {
                 CategoryLabel(
                     iconKey = section.categoryIconKey,
+                    colorKey = section.categoryColorKey,
                     text = section.title,
                     modifier = Modifier.weight(1f),
                     textColor = MaterialTheme.colorScheme.primary,
-                    iconTint = MaterialTheme.colorScheme.primary,
                     maxLines = 1
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -443,6 +451,7 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            categoryColorKey = row.categoryColorKey,
             categoryIconKey = row.categoryIconKey,
             isRecurring = row.isRecurring,
             subtitleFontSizeOffsetSp = -2,
@@ -467,6 +476,7 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            categoryColorKey = row.categoryColorKey,
             categoryIconKey = row.categoryIconKey,
             isRecurring = row.isRecurring,
             subtitleFontSizeOffsetSp = -2,

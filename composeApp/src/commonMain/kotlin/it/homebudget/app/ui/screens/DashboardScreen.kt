@@ -468,6 +468,7 @@ private fun ExpenseSummary(
             SummaryMetricUi(
                 label = topCategoryLabel,
                 value = topCategoryValue,
+                valueIconColorKey = summary.topCategoryId,
                 valueIconKey = topCategoryIconKey,
                 containerColor = colorScheme.errorContainer,
                 contentColor = colorScheme.onErrorContainer,
@@ -519,6 +520,7 @@ private fun ExpenseSummary(
                             modifier = Modifier.fillMaxWidth(),
                             label = item.label,
                             value = item.value,
+                            valueIconColorKey = item.valueIconColorKey,
                             valueIconKey = item.valueIconKey,
                             containerColor = item.containerColor,
                             contentColor = item.contentColor,
@@ -531,6 +533,7 @@ private fun ExpenseSummary(
                                 modifier = Modifier.weight(1f),
                                 label = item.label,
                                 value = item.value,
+                                valueIconColorKey = item.valueIconColorKey,
                                 valueIconKey = item.valueIconKey,
                                 containerColor = item.containerColor,
                                 contentColor = item.contentColor,
@@ -550,6 +553,7 @@ private fun SummaryMetric(
     modifier: Modifier,
     label: String,
     value: String,
+    valueIconColorKey: String?,
     valueIconKey: String?,
     containerColor: Color,
     contentColor: Color,
@@ -591,10 +595,10 @@ private fun SummaryMetric(
                 } else {
                     CategoryLabel(
                         iconKey = valueIconKey,
+                        colorKey = valueIconColorKey,
                         text = value,
                         textStyle = MaterialTheme.typography.titleMedium,
                         textColor = contentColor,
-                        iconTint = contentColor,
                         maxLines = 1
                     )
                 }
@@ -615,11 +619,11 @@ private fun SummaryMetric(
                     } else {
                         CategoryLabel(
                             iconKey = valueIconKey,
+                            colorKey = valueIconColorKey,
                             text = value,
                             modifier = Modifier.fillMaxWidth(0.62f),
                             textStyle = MaterialTheme.typography.titleMedium,
                             textColor = contentColor,
-                            iconTint = contentColor,
                             maxLines = 1
                         )
                     }
@@ -915,6 +919,7 @@ private fun CategoryBreakdownPage(
                             )
                             CategoryLabel(
                                 iconKey = categoryIconKey,
+                                colorKey = categoryTotal.categoryId,
                                 text = categoryName,
                                 textStyle = MaterialTheme.typography.bodyLarge,
                                 textColor = MaterialTheme.colorScheme.onSurface,
@@ -1162,6 +1167,7 @@ private data class CategoryTotal(
 private class SummaryMetricUi(
     val label: String,
     val value: String,
+    val valueIconColorKey: String? = null,
     val valueIconKey: String? = null,
     val containerColor: Color,
     val contentColor: Color,

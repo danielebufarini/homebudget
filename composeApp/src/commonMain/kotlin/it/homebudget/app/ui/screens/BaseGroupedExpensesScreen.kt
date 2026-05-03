@@ -437,6 +437,11 @@ abstract class BaseGroupedExpensesScreen(
 
                                 CategoryLabel(
                                     iconKey = sectionIconKey,
+                                    colorKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
+                                        categoryExpenses.firstOrNull()?.categoryId
+                                    } else {
+                                        null
+                                    },
                                     text = categoryName,
                                     modifier = Modifier.fillMaxWidth(0.72f),
                                     textColor = MaterialTheme.colorScheme.onSurface,
@@ -466,6 +471,7 @@ abstract class BaseGroupedExpensesScreen(
                                                 title = row.title,
                                                 subtitleText = row.subtitleText,
                                                 amountText = formatAmount(expense.amount, currencySymbol),
+                                                categoryColorKey = row.categoryColorKey,
                                                 categoryIconKey = row.categoryIconKey,
                                                 isRecurring = row.isRecurring,
                                                 onClick = {
@@ -489,6 +495,7 @@ abstract class BaseGroupedExpensesScreen(
                                                     title = row.title,
                                                     subtitleText = row.subtitleText,
                                                     amountText = formatAmount(expense.amount, currencySymbol),
+                                                    categoryColorKey = row.categoryColorKey,
                                                     categoryIconKey = row.categoryIconKey,
                                                     isRecurring = row.isRecurring,
                                                     onClick = {

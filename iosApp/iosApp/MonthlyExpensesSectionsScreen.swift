@@ -71,6 +71,7 @@ private struct GroupedExpenseRowModel: Identifiable {
     let title: String
     let subtitleText: String
     let amountText: String
+    let categoryColorKey: String?
     let categoryIconKey: String?
     let recurringSeriesId: String?
 
@@ -86,6 +87,7 @@ private struct GroupedExpenseRowModel: Identifiable {
 private struct GroupedExpenseSectionModel: Identifiable {
     let id: String
     let title: String
+    let categoryColorKey: String?
     let categoryIconKey: String?
     let totalAmountText: String
     let rows: [GroupedExpenseRowModel]
@@ -162,6 +164,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
             GroupedExpenseSectionModel(
                 id: section.id,
                 title: section.title,
+                categoryColorKey: section.categoryColorKey,
                 categoryIconKey: section.categoryIconKey,
                 totalAmountText: section.totalAmountText,
                 rows: section.rows.map { row in
@@ -170,6 +173,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
                         title: row.title,
                         subtitleText: row.subtitleText,
                         amountText: row.amountText,
+                        categoryColorKey: row.categoryColorKey,
                         categoryIconKey: row.categoryIconKey,
                         recurringSeriesId: row.recurringSeriesId
                     )
@@ -254,6 +258,7 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
             GroupedExpenseSectionModel(
                 id: section.id,
                 title: section.title,
+                categoryColorKey: nil,
                 categoryIconKey: nil,
                 totalAmountText: section.totalAmountText,
                 rows: section.rows.map { row in
@@ -262,6 +267,7 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
                         title: row.title,
                         subtitleText: row.subtitleText,
                         amountText: row.amountText,
+                        categoryColorKey: nil,
                         categoryIconKey: nil,
                         recurringSeriesId: row.recurringSeriesId
                     )
@@ -717,6 +723,7 @@ private struct GroupedExpenseSectionHeaderView: View {
                 .frame(width: 12)
 
             CategoryIconLabelView(
+                colorKey: section.categoryColorKey,
                 iconKey: section.categoryIconKey,
                 text: section.title
             )
@@ -791,7 +798,7 @@ private struct GroupedExpenseRowView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .center, spacing: 8) {
-                    CategoryIconView(iconKey: row.categoryIconKey)
+                    CategoryIconView(colorKey: row.categoryColorKey, iconKey: row.categoryIconKey)
                     if row.isRecurring {
                         RecurringBadgeView()
                     }
@@ -816,12 +823,13 @@ private struct GroupedExpenseRowView: View {
 }
 
 private struct CategoryIconLabelView: View {
+    let colorKey: String?
     let iconKey: String?
     let text: String
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            CategoryIconView(iconKey: iconKey)
+            CategoryIconView(colorKey: colorKey, iconKey: iconKey)
             Text(text)
                 .lineLimit(1)
         }
@@ -829,11 +837,12 @@ private struct CategoryIconLabelView: View {
 }
 
 private struct CategoryIconView: View {
+    let colorKey: String?
     let iconKey: String?
 
     var body: some View {
         Image(systemName: categorySystemImageName(iconKey))
-            .foregroundStyle(.tint)
+            .foregroundStyle(categoryIconColor(colorKey))
             .frame(width: 18, height: 18)
     }
 }
@@ -842,16 +851,34 @@ private func categorySystemImageName(_ iconKey: String?) -> String {
     switch normalizedCategoryIconKey(iconKey) {
     case "home":
         return "house.fill"
+    case "build":
+        return "hammer.fill"
     case "shopping_cart":
         return "cart.fill"
     case "restaurant":
         return "fork.knife"
+    case "local_cafe":
+        return "cup.and.saucer.fill"
+    case "cake":
+        return "birthday.cake.fill"
     case "directions_car":
         return "car.fill"
+    case "directions_bus":
+        return "bus.fill"
+    case "train":
+        return "tram.fill"
+    case "local_taxi":
+        return "car.side.fill"
     case "flight":
         return "airplane"
+    case "hotel":
+        return "bed.double.fill"
+    case "beach_access":
+        return "beach.umbrella.fill"
     case "local_hospital":
         return "cross.case.fill"
+    case "healing":
+        return "bandage.fill"
     case "receipt":
         return "receipt.fill"
     case "person":
@@ -864,6 +891,8 @@ private func categorySystemImageName(_ iconKey: String?) -> String {
         return "pawprint.fill"
     case "fitness_center":
         return "figure.strengthtraining.traditional"
+    case "spa":
+        return "leaf.fill"
     default:
         return "square.grid.2x2.fill"
     }

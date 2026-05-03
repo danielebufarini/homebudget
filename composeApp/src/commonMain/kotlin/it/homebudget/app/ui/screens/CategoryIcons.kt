@@ -25,6 +25,19 @@ import org.jetbrains.compose.resources.stringResource
 
 internal const val DEFAULT_CATEGORY_ICON_KEY = "category"
 
+private val categoryIconColorPalette = listOf(
+    Color(0xFFD65A5A),
+    Color(0xFFC65A9E),
+    Color(0xFF8B5CF6),
+    Color(0xFF5B6EE1),
+    Color(0xFF3B82F6),
+    Color(0xFF0EA5A4),
+    Color(0xFF22A06B),
+    Color(0xFF84A63D),
+    Color(0xFFF59E0B),
+    Color(0xFFF97316)
+)
+
 private data class CategoryIconSection(
     val titleRes: StringResource,
     val iconKeys: List<String>
@@ -103,6 +116,26 @@ internal fun normalizeCategoryIconKey(iconKey: String?): String {
     return categoryIconAliases[normalized] ?: normalized
 }
 
+internal fun stableCategoryColorIndex(categoryId: String?): Int {
+    val key = categoryId?.trim().orEmpty()
+    if (key.isEmpty()) {
+        return 0
+    }
+
+    var hash = 0u
+    key.forEach { character ->
+        hash = hash * 31u + character.code.toUInt()
+    }
+    return (hash % categoryIconColorPalette.size.toUInt()).toInt()
+}
+
+@Composable
+internal fun categoryIconTint(colorKey: String?): Color {
+    return remember(colorKey) {
+        categoryIconColorPalette[stableCategoryColorIndex(colorKey)]
+    }
+}
+
 private fun categoryImageVector(iconKey: String?): ImageVector {
     return when (normalizeCategoryIconKey(iconKey)) {
         "home" -> Icons.Filled.Home
@@ -136,13 +169,15 @@ internal fun CategoryIcon(
     iconKey: String?,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    tint: Color = MaterialTheme.colorScheme.primary
+    colorKey: String? = null,
+    tint: Color? = null
 ) {
+    val resolvedTint = tint ?: categoryIconTint(colorKey)
     Icon(
         imageVector = categoryImageVector(iconKey),
         contentDescription = contentDescription,
         modifier = modifier,
-        tint = tint
+        tint = resolvedTint
     )
 }
 
@@ -151,9 +186,10 @@ internal fun CategoryLabel(
     iconKey: String?,
     text: String,
     modifier: Modifier = Modifier,
+    colorKey: String? = null,
     textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
+    iconTint: Color? = null,
     iconSize: Dp = 18.dp,
     maxLines: Int = 1
 ) {
@@ -166,6 +202,7 @@ internal fun CategoryLabel(
             iconKey = iconKey,
             modifier = Modifier.size(iconSize),
             contentDescription = null,
+            colorKey = colorKey,
             tint = iconTint
         )
         Text(
@@ -214,6 +251,7 @@ internal fun CategoryIconPicker(
                     ) {
                         rowIcons.forEach { iconKey ->
                             val isSelected = normalizedSelectedIconKey == normalizeCategoryIconKey(iconKey)
+                            val previewTint = categoryIconTint(iconKey)
                             Surface(
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -238,10 +276,11 @@ internal fun CategoryIconPicker(
                                         iconKey = iconKey,
                                         modifier = Modifier.size(22.dp),
                                         contentDescription = iconLabel,
+                                        colorKey = iconKey,
                                         tint = if (isSelected) {
                                             MaterialTheme.colorScheme.onPrimaryContainer
                                         } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                            previewTint
                                         }
                                     )
                                 }

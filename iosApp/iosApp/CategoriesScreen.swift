@@ -209,7 +209,7 @@ private struct CategoryRow: View {
         HStack(spacing: 14) {
             Image(systemName: categorySystemImageName(category.iconKey))
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.tint)
+                .foregroundStyle(categoryIconColor(category.id))
                 .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -314,6 +314,7 @@ private struct CategoryIconPicker: View {
 
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(section.iconKeys, id: \.self) { iconKey in
+                            let isSelected = normalizedCategoryIconKey(selectedIconKey) == normalizedCategoryIconKey(iconKey)
                             Button {
                                 selectedIconKey = iconKey
                             } label: {
@@ -321,9 +322,9 @@ private struct CategoryIconPicker: View {
                                     .font(.title3.weight(.semibold))
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 46)
-                                    .foregroundStyle(normalizedCategoryIconKey(selectedIconKey) == normalizedCategoryIconKey(iconKey) ? Color.white : Color.accentColor)
+                                    .foregroundStyle(isSelected ? Color.white : categoryIconColor(iconKey))
                                     .background(
-                                        normalizedCategoryIconKey(selectedIconKey) == normalizedCategoryIconKey(iconKey) ? Color.accentColor : Color.clear,
+                                        isSelected ? Color.accentColor : Color.clear,
                                         in: RoundedRectangle(cornerRadius: 16, style: .continuous)
                                     )
                                     .appGlassSurface(cornerRadius: 16)
@@ -399,7 +400,7 @@ private func categorySystemImageName(_ iconKey: String?) -> String {
     case "train":
         return "tram.fill"
     case "local_taxi":
-        return "taxi.fill"
+        return "car.side.fill"
     case "flight":
         return "airplane"
     case "hotel":

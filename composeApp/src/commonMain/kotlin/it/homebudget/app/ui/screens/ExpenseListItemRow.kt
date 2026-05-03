@@ -22,6 +22,7 @@ fun ExpenseListItemRow(
     subtitleText: String,
     amountText: String,
     categoryIconKey: String? = null,
+    categoryColorKey: String? = null,
     isRecurring: Boolean = false,
     subtitleFontSizeOffsetSp: Int = 0,
     onClick: () -> Unit
@@ -47,7 +48,7 @@ fun ExpenseListItemRow(
                         iconKey = categoryIconKey,
                         modifier = Modifier.size(18.dp),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        colorKey = categoryColorKey
                     )
                 }
                 if (isRecurring) {

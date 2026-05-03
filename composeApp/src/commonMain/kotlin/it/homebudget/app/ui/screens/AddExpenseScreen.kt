@@ -314,6 +314,7 @@ class AddExpenseScreen(
 
                 CategorySelectorRow(
                     categoryName = selectedCategoryName,
+                    categoryColorKey = selectedCategoryId,
                     categoryIconKey = selectedCategoryIconKey,
                     enabled = !readOnly,
                     canSelectCategory = categories.isNotEmpty(),
@@ -704,6 +705,7 @@ class AddExpenseScreen(
 private fun CategorySelectorRow(
     categoryName: String?,
     categoryIconKey: String?,
+    categoryColorKey: String?,
     enabled: Boolean,
     canSelectCategory: Boolean,
     onSelectCategory: () -> Unit,
@@ -728,6 +730,7 @@ private fun CategorySelectorRow(
             CategorySplitButton(
                 categoryName = categoryName,
                 categoryIconKey = categoryIconKey,
+                categoryColorKey = categoryColorKey,
                 enabled = enabled,
                 canSelectCategory = canSelectCategory,
                 onSelectCategory = onSelectCategory,
@@ -743,6 +746,7 @@ private fun CategorySelectorRow(
 private fun CategorySplitButton(
     categoryName: String?,
     categoryIconKey: String?,
+    categoryColorKey: String?,
     enabled: Boolean,
     canSelectCategory: Boolean,
     onSelectCategory: () -> Unit,
@@ -763,6 +767,7 @@ private fun CategorySplitButton(
                 CategoryLabel(
                     iconKey = categoryIconKey ?: DEFAULT_CATEGORY_ICON_KEY,
                     text = categoryName ?: selectCategoryLabel,
+                    colorKey = categoryColorKey,
                     textStyle = MaterialTheme.typography.labelLarge,
                     textColor = MaterialTheme.colorScheme.onPrimary,
                     iconTint = MaterialTheme.colorScheme.onPrimary,
@@ -826,6 +831,7 @@ private fun CategoryPickerSheet(
                 ) {
                     CategoryLabel(
                         iconKey = category.icon,
+                        colorKey = category.id,
                         text = categoryName,
                         modifier = Modifier.weight(1f),
                         maxLines = 1
