@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -100,9 +99,7 @@ abstract class BaseGroupedExpensesScreen(
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
 
-        LaunchedEffect(repository) {
-            repository.insertDefaultCategoriesIfEmpty()
-        }
+        EnsureDefaultCategoriesInserted(repository)
 
         val filteredExpenses = remember(
             expenses,
@@ -429,11 +426,21 @@ abstract class BaseGroupedExpensesScreen(
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
+                                val sectionIconKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
+                                    categoryExpenses.firstOrNull()
+                                        ?.categoryId
+                                        ?.let(categoriesById::get)
+                                        ?.icon
+                                } else {
+                                    null
+                                }
+
+                                CategoryLabel(
+                                    iconKey = sectionIconKey,
                                     text = categoryName,
                                     modifier = Modifier.fillMaxWidth(0.72f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    textColor = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
@@ -459,6 +466,7 @@ abstract class BaseGroupedExpensesScreen(
                                                 title = row.title,
                                                 subtitleText = row.subtitleText,
                                                 amountText = formatAmount(expense.amount, currencySymbol),
+                                                categoryIconKey = row.categoryIconKey,
                                                 isRecurring = row.isRecurring,
                                                 onClick = {
                                                     onOpenExpense(expense.id)
@@ -481,6 +489,7 @@ abstract class BaseGroupedExpensesScreen(
                                                     title = row.title,
                                                     subtitleText = row.subtitleText,
                                                     amountText = formatAmount(expense.amount, currencySymbol),
+                                                    categoryIconKey = row.categoryIconKey,
                                                     isRecurring = row.isRecurring,
                                                     onClick = {
                                                         onOpenExpense(expense.id)

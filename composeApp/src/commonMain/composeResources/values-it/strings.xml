@@ -7,6 +7,7 @@
     <!-- ── Simple UI labels ──────────────────────────────────────────────── -->
     <string name="add">Aggiungi</string>
     <string name="add_category">Aggiungi categoria</string>
+    <string name="edit_category">Modifica categoria</string>
     <string name="add_expense">Aggiungi spesa</string>
     <string name="add_income">Aggiungi entrata</string>
     <string name="amount">Importo</string>
@@ -19,6 +20,13 @@
     <string name="categories">Categorie</string>
     <string name="category">Categoria</string>
     <string name="category_name">Nome categoria</string>
+    <string name="icon">Icona</string>
+    <string name="icon_theme_home_and_bills">Casa e bollette</string>
+    <string name="icon_theme_food_and_dining">Cibo e ristorazione</string>
+    <string name="icon_theme_transport_and_travel">Trasporti e viaggi</string>
+    <string name="icon_theme_health_and_wellness">Salute e benessere</string>
+    <string name="icon_theme_people_and_work">Persone e lavoro</string>
+    <string name="icon_theme_general_and_hobbies">Generali e hobby</string>
     <string name="close">Chiudi</string>
     <string name="custom_category">Categoria personalizzata</string>
     <string name="dashboard">Riepilogo</string>
@@ -153,9 +161,13 @@
     <!-- ── Default category names ─────────────────────────────────────────── -->
     <string name="category_default_0">Spese casa</string>
     <string name="category_default_1">Cibo</string>
-    <string name="category_default_2">Bollette</string>
+    <string name="category_default_2">Ristorante</string>
     <string name="category_default_3">Spese auto</string>
-    <string name="category_default_4">Varie</string>
+    <string name="category_default_4">Viaggi</string>
+    <string name="category_default_5">Spese sanitarie</string>
+    <string name="category_default_6">Bollette</string>
+    <string name="category_default_7">Spese personali</string>
+    <string name="category_default_8">Varie</string>
 
     <!-- ── Plurals ────────────────────────────────────────────────────────── -->
     <plurals name="installment_label">

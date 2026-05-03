@@ -25,12 +25,14 @@ class IosGroupedExpenseRow(
     val title: String,
     val subtitleText: String,
     val amountText: String,
+    val categoryIconKey: String?,
     val recurringSeriesId: String?
 )
 
 class IosGroupedExpenseSection(
     val id: String,
     val title: String,
+    val categoryIconKey: String?,
     val totalAmountText: String,
     val rows: List<IosGroupedExpenseRow>
 )
@@ -74,6 +76,7 @@ private data class PreparedIosExpense(
     val amount: BigInteger,
     val amountText: String,
     val categoryName: String,
+    val categoryIconKey: String?,
     val description: String?,
     val recurringSeriesId: String?,
     val dateText: String,
@@ -480,6 +483,7 @@ private fun buildSections(
         IosGroupedExpenseSection(
             id = groupName,
             title = groupName,
+            categoryIconKey = if (groupingMode == "date") null else sortedExpenses.firstOrNull()?.categoryIconKey,
             totalAmountText = formatAmount(
                 sortedExpenses.sumBigIntegerOf(PreparedIosExpense::amount),
                 localization.currencySymbol
@@ -492,6 +496,7 @@ private fun buildSections(
                     title = if (groupingMode == "date") expense.categoryName else expenseName,
                     subtitleText = if (groupingMode == "date") expenseName else expense.dateText,
                     amountText = expense.amountText,
+                    categoryIconKey = expense.categoryIconKey,
                     recurringSeriesId = expense.recurringSeriesId
                 )
             }
@@ -511,6 +516,9 @@ private fun prepareExpense(
         categoryName = categoriesById[expense.categoryId]
             ?.let { localization.resolveCategoryName(it.id, it.name, it.isCustom) }
             ?: localization.unknownCategory,
+        categoryIconKey = categoriesById[expense.categoryId]
+            ?.icon
+            ?.let(::normalizeCategoryIconKey),
         description = expense.description,
         recurringSeriesId = expense.recurringSeriesId,
         dateText = formatExpenseDate(expense.date),

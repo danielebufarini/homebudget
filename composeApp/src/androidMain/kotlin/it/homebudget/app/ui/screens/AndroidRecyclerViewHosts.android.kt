@@ -17,7 +17,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.recyclerview.widget.DiffUtil
@@ -57,6 +56,14 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
             AndroidGroupedExpenseSectionModel(
                 id = categoryName,
                 title = categoryName,
+                categoryIconKey = if (isGroupedByDate) {
+                    null
+                } else {
+                    categoryExpenses.firstOrNull()
+                        ?.categoryId
+                        ?.let(categoriesById::get)
+                        ?.icon
+                },
                 totalAmountText = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount), currencySymbol),
                 rows = categoryExpenses
                     .map { expense ->
@@ -73,6 +80,7 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
                             title = row.title,
                             subtitleText = row.subtitleText,
                             amountText = formatAmount(expense.amount, currencySymbol),
+                            categoryIconKey = row.categoryIconKey,
                             isRecurring = row.isRecurring
                         )
                     }
@@ -115,7 +123,8 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
 internal actual fun AndroidCategoriesRecyclerView(
     categories: List<Category>,
     modifier: Modifier,
-    onDeleteCategory: (String) -> Unit
+    onDeleteCategory: (String) -> Unit,
+    onEditCategory: (Category) -> Unit
 ) {
     val compositionContext = rememberCompositionContext()
 
@@ -132,7 +141,8 @@ internal actual fun AndroidCategoriesRecyclerView(
         update = { recyclerView ->
             (recyclerView.adapter as CategoriesRecyclerAdapter).submit(
                 categories = categories,
-                onDeleteCategory = onDeleteCategory
+                onDeleteCategory = onDeleteCategory,
+                onEditCategory = onEditCategory
             )
         }
     )
@@ -141,6 +151,7 @@ internal actual fun AndroidCategoriesRecyclerView(
 private data class AndroidGroupedExpenseSectionModel(
     val id: String,
     val title: String,
+    val categoryIconKey: String?,
     val totalAmountText: String,
     val rows: List<AndroidGroupedExpenseRowModel>
 )
@@ -150,6 +161,7 @@ private data class AndroidGroupedExpenseRowModel(
     val title: String,
     val subtitleText: String,
     val amountText: String,
+    val categoryIconKey: String?,
     val isRecurring: Boolean
 )
 
@@ -236,14 +248,17 @@ private class CategoriesRecyclerAdapter(
 ) : RecyclerView.Adapter<ComposeViewHolder>() {
     private var categories: List<Category> = emptyList()
     private var onDeleteCategory: (String) -> Unit = {}
+    private var onEditCategory: (Category) -> Unit = {}
 
     fun submit(
         categories: List<Category>,
-        onDeleteCategory: (String) -> Unit
+        onDeleteCategory: (String) -> Unit,
+        onEditCategory: (Category) -> Unit
     ) {
         val previousCategories = this.categories
         this.categories = categories
         this.onDeleteCategory = onDeleteCategory
+        this.onEditCategory = onEditCategory
 
         DiffUtil.calculateDiff(
             CategoriesDiffCallback(
@@ -287,7 +302,10 @@ private class CategoriesRecyclerAdapter(
                             }
                         }
                     ) {
-                        CategoryListItem(category = category)
+                        CategoryListItem(
+                            category = category,
+                            onClick = { onEditCategory(category) }
+                        )
                     }
                 }
             } else {
@@ -368,12 +386,13 @@ private fun AndroidGroupedExpenseSectionCard(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                CategoryLabel(
+                    iconKey = section.categoryIconKey,
                     text = section.title,
                     modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    textColor = MaterialTheme.colorScheme.primary,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
@@ -424,6 +443,7 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            categoryIconKey = row.categoryIconKey,
             isRecurring = row.isRecurring,
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenExpense(row.id) }
@@ -447,6 +467,7 @@ private fun AndroidGroupedExpenseRow(
             title = row.title,
             subtitleText = row.subtitleText,
             amountText = row.amountText,
+            categoryIconKey = row.categoryIconKey,
             isRecurring = row.isRecurring,
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenExpense(row.id) }

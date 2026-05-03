@@ -7,12 +7,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -68,6 +68,8 @@ class AddExpenseScreen(
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
         val addExpenseLabel = stringResource(Res.string.add_expense)
+        val addCategoryLabel = stringResource(Res.string.add_category)
+        val addLabel = stringResource(Res.string.add)
         val amountLabel = stringResource(Res.string.amount)
         val backLabel = stringResource(Res.string.back)
         val cancelLabel = stringResource(Res.string.cancel)
@@ -112,6 +114,7 @@ class AddExpenseScreen(
         var installmentExpanded by remember { mutableStateOf(false) }
         var isSaving by remember { mutableStateOf(false) }
         var showAddCategorySheet by remember { mutableStateOf(false) }
+        var showCategoryPickerSheet by remember { mutableStateOf(false) }
         var isInitialized by remember(expenseId) { mutableStateOf(expenseId == null) }
         var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringExpenseUpdate?>(null) }
         var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
@@ -128,18 +131,12 @@ class AddExpenseScreen(
                 }
             }
         }
-        val categoryOptions = remember(categories, resolveCategoryName) {
-            categories.map { category ->
-                resolveCategoryName(category.id, category.name, category.isCustom) to category.id
-            }
-        }
         val selectedCategoryName = selectedCategory?.let {
             resolveCategoryName(it.id, it.name, it.isCustom)
         }
+        val selectedCategoryIconKey = selectedCategory?.icon
 
-        LaunchedEffect(repository) {
-            repository.insertDefaultCategoriesIfEmpty()
-        }
+        EnsureDefaultCategoriesInserted(repository)
 
         LaunchedEffect(expenseId, categories) {
             if (expenseId == null || isInitialized) {
@@ -317,20 +314,10 @@ class AddExpenseScreen(
 
                 CategorySelectorRow(
                     categoryName = selectedCategoryName,
+                    categoryIconKey = selectedCategoryIconKey,
                     enabled = !readOnly,
                     canSelectCategory = categories.isNotEmpty(),
-                    onSelectCategory = {
-                        platformOptionPicker.show(
-                            title = selectCategoryLabel,
-                            options = categoryOptions.map { it.first },
-                            selectedOption = selectedCategoryName
-                        ) { selectedOption ->
-                            selectedCategoryId = categoryOptions
-                                .firstOrNull { it.first == selectedOption }
-                                ?.second
-                                .orEmpty()
-                        }
-                    },
+                    onSelectCategory = { showCategoryPickerSheet = true },
                     onAddCategory = { showAddCategorySheet = true }
                 )
 
@@ -590,14 +577,16 @@ class AddExpenseScreen(
         if (showAddCategorySheet) {
             AddCategorySheet(
                 onDismiss = { showAddCategorySheet = false },
-                onAddCategory = { name ->
+                title = stringResource(Res.string.add_category),
+                confirmLabel = stringResource(Res.string.add),
+                onConfirm = { name, iconKey ->
                     scope.launch {
-                        val categoryId = buildCategoryId()
+                        val categoryId = buildCustomCategoryId()
                         runCatching {
                             repository.insertCategory(
                                 id = categoryId,
                                 name = name,
-                                icon = "category",
+                                icon = iconKey,
                                 isCustom = true
                             )
                         }.onSuccess {
@@ -607,6 +596,21 @@ class AddExpenseScreen(
                             snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
                         }
                     }
+                }
+            )
+        }
+
+        if (showCategoryPickerSheet) {
+            CategoryPickerSheet(
+                categories = categories,
+                selectedCategoryId = selectedCategoryId,
+                resolveCategoryName = { category ->
+                    resolveCategoryName(category.id, category.name, category.isCustom)
+                },
+                onDismiss = { showCategoryPickerSheet = false },
+                onCategorySelected = { categoryId ->
+                    selectedCategoryId = categoryId
+                    showCategoryPickerSheet = false
                 }
             )
         }
@@ -687,10 +691,6 @@ class AddExpenseScreen(
         return "recurring-${buildExpenseId()}"
     }
 
-    private fun buildCategoryId(): String {
-        return "custom_${Clock.System.now().toEpochMilliseconds()}_${Random.nextLong()}"
-    }
-
     private fun Long.formatDateLabel(): String {
         val date = Instant.fromEpochMilliseconds(this)
             .toLocalDateTime(TimeZone.currentSystemDefault())
@@ -703,6 +703,7 @@ class AddExpenseScreen(
 @Composable
 private fun CategorySelectorRow(
     categoryName: String?,
+    categoryIconKey: String?,
     enabled: Boolean,
     canSelectCategory: Boolean,
     onSelectCategory: () -> Unit,
@@ -726,6 +727,7 @@ private fun CategorySelectorRow(
         ) {
             CategorySplitButton(
                 categoryName = categoryName,
+                categoryIconKey = categoryIconKey,
                 enabled = enabled,
                 canSelectCategory = canSelectCategory,
                 onSelectCategory = onSelectCategory,
@@ -740,6 +742,7 @@ private fun CategorySelectorRow(
 @Composable
 private fun CategorySplitButton(
     categoryName: String?,
+    categoryIconKey: String?,
     enabled: Boolean,
     canSelectCategory: Boolean,
     onSelectCategory: () -> Unit,
@@ -757,10 +760,14 @@ private fun CategorySplitButton(
                 enabled = enabled && canSelectCategory,
                 colors = homeBudgetButtonColors()
             ) {
-                Text(
+                CategoryLabel(
+                    iconKey = categoryIconKey ?: DEFAULT_CATEGORY_ICON_KEY,
                     text = categoryName ?: selectCategoryLabel,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    textStyle = MaterialTheme.typography.labelLarge,
+                    textColor = MaterialTheme.colorScheme.onPrimary,
+                    iconTint = MaterialTheme.colorScheme.onPrimary,
+                    iconSize = 16.dp,
+                    maxLines = 1
                 )
             }
         },
@@ -782,17 +789,15 @@ private fun CategorySplitButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddCategorySheet(
+private fun CategoryPickerSheet(
+    categories: List<it.homebudget.app.database.Category>,
+    selectedCategoryId: String,
+    resolveCategoryName: (it.homebudget.app.database.Category) -> String,
     onDismiss: () -> Unit,
-    onAddCategory: (String) -> Unit
+    onCategorySelected: (String) -> Unit
 ) {
-    val addCategoryLabel = stringResource(Res.string.add_category)
-    val addLabel = stringResource(Res.string.add)
-    val cancelLabel = stringResource(Res.string.cancel)
-    val categoryNameLabel = stringResource(Res.string.category_name)
+    val selectCategoryLabel = stringResource(Res.string.select_category)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var categoryName by remember { mutableStateOf("") }
-    val trimmedCategoryName = categoryName.trim()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -801,39 +806,36 @@ private fun AddCategorySheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .imePadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = addCategoryLabel,
+                text = selectCategoryLabel,
                 style = MaterialTheme.typography.titleLarge
             )
-            PlatformTextField(
-                value = categoryName,
-                onValueChange = { categoryName = it },
-                label = categoryNameLabel,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    colors = homeBudgetTextButtonColors()
+            categories.forEach { category ->
+                val categoryName = resolveCategoryName(category)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onCategorySelected(category.id) }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(cancelLabel)
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    enabled = trimmedCategoryName.isNotEmpty(),
-                    onClick = { onAddCategory(trimmedCategoryName) },
-                    colors = homeBudgetButtonColors()
-                ) {
-                    Text(addLabel)
+                    CategoryLabel(
+                        iconKey = category.icon,
+                        text = categoryName,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1
+                    )
+                    if (category.id == selectedCategoryId) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null
+                        )
+                    }
                 }
             }
         }

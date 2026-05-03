@@ -105,9 +105,7 @@ fun DashboardRoute(
     var selectedMonth by remember { mutableStateOf(currentMonthCursor()) }
     val addExpenseLabel = stringResource(Res.string.add_expense)
 
-    LaunchedEffect(repository) {
-        repository.insertDefaultCategoriesIfEmpty()
-    }
+    EnsureDefaultCategoriesInserted(repository)
 
     val dashboardData = remember(expenses, incomes) {
         buildDashboardDataCache(expenses, incomes)
@@ -418,6 +416,11 @@ private fun ExpenseSummary(
     val unknownCategoryLabel = stringResource(Res.string.unknown_category)
     val weekdayNames = stringArrayResource(Res.array.full_weekday_names)
     val resolveCategoryName = rememberCategoryNameResolver()
+    val topCategoryIconKey = remember(summary.topCategoryId, categoriesById) {
+        summary.topCategoryId
+            ?.let(categoriesById::get)
+            ?.icon
+    }
     val topCategoryValue = remember(summary.topCategoryId, categoriesById, unknownCategoryLabel, resolveCategoryName) {
         summary.topCategoryId
             ?.let(categoriesById::get)
@@ -465,6 +468,7 @@ private fun ExpenseSummary(
             SummaryMetricUi(
                 label = topCategoryLabel,
                 value = topCategoryValue,
+                valueIconKey = topCategoryIconKey,
                 containerColor = colorScheme.errorContainer,
                 contentColor = colorScheme.onErrorContainer,
                 onClick = onTopCategoryClick
@@ -515,6 +519,7 @@ private fun ExpenseSummary(
                             modifier = Modifier.fillMaxWidth(),
                             label = item.label,
                             value = item.value,
+                            valueIconKey = item.valueIconKey,
                             containerColor = item.containerColor,
                             contentColor = item.contentColor,
                             trailingValue = item.trailingValue,
@@ -526,6 +531,7 @@ private fun ExpenseSummary(
                                 modifier = Modifier.weight(1f),
                                 label = item.label,
                                 value = item.value,
+                                valueIconKey = item.valueIconKey,
                                 containerColor = item.containerColor,
                                 contentColor = item.contentColor,
                                 trailingValue = item.trailingValue,
@@ -544,6 +550,7 @@ private fun SummaryMetric(
     modifier: Modifier,
     label: String,
     value: String,
+    valueIconKey: String?,
     containerColor: Color,
     contentColor: Color,
     trailingValue: String? = null,
@@ -576,23 +583,46 @@ private fun SummaryMetric(
             )
 
             if (trailingValue == null) {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                if (valueIconKey == null) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                } else {
+                    CategoryLabel(
+                        iconKey = valueIconKey,
+                        text = value,
+                        textStyle = MaterialTheme.typography.titleMedium,
+                        textColor = contentColor,
+                        iconTint = contentColor,
+                        maxLines = 1
+                    )
+                }
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.fillMaxWidth(0.62f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (valueIconKey == null) {
+                        Text(
+                            text = value,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.fillMaxWidth(0.62f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        CategoryLabel(
+                            iconKey = valueIconKey,
+                            text = value,
+                            modifier = Modifier.fillMaxWidth(0.62f),
+                            textStyle = MaterialTheme.typography.titleMedium,
+                            textColor = contentColor,
+                            iconTint = contentColor,
+                            maxLines = 1
+                        )
+                    }
                     Spacer(modifier = Modifier.width(if (isIos) 10.dp else 12.dp))
                     Text(
                         text = trailingValue,
@@ -865,6 +895,9 @@ private fun CategoryBreakdownPage(
                     ?.let(categoriesById::get)
                     ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
                     ?: unknownCategoryLabel
+                val categoryIconKey = categoryTotal.categoryId
+                    ?.let(categoriesById::get)
+                    ?.icon
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -880,7 +913,13 @@ private fun CategoryBreakdownPage(
                                     .size(10.dp)
                                     .background(categoryTotal.color, CircleShape)
                             )
-                            Text(categoryName, style = MaterialTheme.typography.bodyLarge)
+                            CategoryLabel(
+                                iconKey = categoryIconKey,
+                                text = categoryName,
+                                textStyle = MaterialTheme.typography.bodyLarge,
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
                         }
                         Text(formatAmount(categoryTotal.amount, currencySymbol), style = MaterialTheme.typography.labelLarge)
                     }
@@ -1123,6 +1162,7 @@ private data class CategoryTotal(
 private class SummaryMetricUi(
     val label: String,
     val value: String,
+    val valueIconKey: String? = null,
     val containerColor: Color,
     val contentColor: Color,
     val trailingValue: String? = null,

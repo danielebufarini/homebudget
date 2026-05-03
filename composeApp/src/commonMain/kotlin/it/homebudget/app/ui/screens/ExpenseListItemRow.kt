@@ -21,6 +21,7 @@ fun ExpenseListItemRow(
     title: String,
     subtitleText: String,
     amountText: String,
+    categoryIconKey: String? = null,
     isRecurring: Boolean = false,
     subtitleFontSizeOffsetSp: Int = 0,
     onClick: () -> Unit
@@ -41,6 +42,14 @@ fun ExpenseListItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (categoryIconKey != null) {
+                    CategoryIcon(
+                        iconKey = categoryIconKey,
+                        modifier = Modifier.size(18.dp),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
                 if (isRecurring) {
                     RecurringBadge()
                 }

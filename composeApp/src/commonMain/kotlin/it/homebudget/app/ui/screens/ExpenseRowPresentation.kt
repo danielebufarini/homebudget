@@ -6,6 +6,7 @@ import it.homebudget.app.database.Expense
 internal data class ExpenseRowPresentation(
     val title: String,
     val subtitleText: String,
+    val categoryIconKey: String?,
     val isRecurring: Boolean
 )
 
@@ -18,6 +19,7 @@ internal fun groupedExpenseRowPresentation(
     resolveCategoryName: (Category) -> String
 ): ExpenseRowPresentation {
     val expenseName = expense.displayName(expenseFallbackTitle)
+    val category = categoriesById[expense.categoryId]
     val categoryName = expense.categoryName(
         categoriesById = categoriesById,
         unknownCategoryLabel = unknownCategoryLabel,
@@ -27,6 +29,7 @@ internal fun groupedExpenseRowPresentation(
     return ExpenseRowPresentation(
         title = if (isGroupedByDate) categoryName else expenseName,
         subtitleText = if (isGroupedByDate) expenseName else formatExpenseDate(expense.date),
+        categoryIconKey = category?.icon,
         isRecurring = !expense.recurringSeriesId.isNullOrBlank()
     )
 }
@@ -39,6 +42,7 @@ internal fun calendarExpenseRowPresentation(
     unknownCategoryLabel: String,
     resolveCategoryName: (Category) -> String
 ): ExpenseRowPresentation {
+    val category = categoriesById[expense.categoryId]
     val categoryName = expense.categoryName(
         categoriesById = categoriesById,
         unknownCategoryLabel = unknownCategoryLabel,
@@ -55,6 +59,7 @@ internal fun calendarExpenseRowPresentation(
     return ExpenseRowPresentation(
         title = title,
         subtitleText = subtitleText,
+        categoryIconKey = category?.icon,
         isRecurring = !expense.recurringSeriesId.isNullOrBlank()
     )
 }

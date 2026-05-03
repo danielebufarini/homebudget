@@ -1,11 +1,13 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,8 +22,6 @@ import it.homebudget.app.localization.localizedCategoryName
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import kotlin.random.Random
-import kotlin.time.Clock
 
 class CategoriesScreen : Screen {
     @Composable
@@ -45,14 +45,15 @@ fun CategoriesRoute(
 ) {
     val repository: ExpenseRepository = koinInject()
     val isIos = rememberIsIosPlatform()
+    var categoryBeingEdited by remember { mutableStateOf<it.homebudget.app.database.Category?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
     val addCategoryLabel = stringResource(Res.string.add_category)
+    val editCategoryLabel = stringResource(Res.string.edit_category)
     val addLabel = stringResource(Res.string.add)
-    val cancelLabel = stringResource(Res.string.cancel)
-    val categoryNameLabel = stringResource(Res.string.category_name)
+    val updateLabel = stringResource(Res.string.update)
     val unableToDeleteCategoryLabel = stringResource(Res.string.unable_to_delete_category)
 
     fun deleteCategory(categoryId: String) {
@@ -65,9 +66,7 @@ fun CategoriesRoute(
         }
     }
 
-    LaunchedEffect(repository) {
-        repository.insertDefaultCategoriesIfEmpty()
-    }
+    EnsureDefaultCategoriesInserted(repository)
 
     LaunchedEffect(addCategoryRequestKey) {
         if (addCategoryRequestKey > 0) {
@@ -90,7 +89,8 @@ fun CategoriesRoute(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(16.dp),
-                    onDeleteCategory = ::deleteCategory
+                    onDeleteCategory = ::deleteCategory,
+                    onEditCategory = { categoryBeingEdited = it }
                 )
             } else {
                 AndroidCategoriesRecyclerView(
@@ -99,7 +99,8 @@ fun CategoriesRoute(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(16.dp),
-                    onDeleteCategory = ::deleteCategory
+                    onDeleteCategory = ::deleteCategory,
+                    onEditCategory = { categoryBeingEdited = it }
                 )
             }
         }
@@ -111,7 +112,8 @@ fun CategoriesRoute(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
-                    onDeleteCategory = ::deleteCategory
+                    onDeleteCategory = ::deleteCategory,
+                    onEditCategory = { categoryBeingEdited = it }
                 )
             } else {
                 AndroidCategoriesRecyclerView(
@@ -119,7 +121,8 @@ fun CategoriesRoute(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
-                    onDeleteCategory = ::deleteCategory
+                    onDeleteCategory = ::deleteCategory,
+                    onEditCategory = { categoryBeingEdited = it }
                 )
             }
 
@@ -157,45 +160,35 @@ fun CategoriesRoute(
         }
     }
 
-    if (showAddDialog) {
-        var newCategoryName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text(addCategoryLabel) },
-            text = {
-                PlatformTextField(
-                    value = newCategoryName,
-                    onValueChange = { newCategoryName = it },
-                    label = categoryNameLabel,
-                    modifier = Modifier.fillMaxWidth()
-                )
+    if (showAddDialog || categoryBeingEdited != null) {
+        val editingCategory = categoryBeingEdited
+        AddCategorySheet(
+            onDismiss = {
+                showAddDialog = false
+                categoryBeingEdited = null
             },
-            confirmButton = {
-                val trimmedName = newCategoryName.trim()
-                TextButton(
-                    enabled = trimmedName.isNotEmpty(),
-                    colors = homeBudgetTextButtonColors(),
-                    onClick = {
-                        scope.launch {
-                            repository.insertCategory(
-                                id = buildCategoryId(),
-                                name = trimmedName,
-                                icon = "category",
-                                isCustom = true
-                            )
-                            showAddDialog = false
-                        }
+            title = if (editingCategory == null) addCategoryLabel else editCategoryLabel,
+            confirmLabel = if (editingCategory == null) addLabel else updateLabel,
+            initialName = editingCategory?.name.orEmpty(),
+            initialIconKey = editingCategory?.icon ?: DEFAULT_CATEGORY_ICON_KEY,
+            onConfirm = { name, iconKey ->
+                scope.launch {
+                    if (editingCategory == null) {
+                        repository.insertCategory(
+                            id = buildCustomCategoryId(),
+                            name = name,
+                            icon = iconKey,
+                            isCustom = true
+                        )
+                    } else {
+                        repository.updateCategory(
+                            id = editingCategory.id,
+                            name = name,
+                            icon = iconKey
+                        )
                     }
-                ) {
-                    Text(addLabel)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showAddDialog = false },
-                    colors = homeBudgetTextButtonColors()
-                ) {
-                    Text(cancelLabel)
+                    showAddDialog = false
+                    categoryBeingEdited = null
                 }
             }
         )
@@ -301,7 +294,8 @@ private fun CategoriesScreenScaffold(
 private fun CategoriesList(
     categories: List<it.homebudget.app.database.Category>,
     modifier: Modifier = Modifier,
-    onDeleteCategory: (String) -> Unit
+    onDeleteCategory: (String) -> Unit,
+    onEditCategory: (it.homebudget.app.database.Category) -> Unit
 ) {
     LazyColumn(
         modifier = modifier,
@@ -328,7 +322,10 @@ private fun CategoriesList(
                         }
                     }
                 ) {
-                    CategoryListItem(category = category)
+                    CategoryListItem(
+                        category = category,
+                        onClick = { onEditCategory(category) }
+                    )
                 }
             } else {
                 CategoryListItem(category = category)
@@ -351,28 +348,44 @@ internal fun DeleteCategoryBackground() {
 @Composable
 internal fun CategoryListItem(
     category: it.homebudget.app.database.Category,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     val customCategoryLabel = stringResource(Res.string.custom_category)
     val defaultCategoryLabel = stringResource(Res.string.default_category)
 
     PlatformCard(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick == null) Modifier else Modifier.clickable(onClick = onClick)),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(localizedCategoryName(category))
-            Text(
-                text = if (category.isCustom == 1L) customCategoryLabel else defaultCategoryLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                CategoryLabel(
+                    iconKey = category.icon,
+                    text = localizedCategoryName(category),
+                    maxLines = 1
+                )
+                Text(
+                    text = if (category.isCustom == 1L) customCategoryLabel else defaultCategoryLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (onClick != null) {
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = stringResource(Res.string.edit_category),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
-}
-
-private fun buildCategoryId(): String {
-    return "custom_${Clock.System.now().toEpochMilliseconds()}_${Random.nextLong()}"
 }

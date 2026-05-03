@@ -68,9 +68,7 @@ class CalendarExpensesScreen : Screen {
         var selectedMonth by remember { mutableStateOf(today.asMonthCursor()) }
         var selectedDate by remember { mutableStateOf(today) }
 
-        LaunchedEffect(repository) {
-            repository.insertDefaultCategoriesIfEmpty()
-        }
+        EnsureDefaultCategoriesInserted(repository)
 
         val monthExpenses = remember(expenses, selectedMonth) {
             expenses
@@ -428,6 +426,7 @@ private fun SelectedDayExpensesCard(
                         title = row.title,
                         subtitleText = row.subtitleText,
                         amountText = formatAmount(expense.amount, currencySymbol),
+                        categoryIconKey = row.categoryIconKey,
                         isRecurring = row.isRecurring,
                         onClick = { onOpenExpense(expense.id) }
                     )

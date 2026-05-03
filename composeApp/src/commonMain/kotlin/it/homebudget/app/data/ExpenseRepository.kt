@@ -12,6 +12,11 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
+private data class DefaultCategorySeed(
+    val name: String,
+    val icon: String
+)
+
 class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
     private val expenseQueries = database.expenseQueries
@@ -33,23 +38,64 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
+    suspend fun updateCategory(id: String, name: String, icon: String) {
+        withContext(Dispatchers.IO) {
+            categoryQueries.updateCategory(
+                name = name,
+                icon = icon,
+                id = id
+            )
+        }
+    }
+
     suspend fun insertDefaultCategoriesIfEmpty() {
         withContext(Dispatchers.IO) {
             database.transaction {
                 val count = categoryQueries.countCategories().executeAsOne()
                 if (count == 0L) {
                     val defaults = listOf(
-                        "Spese casa" to "home",
-                        "Cibo" to "restaurant",
-                        "Bollette" to "receipt",
-                        "Spese auto" to "directions_car",
-                        "Varie" to "category"
+                        DefaultCategorySeed(
+                            name = "Household expenses",
+                            icon = "home"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Food",
+                            icon = "shopping_cart"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Restaurant",
+                            icon = "restaurant"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Car expenses",
+                            icon = "directions_car"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Travel",
+                            icon = "flight"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Healthcare expenses",
+                            icon = "local_hospital"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Bills",
+                            icon = "receipt"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Personal expenses",
+                            icon = "person"
+                        ),
+                        DefaultCategorySeed(
+                            name = "Miscellaneous",
+                            icon = "category"
+                        )
                     )
-                    defaults.forEachIndexed { index, pair ->
+                    defaults.forEachIndexed { index, category ->
                         categoryQueries.insertCategory(
                             id = "default_$index",
-                            name = pair.first,
-                            icon = pair.second,
+                            name = category.name,
+                            icon = category.icon,
                             isCustom = 0L
                         )
                     }

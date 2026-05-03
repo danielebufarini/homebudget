@@ -71,6 +71,7 @@ private struct GroupedExpenseRowModel: Identifiable {
     let title: String
     let subtitleText: String
     let amountText: String
+    let categoryIconKey: String?
     let recurringSeriesId: String?
 
     var isRecurring: Bool {
@@ -85,6 +86,7 @@ private struct GroupedExpenseRowModel: Identifiable {
 private struct GroupedExpenseSectionModel: Identifiable {
     let id: String
     let title: String
+    let categoryIconKey: String?
     let totalAmountText: String
     let rows: [GroupedExpenseRowModel]
 }
@@ -160,6 +162,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
             GroupedExpenseSectionModel(
                 id: section.id,
                 title: section.title,
+                categoryIconKey: section.categoryIconKey,
                 totalAmountText: section.totalAmountText,
                 rows: section.rows.map { row in
                     GroupedExpenseRowModel(
@@ -167,6 +170,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
                         title: row.title,
                         subtitleText: row.subtitleText,
                         amountText: row.amountText,
+                        categoryIconKey: row.categoryIconKey,
                         recurringSeriesId: row.recurringSeriesId
                     )
                 }
@@ -250,6 +254,7 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
             GroupedExpenseSectionModel(
                 id: section.id,
                 title: section.title,
+                categoryIconKey: nil,
                 totalAmountText: section.totalAmountText,
                 rows: section.rows.map { row in
                     GroupedExpenseRowModel(
@@ -257,6 +262,7 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
                         title: row.title,
                         subtitleText: row.subtitleText,
                         amountText: row.amountText,
+                        categoryIconKey: nil,
                         recurringSeriesId: row.recurringSeriesId
                     )
                 }
@@ -397,7 +403,7 @@ private struct MonthlyIncomesSectionsContent: View {
                 }
             } else {
                 ForEach(viewModel.sections) { section in
-                    Section(isExpanded: expansionBinding(for: section.id)) {
+                    Section(isExpanded: expandedSectionBinding(expandedSectionIDs: $viewModel.expandedSectionIDs, for: section.id)) {
                         ForEach(section.rows) { row in
                             Button {
                                 onOpenIncome(row.id)
@@ -419,7 +425,7 @@ private struct MonthlyIncomesSectionsContent: View {
                             }
                             .confirmationDialog(
                                 "Delete",
-                                isPresented: recurringIncomeDialogBinding(for: row),
+                                isPresented: dialogSelectionBinding(selection: $recurringIncomeToDelete, matching: row),
                                 titleVisibility: .visible
                             ) {
                                 Button("This instance only", role: .destructive) {
@@ -459,35 +465,6 @@ private struct MonthlyIncomesSectionsContent: View {
         }
     }
 
-    private func expansionBinding(for sectionID: String) -> Binding<Bool> {
-        Binding(
-            get: {
-                viewModel.expandedSectionIDs.contains(sectionID)
-            },
-            set: { isExpanded in
-                var updated = viewModel.expandedSectionIDs
-                if isExpanded {
-                    updated.insert(sectionID)
-                } else {
-                    updated.remove(sectionID)
-                }
-                viewModel.expandedSectionIDs = updated
-            }
-        )
-    }
-
-    private func recurringIncomeDialogBinding(for row: GroupedExpenseRowModel) -> Binding<Bool> {
-        Binding(
-            get: {
-                recurringIncomeToDelete?.id == row.id
-            },
-            set: { isPresented in
-                if !isPresented {
-                    recurringIncomeToDelete = nil
-                }
-            }
-        )
-    }
 }
 
 private struct GroupedExpensesSectionsList: View {
@@ -544,7 +521,7 @@ private struct GroupedExpensesSectionsList: View {
                 }
             } else {
                 ForEach(viewModel.sections) { section in
-                    Section(isExpanded: expansionBinding(for: section.id)) {
+                    Section(isExpanded: expandedSectionBinding(expandedSectionIDs: $viewModel.expandedSectionIDs, for: section.id)) {
                         ForEach(section.rows) { row in
                             rowView(for: row)
                         }
@@ -625,23 +602,6 @@ private struct GroupedExpensesSectionsList: View {
         }
     }
 
-    private func expansionBinding(for sectionID: String) -> Binding<Bool> {
-        Binding(
-            get: {
-                viewModel.expandedSectionIDs.contains(sectionID)
-            },
-            set: { isExpanded in
-                var updated = viewModel.expandedSectionIDs
-                if isExpanded {
-                    updated.insert(sectionID)
-                } else {
-                    updated.remove(sectionID)
-                }
-                viewModel.expandedSectionIDs = updated
-            }
-        )
-    }
-
     @ViewBuilder
     private func rowView(for row: GroupedExpenseRowModel) -> some View {
         if kind.allowsDelete {
@@ -665,7 +625,7 @@ private struct GroupedExpensesSectionsList: View {
             }
             .confirmationDialog(
                 "Delete",
-                isPresented: recurringExpenseDialogBinding(for: row),
+                isPresented: dialogSelectionBinding(selection: $recurringExpenseToDelete, matching: row),
                 titleVisibility: .visible
             ) {
                 Button("This instance only", role: .destructive) {
@@ -689,19 +649,6 @@ private struct GroupedExpensesSectionsList: View {
         }
     }
 
-    private func recurringExpenseDialogBinding(for row: GroupedExpenseRowModel) -> Binding<Bool> {
-        Binding(
-            get: {
-                recurringExpenseToDelete?.id == row.id
-            },
-            set: { isPresented in
-                if !isPresented {
-                    recurringExpenseToDelete = nil
-                }
-            }
-        )
-    }
-
 }
 
 private struct GroupedExpenseSectionHeaderView: View {
@@ -709,7 +656,10 @@ private struct GroupedExpenseSectionHeaderView: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(section.title)
+            CategoryIconLabelView(
+                iconKey: section.categoryIconKey,
+                text: section.title
+            )
 
             Spacer()
 
@@ -718,6 +668,42 @@ private struct GroupedExpenseSectionHeaderView: View {
                 .foregroundStyle(.primary)
         }
     }
+}
+
+private func expandedSectionBinding(
+    expandedSectionIDs: Binding<Set<String>>,
+    for sectionID: String
+) -> Binding<Bool> {
+    Binding(
+        get: {
+            expandedSectionIDs.wrappedValue.contains(sectionID)
+        },
+        set: { isExpanded in
+            var updated = expandedSectionIDs.wrappedValue
+            if isExpanded {
+                updated.insert(sectionID)
+            } else {
+                updated.remove(sectionID)
+            }
+            expandedSectionIDs.wrappedValue = updated
+        }
+    )
+}
+
+private func dialogSelectionBinding<Item: Identifiable>(
+    selection: Binding<Item?>,
+    matching item: Item
+) -> Binding<Bool> where Item.ID: Equatable {
+    Binding(
+        get: {
+            selection.wrappedValue?.id == item.id
+        },
+        set: { isPresented in
+            if !isPresented {
+                selection.wrappedValue = nil
+            }
+        }
+    )
 }
 
 private struct MonthNavigationToolbarTitle: View {
@@ -759,6 +745,7 @@ private struct GroupedExpenseRowView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .center, spacing: 8) {
+                    CategoryIconView(iconKey: row.categoryIconKey)
                     if row.isRecurring {
                         RecurringBadgeView()
                     }
@@ -778,6 +765,85 @@ private struct GroupedExpenseRowView: View {
                 .foregroundStyle(.primary)
         }
         .contentShape(Rectangle())
+    }
+}
+
+private struct CategoryIconLabelView: View {
+    let iconKey: String?
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            CategoryIconView(iconKey: iconKey)
+            Text(text)
+                .lineLimit(1)
+        }
+    }
+}
+
+private struct CategoryIconView: View {
+    let iconKey: String?
+
+    var body: some View {
+        Image(systemName: categorySystemImageName(iconKey))
+            .foregroundStyle(.tint)
+            .frame(width: 18, height: 18)
+    }
+}
+
+private func categorySystemImageName(_ iconKey: String?) -> String {
+    switch normalizedCategoryIconKey(iconKey) {
+    case "home":
+        return "house.fill"
+    case "shopping_cart":
+        return "cart.fill"
+    case "restaurant":
+        return "fork.knife"
+    case "directions_car":
+        return "car.fill"
+    case "flight":
+        return "airplane"
+    case "local_hospital":
+        return "cross.case.fill"
+    case "receipt":
+        return "receipt.fill"
+    case "person":
+        return "person.fill"
+    case "work":
+        return "briefcase.fill"
+    case "school":
+        return "graduationcap.fill"
+    case "pets":
+        return "pawprint.fill"
+    case "fitness_center":
+        return "figure.strengthtraining.traditional"
+    default:
+        return "square.grid.2x2.fill"
+    }
+}
+
+private func normalizedCategoryIconKey(_ iconKey: String?) -> String {
+    switch iconKey?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case nil, "":
+        return "category"
+    case "household_expenses":
+        return "home"
+    case "food":
+        return "shopping_cart"
+    case "car_expenses":
+        return "directions_car"
+    case "travel":
+        return "flight"
+    case "healthcare_expenses":
+        return "local_hospital"
+    case "bills":
+        return "receipt"
+    case "personal_expenses", "personal_expeses":
+        return "person"
+    case "miscellaneous":
+        return "category"
+    case let key?:
+        return key
     }
 }
 

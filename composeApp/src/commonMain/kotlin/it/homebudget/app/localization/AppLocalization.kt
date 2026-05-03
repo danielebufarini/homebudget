@@ -52,37 +52,39 @@ internal fun String.formatResourceArgs(vararg args: Any): String {
 
 @Composable
 private fun rememberDefaultCategoryNamesById(): Map<String, String> {
-    val defaultCategory0 = stringResource(Res.string.category_default_0)
-    val defaultCategory1 = stringResource(Res.string.category_default_1)
-    val defaultCategory2 = stringResource(Res.string.category_default_2)
-    val defaultCategory3 = stringResource(Res.string.category_default_3)
-    val defaultCategory4 = stringResource(Res.string.category_default_4)
+    val defaultCategoryNames = listOf(
+        stringResource(Res.string.category_default_0),
+        stringResource(Res.string.category_default_1),
+        stringResource(Res.string.category_default_2),
+        stringResource(Res.string.category_default_3),
+        stringResource(Res.string.category_default_4),
+        stringResource(Res.string.category_default_5),
+        stringResource(Res.string.category_default_6),
+        stringResource(Res.string.category_default_7),
+        stringResource(Res.string.category_default_8)
+    )
 
-    return remember(
-        defaultCategory0,
-        defaultCategory1,
-        defaultCategory2,
-        defaultCategory3,
-        defaultCategory4
-    ) {
-        mapOf(
-            "default_0" to defaultCategory0,
-            "default_1" to defaultCategory1,
-            "default_2" to defaultCategory2,
-            "default_3" to defaultCategory3,
-            "default_4" to defaultCategory4
-        )
+    return remember(defaultCategoryNames) {
+        defaultCategoryNames.mapIndexed { index, name ->
+            "default_$index" to name
+        }.toMap()
     }
 }
 
 private suspend fun loadDefaultCategoryNamesById(): Map<String, String> {
-    return mapOf(
-        "default_0" to getString(Res.string.category_default_0),
-        "default_1" to getString(Res.string.category_default_1),
-        "default_2" to getString(Res.string.category_default_2),
-        "default_3" to getString(Res.string.category_default_3),
-        "default_4" to getString(Res.string.category_default_4)
-    )
+    return listOf(
+        getString(Res.string.category_default_0),
+        getString(Res.string.category_default_1),
+        getString(Res.string.category_default_2),
+        getString(Res.string.category_default_3),
+        getString(Res.string.category_default_4),
+        getString(Res.string.category_default_5),
+        getString(Res.string.category_default_6),
+        getString(Res.string.category_default_7),
+        getString(Res.string.category_default_8)
+    ).mapIndexed { index, name ->
+        "default_$index" to name
+    }.toMap()
 }
 
 private fun buildCategoryNameResolver(

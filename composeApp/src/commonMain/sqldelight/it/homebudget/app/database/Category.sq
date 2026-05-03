@@ -15,6 +15,11 @@ SELECT * FROM category;
 getCategoryById:
 SELECT * FROM category WHERE id = ?;
 
+updateCategory:
+UPDATE category
+SET name = ?, icon = ?
+WHERE id = ?;
+
 deleteCategory:
 DELETE FROM category WHERE id = ?;
 
