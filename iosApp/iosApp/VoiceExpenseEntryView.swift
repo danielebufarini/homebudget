@@ -27,6 +27,7 @@ struct VoiceExpenseEntrySheet: View {
                         }
                     }
                     .disabled(viewModel.isBusy || !viewModel.canStartCapture)
+                    .buttonStyle(.borderedProminent)
 
                     if viewModel.isBusy {
                         ProgressView(viewModel.busyLabel)
@@ -61,10 +62,12 @@ struct VoiceExpenseEntrySheet: View {
                                 onClose()
                             }
                         }
+                        .buttonStyle(.borderedProminent)
                         .disabled(!viewModel.canCommit)
                     }
                 }
             }
+            .appGlassSheetChrome()
             .navigationTitle("Voice Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

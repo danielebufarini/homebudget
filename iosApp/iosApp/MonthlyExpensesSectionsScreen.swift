@@ -317,7 +317,7 @@ struct GroupedExpensesSectionsScreen: View {
         .id("\(kind.screenType)-\(selectedMonth.id)")
         .safeAreaInset(edge: .bottom) {
             Color.clear
-                .frame(height: 64)
+                .frame(height: 86)
                 .allowsHitTesting(false)
         }
         .overlay(alignment: .bottom) {
@@ -327,9 +327,13 @@ struct GroupedExpensesSectionsScreen: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .appGlassSurface(cornerRadius: 24)
             .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .padding(.bottom, 12)
         }
+        .toolbarBackground(.hidden, for: .navigationBar)
     }
 
     private var supportsMonthNavigation: Bool {
@@ -397,56 +401,72 @@ private struct MonthlyIncomesSectionsContent: View {
         List {
             if viewModel.sections.isEmpty {
                 Section {
-                    Text(viewModel.emptyStateText)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    AppGlassListCard {
+                        Text(viewModel.emptyStateText)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
             } else {
                 ForEach(viewModel.sections) { section in
-                    Section(isExpanded: expandedSectionBinding(expandedSectionIDs: $viewModel.expandedSectionIDs, for: section.id)) {
-                        ForEach(section.rows) { row in
-                            Button {
-                                onOpenIncome(row.id)
-                            } label: {
-                                GroupedExpenseRowView(row: row)
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: !row.isRecurring) {
+                    Section {
+                        if viewModel.expandedSectionIDs.contains(section.id) {
+                            ForEach(section.rows) { row in
                                 Button {
-                                    if row.isRecurring {
-                                        recurringIncomeToDelete = row
-                                    } else {
-                                        viewModel.deleteIncome(row.id)
-                                    }
+                                    onOpenIncome(row.id)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    GroupedExpenseRowView(row: row)
                                 }
-                                .tint(.red)
-                            }
-                            .confirmationDialog(
-                                "Delete",
-                                isPresented: dialogSelectionBinding(selection: $recurringIncomeToDelete, matching: row),
-                                titleVisibility: .visible
-                            ) {
-                                Button("This instance only", role: .destructive) {
-                                    viewModel.deleteIncome(row.id)
-                                    recurringIncomeToDelete = nil
-                                }
-                                Button("Whole series", role: .destructive) {
-                                    if let seriesID = row.recurringSeriesId {
-                                        viewModel.deleteRecurringIncomeSeries(seriesID)
+                                .buttonStyle(.plain)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: !row.isRecurring) {
+                                    Button {
+                                        if row.isRecurring {
+                                            recurringIncomeToDelete = row
+                                        } else {
+                                            viewModel.deleteIncome(row.id)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
-                                    recurringIncomeToDelete = nil
+                                    .tint(.red)
+                                }
+                                .confirmationDialog(
+                                    "Delete",
+                                    isPresented: dialogSelectionBinding(selection: $recurringIncomeToDelete, matching: row),
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("This instance only", role: .destructive) {
+                                        viewModel.deleteIncome(row.id)
+                                        recurringIncomeToDelete = nil
+                                    }
+                                    Button("Whole series", role: .destructive) {
+                                        if let seriesID = row.recurringSeriesId {
+                                            viewModel.deleteRecurringIncomeSeries(seriesID)
+                                        }
+                                        recurringIncomeToDelete = nil
+                                    }
                                 }
                             }
                         }
                     } header: {
-                        GroupedExpenseSectionHeaderView(section: section)
+                        Button {
+                            toggleExpandedSection(section.id)
+                        } label: {
+                            GroupedExpenseSectionHeaderView(
+                                section: section,
+                                isExpanded: viewModel.expandedSectionIDs.contains(section.id)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
         }
-        .listStyle(.sidebar)
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 MonthNavigationToolbarTitle(
@@ -462,6 +482,14 @@ private struct MonthlyIncomesSectionsContent: View {
         }
         .onDisappear {
             viewModel.stop()
+        }
+    }
+
+    private func toggleExpandedSection(_ sectionID: String) {
+        if viewModel.expandedSectionIDs.contains(sectionID) {
+            viewModel.expandedSectionIDs.remove(sectionID)
+        } else {
+            viewModel.expandedSectionIDs.insert(sectionID)
         }
     }
 
@@ -515,23 +543,39 @@ private struct GroupedExpensesSectionsList: View {
         List {
             if viewModel.sections.isEmpty {
                 Section {
-                    Text(viewModel.emptyStateText)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    AppGlassListCard {
+                        Text(viewModel.emptyStateText)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
             } else {
                 ForEach(viewModel.sections) { section in
-                    Section(isExpanded: expandedSectionBinding(expandedSectionIDs: $viewModel.expandedSectionIDs, for: section.id)) {
-                        ForEach(section.rows) { row in
-                            rowView(for: row)
+                    Section {
+                        if viewModel.expandedSectionIDs.contains(section.id) {
+                            ForEach(section.rows) { row in
+                                rowView(for: row)
+                            }
                         }
                     } header: {
-                        GroupedExpenseSectionHeaderView(section: section)
+                        Button {
+                            toggleExpandedSection(section.id)
+                        } label: {
+                            GroupedExpenseSectionHeaderView(
+                                section: section,
+                                isExpanded: viewModel.expandedSectionIDs.contains(section.id)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
         }
-        .listStyle(.sidebar)
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 if let onPreviousMonth, let onNextMonth {
@@ -554,8 +598,9 @@ private struct GroupedExpensesSectionsList: View {
             if let onAddExpense, canAddExpense {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: onAddExpense) {
-                        Image(systemName: "plus")
+                        AppGlassToolbarIcon(systemName: "plus")
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -568,6 +613,14 @@ private struct GroupedExpensesSectionsList: View {
         }
         .onDisappear {
             viewModel.stop()
+        }
+    }
+
+    private func toggleExpandedSection(_ sectionID: String) {
+        if viewModel.expandedSectionIDs.contains(sectionID) {
+            viewModel.expandedSectionIDs.remove(sectionID)
+        } else {
+            viewModel.expandedSectionIDs.insert(sectionID)
         }
     }
 
@@ -653,9 +706,16 @@ private struct GroupedExpensesSectionsList: View {
 
 private struct GroupedExpenseSectionHeaderView: View {
     let section: GroupedExpenseSectionModel
+    let isExpanded: Bool
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                .frame(width: 12)
+
             CategoryIconLabelView(
                 iconKey: section.categoryIconKey,
                 text: section.title
@@ -665,29 +725,11 @@ private struct GroupedExpenseSectionHeaderView: View {
 
             Text(section.totalAmountText)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(.secondary)
         }
+        .padding(.top, 4)
+        .textCase(nil)
     }
-}
-
-private func expandedSectionBinding(
-    expandedSectionIDs: Binding<Set<String>>,
-    for sectionID: String
-) -> Binding<Bool> {
-    Binding(
-        get: {
-            expandedSectionIDs.wrappedValue.contains(sectionID)
-        },
-        set: { isExpanded in
-            var updated = expandedSectionIDs.wrappedValue
-            if isExpanded {
-                updated.insert(sectionID)
-            } else {
-                updated.remove(sectionID)
-            }
-            expandedSectionIDs.wrappedValue = updated
-        }
-    )
 }
 
 private func dialogSelectionBinding<Item: Identifiable>(
@@ -713,23 +755,27 @@ private struct MonthNavigationToolbarTitle: View {
     let onNextMonth: () -> Void
 
     var body: some View {
-        VStack(spacing: 1) {
-            HStack(spacing: 4) {
+        VStack(spacing: 3) {
+            AppGlassToolbarCluster {
                 Button(action: onPreviousMonth) {
                     Image(systemName: "chevron.left")
-                        .font(.caption.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
 
                 Text(selectedMonth.label)
                     .font(.headline)
+                    .padding(.horizontal, 10)
 
                 Button(action: onNextMonth) {
                     Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.horizontal, 2)
 
             Text(subtitle)
                 .font(.caption)
@@ -764,6 +810,7 @@ private struct GroupedExpenseRowView: View {
             Text(row.amountText)
                 .foregroundStyle(.primary)
         }
+        .padding(.vertical, 2)
         .contentShape(Rectangle())
     }
 }

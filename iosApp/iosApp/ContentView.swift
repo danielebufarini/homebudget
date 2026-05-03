@@ -94,6 +94,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack(path: $path) {
             DashboardRootView(path: $path)
+                .appGlassHostedScreenChrome()
                 .navigationTitle("Dashboard")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -109,22 +110,28 @@ struct ContentView: View {
                                 showCsvExportSheet = true
                             }
                         } label: {
-                            Image(systemName: "line.3.horizontal.circle")
+                            AppGlassToolbarIcon(systemName: "line.3.horizontal")
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 16) {
+                        AppGlassToolbarCluster {
                             Button {
                                 path.append(Route.calendar)
                             } label: {
                                 Image(systemName: "calendar")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(width: 36, height: 36)
                             }
+                            .buttonStyle(.plain)
 
                             Button {
                                 showVoiceExpenseSheet = true
                             } label: {
                                 Image(systemName: "waveform.badge.mic")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(width: 36, height: 36)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -132,6 +139,8 @@ struct ContentView: View {
                     VoiceExpenseEntrySheet {
                         showVoiceExpenseSheet = false
                     }
+                    .presentationCornerRadius(28)
+                    .presentationDragIndicator(.visible)
                 }
                 .sheet(isPresented: $showCsvExportSheet) {
                     CsvExportSheet(
@@ -140,6 +149,8 @@ struct ContentView: View {
                         onCancel: { showCsvExportSheet = false },
                         onExport: exportCsv
                     )
+                    .presentationCornerRadius(28)
+                    .presentationDragIndicator(.visible)
                 }
                 .fileImporter(
                     isPresented: $showCsvImporter,
@@ -189,12 +200,22 @@ struct ContentView: View {
                     switch route {
                     case .categories:
                         CategoriesRootView()
+                            .appGlassHostedScreenChrome()
                             .navigationTitle("Categories")
                             .navigationBarTitleDisplayMode(.inline)
+                            .navigationBarBackButtonHidden()
+                            .toolbar {
+                                backToolbar
+                            }
                     case .calendar:
                         CalendarRootView(path: $path)
+                            .appGlassHostedScreenChrome()
                             .navigationTitle(appLocalized("Calendar"))
                             .navigationBarTitleDisplayMode(.inline)
+                            .navigationBarBackButtonHidden()
+                            .toolbar {
+                                backToolbar
+                            }
                     case let .addExpense(expenseId, readOnly):
                         ExpenseEditorRootView(
                             expenseId: expenseId,
@@ -204,8 +225,13 @@ struct ContentView: View {
                                 path.removeLast()
                             }
                         }
+                        .appGlassHostedScreenChrome()
                         .navigationTitle(addExpenseTitle(expenseId: expenseId, readOnly: readOnly))
                         .navigationBarTitleDisplayMode(.inline)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            backToolbar
+                        }
                     case let .addIncome(incomeId, year, month):
                         IncomeEditorRootView(
                             incomeId: incomeId,
@@ -216,8 +242,13 @@ struct ContentView: View {
                                 path.removeLast()
                             }
                         }
+                        .appGlassHostedScreenChrome()
                         .navigationTitle(incomeId == nil ? appLocalized("Add Income") : appLocalized("Edit Income"))
                         .navigationBarTitleDisplayMode(.inline)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            backToolbar
+                        }
                     case let .monthlyIncomes(year, month):
                         MonthlyIncomesRootView(
                             year: Int(year),
@@ -265,6 +296,20 @@ struct ContentView: View {
         .onDisappear {
             csvImportController.dispose()
             csvExportController.dispose()
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var backToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                if !path.isEmpty {
+                    path.removeLast()
+                }
+            } label: {
+                AppGlassBackButton()
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -356,6 +401,7 @@ private struct CsvExportSheet: View {
                     displayedComponents: .date
                 )
             }
+            .appGlassSheetChrome()
             .navigationTitle(appLocalized("Export CSV"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -509,6 +555,7 @@ private struct ExpenseEditorRootView: View {
                 onClose: onClose
             )
         }
+        .appGlassHostedScreenChrome()
         .onDisappear {
             deletionViewModel.disposeController()
         }
@@ -521,8 +568,9 @@ private struct ExpenseEditorRootView: View {
                             onClose: onClose
                         )
                     } label: {
-                        Image(systemName: "trash")
+                        AppGlassToolbarIcon(systemName: "trash")
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -577,6 +625,7 @@ private struct IncomeEditorRootView: View {
                 onClose: onClose
             )
         }
+        .appGlassHostedScreenChrome()
         .onDisappear {
             deletionViewModel.disposeController()
         }
@@ -589,8 +638,9 @@ private struct IncomeEditorRootView: View {
                             onClose: onClose
                         )
                     } label: {
-                        Image(systemName: "trash")
+                        AppGlassToolbarIcon(systemName: "trash")
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -663,6 +713,7 @@ private struct DashboardRootView: View {
                 }
             )
         }
+        .appGlassHostedScreenChrome()
     }
 }
 
@@ -689,30 +740,17 @@ private struct MonthlyIncomesRootView: View {
                         )
                     )
                 } label: {
-                    Image(systemName: "plus")
+                    AppGlassToolbarIcon(systemName: "plus")
                 }
+                .buttonStyle(.plain)
             }
         }
     }
 }
 
 private struct CategoriesRootView: View {
-    @State private var addCategoryRequestKey = 0
-
     var body: some View {
-        KotlinViewControllerHost {
-            MainViewControllerKt.CategoriesContentViewController(addCategoryRequestKey: Int32(addCategoryRequestKey))
-        }
-        .id(addCategoryRequestKey)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    addCategoryRequestKey += 1
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
+        NativeCategoriesScreen()
     }
 }
 
@@ -725,6 +763,7 @@ private struct CalendarRootView: View {
                 path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
             }
         }
+        .appGlassHostedScreenChrome()
     }
 }
 
