@@ -136,7 +136,14 @@ class ComposeAppCommonTest {
                 Category("default_1", "Cibo", "restaurant", 0L)
             ),
             startDate = LocalDate(2026, 5, 1),
-            endDate = LocalDate(2026, 5, 31)
+            endDate = LocalDate(2026, 5, 31),
+            localizeCategoryName = { category ->
+                when (category.id) {
+                    "default_1" -> "Food"
+                    else -> category.name
+                }
+            },
+            unknownCategory = "Unknown category"
         )
 
         assertEquals("expenses_2026-05-01_2026-05-31.csv", export.fileName)

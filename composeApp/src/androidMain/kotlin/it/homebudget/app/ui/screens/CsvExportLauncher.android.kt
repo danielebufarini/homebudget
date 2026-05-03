@@ -11,14 +11,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.CsvExportFile
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.exportBudgetItemsToCsv
-import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -50,7 +51,15 @@ internal actual fun rememberCsvExportLauncher(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository: ExpenseRepository = koinInject()
-    val strings = LocalStrings.current
+    val exportCsvLabel = stringResource(Res.string.export_csv)
+    val startDateLabel = stringResource(Res.string.start_date)
+    val endDateLabel = stringResource(Res.string.end_date)
+    val exportLabel = stringResource(Res.string.export)
+    val cancelLabel = stringResource(Res.string.cancel)
+    val saveLabel = stringResource(Res.string.save)
+    val invalidDateRangeLabel = stringResource(Res.string.invalid_date_range)
+    val csvExportFailedLabel = stringResource(Res.string.csv_export_failed)
+    val csvExportSavedLabel = stringResource(Res.string.csv_export_saved)
     val today = remember { currentAndroidLocalDate() }
     val defaultStartDate = remember(today) { LocalDate(today.year, today.month, 1) }
 
@@ -74,11 +83,11 @@ internal actual fun rememberCsvExportLauncher(
             val result = runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(exportFile.content.encodeToByteArray())
-                } ?: error(strings.csvExportFailed)
+                } ?: error(csvExportFailedLabel)
             }
 
             onExportMessage(
-                if (result.isSuccess) strings.csvExportSaved else strings.csvExportFailed
+                if (result.isSuccess) csvExportSavedLabel else csvExportFailedLabel
             )
         }
     }
@@ -86,7 +95,6 @@ internal actual fun rememberCsvExportLauncher(
     return remember(
         context,
         repository,
-        strings,
         showDialog,
         startDate,
         endDate,
@@ -99,19 +107,19 @@ internal actual fun rememberCsvExportLauncher(
                 if (showDialog) {
                     AlertDialog(
                         onDismissRequest = { showDialog = false },
-                        title = { Text(strings.exportCsv) },
+                        title = { Text(exportCsvLabel) },
                         text = {
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 ExportDateButton(
-                                    label = strings.startDate,
+                                    label = startDateLabel,
                                     value = startDate.toString(),
                                     onClick = { activeDateField = ExportDateField.Start }
                                 )
 
                                 ExportDateButton(
-                                    label = strings.endDate,
+                                    label = endDateLabel,
                                     value = endDate.toString(),
                                     onClick = { activeDateField = ExportDateField.End }
                                 )
@@ -122,7 +130,7 @@ internal actual fun rememberCsvExportLauncher(
                                 colors = homeBudgetTextButtonColors(),
                                 onClick = {
                                     if (startDate > endDate) {
-                                        onExportMessage(strings.invalidDateRange)
+                                        onExportMessage(invalidDateRangeLabel)
                                         return@TextButton
                                     }
 
@@ -134,7 +142,7 @@ internal actual fun rememberCsvExportLauncher(
                                                 endDate = endDate
                                             )
                                         }.getOrElse {
-                                            onExportMessage(strings.csvExportFailed)
+                                            onExportMessage(csvExportFailedLabel)
                                             null
                                         }
 
@@ -144,9 +152,9 @@ internal actual fun rememberCsvExportLauncher(
                                             saveLauncher.launch(exportFile.fileName)
                                         }
                                     }
-                                }
-                            ) {
-                                Text(strings.export)
+                            }
+                        ) {
+                                Text(exportLabel)
                             }
                         },
                         dismissButton = {
@@ -154,7 +162,7 @@ internal actual fun rememberCsvExportLauncher(
                                 onClick = { showDialog = false },
                                 colors = homeBudgetTextButtonColors()
                             ) {
-                                Text(strings.cancel)
+                                Text(cancelLabel)
                             }
                         }
                     )
@@ -183,7 +191,7 @@ internal actual fun rememberCsvExportLauncher(
                                     activeDateField = null
                                 }
                             ) {
-                                Text(strings.save)
+                                Text(saveLabel)
                             }
                         },
                         dismissButton = {
@@ -191,7 +199,7 @@ internal actual fun rememberCsvExportLauncher(
                                 onClick = { activeDateField = null },
                                 colors = homeBudgetTextButtonColors()
                             ) {
-                                Text(strings.cancel)
+                                Text(cancelLabel)
                             }
                         }
                     ) {

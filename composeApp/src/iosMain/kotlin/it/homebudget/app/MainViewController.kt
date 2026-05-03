@@ -2,7 +2,6 @@ package it.homebudget.app
 
 import androidx.compose.ui.window.ComposeUIViewController
 import it.homebudget.app.di.initKoin
-import it.homebudget.app.localization.ProvideAppStrings
 import it.homebudget.app.ui.screens.*
 import it.homebudget.app.ui.theme.AppTheme
 import org.koin.mp.KoinPlatformTools
@@ -26,20 +25,18 @@ fun DashboardContentViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            DashboardRoute(
-                showNavigationChrome = false,
-                showFab = false,
-                onOpenCategories = onOpenCategories,
-                onOpenAddExpense = onOpenAddExpense,
-                onOpenMonthlyIncomes = onOpenMonthlyIncomes,
-                onOpenMonthlyExpenses = onOpenMonthlyExpenses,
-                onOpenSharedExpenses = onOpenSharedExpenses,
-                onOpenExpenseDetails = onOpenExpenseDetails,
-                onOpenCategoryExpenses = onOpenCategoryExpenses
-            )
-        }
+    AppTheme {
+        DashboardRoute(
+            showNavigationChrome = false,
+            showFab = false,
+            onOpenCategories = onOpenCategories,
+            onOpenAddExpense = onOpenAddExpense,
+            onOpenMonthlyIncomes = onOpenMonthlyIncomes,
+            onOpenMonthlyExpenses = onOpenMonthlyExpenses,
+            onOpenSharedExpenses = onOpenSharedExpenses,
+            onOpenExpenseDetails = onOpenExpenseDetails,
+            onOpenCategoryExpenses = onOpenCategoryExpenses
+        )
     }
 }
 
@@ -50,15 +47,13 @@ fun CategoriesContentViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            CategoriesRoute(
-                onBack = {},
-                showNavigationChrome = false,
-                showFab = false,
-                addCategoryRequestKey = addCategoryRequestKey
-            )
-        }
+    AppTheme {
+        CategoriesRoute(
+            onBack = {},
+            showNavigationChrome = false,
+            showFab = false,
+            addCategoryRequestKey = addCategoryRequestKey
+        )
     }
 }
 
@@ -71,13 +66,11 @@ fun AddExpenseViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            AddExpenseScreen(expenseId = expenseId, readOnly = readOnly).RouteContent(
-                showNavigationChrome = false,
-                onClose = onClose
-            )
-        }
+    AppTheme {
+        AddExpenseScreen(expenseId = expenseId, readOnly = readOnly).RouteContent(
+            showNavigationChrome = false,
+            onClose = onClose
+        )
     }
 }
 
@@ -91,17 +84,15 @@ fun AddIncomeViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            AddIncomeScreen(
-                incomeId = incomeId,
-                initialYear = initialYear,
-                initialMonth = initialMonth
-            ).RouteContent(
-                showNavigationChrome = false,
-                onClose = onClose
-            )
-        }
+    AppTheme {
+        AddIncomeScreen(
+            incomeId = incomeId,
+            initialYear = initialYear,
+            initialMonth = initialMonth
+        ).RouteContent(
+            showNavigationChrome = false,
+            onClose = onClose
+        )
     }
 }
 
@@ -114,15 +105,13 @@ fun MonthlyExpensesViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            MonthlyExpensesScreen(year = year, month = month).RouteContent(
-                showNavigationChrome = false,
-                onBack = {},
-                onAddExpense = {},
-                onOpenExpense = onOpenExpense
-            )
-        }
+    AppTheme {
+        MonthlyExpensesScreen(year = year, month = month).RouteContent(
+            showNavigationChrome = false,
+            onBack = {},
+            onAddExpense = {},
+            onOpenExpense = onOpenExpense
+        )
     }
 }
 
@@ -136,16 +125,14 @@ fun MonthlyIncomesViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            MonthlyIncomesScreen(year = year, month = month).RouteContent(
-                initialMonth = MonthCursor(year = year, month = month),
-                showNavigationChrome = false,
-                onBack = {},
-                onAddIncome = { _, _ -> onAddIncome() },
-                onOpenIncome = onOpenIncome
-            )
-        }
+    AppTheme {
+        MonthlyIncomesScreen(year = year, month = month).RouteContent(
+            initialMonth = MonthCursor(year = year, month = month),
+            showNavigationChrome = false,
+            onBack = {},
+            onAddIncome = { _, _ -> onAddIncome() },
+            onOpenIncome = onOpenIncome
+        )
     }
 }
 
@@ -158,15 +145,13 @@ fun SharedExpensesViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            SharedExpensesScreen(year = year, month = month).RouteContent(
-                showNavigationChrome = false,
-                onBack = {},
-                onAddExpense = {},
-                onOpenExpense = onOpenExpense
-            )
-        }
+    AppTheme {
+        SharedExpensesScreen(year = year, month = month).RouteContent(
+            showNavigationChrome = false,
+            onBack = {},
+            onAddExpense = {},
+            onOpenExpense = onOpenExpense
+        )
     }
 }
 
@@ -180,15 +165,13 @@ fun CategoryExpensesViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            CategoryExpensesScreen(year = year, month = month, categoryName = categoryName).RouteContent(
-                showNavigationChrome = false,
-                onBack = {},
-                onAddExpense = {},
-                onOpenExpense = onOpenExpense
-            )
-        }
+    AppTheme {
+        CategoryExpensesScreen(year = year, month = month, categoryName = categoryName).RouteContent(
+            showNavigationChrome = false,
+            onBack = {},
+            onAddExpense = {},
+            onOpenExpense = onOpenExpense
+        )
     }
 }
 
@@ -199,14 +182,12 @@ fun CalendarExpensesViewController(
         ensureKoinStarted()
     }
 ) {
-    ProvideAppStrings {
-        AppTheme {
-            CalendarExpensesScreen().RouteContent(
-                showNavigationChrome = false,
-                onBack = {},
-                onOpenExpense = onOpenExpense
-            )
-        }
+    AppTheme {
+        CalendarExpensesScreen().RouteContent(
+            showNavigationChrome = false,
+            onBack = {},
+            onOpenExpense = onOpenExpense
+        )
     }
 }
 

@@ -15,18 +15,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
-import it.homebudget.app.localization.LocalStrings
+import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import kotlin.time.Instant
 
 private enum class ExpenseGroupingMode {
     ByCategory,
@@ -38,8 +38,11 @@ abstract class BaseGroupedExpensesScreen(
     private val month: Int
 ) : Screen {
 
+    @Composable
     protected abstract fun screenTitle(monthName: String): String
+    @Composable
     protected abstract fun emptyStateText(): String
+    @Composable
     protected abstract fun expenseFallbackTitle(): String
     protected abstract fun includeExpense(expense: Expense): Boolean
 
@@ -48,6 +51,7 @@ abstract class BaseGroupedExpensesScreen(
     protected open fun includeCategory(categoryName: String): Boolean = true
     protected open fun canDeleteExpense(): Boolean = true
     protected open fun canAddExpense(): Boolean = false
+    @Composable
     protected open fun monthNavigationDescriptor(): String? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -75,7 +79,20 @@ abstract class BaseGroupedExpensesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = remember { getPlatform().isIos }
         val scope = rememberCoroutineScope()
-        val strings = LocalStrings.current
+        val addExpenseLabel = stringResource(Res.string.add_expense)
+        val backLabel = stringResource(Res.string.back)
+        val byCategoryLabel = stringResource(Res.string.by_category)
+        val byDateLabel = stringResource(Res.string.by_date)
+        val currencySymbol = stringResource(Res.string.currency_symbol)
+        val deleteRecurringExpenseTitle = stringResource(Res.string.delete_recurring_expense_title)
+        val recurringExpenseDeleteMessage = stringResource(Res.string.recurring_expense_action_delete)
+        val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+        val fullMonthNames = stringArrayResource(Res.array.full_month_names)
+        val shortMonthNames = stringArrayResource(Res.array.short_month_names)
+        val resolveCategoryName = rememberCategoryNameResolver()
+        val emptyStateText = emptyStateText()
+        val expenseFallbackTitle = expenseFallbackTitle()
+        val navigationDescriptor = monthNavigationDescriptor()
         var selectedMonth by remember { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
@@ -87,12 +104,18 @@ abstract class BaseGroupedExpensesScreen(
             repository.insertDefaultCategoriesIfEmpty()
         }
 
-        val filteredExpenses = remember(expenses, categoriesById, selectedMonth, strings) {
+        val filteredExpenses = remember(
+            expenses,
+            categoriesById,
+            selectedMonth,
+            resolveCategoryName,
+            unknownCategoryLabel
+        ) {
             expenses.filter { expense ->
-                val localDate = expense.date.toLocalDate()
+                val localDate = epochMillisToLocalDate(expense.date)
                 val categoryName = categoriesById[expense.categoryId]
-                    ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                    ?: strings.unknownCategory
+                    ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+                    ?: unknownCategoryLabel
                 localDate.year == selectedMonth.year &&
                     localDate.month.ordinal + 1 == selectedMonth.month &&
                     includeExpense(expense) &&
@@ -100,14 +123,21 @@ abstract class BaseGroupedExpensesScreen(
             }
         }
 
-        val groupedExpenses = remember(filteredExpenses, categoriesById, groupingMode, strings) {
+        val groupedExpenses = remember(
+            filteredExpenses,
+            categoriesById,
+            groupingMode,
+            resolveCategoryName,
+            unknownCategoryLabel,
+            shortMonthNames
+        ) {
             when (groupingMode) {
                 ExpenseGroupingMode.ByCategory -> {
                     filteredExpenses
                         .groupBy { expense ->
                             categoriesById[expense.categoryId]
-                                ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                                ?: strings.unknownCategory
+                                ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+                                ?: unknownCategoryLabel
                         }
                         .toList()
                         .sortedBy { it.first }
@@ -116,8 +146,8 @@ abstract class BaseGroupedExpensesScreen(
                                 compareByDescending<Expense> { it.date }
                                     .thenBy { expense ->
                                         categoriesById[expense.categoryId]
-                                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                                            ?: strings.unknownCategory
+                                            ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+                                            ?: unknownCategoryLabel
                                     }
                                     .thenBy { it.description ?: "" }
                             )
@@ -126,7 +156,7 @@ abstract class BaseGroupedExpensesScreen(
                 }
                 ExpenseGroupingMode.ByDate -> {
                     filteredExpenses
-                        .groupBy { expense -> expense.date.toLocalDate() }
+                        .groupBy { expense -> epochMillisToLocalDate(expense.date) }
                         .toList()
                         .sortedByDescending { (_, groupExpenses) ->
                             groupExpenses.maxOf { it.date }
@@ -136,12 +166,12 @@ abstract class BaseGroupedExpensesScreen(
                                 compareByDescending<Expense> { it.date }
                                     .thenBy { expense ->
                                         categoriesById[expense.categoryId]
-                                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                                            ?: strings.unknownCategory
+                                            ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+                                            ?: unknownCategoryLabel
                                     }
                                     .thenBy { it.description ?: "" }
                             )
-                            formatDateGroupTitle(groupDate) to sortedExpenses
+                            formatDateGroupTitle(groupDate, shortMonthNames) to sortedExpenses
                         }
                 }
             }
@@ -163,17 +193,15 @@ abstract class BaseGroupedExpensesScreen(
         } else {
             null
         }
-        val monthNavigationDescriptor = monthNavigationDescriptor()
-
         if (showNavigationChrome) {
             Scaffold(
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            if (monthNavigationDescriptor != null) {
+                            if (navigationDescriptor != null) {
                                 MonthNavigationTitle(
                                     selectedMonth = selectedMonth,
-                                    subtitle = "$monthNavigationDescriptor • ${formatAmount(totalAmount)}",
+                                    subtitle = "$navigationDescriptor • ${formatAmount(totalAmount, currencySymbol)}",
                                     onPreviousMonth = { selectedMonth = selectedMonth.previous() },
                                     onNextMonth = { selectedMonth = selectedMonth.next() }
                                 )
@@ -182,9 +210,9 @@ abstract class BaseGroupedExpensesScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
-                                    Text(screenTitle(monthName(selectedMonth.month)))
+                                    Text(screenTitle(monthName(selectedMonth.month, fullMonthNames)))
                                     Text(
-                                        text = formatAmount(totalAmount),
+                                        text = formatAmount(totalAmount, currencySymbol),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -194,7 +222,7 @@ abstract class BaseGroupedExpensesScreen(
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onBack) {
-                                    Text(strings.back)
+                                    Text(backLabel)
                                 }
                             }
                         }
@@ -207,7 +235,7 @@ abstract class BaseGroupedExpensesScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = strings.addExpense
+                                contentDescription = addExpenseLabel
                             )
                         }
                     }
@@ -224,7 +252,16 @@ abstract class BaseGroupedExpensesScreen(
                     groupingMode = groupingMode,
                     onGroupingModeChange = { groupingMode = it },
                     onOpenExpense = onOpenExpense,
-                    onDeleteExpense = deleteExpenseAction
+                    onDeleteExpense = deleteExpenseAction,
+                    emptyStateText = emptyStateText,
+                    expenseFallbackTitle = expenseFallbackTitle,
+                    currencySymbol = currencySymbol,
+                    unknownCategoryLabel = unknownCategoryLabel,
+                    resolveCategoryName = { category ->
+                        resolveCategoryName(category.id, category.name, category.isCustom)
+                    },
+                    byCategoryLabel = byCategoryLabel,
+                    byDateLabel = byDateLabel
                 )
             }
         } else {
@@ -238,14 +275,23 @@ abstract class BaseGroupedExpensesScreen(
                 groupingMode = groupingMode,
                 onGroupingModeChange = { groupingMode = it },
                 onOpenExpense = onOpenExpense,
-                onDeleteExpense = deleteExpenseAction
+                onDeleteExpense = deleteExpenseAction,
+                emptyStateText = emptyStateText,
+                expenseFallbackTitle = expenseFallbackTitle,
+                currencySymbol = currencySymbol,
+                unknownCategoryLabel = unknownCategoryLabel,
+                resolveCategoryName = { category ->
+                    resolveCategoryName(category.id, category.name, category.isCustom)
+                },
+                byCategoryLabel = byCategoryLabel,
+                byDateLabel = byDateLabel
             )
         }
 
         recurringExpenseToDelete?.let { expense ->
             RecurringSeriesActionDialog(
-                title = strings.deleteRecurringExpenseTitle,
-                message = strings.recurringExpenseActionMessage(isUpdate = false),
+                title = deleteRecurringExpenseTitle,
+                message = recurringExpenseDeleteMessage,
                 onThisInstanceOnly = {
                     recurringExpenseToDelete = null
                     scope.launch {
@@ -274,7 +320,14 @@ abstract class BaseGroupedExpensesScreen(
         groupingMode: ExpenseGroupingMode,
         onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
         onOpenExpense: (String) -> Unit,
-        onDeleteExpense: ((String) -> Unit)?
+        onDeleteExpense: ((String) -> Unit)?,
+        emptyStateText: String,
+        expenseFallbackTitle: String,
+        currencySymbol: String,
+        unknownCategoryLabel: String,
+        resolveCategoryName: (Category) -> String,
+        byCategoryLabel: String,
+        byDateLabel: String
     ) {
         Box(modifier = modifier) {
             val listModifier = Modifier
@@ -287,8 +340,11 @@ abstract class BaseGroupedExpensesScreen(
                     categoriesById = categoriesById,
                     isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
                     modifier = listModifier,
-                    emptyStateText = emptyStateText(),
-                    expenseFallbackTitle = expenseFallbackTitle(),
+                    emptyStateText = emptyStateText,
+                    expenseFallbackTitle = expenseFallbackTitle,
+                    currencySymbol = currencySymbol,
+                    unknownCategoryLabel = unknownCategoryLabel,
+                    resolveCategoryName = resolveCategoryName,
                     groupsExpandedByDefault = groupsExpandedByDefault(),
                     onOpenExpense = onOpenExpense,
                     onDeleteExpense = onDeleteExpense
@@ -300,13 +356,20 @@ abstract class BaseGroupedExpensesScreen(
                     groupingMode = groupingMode,
                     modifier = listModifier,
                     onOpenExpense = onOpenExpense,
-                    onDeleteExpense = onDeleteExpense
+                    onDeleteExpense = onDeleteExpense,
+                    emptyStateText = emptyStateText,
+                    expenseFallbackTitle = expenseFallbackTitle,
+                    currencySymbol = currencySymbol,
+                    unknownCategoryLabel = unknownCategoryLabel,
+                    resolveCategoryName = resolveCategoryName
                 )
             }
 
             GroupingModeButtons(
                 groupingMode = groupingMode,
                 onGroupingModeChange = onGroupingModeChange,
+                byCategoryLabel = byCategoryLabel,
+                byDateLabel = byDateLabel,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 8.dp)
@@ -322,9 +385,13 @@ abstract class BaseGroupedExpensesScreen(
         groupingMode: ExpenseGroupingMode,
         modifier: Modifier,
         onOpenExpense: (String) -> Unit,
-        onDeleteExpense: ((String) -> Unit)?
+        onDeleteExpense: ((String) -> Unit)?,
+        emptyStateText: String,
+        expenseFallbackTitle: String,
+        currencySymbol: String,
+        unknownCategoryLabel: String,
+        resolveCategoryName: (Category) -> String
     ) {
-        val strings = LocalStrings.current
         val expandedState = remember { mutableStateMapOf<String, Boolean>() }
 
         LazyColumn(
@@ -335,7 +402,7 @@ abstract class BaseGroupedExpensesScreen(
                 item {
                     PlatformCard {
                         Text(
-                            text = emptyStateText(),
+                            text = emptyStateText,
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -370,7 +437,7 @@ abstract class BaseGroupedExpensesScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount)),
+                                    text = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount), currencySymbol),
                                     textAlign = TextAlign.End
                                 )
                             }
@@ -378,29 +445,21 @@ abstract class BaseGroupedExpensesScreen(
                                 HorizontalDivider()
                                 categoryExpenses.forEach { expense ->
                                     key(expense.id) {
-                                        val expenseName = expense.description?.ifBlank { expenseFallbackTitle() }
-                                            ?: expenseFallbackTitle()
-                                        val categoryName = categoriesById[expense.categoryId]
-                                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                                            ?: strings.unknownCategory
-                                        val rowTitle = if (groupingMode == ExpenseGroupingMode.ByDate) {
-                                            categoryName
-                                        } else {
-                                            expenseName
-                                        }
-                                        val rowSubtitleText = if (groupingMode == ExpenseGroupingMode.ByDate) {
-                                            expenseName
-                                        } else {
-                                            formatDate(expense.date)
-                                        }
-                                        val rowAmountText = formatAmount(expense.amount)
+                                        val row = groupedExpenseRowPresentation(
+                                            expense = expense,
+                                            categoriesById = categoriesById,
+                                            isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
+                                            expenseFallbackTitle = expenseFallbackTitle,
+                                            unknownCategoryLabel = unknownCategoryLabel,
+                                            resolveCategoryName = resolveCategoryName
+                                        )
 
                                         if (onDeleteExpense == null) {
                                             ExpenseListItemRow(
-                                                title = rowTitle,
-                                                subtitleText = rowSubtitleText,
-                                                amountText = rowAmountText,
-                                                isRecurring = !expense.recurringSeriesId.isNullOrBlank(),
+                                                title = row.title,
+                                                subtitleText = row.subtitleText,
+                                                amountText = formatAmount(expense.amount, currencySymbol),
+                                                isRecurring = row.isRecurring,
                                                 onClick = {
                                                     onOpenExpense(expense.id)
                                                 }
@@ -419,10 +478,10 @@ abstract class BaseGroupedExpensesScreen(
                                                 }
                                             ) {
                                                 ExpenseListItemRow(
-                                                    title = rowTitle,
-                                                    subtitleText = rowSubtitleText,
-                                                    amountText = rowAmountText,
-                                                    isRecurring = !expense.recurringSeriesId.isNullOrBlank(),
+                                                    title = row.title,
+                                                    subtitleText = row.subtitleText,
+                                                    amountText = formatAmount(expense.amount, currencySymbol),
+                                                    isRecurring = row.isRecurring,
                                                     onClick = {
                                                         onOpenExpense(expense.id)
                                                     }
@@ -440,26 +499,27 @@ abstract class BaseGroupedExpensesScreen(
         }
     }
 
-    protected fun formatDate(epochMillis: Long): String {
-        val date = epochMillis.toLocalDate()
-        return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
-    }
-
-    protected fun formatDateGroupTitle(date: kotlinx.datetime.LocalDate): String {
-        return formatExpenseDateGroupTitle(date)
+    protected fun formatDateGroupTitle(
+        date: kotlinx.datetime.LocalDate,
+        shortMonthNames: List<String>
+    ): String {
+        return formatExpenseDateGroupTitle(date, shortMonthNames)
     }
 
     @Composable
     private fun GroupingModeButtons(
         groupingMode: ExpenseGroupingMode,
         onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
+        byCategoryLabel: String,
+        byDateLabel: String,
         modifier: Modifier = Modifier
     ) {
-        val strings = LocalStrings.current
         if (!rememberIsIosPlatform()) {
             AndroidGroupingModeSegmentedButtons(
                 groupingMode = groupingMode,
                 onGroupingModeChange = onGroupingModeChange,
+                byCategoryLabel = byCategoryLabel,
+                byDateLabel = byDateLabel,
                 modifier = modifier
             )
             return
@@ -471,12 +531,12 @@ abstract class BaseGroupedExpensesScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             GroupingModeButton(
-                label = strings.byCategory,
+                label = byCategoryLabel,
                 selected = groupingMode == ExpenseGroupingMode.ByCategory,
                 onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
             )
             GroupingModeButton(
-                label = strings.byDate,
+                label = byDateLabel,
                 selected = groupingMode == ExpenseGroupingMode.ByDate,
                 onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
             )
@@ -487,12 +547,13 @@ abstract class BaseGroupedExpensesScreen(
     private fun AndroidGroupingModeSegmentedButtons(
         groupingMode: ExpenseGroupingMode,
         onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
+        byCategoryLabel: String,
+        byDateLabel: String,
         modifier: Modifier = Modifier
     ) {
-        val strings = LocalStrings.current
         val options = listOf(
-            ExpenseGroupingMode.ByCategory to strings.byCategory,
-            ExpenseGroupingMode.ByDate to strings.byDate
+            ExpenseGroupingMode.ByCategory to byCategoryLabel,
+            ExpenseGroupingMode.ByDate to byDateLabel
         )
 
         SingleChoiceSegmentedButtonRow(modifier = modifier) {
@@ -538,11 +599,7 @@ abstract class BaseGroupedExpensesScreen(
         }
     }
 
-    protected fun monthName(month: Int): String {
-        return fullMonthName(month)
+    protected fun monthName(month: Int, fullMonthNames: List<String>): String {
+        return fullMonthNames[month - 1]
     }
-
-    private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
 }

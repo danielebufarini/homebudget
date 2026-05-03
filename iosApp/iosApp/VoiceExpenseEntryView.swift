@@ -1,5 +1,7 @@
 import SwiftUI
 
+// SwiftUI sheet for recording, reviewing, and committing a voice expense draft.
+
 struct VoiceExpenseEntrySheet: View {
     let onClose: () -> Void
 

@@ -13,6 +13,9 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
     modifier: Modifier,
     emptyStateText: String,
     expenseFallbackTitle: String,
+    currencySymbol: String,
+    unknownCategoryLabel: String,
+    resolveCategoryName: (Category) -> String,
     groupsExpandedByDefault: Boolean,
     onOpenExpense: (String) -> Unit,
     onDeleteExpense: ((String) -> Unit)?

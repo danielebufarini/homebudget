@@ -1,21 +1,11 @@
 package it.homebudget.app.ui.screens
 
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.PendingExpense
-import it.homebudget.app.data.formatAmountInput
-import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.di.initKoin
-import it.homebudget.app.localization.AppStrings
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.toLocalDateTime
 import org.koin.mp.KoinPlatformTools
-import kotlin.random.Random
-import kotlin.time.Clock
 
 class IosVoiceExpenseCategory(
     val id: String,
@@ -50,42 +40,7 @@ class IosVoiceExpenseController {
         onResult: (IosVoiceExpenseSnapshot?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                repository.insertDefaultCategoriesIfEmpty()
-
-                val categorySnapshot = repository.getAllCategoriesSnapshot()
-                val categories = categorySnapshot
-                    .sortedBy { AppStrings.categoryName(it.id, it.name, it.isCustom).lowercase() }
-                    .map { category ->
-                        IosVoiceExpenseCategory(
-                            id = category.id,
-                            name = AppStrings.categoryName(category.id, category.name, category.isCustom)
-                        )
-                    }
-
-                val categoriesById = categorySnapshot.associateBy { it.id }
-
-                val recentExpenses = repository.getAllExpensesSnapshot()
-                    .sortedByDescending { it.date }
-                    .take(120)
-                    .mapNotNull { expense ->
-                        val category = categoriesById[expense.categoryId] ?: return@mapNotNull null
-                        IosVoiceExpenseRecord(
-                            id = expense.id,
-                            amountInput = formatAmountInput(expense.amount),
-                            categoryId = expense.categoryId,
-                            categoryName = AppStrings.categoryName(category.id, category.name, category.isCustom),
-                            description = expense.description,
-                            date = expense.date,
-                            isShared = expense.isShared == 1L
-                        )
-                    }
-
-                IosVoiceExpenseSnapshot(
-                    categories = categories,
-                    recentExpenses = recentExpenses
-                )
-            }
+            val result = runCatching { loadIosVoiceExpenseSnapshot(repository) }
 
             onResult(result.getOrNull())
         }
@@ -100,24 +55,14 @@ class IosVoiceExpenseController {
         onComplete: (Boolean, String?) -> Unit
     ) {
         scope.launch {
-            val result = runExpenseSave(
+            val result = createIosVoiceExpense(
+                repository = repository,
                 amountInput = amountInput,
-                categoryId = categoryId
-            ) { amount ->
-                repository.insertExpenses(
-                    listOf(
-                        PendingExpense(
-                            id = buildExpenseId(),
-                            amount = amount,
-                            date = normalizeToStartOfDay(date),
-                            categoryId = categoryId,
-                            description = description?.takeIf { it.isNotBlank() },
-                            isShared = isShared,
-                            recurringSeriesId = null
-                        )
-                    )
-                )
-            }
+                categoryId = categoryId,
+                description = description,
+                date = date,
+                isShared = isShared
+            )
             onComplete(result.first, result.second)
         }
     }
@@ -132,63 +77,20 @@ class IosVoiceExpenseController {
         onComplete: (Boolean, String?) -> Unit
     ) {
         scope.launch {
-            val result = runExpenseSave(
+            val result = updateIosVoiceExpense(
+                repository = repository,
+                expenseId = expenseId,
                 amountInput = amountInput,
-                categoryId = categoryId
-            ) { amount ->
-                val existingExpense = repository.getExpenseById(expenseId)
-                    ?: error("Expense not found")
-                repository.insertExpenses(
-                    listOf(
-                        PendingExpense(
-                            id = existingExpense.id,
-                            amount = amount,
-                            date = normalizeToStartOfDay(date),
-                            categoryId = categoryId,
-                            description = description?.takeIf { it.isNotBlank() },
-                            isShared = isShared,
-                            recurringSeriesId = existingExpense.recurringSeriesId
-                        )
-                    )
-                )
-            }
+                categoryId = categoryId,
+                description = description,
+                date = date,
+                isShared = isShared
+            )
             onComplete(result.first, result.second)
         }
     }
 
     fun dispose() {
         scope.cancel()
-    }
-
-    private suspend fun runExpenseSave(
-        amountInput: String,
-        categoryId: String,
-        block: suspend (BigInteger) -> Unit
-    ): Pair<Boolean, String?> {
-        val parsedAmount = parseAmountInput(amountInput)
-            ?: return false to "Invalid amount"
-        val error = when {
-            parsedAmount <= BigInteger.ZERO -> "Amount must be greater than zero"
-            categoryId.isBlank() -> "Category is required"
-            else -> null
-        }
-        if (error != null) return false to error
-        return runCatching { block(parsedAmount) }
-            .fold(
-                onSuccess = { true to null },
-                onFailure = { false to (it.message ?: "Unable to save expense") }
-            )
-    }
-
-
-    private fun buildExpenseId(): String {
-        return "${Clock.System.now().toEpochMilliseconds()}-${Random.nextLong()}"
-    }
-
-    private fun normalizeToStartOfDay(date: Long): Long {
-        val localDate = kotlin.time.Instant.fromEpochMilliseconds(date)
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-            .date
-        return localDate.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
     }
 }

@@ -12,13 +12,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Income
-import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Instant
 
@@ -59,7 +60,13 @@ class MonthlyIncomesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
-        val strings = LocalStrings.current
+        val addIncomeLabel = stringResource(Res.string.add_income)
+        val backLabel = stringResource(Res.string.back)
+        val currencySymbol = stringResource(Res.string.currency_symbol)
+        val deleteRecurringIncomeTitle = stringResource(Res.string.delete_recurring_income_title)
+        val incomeActionDeleteMessage = stringResource(Res.string.recurring_income_action_delete)
+        val incomeLabel = stringResource(Res.string.income)
+        val noIncomeForMonthLabel = stringResource(Res.string.no_income_for_month)
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
         var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
         val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
@@ -70,14 +77,12 @@ class MonthlyIncomesScreen(
                 localDate.year == selectedMonth.year && localDate.month.ordinal + 1 == selectedMonth.month
             }
         }
-        val groupedIncomes: List<Pair<String, List<Income>>> = remember(filteredIncomes) {
+        val groupedIncomes: List<Pair<kotlinx.datetime.LocalDate, List<Income>>> = remember(filteredIncomes) {
             filteredIncomes
                 .groupBy { it.date.toLocalDate() }
                 .toList()
                 .sortedByDescending { (_, items) -> items.maxOf { it.date } }
-                .map { (date, items) ->
-                    formatExpenseDateGroupTitle(date) to items.sortedByDescending { it.date }
-                }
+                .map { (date, items) -> date to items.sortedByDescending { it.date } }
         }
         val totalAmount = remember(filteredIncomes) {
             filteredIncomes.sumBigIntegerOf(Income::amount)
@@ -102,7 +107,7 @@ class MonthlyIncomesScreen(
                 ) {
                     PlatformCard {
                         Text(
-                            text = strings.noIncomeForMonth,
+                            text = noIncomeForMonthLabel,
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -115,8 +120,8 @@ class MonthlyIncomesScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    for ((groupTitle, incomesForDate) in groupedIncomes) {
-                        item(key = groupTitle) {
+                    for ((groupDate, incomesForDate) in groupedIncomes) {
+                        item(key = groupDate.toString()) {
                             PlatformCard(contentPadding = PaddingValues(0.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
@@ -126,7 +131,7 @@ class MonthlyIncomesScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = groupTitle,
+                                            text = formatExpenseDateGroupTitle(groupDate),
                                             modifier = Modifier.weight(1f),
                                             color = MaterialTheme.colorScheme.primary,
                                             maxLines = 1,
@@ -134,7 +139,7 @@ class MonthlyIncomesScreen(
                                         )
                                         Spacer(modifier = Modifier.width(16.dp))
                                         Text(
-                                            text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount)),
+                                            text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), currencySymbol),
                                             textAlign = TextAlign.End
                                         )
                                     }
@@ -165,7 +170,7 @@ class MonthlyIncomesScreen(
                         title = {
                             MonthNavigationTitle(
                                 selectedMonth = selectedMonth,
-                                subtitle = "${strings.income} • ${formatAmount(totalAmount)}",
+                                subtitle = "$incomeLabel • ${formatAmount(totalAmount, currencySymbol)}",
                                 onPreviousMonth = { selectedMonth = selectedMonth.previous() },
                                 onNextMonth = { selectedMonth = selectedMonth.next() }
                             )
@@ -173,7 +178,7 @@ class MonthlyIncomesScreen(
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onBack) {
-                                    Text(strings.back)
+                                    Text(backLabel)
                                 }
                             }
                         }
@@ -186,7 +191,7 @@ class MonthlyIncomesScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = strings.addIncome
+                                contentDescription = addIncomeLabel
                             )
                         }
                     }
@@ -200,8 +205,8 @@ class MonthlyIncomesScreen(
 
         recurringIncomeToDelete?.let { income ->
             RecurringSeriesActionDialog(
-                title = strings.deleteRecurringIncomeTitle,
-                message = strings.recurringIncomeActionMessage(isUpdate = false),
+                title = deleteRecurringIncomeTitle,
+                message = incomeActionDeleteMessage,
                 onThisInstanceOnly = {
                     recurringIncomeToDelete = null
                     scope.launch {
@@ -230,7 +235,8 @@ private fun MonthlyIncomeRow(
     onDeleteIncome: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val strings = LocalStrings.current
+    val currencySymbol = stringResource(Res.string.currency_symbol)
+    val incomeLabel = stringResource(Res.string.income)
     val currentOnDeleteIncome by rememberUpdatedState(onDeleteIncome)
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance ->
@@ -257,9 +263,9 @@ private fun MonthlyIncomeRow(
         }
     ) {
         ExpenseListItemRow(
-            title = income.description?.ifBlank { strings.income } ?: strings.income,
+            title = income.description?.ifBlank { incomeLabel } ?: incomeLabel,
             subtitleText = formatExpenseDateGroupTitle(income.date.toLocalDate()),
-            amountText = formatAmount(income.amount),
+            amountText = formatAmount(income.amount, currencySymbol),
             isRecurring = !income.recurringSeriesId.isNullOrBlank(),
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenIncome(income.id) }

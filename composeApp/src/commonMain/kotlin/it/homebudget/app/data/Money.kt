@@ -3,7 +3,6 @@ package it.homebudget.app.data
 import app.cash.sqldelight.ColumnAdapter
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
-import it.homebudget.app.localization.currentCurrencySymbol
 
 private val ZERO = BigInteger.ZERO
 private val ONE_HUNDRED = 100.toBigInteger()
@@ -42,9 +41,9 @@ fun parseAmountInput(value: String): BigInteger? {
     return if (negative) -cents else cents
 }
 
-fun formatAmount(amount: BigInteger): String {
+fun formatAmount(amount: BigInteger, currencySymbol: String): String {
     val (units, cents, sign) = amountComponents(amount)
-    return "${currentCurrencySymbol()} $sign$units.$cents"
+    return "$currencySymbol $sign$units.$cents"
 }
 
 fun formatAmountInput(amount: BigInteger): String {

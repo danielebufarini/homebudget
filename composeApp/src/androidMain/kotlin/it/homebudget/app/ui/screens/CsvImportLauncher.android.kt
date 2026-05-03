@@ -6,10 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.importBudgetItemsFromCsv
-import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 internal actual class CsvImportLauncher(
@@ -33,7 +34,10 @@ internal actual fun rememberCsvImportLauncher(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository: ExpenseRepository = koinInject()
-    val strings = LocalStrings.current
+    val csvImportFailedLabel = stringResource(Res.string.csv_import_failed)
+    val csvImportNoRowsLabel = stringResource(Res.string.csv_import_no_rows)
+    val csvImportSuccessLabel = stringResource(Res.string.csv_import_success)
+    val csvImportSuccessWithSkippedLabel = stringResource(Res.string.csv_import_success_with_skipped)
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -46,7 +50,7 @@ internal actual fun rememberCsvImportLauncher(
             runCatching {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     inputStream.readBytes().decodeToString()
-                } ?: error(strings.csvImportFailed)
+                } ?: error(csvImportFailedLabel)
             }.onSuccess { csvText ->
                 val result = importBudgetItemsFromCsv(
                     repository = repository,
@@ -55,16 +59,20 @@ internal actual fun rememberCsvImportLauncher(
 
                 onImportMessage(
                     if (result.importedCount == 0 && result.skippedCount == 0) {
-                        strings.csvImportNoRows
+                        csvImportNoRowsLabel
                     } else {
-                        strings.csvImportSuccess(
-                            importedCount = result.importedCount,
-                            skippedCount = result.skippedCount
-                        )
+                        if (result.skippedCount == 0) {
+                            csvImportSuccessLabel
+                                .replace("%1\$d", result.importedCount.toString())
+                        } else {
+                            csvImportSuccessWithSkippedLabel
+                                .replace("%1\$d", result.importedCount.toString())
+                                .replace("%2\$d", result.skippedCount.toString())
+                        }
                     }
                 )
             }.onFailure {
-                onImportMessage(strings.csvImportFailed)
+                onImportMessage(csvImportFailedLabel)
             }
         }
     }

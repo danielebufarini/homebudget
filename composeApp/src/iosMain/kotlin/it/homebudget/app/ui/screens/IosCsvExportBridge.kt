@@ -3,7 +3,7 @@ package it.homebudget.app.ui.screens
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.exportBudgetItemsToCsv
 import it.homebudget.app.di.initKoin
-import it.homebudget.app.localization.AppStrings
+import it.homebudget.app.localization.csvExportFailedMessage
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -35,7 +35,7 @@ class IosCsvExportController {
                 )
                 Triple(export.fileName, export.content, null as String?)
             }.getOrElse { error ->
-                Triple(null, null, error.message ?: AppStrings.csvExportFailed)
+                Triple(null, null, error.message ?: csvExportFailedMessage())
             }
 
             onComplete(result.first, result.second, result.third)

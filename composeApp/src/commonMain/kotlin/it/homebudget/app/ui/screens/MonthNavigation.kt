@@ -15,15 +15,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import it.homebudget.app.localization.AppStrings
-
-internal fun fullMonthName(month: Int): String {
-    return AppStrings.fullMonthName(month)
-}
-
-internal fun shortMonthName(month: Int): String {
-    return AppStrings.shortMonthName(month)
-}
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.full_month_names
+import homebudget.composeapp.generated.resources.short_month_names
+import org.jetbrains.compose.resources.stringArrayResource
 
 data class MonthCursor(
     val year: Int,
@@ -50,15 +45,19 @@ data class MonthCursor(
         }
         return months.toList()
     }
+}
 
-    fun label(): String {
-        return "${fullMonthName(month)} $year"
-    }
+@Composable
+fun MonthCursor.label(): String {
+    val fullMonthNames = stringArrayResource(Res.array.full_month_names)
+    return "${fullMonthNames[month - 1]} $year"
+}
 
-    fun shortLabel(): String {
-        val shortYear = (year % 100).toString().padStart(2, '0')
-        return "${shortMonthName(month)} $shortYear"
-    }
+@Composable
+fun MonthCursor.shortLabel(): String {
+    val shortMonthNames = stringArrayResource(Res.array.short_month_names)
+    val shortYear = (year % 100).toString().padStart(2, '0')
+    return "${shortMonthNames[month - 1]} $shortYear"
 }
 
 @Composable

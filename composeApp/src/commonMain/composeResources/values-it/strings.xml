@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ── Currency ──────────────────────────────────────────────────────── -->
+    <string name="currency_symbol">€</string>
+
+    <!-- ── Simple UI labels ──────────────────────────────────────────────── -->
+    <string name="add">Aggiungi</string>
+    <string name="add_category">Aggiungi categoria</string>
+    <string name="add_expense">Aggiungi spesa</string>
+    <string name="add_income">Aggiungi entrata</string>
+    <string name="amount">Importo</string>
+    <string name="back">Indietro</string>
+    <string name="by_category">Per categoria</string>
+    <string name="by_date">Per data</string>
+    <string name="calendar">Calendario</string>
+    <string name="cancel">Annulla</string>
+    <string name="cash_flow">Flusso di cassa</string>
+    <string name="categories">Categorie</string>
+    <string name="category">Categoria</string>
+    <string name="category_name">Nome categoria</string>
+    <string name="close">Chiudi</string>
+    <string name="custom_category">Categoria personalizzata</string>
+    <string name="dashboard">Riepilogo</string>
+    <string name="date">Data</string>
+    <string name="default_category">Categoria predefinita</string>
+    <string name="delete">Elimina</string>
+    <string name="delete_category">Elimina categoria</string>
+    <string name="delete_expense">Elimina spesa</string>
+    <string name="delete_income">Elimina entrata</string>
+    <string name="delete_recurring_expense_title">Eliminare la spesa ricorrente?</string>
+    <string name="delete_recurring_income_title">Eliminare l\'entrata ricorrente?</string>
+    <string name="description">Descrizione</string>
+    <string name="edit_expense">Modifica spesa</string>
+    <string name="edit_income">Modifica entrata</string>
+    <string name="end_date">Data finale</string>
+    <string name="enter_valid_amount">Inserisci un importo valido maggiore di 0</string>
+    <string name="expense">Spesa</string>
+    <string name="expense_id_missing">Manca l'identificativo della spesa</string>
+    <string name="expense_not_found">Spesa non trovata</string>
+    <string name="expense_details">Dettagli spesa</string>
+    <string name="expenses">Spese</string>
+    <string name="expenses_by_category">Spese per categoria</string>
+    <string name="export">Esporta</string>
+    <string name="export_csv">Esporta CSV</string>
+    <string name="highest_day">Giorno in cui si è speso di più</string>
+    <string name="import_action">Importa</string>
+    <string name="import_csv">Importa CSV</string>
+    <string name="income">Entrate</string>
+    <string name="installments">Rate</string>
+    <string name="invalid_date_range">La data iniziale deve essere precedente o uguale a quella finale</string>
+    <string name="monthly_summary">Riepilogo mensile</string>
+    <string name="new_expense">Nuova spesa</string>
+    <string name="no_expenses_for_day">Nessuna spesa per questo giorno</string>
+    <string name="no_expenses_for_month">Nessuna spesa per questo mese</string>
+    <string name="no_expenses_in_period">Nessuna spesa in questo periodo</string>
+    <string name="no_income_for_month">Nessuna entrata per questo mese</string>
+    <string name="no_shared_expenses_for_month">Nessuna spesa condivisa per questo mese</string>
+    <string name="nothing_to_save">Niente da salvare</string>
+    <string name="recurring_monthly">Mensile ricorrente</string>
+    <string name="refresh">Aggiorna</string>
+    <string name="save">Salva</string>
+    <string name="save_expense">Salva spesa</string>
+    <string name="saving">Salvataggio...</string>
+    <string name="select_category">Seleziona categoria</string>
+    <string name="select_date">Seleziona una data</string>
+    <string name="select_installments">Seleziona rate</string>
+    <string name="shared">Condivise</string>
+    <string name="shared_expense">Spesa condivisa</string>
+    <string name="shared_expenses">Spese condivise</string>
+    <string name="single_payment">Pagamento singolo</string>
+    <string name="start_date">Data iniziale</string>
+    <string name="this_instance_only">Solo questa occorrenza</string>
+    <string name="top_category">Categoria principale</string>
+    <string name="transcript">Trascrizione</string>
+    <string name="unable_to_delete_category">Impossibile eliminare la categoria</string>
+    <string name="unable_to_delete_expense">Impossibile eliminare la spesa</string>
+    <string name="unable_to_delete_income">Impossibile eliminare l\'entrata</string>
+    <string name="unable_to_save_expense">Impossibile salvare la spesa</string>
+    <string name="unable_to_save_income">Impossibile salvare l\'entrata</string>
+    <string name="unknown_category">Categoria sconosciuta</string>
+    <string name="update">Aggiorna</string>
+    <string name="update_expense">Aggiorna spesa</string>
+    <string name="update_recurring_expense_title">Aggiornare la spesa ricorrente?</string>
+    <string name="update_recurring_income_title">Aggiornare l\'entrata ricorrente?</string>
+    <string name="voice_expense">Spesa vocale</string>
+    <string name="voice_expense_action_download_model">Scarica modello</string>
+    <string name="voice_expense_action_listen_again">Ascolta di nuovo</string>
+    <string name="voice_expense_action_start_listening">Avvia ascolto</string>
+    <string name="voice_expense_action_stop_listening">Ferma ascolto</string>
+    <string name="voice_expense_availability_available">Stato Gemini Nano: disponibile.</string>
+    <string name="voice_expense_availability_downloadable">Stato Gemini Nano: scaricabile.</string>
+    <string name="voice_expense_availability_downloading">Stato Gemini Nano: in download.</string>
+    <string name="voice_expense_availability_unknown">Stato Gemini Nano: sconosciuto.</string>
+    <string name="voice_expense_availability_unavailable">Stato Gemini Nano: non disponibile. Il parser base è attivo.</string>
+    <string name="voice_expense_category_required">La categoria è obbligatoria</string>
+    <string name="voice_expense_empty_prompt">Pronuncia un comando relativo a una spesa per creare o aggiornare una voce.</string>
+    <string name="voice_expense_invalid_amount">Importo non valido</string>
+    <string name="voice_expense_model_downloading">Download di Gemini Nano per ML Kit in corso...</string>
+    <string name="voice_expense_model_not_ready">Gemini Nano non è ancora pronto.</string>
+    <string name="voice_expense_model_ready">Gemini Nano è pronto.</string>
+    <string name="voice_expense_prompt">Pronuncia un comando relativo a una spesa</string>
+    <string name="voice_expense_status_audio_unavailable">L'ingresso del microfono non è disponibile.</string>
+    <string name="voice_expense_status_cancelled">L'input vocale è stato annullato.</string>
+    <string name="voice_expense_status_checking_availability">Verifica disponibilità di Gemini Nano...</string>
+    <string name="voice_expense_status_downloading_available">Stato Gemini Nano: scaricabile. Il modello ML Kit può essere scaricato su questo dispositivo.</string>
+    <string name="voice_expense_status_downloading_in_progress">Stato Gemini Nano: in download. AICore sta ancora preparando il modello.</string>
+    <string name="voice_expense_status_fallback_parser">Gemini Nano non è disponibile su questo dispositivo. Verrà usato il parser vocale di base.</string>
+    <string name="voice_expense_status_interpreting">Interpretazione dell'input vocale...</string>
+    <string name="voice_expense_status_listening">In ascolto...</string>
+    <string name="voice_expense_status_microphone_permission_required">È necessaria l'autorizzazione al microfono.</string>
+    <string name="voice_expense_status_no_recognizer">Nessun riconoscitore vocale è disponibile su questo dispositivo.</string>
+    <string name="voice_expense_status_no_speech">Nessun parlato acquisito.</string>
+    <string name="voice_expense_status_not_understood">Non ho capito. Riprova.</string>
+    <string name="voice_expense_status_processing">Elaborazione del parlato...</string>
+    <string name="voice_expense_status_ready_to_save">Pronto per salvare una nuova spesa.</string>
+    <string name="voice_expense_status_ready_to_update">Pronto per aggiornare la spesa trovata.</string>
+    <string name="voice_expense_status_recognizer_busy">Il riconoscitore vocale è occupato. Riprova.</string>
+    <string name="voice_expense_status_service_unavailable">Il servizio di riconoscimento vocale non è disponibile.</string>
+    <string name="voice_expense_status_unable_to_capture">Impossibile acquisire il parlato.</string>
+    <string name="voice_expense_status_unable_to_check">Impossibile verificare la disponibilità di Gemini Nano.</string>
+    <string name="voice_expense_status_unable_to_download_model">Impossibile scaricare Gemini Nano.</string>
+    <string name="voice_expense_status_unable_to_interpret">Impossibile interpretare il comando vocale.</string>
+    <string name="voice_expense_status_unable_to_start">Impossibile avviare il riconoscimento vocale.</string>
+    <string name="voice_expense_status_unable_to_stop">Impossibile fermare il riconoscimento vocale.</string>
+    <string name="voice_expense_status_unusable">Il comando vocale non descrive una spesa utilizzabile.</string>
+    <string name="voice_expense_value_amount_positive">L'importo deve essere maggiore di zero</string>
+    <string name="whole_series">Tutta la serie</string>
+    <string name="yes">Sì</string>
+    <string name="no">No</string>
+    <string name="csv_import_failed">Impossibile importare il file CSV</string>
+    <string name="csv_import_no_rows">Nessuna riga importabile trovata nel file CSV</string>
+    <string name="csv_export_failed">Impossibile esportare il file CSV</string>
+    <string name="csv_export_saved">File CSV esportato</string>
+    <string name="recurring_expense_series_info">Questa spesa fa parte di una serie mensile ricorrente.</string>
+    <string name="recurring_income_series_info">Questa entrata fa parte di una serie mensile ricorrente.</string>
+
+    <!-- ── Parameterised strings ──────────────────────────────────────────── -->
+    <string name="recurring_expense_info">Crea la stessa spesa ogni mese in questo giorno per i prossimi %1$d anni.</string>
+    <string name="recurring_income_info">Crea la stessa entrata ogni mese in questo giorno per i prossimi %1$d anni.</string>
+    <string name="no_expenses_for_category_this_month">Nessuna spesa per %1$s questo mese</string>
+
+    <!-- ── Boolean-branched strings ──────────────────────────────────────── -->
+    <string name="recurring_expense_action_update">Vuoi aggiornare solo questa spesa o tutta la serie ricorrente?</string>
+    <string name="recurring_expense_action_delete">Vuoi eliminare solo questa spesa o tutta la serie ricorrente?</string>
+    <string name="recurring_income_action_update">Vuoi aggiornare solo questa entrata o tutta la serie ricorrente?</string>
+    <string name="recurring_income_action_delete">Vuoi eliminare solo questa entrata o tutta la serie ricorrente?</string>
+
+    <!-- ── CSV import result ──────────────────────────────────────────────── -->
+    <string name="csv_import_success">Importate %1$d voci dal CSV</string>
+    <string name="csv_import_success_with_skipped">Importate %1$d voci dal CSV, saltate %2$d</string>
+
+    <!-- ── Default category names ─────────────────────────────────────────── -->
+    <string name="category_default_0">Spese casa</string>
+    <string name="category_default_1">Cibo</string>
+    <string name="category_default_2">Bollette</string>
+    <string name="category_default_3">Spese auto</string>
+    <string name="category_default_4">Varie</string>
+
+    <!-- ── Plurals ────────────────────────────────────────────────────────── -->
+    <plurals name="installment_label">
+        <item quantity="one">Pagamento singolo</item>
+        <item quantity="other">%1$d rate</item>
+    </plurals>
+
+    <!-- ── String arrays ─────────────────────────────────────────────────── -->
+    <string-array name="full_month_names">
+        <item>Gennaio</item>
+        <item>Febbraio</item>
+        <item>Marzo</item>
+        <item>Aprile</item>
+        <item>Maggio</item>
+        <item>Giugno</item>
+        <item>Luglio</item>
+        <item>Agosto</item>
+        <item>Settembre</item>
+        <item>Ottobre</item>
+        <item>Novembre</item>
+        <item>Dicembre</item>
+    </string-array>
+
+    <string-array name="short_month_names">
+        <item>Gen</item>
+        <item>Feb</item>
+        <item>Mar</item>
+        <item>Apr</item>
+        <item>Mag</item>
+        <item>Giu</item>
+        <item>Lug</item>
+        <item>Ago</item>
+        <item>Set</item>
+        <item>Ott</item>
+        <item>Nov</item>
+        <item>Dic</item>
+    </string-array>
+
+    <!-- MONDAY=0 … SUNDAY=6 (kotlinx.datetime ordinals) -->
+    <string-array name="full_weekday_names">
+        <item>Lunedì</item>
+        <item>Martedì</item>
+        <item>Mercoledì</item>
+        <item>Giovedì</item>
+        <item>Venerdì</item>
+        <item>Sabato</item>
+        <item>Domenica</item>
+    </string-array>
+
+    <!-- 0=Sunday … 6=Saturday (legacy calendar index) -->
+    <string-array name="short_weekday_names">
+        <item>Dom</item>
+        <item>Lun</item>
+        <item>Mar</item>
+        <item>Mer</item>
+        <item>Gio</item>
+        <item>Ven</item>
+        <item>Sab</item>
+    </string-array>
+
+</resources>

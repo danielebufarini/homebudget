@@ -4,7 +4,7 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
-import it.homebudget.app.localization.AppStrings
+import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -23,6 +23,7 @@ suspend fun importBudgetItemsFromCsv(
     csvText: String
 ): CsvImportResult {
     repository.insertDefaultCategoriesIfEmpty()
+    val resolveCategoryName = loadCategoryNameResolver()
 
     val parsedRows = parseUnifiedCsvRows(csvText)
     if (parsedRows.isEmpty()) {
@@ -34,7 +35,7 @@ suspend fun importBudgetItemsFromCsv(
 
     val categoriesByNormalizedName = mutableMapOf<String, Category>()
     categoriesById.values.forEach { category ->
-        registerCategoryNames(category, categoriesByNormalizedName)
+        registerCategoryNames(category, categoriesByNormalizedName, resolveCategoryName)
     }
 
     val existingExpenseKeys = repository.getAllExpensesSnapshot()
@@ -76,7 +77,7 @@ suspend fun importBudgetItemsFromCsv(
                         isCustom = category.isCustom == 1L
                     )
                     categoriesById[category.id] = category
-                    registerCategoryNames(category, categoriesByNormalizedName)
+                    registerCategoryNames(category, categoriesByNormalizedName, resolveCategoryName)
                 }
 
                 val expenseKey = CsvImportedExpenseKey(
@@ -132,11 +133,6 @@ suspend fun importBudgetItemsFromCsv(
     )
 }
 
-private fun registerCategoryNames(category: Category, map: MutableMap<String, Category>) {
-    map[normalizeCategoryToken(category.name)] = category
-    map[normalizeCategoryToken(AppStrings.categoryName(category.id, category.name, category.isCustom))] = category
-}
-
 private data class ParsedUnifiedCsvRow(
     val type: CsvRowType,
     val date: LocalDate,
@@ -166,6 +162,15 @@ private data class CsvImportedIncomeKey(
     val amount: BigInteger,
     val description: String
 )
+
+private fun registerCategoryNames(
+    category: Category,
+    map: MutableMap<String, Category>,
+    resolveCategoryName: (String, String, Long) -> String
+) {
+    map[normalizeCategoryToken(category.name)] = category
+    map[normalizeCategoryToken(resolveCategoryName(category.id, category.name, category.isCustom))] = category
+}
 
 private fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
     val lines = csvText
@@ -240,6 +245,8 @@ private fun parseCsvDate(value: String): LocalDate? {
     return runCatching { LocalDate(year = year, month = month, day = day) }.getOrNull()
 }
 
+// ── Category resolution ──────────────────────────────────────────────────────
+
 private fun resolveImportCategory(
     rawCategoryName: String,
     categoriesByNormalizedName: Map<String, Category>
@@ -254,6 +261,8 @@ private fun resolveImportCategory(
         isCustom = 1L
     )
 }
+
+// ── Normalisation helpers ────────────────────────────────────────────────────
 
 private fun normalizeCategoryToken(value: String): String =
     value.trim().lowercase().replace(nonAlphanumericRegex, " ").trim()
@@ -272,6 +281,8 @@ private fun String.toCsvRowType(): CsvRowType? =
         "income" -> CsvRowType.Income
         else -> null
     }
+
+// ── Key factories ────────────────────────────────────────────────────────────
 
 private fun Expense.asImportKey() = CsvImportedExpenseKey(
     date = date,
@@ -292,6 +303,8 @@ private fun buildImportedId(prefix: String): String =
 private fun buildImportedExpenseId() = buildImportedId("expense")
 private fun buildImportedIncomeId() = buildImportedId("income")
 private fun buildImportedCategoryId() = buildImportedId("category")
+
+// ── Column index mapping ─────────────────────────────────────────────────────
 
 private data class UnifiedCsvColumnIndices(
     val typeIndex: Int,

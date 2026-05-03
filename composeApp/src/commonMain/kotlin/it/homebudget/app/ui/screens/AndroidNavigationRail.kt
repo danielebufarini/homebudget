@@ -9,8 +9,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import it.homebudget.app.localization.LocalStrings
+import homebudget.composeapp.generated.resources.*
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 internal enum class AndroidNavigationDestination {
     Dashboard,
@@ -30,7 +31,11 @@ internal fun AndroidNavigationRailOverlay(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
-    val strings = LocalStrings.current
+    val dashboardLabel = stringResource(Res.string.dashboard)
+    val calendarLabel = stringResource(Res.string.calendar)
+    val categoriesLabel = stringResource(Res.string.categories)
+    val importCsvLabel = stringResource(Res.string.import_csv)
+    val exportCsvLabel = stringResource(Res.string.export_csv)
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -55,11 +60,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = selectedDestination == AndroidNavigationDestination.Dashboard,
-                        label = { Text(strings.dashboard) },
+                        label = { Text(dashboardLabel) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.Dashboard,
-                                contentDescription = strings.dashboard,
+                                contentDescription = dashboardLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
@@ -75,11 +80,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = selectedDestination == AndroidNavigationDestination.Calendar,
-                        label = { Text(strings.calendar) },
+                        label = { Text(calendarLabel) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.CalendarMonth,
-                                contentDescription = strings.calendar,
+                                contentDescription = calendarLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
@@ -95,11 +100,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = selectedDestination == AndroidNavigationDestination.Categories,
-                        label = { Text(strings.categories) },
+                        label = { Text(categoriesLabel) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.Category,
-                                contentDescription = strings.categories,
+                                contentDescription = categoriesLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
@@ -115,11 +120,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = false,
-                        label = { Text(strings.importCsv) },
+                        label = { Text(importCsvLabel) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.FileUpload,
-                                contentDescription = strings.importCsv,
+                                contentDescription = importCsvLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
@@ -133,11 +138,11 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = false,
-                        label = { Text(strings.exportCsv) },
+                        label = { Text(exportCsvLabel) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.FileDownload,
-                                contentDescription = strings.exportCsv,
+                                contentDescription = exportCsvLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },

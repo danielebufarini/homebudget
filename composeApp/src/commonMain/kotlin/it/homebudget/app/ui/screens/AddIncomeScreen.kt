@@ -14,13 +14,15 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.*
-import it.homebudget.app.localization.LocalStrings
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -62,7 +64,29 @@ class AddIncomeScreen(
         val platformDatePicker = rememberPlatformDatePicker()
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
-        val strings = LocalStrings.current
+        val addIncomeLabel = stringResource(Res.string.add_income)
+        val amountLabel = stringResource(Res.string.amount)
+        val backLabel = stringResource(Res.string.back)
+        val cancelLabel = stringResource(Res.string.cancel)
+        val dateLabel = stringResource(Res.string.date)
+        val deleteIncomeLabel = stringResource(Res.string.delete_income)
+        val deleteRecurringIncomeTitle = stringResource(Res.string.delete_recurring_income_title)
+        val descriptionLabel = stringResource(Res.string.description)
+        val editIncomeLabel = stringResource(Res.string.edit_income)
+        val enterValidAmountLabel = stringResource(Res.string.enter_valid_amount)
+        val recurringIncomeActionDelete = stringResource(Res.string.recurring_income_action_delete)
+        val recurringIncomeActionUpdate = stringResource(Res.string.recurring_income_action_update)
+        val recurringIncomeInfo = stringResource(
+            Res.string.recurring_income_info,
+            RECURRING_MONTHLY_OCCURRENCES / 12
+        )
+        val recurringIncomeSeriesInfo = stringResource(Res.string.recurring_income_series_info)
+        val recurringMonthlyLabel = stringResource(Res.string.recurring_monthly)
+        val saveLabel = stringResource(Res.string.save)
+        val unableToDeleteIncomeLabel = stringResource(Res.string.unable_to_delete_income)
+        val unableToSaveIncomeLabel = stringResource(Res.string.unable_to_save_income)
+        val updateLabel = stringResource(Res.string.update)
+        val updateRecurringIncomeTitle = stringResource(Res.string.update_recurring_income_title)
         val defaultDateMillis = remember(incomeId, initialYear, initialMonth) {
             if (incomeId != null) {
                 null
@@ -140,7 +164,7 @@ class AddIncomeScreen(
             }.onSuccess {
                 closeAfterRecurringAction()
             }.onFailure {
-                snackbarHostState.showSnackbar(strings.unableToSaveIncome)
+                snackbarHostState.showSnackbar(unableToSaveIncomeLabel)
             }
             isSaving = false
         }
@@ -157,7 +181,7 @@ class AddIncomeScreen(
             }.onSuccess {
                 closeAfterRecurringAction()
             }.onFailure {
-                snackbarHostState.showSnackbar(strings.unableToDeleteIncome)
+                snackbarHostState.showSnackbar(unableToDeleteIncomeLabel)
             }
             isSaving = false
         }
@@ -181,12 +205,12 @@ class AddIncomeScreen(
                 if (showNavigationChrome) {
                     TopAppBar(
                         title = {
-                            Text(if (incomeId == null) strings.addIncome else strings.editIncome)
+                            Text(if (incomeId == null) addIncomeLabel else editIncomeLabel)
                         },
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onClose) {
-                                    Text(strings.back)
+                                    Text(backLabel)
                                 }
                             }
                         }
@@ -196,7 +220,7 @@ class AddIncomeScreen(
             floatingActionButton = {
                 if (!isIos && incomeId != null) {
                     DeleteEditItemFab(
-                        label = strings.deleteIncome,
+                        label = deleteIncomeLabel,
                         enabled = !isSaving,
                         onClick = ::requestDeleteIncome
                     )
@@ -215,7 +239,7 @@ class AddIncomeScreen(
                 PlatformTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = strings.amount,
+                    label = amountLabel,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -223,7 +247,7 @@ class AddIncomeScreen(
                 PlatformTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = strings.description,
+                    label = descriptionLabel,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -241,7 +265,7 @@ class AddIncomeScreen(
                         onValueChange = {},
                         readOnly = true,
                         enabled = false,
-                        label = strings.date,
+                        label = dateLabel,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -266,11 +290,11 @@ class AddIncomeScreen(
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text(strings.recurringMonthly)
+                            Text(recurringMonthlyLabel)
                         }
                         if (isRecurringMonthly) {
                             Text(
-                                text = strings.recurringIncomeInfo(RECURRING_MONTHLY_OCCURRENCES / 12),
+                                text = recurringIncomeInfo,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -279,7 +303,7 @@ class AddIncomeScreen(
 
                 if (recurringSeriesId != null) {
                     RecurringSeriesNotice(
-                        text = strings.recurringIncomeSeriesInfo()
+                        text = recurringIncomeSeriesInfo
                     )
                 }
 
@@ -292,7 +316,7 @@ class AddIncomeScreen(
                         colors = homeBudgetButtonColors(),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(strings.cancel)
+                        Text(cancelLabel)
                     }
 
                     Button(
@@ -304,7 +328,7 @@ class AddIncomeScreen(
 
                                 when {
                                     parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
-                                        snackbarHostState.showSnackbar(strings.enterValidAmount)
+                                        snackbarHostState.showSnackbar(enterValidAmountLabel)
                                     }
                                     else -> {
                                         isSaving = true
@@ -354,7 +378,7 @@ class AddIncomeScreen(
                                             }.onSuccess {
                                                 onClose()
                                             }.onFailure {
-                                                snackbarHostState.showSnackbar(strings.unableToSaveIncome)
+                                                snackbarHostState.showSnackbar(unableToSaveIncomeLabel)
                                             }
                                             isSaving = false
                                         }
@@ -364,7 +388,7 @@ class AddIncomeScreen(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(if (incomeId == null) strings.save else strings.update)
+                        Text(if (incomeId == null) saveLabel else updateLabel)
                     }
                 }
             }
@@ -373,13 +397,13 @@ class AddIncomeScreen(
         if (pendingRecurringAction != null) {
             RecurringSeriesActionDialog(
                 title = when (pendingRecurringAction) {
-                    RecurringIncomeAction.Update -> strings.updateRecurringIncomeTitle
-                    RecurringIncomeAction.Delete -> strings.deleteRecurringIncomeTitle
+                    RecurringIncomeAction.Update -> updateRecurringIncomeTitle
+                    RecurringIncomeAction.Delete -> deleteRecurringIncomeTitle
                     null -> ""
                 },
                 message = when (pendingRecurringAction) {
-                    RecurringIncomeAction.Update -> strings.recurringIncomeActionMessage(isUpdate = true)
-                    RecurringIncomeAction.Delete -> strings.recurringIncomeActionMessage(isUpdate = false)
+                    RecurringIncomeAction.Update -> recurringIncomeActionUpdate
+                    RecurringIncomeAction.Delete -> recurringIncomeActionDelete
                     null -> ""
                 },
                 onThisInstanceOnly = {
@@ -476,9 +500,11 @@ private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
 
+@Composable
 private fun Long.formatDateLabel(): String {
+    val shortMonthNames = stringArrayResource(Res.array.short_month_names)
     val date = Instant.fromEpochMilliseconds(this)
         .toLocalDateTime(TimeZone.currentSystemDefault())
         .date
-    return "${date.day.toString().padStart(2, '0')} ${shortMonthName(date.month.ordinal + 1)} ${date.year}"
+    return "${date.day.toString().padStart(2, '0')} ${shortMonthNames[date.month.ordinal]} ${date.year}"
 }

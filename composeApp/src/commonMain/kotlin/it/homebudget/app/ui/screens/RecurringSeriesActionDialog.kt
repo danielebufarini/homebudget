@@ -8,7 +8,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import it.homebudget.app.localization.LocalStrings
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.cancel
+import homebudget.composeapp.generated.resources.this_instance_only
+import homebudget.composeapp.generated.resources.whole_series
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun RecurringSeriesActionDialog(
@@ -18,8 +22,6 @@ internal fun RecurringSeriesActionDialog(
     onWholeSeries: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val strings = LocalStrings.current
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -29,7 +31,7 @@ internal fun RecurringSeriesActionDialog(
                 onClick = onWholeSeries,
                 colors = homeBudgetTextButtonColors()
             ) {
-                Text(strings.wholeSeries)
+                Text(stringResource(Res.string.whole_series))
             }
         },
         dismissButton = {
@@ -41,13 +43,13 @@ internal fun RecurringSeriesActionDialog(
                     onClick = onThisInstanceOnly,
                     colors = homeBudgetTextButtonColors()
                 ) {
-                    Text(strings.thisInstanceOnly)
+                    Text(stringResource(Res.string.this_instance_only))
                 }
                 TextButton(
                     onClick = onDismiss,
                     colors = homeBudgetTextButtonColors()
                 ) {
-                    Text(strings.cancel)
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         }

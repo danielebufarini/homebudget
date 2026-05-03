@@ -14,9 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.localization.LocalStrings
+import it.homebudget.app.localization.localizedCategoryName
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -47,14 +49,18 @@ fun CategoriesRoute(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-    val strings = LocalStrings.current
+    val addCategoryLabel = stringResource(Res.string.add_category)
+    val addLabel = stringResource(Res.string.add)
+    val cancelLabel = stringResource(Res.string.cancel)
+    val categoryNameLabel = stringResource(Res.string.category_name)
+    val unableToDeleteCategoryLabel = stringResource(Res.string.unable_to_delete_category)
 
     fun deleteCategory(categoryId: String) {
         scope.launch {
             runCatching {
                 repository.deleteCategory(categoryId)
             }.onFailure {
-                snackbarHostState.showSnackbar(strings.unableToDeleteCategory)
+                snackbarHostState.showSnackbar(unableToDeleteCategoryLabel)
             }
         }
     }
@@ -136,7 +142,7 @@ fun CategoriesRoute(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = strings.addCategory
+                            contentDescription = addCategoryLabel
                         )
                     }
                 }
@@ -155,12 +161,12 @@ fun CategoriesRoute(
         var newCategoryName by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text(strings.addCategory) },
+            title = { Text(addCategoryLabel) },
             text = {
                 PlatformTextField(
                     value = newCategoryName,
                     onValueChange = { newCategoryName = it },
-                    label = strings.categoryName,
+                    label = categoryNameLabel,
                     modifier = Modifier.fillMaxWidth()
                 )
             },
@@ -181,7 +187,7 @@ fun CategoriesRoute(
                         }
                     }
                 ) {
-                    Text(strings.add)
+                    Text(addLabel)
                 }
             },
             dismissButton = {
@@ -189,7 +195,7 @@ fun CategoriesRoute(
                     onClick = { showAddDialog = false },
                     colors = homeBudgetTextButtonColors()
                 ) {
-                    Text(strings.cancel)
+                    Text(cancelLabel)
                 }
             }
         )
@@ -220,7 +226,8 @@ private fun CategoriesScreenScaffold(
         }
     }
     var showNavigationRail by remember { mutableStateOf(false) }
-    val strings = LocalStrings.current
+    val addCategoryLabel = stringResource(Res.string.add_category)
+    val categoriesLabel = stringResource(Res.string.categories)
 
     Box(modifier = Modifier.fillMaxSize()) {
         importCsvLauncher.Render()
@@ -230,7 +237,7 @@ private fun CategoriesScreenScaffold(
             topBar = {
                 if (showNavigationChrome) {
                     CenterAlignedTopAppBar(
-                        title = { Text(strings.categories) },
+                        title = { Text(categoriesLabel) },
                         navigationIcon = {
                             IconButton(
                                 onClick = {
@@ -241,7 +248,7 @@ private fun CategoriesScreenScaffold(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Menu,
-                                    contentDescription = strings.categories
+                                    contentDescription = categoriesLabel
                                 )
                             }
                         }
@@ -260,7 +267,7 @@ private fun CategoriesScreenScaffold(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = strings.addCategory
+                                contentDescription = addCategoryLabel
                             )
                         }
                     }
@@ -333,10 +340,10 @@ private fun CategoriesList(
 @Composable
 internal fun DeleteCategoryBackground() {
     val isIos = rememberIsIosPlatform()
-    val strings = LocalStrings.current
+    val deleteCategoryLabel = stringResource(Res.string.delete_category)
 
     DeleteSwipeBackground(
-        contentDescription = strings.deleteCategory,
+        contentDescription = deleteCategoryLabel,
         shape = if (isIos) RoundedCornerShape(20.dp) else MaterialTheme.shapes.medium
     )
 }
@@ -346,7 +353,8 @@ internal fun CategoryListItem(
     category: it.homebudget.app.database.Category,
     modifier: Modifier = Modifier
 ) {
-    val strings = LocalStrings.current
+    val customCategoryLabel = stringResource(Res.string.custom_category)
+    val defaultCategoryLabel = stringResource(Res.string.default_category)
 
     PlatformCard(
         modifier = modifier.fillMaxWidth(),
@@ -355,9 +363,9 @@ internal fun CategoryListItem(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(strings.categoryName(category.id, category.name, category.isCustom))
+            Text(localizedCategoryName(category))
             Text(
-                text = if (category.isCustom == 1L) strings.customCategory else strings.defaultCategory,
+                text = if (category.isCustom == 1L) customCategoryLabel else defaultCategoryLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

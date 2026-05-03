@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ── Currency ──────────────────────────────────────────────────────── -->
+    <string name="currency_symbol">$</string>
+
+    <!-- ── Simple UI labels ──────────────────────────────────────────────── -->
+    <string name="add">Add</string>
+    <string name="add_category">Add Category</string>
+    <string name="add_expense">Add Expense</string>
+    <string name="add_income">Add Income</string>
+    <string name="amount">Amount</string>
+    <string name="back">Back</string>
+    <string name="by_category">By Category</string>
+    <string name="by_date">By Date</string>
+    <string name="calendar">Calendar</string>
+    <string name="cancel">Cancel</string>
+    <string name="cash_flow">Cash Flow</string>
+    <string name="categories">Categories</string>
+    <string name="category">Category</string>
+    <string name="category_name">Category Name</string>
+    <string name="close">Close</string>
+    <string name="custom_category">Custom category</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="date">Date</string>
+    <string name="default_category">Default category</string>
+    <string name="delete">Delete</string>
+    <string name="delete_category">Delete category</string>
+    <string name="delete_expense">Delete expense</string>
+    <string name="delete_income">Delete income</string>
+    <string name="delete_recurring_expense_title">Delete recurring expense?</string>
+    <string name="delete_recurring_income_title">Delete recurring income?</string>
+    <string name="description">Description</string>
+    <string name="edit_expense">Edit Expense</string>
+    <string name="edit_income">Edit Income</string>
+    <string name="end_date">End Date</string>
+    <string name="enter_valid_amount">Enter a valid amount greater than 0</string>
+    <string name="expense">Expense</string>
+    <string name="expense_id_missing">Expense id is missing</string>
+    <string name="expense_not_found">Expense not found</string>
+    <string name="expense_details">Expense Details</string>
+    <string name="expenses">Expenses</string>
+    <string name="expenses_by_category">Expenses by category</string>
+    <string name="export">Export</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="highest_day">Highest Day</string>
+    <string name="import_action">Import</string>
+    <string name="import_csv">Import CSV</string>
+    <string name="income">Income</string>
+    <string name="installments">Installments</string>
+    <string name="invalid_date_range">Start date must be on or before end date</string>
+    <string name="monthly_summary">Monthly Summary</string>
+    <string name="new_expense">New expense</string>
+    <string name="no_expenses_for_day">No expenses for this day</string>
+    <string name="no_expenses_for_month">No expenses for this month</string>
+    <string name="no_expenses_in_period">No expenses in this period</string>
+    <string name="no_income_for_month">No income for this month</string>
+    <string name="no_shared_expenses_for_month">No shared expenses for this month</string>
+    <string name="nothing_to_save">Nothing to save</string>
+    <string name="recurring_monthly">Recurring Monthly</string>
+    <string name="refresh">Refresh</string>
+    <string name="save">Save</string>
+    <string name="save_expense">Save Expense</string>
+    <string name="saving">Saving...</string>
+    <string name="select_category">Select Category</string>
+    <string name="select_date">Select a date</string>
+    <string name="select_installments">Select Installments</string>
+    <string name="shared">Shared</string>
+    <string name="shared_expense">Shared Expense</string>
+    <string name="shared_expenses">Shared Expenses</string>
+    <string name="single_payment">Single payment</string>
+    <string name="start_date">Start Date</string>
+    <string name="this_instance_only">This instance only</string>
+    <string name="top_category">Top Category</string>
+    <string name="transcript">Transcript</string>
+    <string name="unable_to_delete_category">Unable to delete category</string>
+    <string name="unable_to_delete_expense">Unable to delete expense</string>
+    <string name="unable_to_delete_income">Unable to delete income</string>
+    <string name="unable_to_save_expense">Unable to save expense</string>
+    <string name="unable_to_save_income">Unable to save income</string>
+    <string name="unknown_category">Unknown category</string>
+    <string name="update">Update</string>
+    <string name="update_expense">Update Expense</string>
+    <string name="update_recurring_expense_title">Update recurring expense?</string>
+    <string name="update_recurring_income_title">Update recurring income?</string>
+    <string name="voice_expense">Voice expense</string>
+    <string name="voice_expense_action_download_model">Download model</string>
+    <string name="voice_expense_action_listen_again">Listen again</string>
+    <string name="voice_expense_action_start_listening">Start listening</string>
+    <string name="voice_expense_action_stop_listening">Stop listening</string>
+    <string name="voice_expense_availability_available">Gemini Nano status: available.</string>
+    <string name="voice_expense_availability_downloadable">Gemini Nano status: downloadable.</string>
+    <string name="voice_expense_availability_downloading">Gemini Nano status: downloading.</string>
+    <string name="voice_expense_availability_unknown">Gemini Nano status: unknown.</string>
+    <string name="voice_expense_availability_unavailable">Gemini Nano status: unavailable. Basic parser fallback is enabled.</string>
+    <string name="voice_expense_category_required">Category is required</string>
+    <string name="voice_expense_empty_prompt">Speak an expense command to create or update an entry.</string>
+    <string name="voice_expense_invalid_amount">Invalid amount</string>
+    <string name="voice_expense_model_downloading">Downloading Gemini Nano for ML Kit...</string>
+    <string name="voice_expense_model_not_ready">Gemini Nano is still not ready.</string>
+    <string name="voice_expense_model_ready">Gemini Nano is ready.</string>
+    <string name="voice_expense_prompt">Speak an expense command</string>
+    <string name="voice_expense_status_audio_unavailable">Microphone input is unavailable.</string>
+    <string name="voice_expense_status_cancelled">Voice input was cancelled.</string>
+    <string name="voice_expense_status_checking_availability">Checking Gemini Nano availability...</string>
+    <string name="voice_expense_status_downloading_available">Gemini Nano status: downloadable. The ML Kit model can be downloaded on this device.</string>
+    <string name="voice_expense_status_downloading_in_progress">Gemini Nano status: downloading. AICore is still preparing the model.</string>
+    <string name="voice_expense_status_fallback_parser">Gemini Nano is unavailable on this device. Using the basic voice parser.</string>
+    <string name="voice_expense_status_interpreting">Interpreting voice input...</string>
+    <string name="voice_expense_status_listening">Listening...</string>
+    <string name="voice_expense_status_microphone_permission_required">Microphone permission is required.</string>
+    <string name="voice_expense_status_no_recognizer">No speech recognizer is available on this device.</string>
+    <string name="voice_expense_status_no_speech">No speech was captured.</string>
+    <string name="voice_expense_status_not_understood">I didn't understand. Try again.</string>
+    <string name="voice_expense_status_processing">Processing speech...</string>
+    <string name="voice_expense_status_ready_to_save">Ready to save a new expense.</string>
+    <string name="voice_expense_status_ready_to_update">Ready to update the matched expense.</string>
+    <string name="voice_expense_status_recognizer_busy">Speech recognizer is busy. Try again.</string>
+    <string name="voice_expense_status_service_unavailable">Speech recognition service is unavailable.</string>
+    <string name="voice_expense_status_unable_to_capture">Unable to capture speech.</string>
+    <string name="voice_expense_status_unable_to_check">Unable to check Gemini Nano availability.</string>
+    <string name="voice_expense_status_unable_to_download_model">Unable to download Gemini Nano.</string>
+    <string name="voice_expense_status_unable_to_interpret">Unable to interpret the voice command.</string>
+    <string name="voice_expense_status_unable_to_start">Unable to start speech recognition.</string>
+    <string name="voice_expense_status_unable_to_stop">Unable to stop speech recognition.</string>
+    <string name="voice_expense_status_unusable">The voice command did not describe a usable expense.</string>
+    <string name="voice_expense_value_amount_positive">Amount must be greater than zero</string>
+    <string name="whole_series">Whole series</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="csv_import_failed">Unable to import the CSV file</string>
+    <string name="csv_import_no_rows">No importable rows were found in the CSV file</string>
+    <string name="csv_export_failed">Unable to export the CSV file</string>
+    <string name="csv_export_saved">CSV file exported</string>
+    <string name="recurring_expense_series_info">This expense is part of a recurring monthly series.</string>
+    <string name="recurring_income_series_info">This income is part of a recurring monthly series.</string>
+
+    <!-- ── Parameterised strings ──────────────────────────────────────────── -->
+    <!-- recurringExpenseInfo(years: Int) -->
+    <string name="recurring_expense_info">Creates the same expense every month on this day for the next %1$d years.</string>
+    <!-- recurringIncomeInfo(years: Int) -->
+    <string name="recurring_income_info">Creates the same income every month on this day for the next %1$d years.</string>
+    <!-- noExpensesForCategoryThisMonth(categoryName: String) -->
+    <string name="no_expenses_for_category_this_month">No expenses for %1$s this month</string>
+
+    <!-- ── Boolean-branched strings (one key per branch) ─────────────────── -->
+    <!-- recurringExpenseActionMessage(isUpdate = true) -->
+    <string name="recurring_expense_action_update">Do you want to update only this expense or the whole recurring series?</string>
+    <!-- recurringExpenseActionMessage(isUpdate = false) -->
+    <string name="recurring_expense_action_delete">Do you want to delete only this expense or the whole recurring series?</string>
+    <!-- recurringIncomeActionMessage(isUpdate = true) -->
+    <string name="recurring_income_action_update">Do you want to update only this income or the whole recurring series?</string>
+    <!-- recurringIncomeActionMessage(isUpdate = false) -->
+    <string name="recurring_income_action_delete">Do you want to delete only this income or the whole recurring series?</string>
+
+    <!-- ── CSV import result (skipped/no-skipped branch) ─────────────────── -->
+    <!-- csvImportSuccess(importedCount, skippedCount = 0) -->
+    <string name="csv_import_success">Imported %1$d items from CSV</string>
+    <!-- csvImportSuccess(importedCount, skippedCount > 0) -->
+    <string name="csv_import_success_with_skipped">Imported %1$d items from CSV, skipped %2$d</string>
+
+    <!-- ── Default category names (categoryName() logic) ─────────────────── -->
+    <!-- Custom categories always use their stored name; only built-ins need translation. -->
+    <string name="category_default_0">Home expenses</string>
+    <string name="category_default_1">Food</string>
+    <string name="category_default_2">Bills</string>
+    <string name="category_default_3">Car expenses</string>
+    <string name="category_default_4">Miscellaneous</string>
+
+    <!-- ── Plurals ────────────────────────────────────────────────────────── -->
+    <!--
+        installmentLabel(count):
+          count == 1 → "Single payment"  (no format arg in the "one" template — arg is ignored)
+          count  > 1 → "%1$d installments"
+    -->
+    <plurals name="installment_label">
+        <item quantity="one">Single payment</item>
+        <item quantity="other">%1$d installments</item>
+    </plurals>
+
+    <!-- ── String arrays ─────────────────────────────────────────────────── -->
+    <!--
+        fullMonthName(month: Int): month is 1-based → array is 0-based → index = month - 1
+    -->
+    <string-array name="full_month_names">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+
+    <!--
+        shortMonthName(month: Int): same 1-based convention
+    -->
+    <string-array name="short_month_names">
+        <item>Jan</item>
+        <item>Feb</item>
+        <item>Mar</item>
+        <item>Apr</item>
+        <item>May</item>
+        <item>Jun</item>
+        <item>Jul</item>
+        <item>Aug</item>
+        <item>Sep</item>
+        <item>Oct</item>
+        <item>Nov</item>
+        <item>Dec</item>
+    </string-array>
+
+    <!--
+        weekdayFullName(dayOfWeek: DayOfWeek): indexed by DayOfWeek.ordinal
+        kotlinx.datetime ordinals: MONDAY=0, TUESDAY=1, …, SUNDAY=6
+    -->
+    <string-array name="full_weekday_names">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+
+    <!--
+        shortWeekdayName(dayIndex: Int): legacy 0-based Sunday-first calendar index
+        index: 0=Sunday, 1=Monday, …, 6=Saturday
+    -->
+    <string-array name="short_weekday_names">
+        <item>Sun</item>
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+    </string-array>
+
+</resources>

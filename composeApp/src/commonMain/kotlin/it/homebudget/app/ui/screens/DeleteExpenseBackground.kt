@@ -14,7 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
-import it.homebudget.app.localization.LocalStrings
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.delete
+import homebudget.composeapp.generated.resources.delete_expense
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun DeleteSwipeBackground(
@@ -22,8 +25,6 @@ internal fun DeleteSwipeBackground(
     modifier: Modifier = Modifier,
     shape: Shape? = null
 ) {
-    val strings = LocalStrings.current
-
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -36,7 +37,7 @@ internal fun DeleteSwipeBackground(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = strings.delete,
+                text = stringResource(Res.string.delete),
                 color = MaterialTheme.colorScheme.onError
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -51,11 +52,10 @@ internal fun DeleteSwipeBackground(
 
 @Composable
 internal fun DeleteExpenseBackground() {
-    val strings = LocalStrings.current
     val isIos = rememberIsIosPlatform()
 
     DeleteSwipeBackground(
-        contentDescription = strings.deleteExpense,
+        contentDescription = stringResource(Res.string.delete_expense),
         shape = if (isIos) RoundedCornerShape(20.dp) else MaterialTheme.shapes.medium
     )
 }

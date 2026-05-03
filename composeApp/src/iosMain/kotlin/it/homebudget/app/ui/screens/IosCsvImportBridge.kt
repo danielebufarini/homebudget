@@ -3,7 +3,9 @@ package it.homebudget.app.ui.screens
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.importBudgetItemsFromCsv
 import it.homebudget.app.di.initKoin
-import it.homebudget.app.localization.AppStrings
+import it.homebudget.app.localization.csvImportFailedMessage
+import it.homebudget.app.localization.csvImportNoRowsMessage
+import it.homebudget.app.localization.csvImportSuccessMessage
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -30,9 +32,9 @@ class IosCsvImportController {
                 )
 
                 if (importResult.importedCount == 0 && importResult.skippedCount == 0) {
-                    AppStrings.csvImportNoRows
+                    csvImportNoRowsMessage()
                 } else {
-                    AppStrings.csvImportSuccess(
+                    csvImportSuccessMessage(
                         importedCount = importResult.importedCount,
                         skippedCount = importResult.skippedCount
                     )
@@ -41,7 +43,7 @@ class IosCsvImportController {
 
             onComplete(
                 result.getOrNull(),
-                result.exceptionOrNull()?.message ?: AppStrings.csvImportFailed
+                result.exceptionOrNull()?.message ?: csvImportFailedMessage()
             )
         }
     }

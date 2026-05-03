@@ -17,11 +17,13 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.*
-import it.homebudget.app.localization.LocalStrings
+import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -65,7 +67,39 @@ class AddExpenseScreen(
         val platformOptionPicker = rememberPlatformOptionPicker()
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
-        val strings = LocalStrings.current
+        val addExpenseLabel = stringResource(Res.string.add_expense)
+        val amountLabel = stringResource(Res.string.amount)
+        val backLabel = stringResource(Res.string.back)
+        val cancelLabel = stringResource(Res.string.cancel)
+        val closeLabel = stringResource(Res.string.close)
+        val dateLabel = stringResource(Res.string.date)
+        val deleteExpenseLabel = stringResource(Res.string.delete_expense)
+        val deleteRecurringExpenseTitle = stringResource(Res.string.delete_recurring_expense_title)
+        val descriptionLabel = stringResource(Res.string.description)
+        val editExpenseLabel = stringResource(Res.string.edit_expense)
+        val enterValidAmountLabel = stringResource(Res.string.enter_valid_amount)
+        val expenseDetailsLabel = stringResource(Res.string.expense_details)
+        val installmentsLabel = stringResource(Res.string.installments)
+        val recurringExpenseActionDelete = stringResource(Res.string.recurring_expense_action_delete)
+        val recurringExpenseActionUpdate = stringResource(Res.string.recurring_expense_action_update)
+        val recurringExpenseInfo = stringResource(
+            Res.string.recurring_expense_info,
+            RECURRING_MONTHLY_OCCURRENCES / 12
+        )
+        val recurringExpenseSeriesInfo = stringResource(Res.string.recurring_expense_series_info)
+        val recurringMonthlyLabel = stringResource(Res.string.recurring_monthly)
+        val saveExpenseLabel = stringResource(Res.string.save_expense)
+        val savingLabel = stringResource(Res.string.saving)
+        val selectCategoryLabel = stringResource(Res.string.select_category)
+        val selectDateLabel = stringResource(Res.string.select_date)
+        val selectInstallmentsLabel = stringResource(Res.string.select_installments)
+        val sharedExpenseLabel = stringResource(Res.string.shared_expense)
+        val singlePaymentLabel = stringResource(Res.string.single_payment)
+        val unableToDeleteExpenseLabel = stringResource(Res.string.unable_to_delete_expense)
+        val unableToSaveExpenseLabel = stringResource(Res.string.unable_to_save_expense)
+        val updateExpenseLabel = stringResource(Res.string.update_expense)
+        val updateRecurringExpenseTitle = stringResource(Res.string.update_recurring_expense_title)
+        val resolveCategoryName = rememberCategoryNameResolver()
 
         var amount by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
@@ -85,8 +119,22 @@ class AddExpenseScreen(
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val selectedCategory = categories.find { it.id == selectedCategoryId }
         val installmentOptions = remember { (1..12).toList() }
-        val installmentLabels = remember(installmentOptions, strings) {
-            installmentOptions.associateWith(strings::installmentLabel)
+        val installmentLabels = remember(installmentOptions, singlePaymentLabel, installmentsLabel) {
+            installmentOptions.associateWith { count ->
+                if (count == 1) {
+                    singlePaymentLabel
+                } else {
+                    "$count ${installmentsLabel.lowercase()}"
+                }
+            }
+        }
+        val categoryOptions = remember(categories, resolveCategoryName) {
+            categories.map { category ->
+                resolveCategoryName(category.id, category.name, category.isCustom) to category.id
+            }
+        }
+        val selectedCategoryName = selectedCategory?.let {
+            resolveCategoryName(it.id, it.name, it.isCustom)
         }
 
         LaunchedEffect(repository) {
@@ -153,7 +201,7 @@ class AddExpenseScreen(
             }.onSuccess {
                 closeAfterRecurringAction()
             }.onFailure {
-                snackbarHostState.showSnackbar(strings.unableToSaveExpense)
+                snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
             }
             isSaving = false
         }
@@ -170,7 +218,7 @@ class AddExpenseScreen(
             }.onSuccess {
                 closeAfterRecurringAction()
             }.onFailure {
-                snackbarHostState.showSnackbar(strings.unableToDeleteExpense)
+                snackbarHostState.showSnackbar(unableToDeleteExpenseLabel)
             }
             isSaving = false
         }
@@ -196,16 +244,16 @@ class AddExpenseScreen(
                         title = {
                             Text(
                                 when {
-                                    readOnly -> strings.expenseDetails
-                                    expenseId == null -> strings.addExpense
-                                    else -> strings.editExpense
+                                    readOnly -> expenseDetailsLabel
+                                    expenseId == null -> addExpenseLabel
+                                    else -> editExpenseLabel
                                 }
                             )
                         },
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onClose) {
-                                    Text(strings.back)
+                                    Text(backLabel)
                                 }
                             }
                         }
@@ -215,7 +263,7 @@ class AddExpenseScreen(
             floatingActionButton = {
                 if (!isIos && !readOnly && expenseId != null) {
                     DeleteEditItemFab(
-                        label = strings.deleteExpense,
+                        label = deleteExpenseLabel,
                         enabled = !isSaving,
                         onClick = ::requestDeleteExpense
                     )
@@ -234,7 +282,7 @@ class AddExpenseScreen(
                 PlatformTextField(
                     value = amount,
                     onValueChange = { if (!readOnly) amount = it },
-                    label = strings.amount,
+                    label = amountLabel,
                     readOnly = readOnly,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
@@ -243,7 +291,7 @@ class AddExpenseScreen(
                 PlatformTextField(
                     value = description,
                     onValueChange = { if (!readOnly) description = it },
-                    label = strings.description,
+                    label = descriptionLabel,
                     readOnly = readOnly,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -262,28 +310,24 @@ class AddExpenseScreen(
                         onValueChange = {},
                         readOnly = true,
                         enabled = false,
-                        label = strings.date,
+                        label = dateLabel,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
                 CategorySelectorRow(
-                    categoryName = selectedCategory?.let { strings.categoryName(it.id, it.name, it.isCustom) },
+                    categoryName = selectedCategoryName,
                     enabled = !readOnly,
                     canSelectCategory = categories.isNotEmpty(),
                     onSelectCategory = {
                         platformOptionPicker.show(
-                            title = strings.selectCategory,
-                            options = categories.map { strings.categoryName(it.id, it.name, it.isCustom) },
-                            selectedOption = selectedCategory?.let {
-                                strings.categoryName(it.id, it.name, it.isCustom)
-                            }
+                            title = selectCategoryLabel,
+                            options = categoryOptions.map { it.first },
+                            selectedOption = selectedCategoryName
                         ) { selectedOption ->
-                            selectedCategoryId = categories
-                                .firstOrNull {
-                                    strings.categoryName(it.id, it.name, it.isCustom) == selectedOption
-                                }
-                                ?.id
+                            selectedCategoryId = categoryOptions
+                                .firstOrNull { it.first == selectedOption }
+                                ?.second
                                 .orEmpty()
                         }
                     },
@@ -298,7 +342,7 @@ class AddExpenseScreen(
                                 .clickable(enabled = !readOnly) {
                                     val options = installmentOptions.map { installmentLabels.getValue(it) }
                                     platformOptionPicker.show(
-                                        title = strings.selectInstallments,
+                                        title = selectInstallmentsLabel,
                                         options = options,
                                         selectedOption = installmentLabels.getValue(installmentCount)
                                     ) { selectedOption ->
@@ -313,7 +357,7 @@ class AddExpenseScreen(
                                 onValueChange = {},
                                 readOnly = true,
                                 enabled = false,
-                                label = strings.installments,
+                                label = installmentsLabel,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -330,7 +374,7 @@ class AddExpenseScreen(
                                 value = installmentLabels.getValue(installmentCount),
                                 onValueChange = {},
                                 readOnly = true,
-                                label = strings.installments,
+                                label = installmentsLabel,
                                 trailingIcon = {
                                     if (!readOnly) {
                                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = installmentExpanded)
@@ -391,11 +435,11 @@ class AddExpenseScreen(
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text(strings.recurringMonthly)
+                            Text(recurringMonthlyLabel)
                         }
                         if (isRecurringMonthly) {
                             Text(
-                                text = strings.recurringExpenseInfo(RECURRING_MONTHLY_OCCURRENCES / 12),
+                                text = recurringExpenseInfo,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -404,7 +448,7 @@ class AddExpenseScreen(
 
                 if (recurringSeriesId != null) {
                     RecurringSeriesNotice(
-                        text = strings.recurringExpenseSeriesInfo()
+                        text = recurringExpenseSeriesInfo
                     )
                 }
 
@@ -426,7 +470,7 @@ class AddExpenseScreen(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(strings.sharedExpense)
+                    Text(sharedExpenseLabel)
                 }
 
                 if (readOnly) {
@@ -435,7 +479,7 @@ class AddExpenseScreen(
                         colors = homeBudgetTextButtonColors(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(strings.close)
+                        Text(closeLabel)
                     }
                 } else {
                     Row(
@@ -447,7 +491,7 @@ class AddExpenseScreen(
                             colors = homeBudgetButtonColors(),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(strings.cancel)
+                            Text(cancelLabel)
                         }
 
                         Button(
@@ -460,13 +504,13 @@ class AddExpenseScreen(
 
                                     when {
                                         parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
-                                            snackbarHostState.showSnackbar(strings.enterValidAmount)
+                                            snackbarHostState.showSnackbar(enterValidAmountLabel)
                                         }
                                         selectedCategoryId.isBlank() -> {
-                                            snackbarHostState.showSnackbar(strings.selectCategory)
+                                            snackbarHostState.showSnackbar(selectCategoryLabel)
                                         }
                                         expenseDate == null -> {
-                                            snackbarHostState.showSnackbar(strings.selectDate)
+                                            snackbarHostState.showSnackbar(selectDateLabel)
                                         }
                                         else -> {
                                             isSaving = true
@@ -522,7 +566,7 @@ class AddExpenseScreen(
                                                 }.onSuccess {
                                                     onClose()
                                                 }.onFailure {
-                                                    snackbarHostState.showSnackbar(strings.unableToSaveExpense)
+                                                    snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
                                                 }
                                                 isSaving = false
                                             }
@@ -533,9 +577,9 @@ class AddExpenseScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                if (isSaving) strings.saving
-                                else if (expenseId == null) strings.saveExpense
-                                else strings.updateExpense
+                                if (isSaving) savingLabel
+                                else if (expenseId == null) saveExpenseLabel
+                                else updateExpenseLabel
                             )
                         }
                     }
@@ -560,7 +604,7 @@ class AddExpenseScreen(
                             selectedCategoryId = categoryId
                             showAddCategorySheet = false
                         }.onFailure {
-                            snackbarHostState.showSnackbar(strings.unableToSaveExpense)
+                            snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
                         }
                     }
                 }
@@ -570,13 +614,13 @@ class AddExpenseScreen(
         if (pendingRecurringAction != null) {
             RecurringSeriesActionDialog(
                 title = when (pendingRecurringAction) {
-                    RecurringExpenseAction.Update -> strings.updateRecurringExpenseTitle
-                    RecurringExpenseAction.Delete -> strings.deleteRecurringExpenseTitle
+                    RecurringExpenseAction.Update -> updateRecurringExpenseTitle
+                    RecurringExpenseAction.Delete -> deleteRecurringExpenseTitle
                     null -> ""
                 },
                 message = when (pendingRecurringAction) {
-                    RecurringExpenseAction.Update -> strings.recurringExpenseActionMessage(isUpdate = true)
-                    RecurringExpenseAction.Delete -> strings.recurringExpenseActionMessage(isUpdate = false)
+                    RecurringExpenseAction.Update -> recurringExpenseActionUpdate
+                    RecurringExpenseAction.Delete -> recurringExpenseActionDelete
                     null -> ""
                 },
                 onThisInstanceOnly = {
@@ -664,14 +708,14 @@ private fun CategorySelectorRow(
     onSelectCategory: () -> Unit,
     onAddCategory: () -> Unit
 ) {
-    val strings = LocalStrings.current
+    val categoryLabel = stringResource(Res.string.category)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = strings.category,
+            text = categoryLabel,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(end = 16.dp)
@@ -702,7 +746,8 @@ private fun CategorySplitButton(
     onAddCategory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val strings = LocalStrings.current
+    val addCategoryLabel = stringResource(Res.string.add_category)
+    val selectCategoryLabel = stringResource(Res.string.select_category)
 
     SplitButtonLayout(
         modifier = modifier,
@@ -713,7 +758,7 @@ private fun CategorySplitButton(
                 colors = homeBudgetButtonColors()
             ) {
                 Text(
-                    text = categoryName ?: strings.selectCategory,
+                    text = categoryName ?: selectCategoryLabel,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -728,7 +773,7 @@ private fun CategorySplitButton(
                 Icon(
                     imageVector = Icons.Filled.Add,
                     modifier = Modifier.size(SplitButtonDefaults.TrailingIconSize),
-                    contentDescription = strings.addCategory
+                    contentDescription = addCategoryLabel
                 )
             }
         }
@@ -741,7 +786,10 @@ private fun AddCategorySheet(
     onDismiss: () -> Unit,
     onAddCategory: (String) -> Unit
 ) {
-    val strings = LocalStrings.current
+    val addCategoryLabel = stringResource(Res.string.add_category)
+    val addLabel = stringResource(Res.string.add)
+    val cancelLabel = stringResource(Res.string.cancel)
+    val categoryNameLabel = stringResource(Res.string.category_name)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var categoryName by remember { mutableStateOf("") }
     val trimmedCategoryName = categoryName.trim()
@@ -760,13 +808,13 @@ private fun AddCategorySheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = strings.addCategory,
+                text = addCategoryLabel,
                 style = MaterialTheme.typography.titleLarge
             )
             PlatformTextField(
                 value = categoryName,
                 onValueChange = { categoryName = it },
-                label = strings.categoryName,
+                label = categoryNameLabel,
                 modifier = Modifier.fillMaxWidth()
             )
             Row(
@@ -777,7 +825,7 @@ private fun AddCategorySheet(
                     onClick = onDismiss,
                     colors = homeBudgetTextButtonColors()
                 ) {
-                    Text(strings.cancel)
+                    Text(cancelLabel)
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(
@@ -785,7 +833,7 @@ private fun AddCategorySheet(
                     onClick = { onAddCategory(trimmedCategoryName) },
                     colors = homeBudgetButtonColors()
                 ) {
-                    Text(strings.add)
+                    Text(addLabel)
                 }
             }
         }

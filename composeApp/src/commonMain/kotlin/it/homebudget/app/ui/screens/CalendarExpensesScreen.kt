@@ -18,16 +18,19 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
-import it.homebudget.app.localization.LocalStrings
+import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -54,8 +57,10 @@ class CalendarExpensesScreen : Screen {
         onOpenExpense: (String) -> Unit
     ) {
         val repository: ExpenseRepository = koinInject()
-        val strings = LocalStrings.current
         val isIos = rememberIsIosPlatform()
+        val backLabel = stringResource(Res.string.back)
+        val calendarLabel = stringResource(Res.string.calendar)
+        val currencySymbol = stringResource(Res.string.currency_symbol)
         val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy(Category::id) }
@@ -129,7 +134,7 @@ class CalendarExpensesScreen : Screen {
                         title = {
                             MonthNavigationTitle(
                                 selectedMonth = selectedMonth,
-                                subtitle = "${strings.calendar} • ${formatAmount(monthTotal)}",
+                                subtitle = "$calendarLabel • ${formatAmount(monthTotal, currencySymbol)}",
                                 onPreviousMonth = { updateSelectedMonth(selectedMonth.previous()) },
                                 onNextMonth = { updateSelectedMonth(selectedMonth.next()) }
                             )
@@ -137,7 +142,7 @@ class CalendarExpensesScreen : Screen {
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onBack) {
-                                    Text(strings.back)
+                                    Text(backLabel)
                                 }
                             }
                         }
@@ -176,6 +181,7 @@ private fun CalendarExpensesContent(
     onSelectDate: (LocalDate) -> Unit,
     onOpenExpense: (String) -> Unit
 ) {
+    val currencySymbol = stringResource(Res.string.currency_symbol)
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -192,7 +198,7 @@ private fun CalendarExpensesContent(
                     ) {
                         MonthNavigationTitle(
                             selectedMonth = selectedMonth,
-                            subtitle = formatAmount(monthTotal),
+                            subtitle = formatAmount(monthTotal, currencySymbol),
                             onPreviousMonth = onPreviousMonth,
                             onNextMonth = onNextMonth
                         )
@@ -228,9 +234,9 @@ private fun CalendarMonthCard(
     monthTotalsByDate: Map<LocalDate, BigInteger>,
     onSelectDate: (LocalDate) -> Unit
 ) {
-    val strings = LocalStrings.current
     val today = remember { currentLocalDate() }
     val visibleDates = remember(selectedMonth) { buildVisibleCalendarDates(selectedMonth) }
+    val shortWeekdayNames = stringArrayResource(Res.array.short_weekday_names)
 
     PlatformCard(
         modifier = Modifier.fillMaxWidth(),
@@ -250,7 +256,7 @@ private fun CalendarMonthCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = strings.shortWeekdayName(dayIndex),
+                            text = shortWeekdayNames[dayIndex],
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -358,7 +364,12 @@ private fun SelectedDayExpensesCard(
     expenses: List<Expense>,
     onOpenExpense: (String) -> Unit
 ) {
-    val strings = LocalStrings.current
+    val currencySymbol = stringResource(Res.string.currency_symbol)
+    val noExpensesForDayLabel = stringResource(Res.string.no_expenses_for_day)
+    val sharedLabel = stringResource(Res.string.shared)
+    val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+    val resolveCategoryName = rememberCategoryNameResolver()
+    val selectedDateLabel = formatExpenseDateGroupTitle(selectedDate)
     val dayTotal = remember(expenses) { expenses.sumBigIntegerOf(Expense::amount) }
 
     PlatformCard(
@@ -382,7 +393,7 @@ private fun SelectedDayExpensesCard(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = formatAmount(dayTotal),
+                    text = formatAmount(dayTotal, currencySymbol),
                     style = MaterialTheme.typography.titleSmall
                 )
             }
@@ -391,7 +402,7 @@ private fun SelectedDayExpensesCard(
 
             if (expenses.isEmpty()) {
                 Text(
-                    text = strings.noExpensesForDay,
+                    text = noExpensesForDayLabel,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -402,22 +413,22 @@ private fun SelectedDayExpensesCard(
                         HorizontalDivider()
                     }
 
-                    val categoryName = categoriesById[expense.categoryId]
-                        ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                        ?: strings.unknownCategory
-                    val title = expense.description?.takeIf { it.isNotBlank() } ?: categoryName
-                    val subtitle = when {
-                        title != categoryName && expense.isShared == 1L -> "$categoryName • ${strings.shared}"
-                        title != categoryName -> categoryName
-                        expense.isShared == 1L -> strings.shared
-                        else -> formatExpenseDateGroupTitle(selectedDate)
-                    }
+                    val row = calendarExpenseRowPresentation(
+                        expense = expense,
+                        categoriesById = categoriesById,
+                        sharedLabel = sharedLabel,
+                        selectedDateLabel = selectedDateLabel,
+                        unknownCategoryLabel = unknownCategoryLabel,
+                        resolveCategoryName = { category ->
+                            resolveCategoryName(category.id, category.name, category.isCustom)
+                        }
+                    )
 
                     ExpenseListItemRow(
-                        title = title,
-                        subtitleText = subtitle,
-                        amountText = formatAmount(expense.amount),
-                        isRecurring = !expense.recurringSeriesId.isNullOrBlank(),
+                        title = row.title,
+                        subtitleText = row.subtitleText,
+                        amountText = formatAmount(expense.amount, currencySymbol),
+                        isRecurring = row.isRecurring,
                         onClick = { onOpenExpense(expense.id) }
                     )
                 }

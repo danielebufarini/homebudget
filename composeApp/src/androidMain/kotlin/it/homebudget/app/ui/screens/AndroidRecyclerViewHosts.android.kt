@@ -27,10 +27,6 @@ import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
-import it.homebudget.app.localization.LocalStrings
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
 
 @Composable
 internal actual fun AndroidGroupedExpensesRecyclerView(
@@ -40,30 +36,44 @@ internal actual fun AndroidGroupedExpensesRecyclerView(
     modifier: Modifier,
     emptyStateText: String,
     expenseFallbackTitle: String,
+    currencySymbol: String,
+    unknownCategoryLabel: String,
+    resolveCategoryName: (Category) -> String,
     groupsExpandedByDefault: Boolean,
     onOpenExpense: (String) -> Unit,
     onDeleteExpense: ((String) -> Unit)?
 ) {
     val compositionContext = rememberCompositionContext()
-    val strings = LocalStrings.current
-    val sections = remember(groupedExpenses, categoriesById, isGroupedByDate, expenseFallbackTitle, strings) {
+    val sections = remember(
+        groupedExpenses,
+        categoriesById,
+        isGroupedByDate,
+        expenseFallbackTitle,
+        currencySymbol,
+        unknownCategoryLabel,
+        resolveCategoryName
+    ) {
         groupedExpenses.map { (categoryName, categoryExpenses) ->
             AndroidGroupedExpenseSectionModel(
                 id = categoryName,
                 title = categoryName,
-                totalAmountText = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount)),
+                totalAmountText = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount), currencySymbol),
                 rows = categoryExpenses
                     .map { expense ->
-                        val expenseName = expense.description?.ifBlank { expenseFallbackTitle } ?: expenseFallbackTitle
-                        val resolvedCategoryName = categoriesById[expense.categoryId]
-                            ?.let { strings.categoryName(it.id, it.name, it.isCustom) }
-                            ?: strings.unknownCategory
+                        val row = groupedExpenseRowPresentation(
+                            expense = expense,
+                            categoriesById = categoriesById,
+                            isGroupedByDate = isGroupedByDate,
+                            expenseFallbackTitle = expenseFallbackTitle,
+                            unknownCategoryLabel = unknownCategoryLabel,
+                            resolveCategoryName = resolveCategoryName
+                        )
                         AndroidGroupedExpenseRowModel(
                             id = expense.id,
-                            title = if (isGroupedByDate) resolvedCategoryName else expenseName,
-                            subtitleText = if (isGroupedByDate) expenseName else formatDate(epochMillis = expense.date),
-                            amountText = formatAmount(expense.amount),
-                            isRecurring = !expense.recurringSeriesId.isNullOrBlank()
+                            title = row.title,
+                            subtitleText = row.subtitleText,
+                            amountText = formatAmount(expense.amount, currencySymbol),
+                            isRecurring = row.isRecurring
                         )
                     }
             )
@@ -442,11 +452,4 @@ private fun AndroidGroupedExpenseRow(
             onClick = { onOpenExpense(row.id) }
         )
     }
-}
-
-private fun formatDate(epochMillis: Long): String {
-    val date = Instant.fromEpochMilliseconds(epochMillis)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
-    return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
 }

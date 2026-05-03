@@ -1,12 +1,15 @@
 package it.homebudget.app.data
 
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
-import it.homebudget.app.localization.AppStrings
+import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.getString
 import kotlin.time.Instant
 
 enum class CsvRowType {
@@ -25,25 +28,34 @@ suspend fun exportBudgetItemsToCsv(
     endDate: LocalDate
 ): CsvExportFile {
     require(startDate <= endDate) { "startDate must be on or before endDate" }
+    val resolveCategoryName = loadCategoryNameResolver()
 
     return exportFullDatabaseCsv(
         repository = repository,
         startDate = startDate,
-        endDate = endDate
+        endDate = endDate,
+        localizeCategoryName = { category ->
+            resolveCategoryName(category.id, category.name, category.isCustom)
+        },
+        unknownCategory = getString(Res.string.unknown_category)
     )
 }
 
 private suspend fun exportFullDatabaseCsv(
     repository: ExpenseRepository,
     startDate: LocalDate,
-    endDate: LocalDate
+    endDate: LocalDate,
+    localizeCategoryName: (Category) -> String,
+    unknownCategory: String
 ): CsvExportFile {
     return buildFullDatabaseCsvExport(
         expenses = repository.getAllExpensesSnapshot(),
         incomes = repository.getAllIncomesSnapshot(),
         categories = repository.getAllCategoriesSnapshot(),
         startDate = startDate,
-        endDate = endDate
+        endDate = endDate,
+        localizeCategoryName = localizeCategoryName,
+        unknownCategory = unknownCategory
     )
 }
 
@@ -51,7 +63,9 @@ internal fun buildExpensesCsvExport(
     expenses: List<Expense>,
     categories: List<Category>,
     startDate: LocalDate,
-    endDate: LocalDate
+    endDate: LocalDate,
+    localizeCategoryName: (Category) -> String,
+    unknownCategory: String
 ): CsvExportFile {
     val categoriesById = categories.associateBy(Category::id)
     val rows = expenses
@@ -63,8 +77,8 @@ internal fun buildExpensesCsvExport(
                 "expense",
                 expense.date.toCsvDate(),
                 categoriesById[expense.categoryId]
-                    ?.let { category -> AppStrings.categoryName(category.id, category.name, category.isCustom) }
-                    ?: AppStrings.unknownCategory,
+                    ?.let(localizeCategoryName)
+                    ?: unknownCategory,
                 formatAmountInput(expense.amount),
                 expense.description.orEmpty(),
                 (expense.isShared == 1L).toCsvFlag(),
@@ -138,7 +152,9 @@ internal fun buildFullDatabaseCsvExport(
     incomes: List<Income>,
     categories: List<Category>,
     startDate: LocalDate,
-    endDate: LocalDate
+    endDate: LocalDate,
+    localizeCategoryName: (Category) -> String,
+    unknownCategory: String
 ): CsvExportFile {
     val categoriesById = categories.associateBy(Category::id)
     val expenseRows = expenses
@@ -151,8 +167,8 @@ internal fun buildFullDatabaseCsvExport(
                     "expense",
                     expense.date.toCsvDate(),
                     categoriesById[expense.categoryId]
-                        ?.let { category -> AppStrings.categoryName(category.id, category.name, category.isCustom) }
-                        ?: AppStrings.unknownCategory,
+                        ?.let(localizeCategoryName)
+                        ?: unknownCategory,
                     formatAmountInput(expense.amount),
                     expense.description.orEmpty(),
                     (expense.isShared == 1L).toCsvFlag(),

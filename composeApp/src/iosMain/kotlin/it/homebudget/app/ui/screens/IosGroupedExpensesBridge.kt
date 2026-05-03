@@ -1,6 +1,7 @@
 package it.homebudget.app.ui.screens
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
@@ -8,14 +9,16 @@ import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.di.initKoin
-import it.homebudget.app.localization.AppStrings
+import it.homebudget.app.localization.formatResourceArgs
+import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.getStringArray
 import org.koin.mp.KoinPlatformTools
 import kotlin.time.Clock
-import kotlin.time.Instant
 
 class IosGroupedExpenseRow(
     val id: String,
@@ -81,6 +84,21 @@ private data class PreparedIosExpense(
     val isShared: Boolean
 )
 
+private data class IosGroupedLocalization(
+    val currencySymbol: String,
+    val expense: String,
+    val income: String,
+    val sharedExpense: String,
+    val category: String,
+    val noExpensesForMonth: String,
+    val noSharedExpensesForMonth: String,
+    val noIncomeForMonth: String,
+    val unknownCategory: String,
+    val noExpensesForCategoryThisMonthTemplate: String,
+    val shortMonthNames: List<String>,
+    val resolveCategoryName: (String, String, Long) -> String
+)
+
 internal data class IosGroupedSnapshotsCache(
     val byCategory: IosGroupedExpensesSnapshot,
     val byDate: IosGroupedExpensesSnapshot
@@ -115,10 +133,12 @@ internal class IosGroupedExpensesStore(
             combine(repository.getAllExpenses(), repository.getAllCategories()) { expenses, categories ->
                 expenses to categories
             }.collect { (expenses, categories) ->
+                val localization = loadIosGroupedLocalization()
                 state.value = buildStoreState(
                     expenses = expenses,
                     categories = categories,
-                    trackedKeys = trackedKeys
+                    trackedKeys = trackedKeys,
+                    localization = localization
                 )
             }
         }
@@ -139,7 +159,8 @@ internal class IosGroupedExpensesStore(
             val cache = withContext(Dispatchers.Default) {
                 buildSnapshotsCache(
                     preparedExpenses = currentState.preparedExpenses,
-                    key = key
+                    key = key,
+                    localization = loadIosGroupedLocalization()
                 )
             }
             val latestState = state.value
@@ -170,20 +191,23 @@ internal class IosGroupedExpensesStore(
     private suspend fun buildStoreState(
         expenses: List<Expense>,
         categories: List<Category>,
-        trackedKeys: Set<GroupedExpensesCacheKey>
+        trackedKeys: Set<GroupedExpensesCacheKey>,
+        localization: IosGroupedLocalization
     ): IosGroupedExpensesStoreState = withContext(Dispatchers.Default) {
         val categoriesById = categories.associateBy { it.id }
         val preparedExpenses = expenses.map { expense ->
             prepareExpense(
                 expense = expense,
-                categoriesById = categoriesById
+                categoriesById = categoriesById,
+                localization = localization
             )
         }
         val cacheKeys = defaultPrewarmKeys(preparedExpenses) + trackedKeys
         val caches = cacheKeys.associateWith { key ->
             buildSnapshotsCache(
                 preparedExpenses = preparedExpenses,
-                key = key
+                key = key,
+                localization = localization
             )
         }
         IosGroupedExpensesStoreState(
@@ -299,11 +323,13 @@ class IosMonthlyIncomesObserver(
         updatesJob = scope.launch {
             val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
             repository.getAllIncomes().collect { incomes ->
+                val localization = loadIosGroupedLocalization()
                 val snapshot = withContext(Dispatchers.Default) {
                     buildMonthlyIncomesSnapshot(
                         incomes = incomes,
                         year = year,
-                        month = month
+                        month = month,
+                        localization = localization
                     )
                 }
                 onUpdate(snapshot)
@@ -344,7 +370,8 @@ internal fun startIosGroupedExpensesStore() {
 
 private fun buildSnapshotsCache(
     preparedExpenses: List<PreparedIosExpense>,
-    key: GroupedExpensesCacheKey
+    key: GroupedExpensesCacheKey,
+    localization: IosGroupedLocalization
 ): IosGroupedSnapshotsCache {
     val filteredExpenses = preparedExpenses.filter { expense ->
         expense.year == key.year &&
@@ -353,8 +380,11 @@ private fun buildSnapshotsCache(
             includeCategory(expense.categoryName, key.screenType, key.categoryName)
     }
 
-    val totalAmountText = formatAmount(filteredExpenses.sumBigIntegerOf(PreparedIosExpense::amount))
-    val emptyStateText = emptyStateText(key.screenType, key.categoryName)
+    val totalAmountText = formatAmount(
+        filteredExpenses.sumBigIntegerOf(PreparedIosExpense::amount),
+        localization.currencySymbol
+    )
+    val emptyStateText = emptyStateText(key.screenType, key.categoryName, localization)
 
     return IosGroupedSnapshotsCache(
         byCategory = IosGroupedExpensesSnapshot(
@@ -363,7 +393,8 @@ private fun buildSnapshotsCache(
             sections = buildSections(
                 groupedExpenses = filteredExpenses.groupBy { it.categoryName },
                 groupingMode = "category",
-                screenType = key.screenType
+                screenType = key.screenType,
+                localization = localization
             )
         ),
         byDate = IosGroupedExpensesSnapshot(
@@ -372,7 +403,8 @@ private fun buildSnapshotsCache(
             sections = buildSections(
                 groupedExpenses = filteredExpenses.groupBy { it.dateGroupTitleText },
                 groupingMode = "date",
-                screenType = key.screenType
+                screenType = key.screenType,
+                localization = localization
             )
         )
     )
@@ -381,29 +413,33 @@ private fun buildSnapshotsCache(
 private fun buildMonthlyIncomesSnapshot(
     incomes: List<Income>,
     year: Int,
-    month: Int
+    month: Int,
+    localization: IosGroupedLocalization
 ): IosMonthlyIncomesSnapshot {
     val filteredIncomes = incomes.filter { income ->
-        val localDate = income.date.toLocalDate()
+        val localDate = epochMillisToLocalDate(income.date)
         localDate.year == year && localDate.month.ordinal + 1 == month
     }
 
     val sections = filteredIncomes
-        .groupBy { it.date.toLocalDate() }
+        .groupBy { epochMillisToLocalDate(it.date) }
         .toList()
         .sortedByDescending { (_, items) -> items.maxOf { it.date } }
         .map { (date, items) ->
             val sortedItems = items.sortedByDescending { it.date }
             IosIncomeSection(
-                id = formatExpenseDateGroupTitle(date),
-                title = formatExpenseDateGroupTitle(date),
-                totalAmountText = formatAmount(sortedItems.sumBigIntegerOf(Income::amount)),
+                id = formatExpenseDateGroupTitle(date, localization.shortMonthNames),
+                title = formatExpenseDateGroupTitle(date, localization.shortMonthNames),
+                totalAmountText = formatAmount(
+                    sortedItems.sumBigIntegerOf(Income::amount),
+                    localization.currencySymbol
+                ),
                 rows = sortedItems.map { income ->
                     IosIncomeRow(
                         id = income.id,
-                        title = income.description?.ifBlank { AppStrings.income } ?: AppStrings.income,
-                        subtitleText = formatDate(income.date),
-                        amountText = formatAmount(income.amount),
+                        title = income.description?.ifBlank { localization.income } ?: localization.income,
+                        subtitleText = formatExpenseDate(income.date),
+                        amountText = formatAmount(income.amount, localization.currencySymbol),
                         recurringSeriesId = income.recurringSeriesId
                     )
                 }
@@ -411,8 +447,11 @@ private fun buildMonthlyIncomesSnapshot(
         }
 
     return IosMonthlyIncomesSnapshot(
-        totalAmountText = formatAmount(filteredIncomes.sumBigIntegerOf(Income::amount)),
-        emptyStateText = AppStrings.noIncomeForMonth,
+        totalAmountText = formatAmount(
+            filteredIncomes.sumBigIntegerOf(Income::amount),
+            localization.currencySymbol
+        ),
+        emptyStateText = localization.noIncomeForMonth,
         sections = sections
     )
 }
@@ -420,7 +459,8 @@ private fun buildMonthlyIncomesSnapshot(
 private fun buildSections(
     groupedExpenses: Map<String, List<PreparedIosExpense>>,
     groupingMode: String,
-    screenType: String
+    screenType: String,
+    localization: IosGroupedLocalization
 ): List<IosGroupedExpenseSection> = groupedExpenses
     .toList()
     .sortedWith(
@@ -440,10 +480,13 @@ private fun buildSections(
         IosGroupedExpenseSection(
             id = groupName,
             title = groupName,
-            totalAmountText = formatAmount(sortedExpenses.sumBigIntegerOf(PreparedIosExpense::amount)),
+            totalAmountText = formatAmount(
+                sortedExpenses.sumBigIntegerOf(PreparedIosExpense::amount),
+                localization.currencySymbol
+            ),
             rows = sortedExpenses.map { expense ->
-                val expenseName = expense.description?.ifBlank { expenseFallbackTitle(screenType) }
-                    ?: expenseFallbackTitle(screenType)
+                val expenseName = expense.description?.ifBlank { expenseFallbackTitle(screenType, localization) }
+                    ?: expenseFallbackTitle(screenType, localization)
                 IosGroupedExpenseRow(
                     id = expense.id,
                     title = if (groupingMode == "date") expense.categoryName else expenseName,
@@ -457,20 +500,21 @@ private fun buildSections(
 
 private fun prepareExpense(
     expense: Expense,
-    categoriesById: Map<String, Category>
+    categoriesById: Map<String, Category>,
+    localization: IosGroupedLocalization
 ): PreparedIosExpense {
-    val localDate = expense.date.toLocalDate()
+    val localDate = epochMillisToLocalDate(expense.date)
     return PreparedIosExpense(
         id = expense.id,
         amount = expense.amount,
-        amountText = formatAmount(expense.amount),
+        amountText = formatAmount(expense.amount, localization.currencySymbol),
         categoryName = categoriesById[expense.categoryId]
-            ?.let { AppStrings.categoryName(it.id, it.name, it.isCustom) }
-            ?: AppStrings.unknownCategory,
+            ?.let { localization.resolveCategoryName(it.id, it.name, it.isCustom) }
+            ?: localization.unknownCategory,
         description = expense.description,
         recurringSeriesId = expense.recurringSeriesId,
-        dateText = formatDate(expense.date),
-        dateGroupTitleText = formatDateGroupTitle(expense.date),
+        dateText = formatExpenseDate(expense.date),
+        dateGroupTitleText = formatDateGroupTitle(expense.date, localization.shortMonthNames),
         dateMillis = expense.date,
         year = localDate.year,
         month = localDate.month.ordinal + 1,
@@ -511,30 +555,42 @@ private fun includeCategory(groupName: String, screenType: String, categoryName:
     else -> true
 }
 
-private fun expenseFallbackTitle(screenType: String): String = when (screenType) {
-    "shared" -> AppStrings.sharedExpense
-    else -> AppStrings.expense
+private fun expenseFallbackTitle(screenType: String, localization: IosGroupedLocalization): String = when (screenType) {
+    "shared" -> localization.sharedExpense
+    else -> localization.expense
 }
 
-private fun emptyStateText(screenType: String, categoryName: String?): String = when (screenType) {
-    "shared" -> AppStrings.noSharedExpensesForMonth()
-    "category" -> AppStrings.noExpensesForCategoryThisMonth(categoryName ?: AppStrings.category)
-    else -> AppStrings.noExpensesForMonth
+private fun emptyStateText(
+    screenType: String,
+    categoryName: String?,
+    localization: IosGroupedLocalization
+): String = when (screenType) {
+    "shared" -> localization.noSharedExpensesForMonth
+    "category" -> localization.noExpensesForCategoryThisMonthTemplate
+        .formatResourceArgs(categoryName ?: localization.category)
+    else -> localization.noExpensesForMonth
 }
 
-private fun formatDate(epochMillis: Long): String {
-    val date = epochMillis.toLocalDate()
-    return "${date.year}-${(date.month.ordinal + 1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
+private fun formatDateGroupTitle(epochMillis: Long, shortMonthNames: List<String>): String {
+    return formatExpenseDateGroupTitle(epochMillisToLocalDate(epochMillis), shortMonthNames)
 }
 
-private fun formatDateGroupTitle(epochMillis: Long): String {
-    val date = epochMillis.toLocalDate()
-    return formatExpenseDateGroupTitle(date)
+private suspend fun loadIosGroupedLocalization(): IosGroupedLocalization {
+    return IosGroupedLocalization(
+        currencySymbol = getString(Res.string.currency_symbol),
+        expense = getString(Res.string.expense),
+        income = getString(Res.string.income),
+        sharedExpense = getString(Res.string.shared_expense),
+        category = getString(Res.string.category),
+        noExpensesForMonth = getString(Res.string.no_expenses_for_month),
+        noSharedExpensesForMonth = getString(Res.string.no_shared_expenses_for_month),
+        noIncomeForMonth = getString(Res.string.no_income_for_month),
+        unknownCategory = getString(Res.string.unknown_category),
+        noExpensesForCategoryThisMonthTemplate = getString(Res.string.no_expenses_for_category_this_month),
+        shortMonthNames = getStringArray(Res.array.short_month_names),
+        resolveCategoryName = loadCategoryNameResolver()
+    )
 }
-
-private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)
-    .toLocalDateTime(TimeZone.currentSystemDefault())
-    .date
 
 private fun ensureKoinStartedIfNeeded() {
     if (KoinPlatformTools.defaultContext().getOrNull() == null) {
