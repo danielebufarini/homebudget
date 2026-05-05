@@ -6,7 +6,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.sqldelight)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.room)
 }
 
 kotlin {
@@ -21,9 +22,6 @@ kotlin {
         iosX64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
-        iosTarget.binaries.all {
-            linkerOpts("-lsqlite3")
-        }
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
@@ -40,10 +38,6 @@ kotlin {
             implementation(libs.google.api.client.gson)
             implementation(libs.google.api.services.drive)
             implementation(libs.mlkit.genai.prompt)
-            implementation(libs.sqldelight.android)
-        }
-        iosMain.dependencies {
-            implementation(libs.sqldelight.native)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -61,8 +55,8 @@ kotlin {
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.transitions)
             implementation(libs.voyager.koin)
-            implementation(libs.sqldelight.coroutines)
-            implementation(libs.sqldelight.primitive.adapters)
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.sqlite.bundled)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
@@ -104,14 +98,13 @@ android {
 }
 
 dependencies {
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspIosX64", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
     debugImplementation(libs.compose.uiTooling)
 }
 
-sqldelight {
-    databases {
-        create("HomeBudgetDatabase") {
-            packageName.set("it.homebudget.app.database")
-        }
-    }
-    linkSqlite = true
+room {
+    schemaDirectory("$projectDir/schemas")
 }

@@ -1,17 +1,10 @@
 package it.homebudget.app.data
 
-import app.cash.sqldelight.ColumnAdapter
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 
 private val ZERO = BigInteger.ZERO
 private val ONE_HUNDRED = 100.toBigInteger()
-
-val BigIntegerColumnAdapter = object : ColumnAdapter<BigInteger, String> {
-    override fun decode(databaseValue: String): BigInteger = databaseValue.toBigInteger()
-
-    override fun encode(value: BigInteger): String = value.toString()
-}
 
 fun parseAmountInput(value: String): BigInteger? {
     val normalized = value.trim().replace(',', '.')

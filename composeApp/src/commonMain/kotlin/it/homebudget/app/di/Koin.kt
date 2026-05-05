@@ -1,11 +1,8 @@
 package it.homebudget.app.di
 
-import it.homebudget.app.data.BigIntegerColumnAdapter
-import it.homebudget.app.data.DatabaseDriverFactory
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import it.homebudget.app.data.DatabaseBuilderFactory
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.database.Expense
-import it.homebudget.app.database.HomeBudgetDatabase
-import it.homebudget.app.database.Income
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -14,16 +11,10 @@ expect val platformModule: Module
 
 val sharedModule = module {
     single {
-        val driverFactory = get<DatabaseDriverFactory>()
-        HomeBudgetDatabase(
-            driver = driverFactory.createDriver(),
-            expenseAdapter = Expense.Adapter(
-                amountAdapter = BigIntegerColumnAdapter
-            ),
-            incomeAdapter = Income.Adapter(
-                amountAdapter = BigIntegerColumnAdapter
-            )
-        )
+        val builderFactory = get<DatabaseBuilderFactory>()
+        builderFactory.createBuilder()
+            .setDriver(BundledSQLiteDriver())
+            .build()
     }
     single { ExpenseRepository(get()) }
 }

@@ -18,23 +18,24 @@ The project is not structured as a generic “shared everything” sample. Most 
   - domain and persistence code
   - navigation screens built with Voyager
   - theme, shared UI components, and localization helpers
-  - SQLDelight schema under `sqldelight`
+  - Room entities, DAOs, and schema export
   - Compose Multiplatform string resources under `composeResources`
 - `androidMain`
   - Android entry points (`MainActivity`, `Application`)
   - Android-specific DI bootstrap
-  - Android-only integrations such as speech recognition and a few RecyclerView-backed list hosts
+  - Android-only integrations such as speech recognition and Google Drive cloud-backup access
 - `iosMain`
   - `ComposeUIViewController` factories used by the SwiftUI app
   - iOS-specific DI bootstrap
-  - iOS bridge objects used by Swift code for grouped expenses, categories, CSV import/export, and voice entry
+  - iOS bridge objects used by Swift code for grouped expenses, categories, CSV import/export, backup/restore, and voice entry
 
 ### `iosApp`
 
 `iosApp` is the native iOS application target. It is responsible for:
 
 - the SwiftUI root navigation stack
-- file import/export UI
+- CSV file import/export UI
+- fixed-file iCloud backup/restore UI
 - some native list, category-management, and voice-entry flows
 - hosting shared Compose screens inside `UIViewControllerRepresentable`
 
@@ -53,7 +54,7 @@ Koin is used as the runtime composition root.
 
 The shared module registers:
 
-- `DatabaseDriverFactory`
+- `DatabaseBuilderFactory`
 - `HomeBudgetDatabase`
 - `ExpenseRepository`
 
@@ -61,13 +62,17 @@ The rest of the application resolves dependencies directly from Koin inside scre
 
 ### 2. Persistence
 
-Persistence is built on SQLDelight with SQLite.
+Persistence is built on Room KMP with SQLite.
 
-- Schema: `composeApp/src/commonMain/sqldelight`
-- Driver factory:
-  - shared expect declaration in [`DatabaseDriverFactory.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseDriverFactory.kt)
-  - Android actual in [`DatabaseDriverFactory.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseDriverFactory.android.kt)
-  - iOS actual in [`DatabaseDriverFactory.ios.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseDriverFactory.ios.kt)
+- Shared database definition: [`HomeBudgetDatabase.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database/HomeBudgetDatabase.kt)
+- Shared entities and DAOs: [`composeApp/src/commonMain/kotlin/it/homebudget/app/database`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
+- Platform-specific builders:
+  - shared expect declaration in [`DatabaseBuilderFactory.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.kt)
+  - Android actual in [`DatabaseBuilderFactory.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.android.kt)
+  - iOS actual in [`DatabaseBuilderFactory.ios.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.ios.kt)
+- Exported Room schemas: [`composeApp/schemas`](./composeApp/schemas)
+
+The Room database file is `homebudget-room.db` on both platforms.
 
 The repository is intentionally simple. [`ExpenseRepository.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt) owns:
 
@@ -89,7 +94,6 @@ Most screens are implemented in shared Kotlin under `commonMain/ui/screens`, for
 - dashboard
 - add/edit expense
 - add/edit income
-- calendar
 - grouped monthly/shared/category expense screens
 
 The shared application entry point is [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt). It wraps the app in the shared theme and starts a Voyager `Navigator` with `DashboardScreen`.
@@ -99,7 +103,8 @@ The shared application entry point is [`App.kt`](./composeApp/src/commonMain/kot
 Android uses the shared Compose screens as the primary UI, but a few paths remain platform-specific:
 
 - speech recognition and Gemini-related voice input
-- RecyclerView-backed grouped/category lists where Compose is hosted inside row containers
+- Google Drive access for fixed-file cloud backup/restore
+- a native RecyclerView host for the categories screen
 
 Those Android-only pieces live under `androidMain/ui/screens`.
 
@@ -158,7 +163,7 @@ Currency handling is also localized:
 The common pattern across the app is:
 
 1. resolve `ExpenseRepository` from Koin
-2. subscribe to `Flow` from SQLDelight queries
+2. subscribe to `Flow` from Room DAO queries
 3. transform database rows into UI-specific grouped or formatted structures
 4. render directly from those structures
 
@@ -183,12 +188,49 @@ Examples:
 - grouped expenses snapshots
 - categories snapshots and mutations
 - CSV import/export controllers
+- backup export/restore controllers
 - voice-entry persistence and lookup support
 - deletion flows for expenses/incomes
 
-These classes sit in `composeApp/src/iosMain/kotlin/.../ui/screens` and exist specifically to keep Swift code away from low-level SQLDelight or repository details.
+These classes sit in `composeApp/src/iosMain/kotlin/.../ui/screens` and exist specifically to keep Swift code away from low-level Room or repository details.
 
-### 8. Voice Input
+### 8. Data Transfer and Backup
+
+The app exposes two distinct data-transfer paths in the UI:
+
+- `Full Cloud Backup`
+- `CSV Import / Export`
+
+They are intentionally separate because they solve different problems.
+
+#### Full Cloud Backup
+
+Full backup/restore is complete-database transfer, not a CSV export.
+
+- Android stores a fixed JSON backup file in Google Drive app data:
+  - [`GoogleDriveBackup.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/GoogleDriveBackup.android.kt)
+- iOS stores a fixed JSON backup file in the app's iCloud container:
+  - [`ICloudBackupStore.swift`](./iosApp/iosApp/ICloudBackupStore.swift)
+- shared backup serialization lives in:
+  - [`BudgetBackup.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
+
+The fixed backup filename is `homebudget-backup.json`.
+
+#### CSV Import / Export
+
+CSV import/export is file-based transfer for selected data ranges. It is deliberately not presented as a full backup mechanism.
+
+- shared CSV import/export logic:
+  - [`CsvBudgetImport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetImport.kt)
+  - [`CsvBudgetExport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetExport.kt)
+- Android launchers and transfer UI:
+  - [`CsvImportLauncher.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/CsvImportLauncher.android.kt)
+  - [`CsvExportLauncher.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/CsvExportLauncher.android.kt)
+  - [`AndroidDataTransferUi.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/AndroidDataTransferUi.kt)
+- iOS shell flow:
+  - [`ContentView.swift`](./iosApp/iosApp/ContentView.swift)
+
+### 9. Voice Input
 
 Voice input is platform-specific by design.
 
@@ -219,8 +261,8 @@ The iOS implementation is intentionally more native because the recording and UX
 - Shared app entry: [`composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
 - Shared DI: [`composeApp/src/commonMain/kotlin/it/homebudget/app/di`](./composeApp/src/commonMain/kotlin/it/homebudget/app/di)
 - Shared data layer: [`composeApp/src/commonMain/kotlin/it/homebudget/app/data`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data)
+- Shared Room database: [`composeApp/src/commonMain/kotlin/it/homebudget/app/database`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
 - Shared screens: [`composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens)
-- SQLDelight schema: [`composeApp/src/commonMain/sqldelight`](./composeApp/src/commonMain/sqldelight)
 - Shared resources: [`composeApp/src/commonMain/composeResources`](./composeApp/src/commonMain/composeResources)
 - Android-specific code: [`composeApp/src/androidMain/kotlin`](./composeApp/src/androidMain/kotlin)
 - iOS Kotlin bridges: [`composeApp/src/iosMain/kotlin`](./composeApp/src/iosMain/kotlin)
@@ -247,7 +289,7 @@ xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug 
 
 ## Notes
 
-- The app is backed by SQLite on both platforms through SQLDelight.
+- The app is backed by SQLite on both platforms through Room KMP.
 - The iOS target always rebuilds the Kotlin framework during Xcode builds.
 - Default categories are seeded at runtime if the category table is empty.
 - The codebase is intentionally pragmatic: shared where it reduces real cost, native where platform APIs, visual language, or host navigation make that simpler.

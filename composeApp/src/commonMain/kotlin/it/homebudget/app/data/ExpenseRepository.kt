@@ -1,16 +1,13 @@
 package it.homebudget.app.data
 
-import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Income
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 
 private data class DefaultCategorySeed(
     val name: String,
@@ -26,157 +23,87 @@ data class RestoredCategory(
 
 class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
-    private val expenseQueries = database.expenseQueries
-    private val categoryQueries = database.categoryQueries
-    private val incomeQueries = database.incomeQueries
+    private val expenseDao = database.expenseDao()
+    private val categoryDao = database.categoryDao()
+    private val incomeDao = database.incomeDao()
 
-    fun getAllCategories(): Flow<List<Category>> {
-        return categoryQueries.getAllCategories().asFlow().mapToList(Dispatchers.IO)
-    }
+    fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories()
 
     suspend fun insertCategory(id: String, name: String, icon: String, isCustom: Boolean) {
-        withContext(Dispatchers.IO) {
-            categoryQueries.insertCategory(
+        categoryDao.insertCategory(
+            Category(
                 id = id,
                 name = name,
                 icon = icon,
                 isCustom = if (isCustom) 1L else 0L
             )
-        }
+        )
     }
 
     suspend fun updateCategory(id: String, name: String, icon: String) {
-        withContext(Dispatchers.IO) {
-            categoryQueries.updateCategory(
-                name = name,
-                icon = icon,
-                id = id
-            )
-        }
+        categoryDao.updateCategory(id = id, name = name, icon = icon)
     }
 
     suspend fun insertDefaultCategoriesIfEmpty() {
-        withContext(Dispatchers.IO) {
-            database.transaction {
-                val count = categoryQueries.countCategories().executeAsOne()
-                if (count == 0L) {
-                    val defaults = listOf(
-                        DefaultCategorySeed(
-                            name = "Household expenses",
-                            icon = "home"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Food",
-                            icon = "shopping_cart"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Restaurant",
-                            icon = "restaurant"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Car expenses",
-                            icon = "directions_car"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Travel",
-                            icon = "flight"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Healthcare expenses",
-                            icon = "local_hospital"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Bills",
-                            icon = "receipt"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Personal expenses",
-                            icon = "person"
-                        ),
-                        DefaultCategorySeed(
-                            name = "Miscellaneous",
-                            icon = "category"
-                        )
-                    )
-                    defaults.forEachIndexed { index, category ->
-                        categoryQueries.insertCategory(
+        writeTransaction {
+            if (categoryDao.countCategories() == 0L) {
+                val defaults = listOf(
+                    DefaultCategorySeed("Household expenses", "home"),
+                    DefaultCategorySeed("Food", "shopping_cart"),
+                    DefaultCategorySeed("Restaurant", "restaurant"),
+                    DefaultCategorySeed("Car expenses", "directions_car"),
+                    DefaultCategorySeed("Travel", "flight"),
+                    DefaultCategorySeed("Healthcare expenses", "local_hospital"),
+                    DefaultCategorySeed("Bills", "receipt"),
+                    DefaultCategorySeed("Personal expenses", "person"),
+                    DefaultCategorySeed("Miscellaneous", "category")
+                )
+                defaults.forEachIndexed { index, category ->
+                    categoryDao.insertCategory(
+                        Category(
                             id = "default_$index",
                             name = category.name,
                             icon = category.icon,
                             isCustom = 0L
                         )
-                    }
+                    )
                 }
             }
         }
     }
 
-    fun getAllExpenses(): Flow<List<Expense>> {
-        return expenseQueries.getAllExpenses().asFlow().mapToList(Dispatchers.IO)
-    }
+    fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
 
-    suspend fun getAllExpensesSnapshot(): List<Expense> {
-        return withContext(Dispatchers.IO) {
-            expenseQueries.getAllExpenses().executeAsList()
-        }
-    }
+    suspend fun getAllExpensesSnapshot(): List<Expense> = expenseDao.getAllExpensesSnapshot()
 
-    fun getAllIncomes(): Flow<List<Income>> {
-        return incomeQueries.getAllIncomes().asFlow().mapToList(Dispatchers.IO)
-    }
+    fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes()
 
-    suspend fun getAllIncomesSnapshot(): List<Income> {
-        return withContext(Dispatchers.IO) {
-            incomeQueries.getAllIncomes().executeAsList()
-        }
-    }
+    suspend fun getAllIncomesSnapshot(): List<Income> = incomeDao.getAllIncomesSnapshot()
 
-    suspend fun getAllCategoriesSnapshot(): List<Category> {
-        return withContext(Dispatchers.IO) {
-            categoryQueries.getAllCategories().executeAsList()
-        }
-    }
+    suspend fun getAllCategoriesSnapshot(): List<Category> = categoryDao.getAllCategoriesSnapshot()
 
-    suspend fun getExpenseById(id: String): Expense? {
-        return withContext(Dispatchers.IO) {
-            expenseQueries.getExpenseById(id).executeAsOneOrNull()
-        }
-    }
+    suspend fun getExpenseById(id: String): Expense? = expenseDao.getExpenseById(id)
 
-    suspend fun getIncomeById(id: String): Income? {
-        return withContext(Dispatchers.IO) {
-            incomeQueries.getIncomeById(id).executeAsOneOrNull()
-        }
-    }
+    suspend fun getIncomeById(id: String): Income? = incomeDao.getIncomeById(id)
 
     suspend fun deleteExpense(id: String) {
-        withContext(Dispatchers.IO) {
-            expenseQueries.deleteExpense(id)
-        }
+        expenseDao.deleteExpense(id)
     }
 
     suspend fun deleteCategory(id: String) {
-        withContext(Dispatchers.IO) {
-            categoryQueries.deleteCategory(id)
-        }
+        categoryDao.deleteCategory(id)
     }
 
     suspend fun deleteRecurringExpenseSeries(seriesId: String) {
-        withContext(Dispatchers.IO) {
-            expenseQueries.deleteRecurringExpenseSeries(seriesId)
-        }
+        expenseDao.deleteRecurringExpenseSeries(seriesId)
     }
 
     suspend fun deleteIncome(id: String) {
-        withContext(Dispatchers.IO) {
-            incomeQueries.deleteIncome(id)
-        }
+        incomeDao.deleteIncome(id)
     }
 
     suspend fun deleteRecurringIncomeSeries(seriesId: String) {
-        withContext(Dispatchers.IO) {
-            incomeQueries.deleteRecurringIncomeSeries(seriesId)
-        }
+        incomeDao.deleteRecurringIncomeSeries(seriesId)
     }
 
     suspend fun insertExpense(
@@ -223,28 +150,23 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
     }
 
     suspend fun insertIncomes(incomes: List<PendingIncome>) {
-        withContext(Dispatchers.IO) {
-            database.transaction {
-                incomes.forEach { income ->
-                    incomeQueries.insertIncome(
+        writeTransaction {
+            incomes.forEach { income ->
+                incomeDao.insertIncome(
+                    Income(
                         id = income.id,
                         amount = income.amount,
                         date = income.date,
                         description = income.description,
                         recurringSeriesId = income.recurringSeriesId
                     )
-                }
+                )
             }
         }
     }
 
     suspend fun cancelRecurringIncomes(seriesId: String, fromDate: Long) {
-        withContext(Dispatchers.IO) {
-            incomeQueries.deleteRecurringIncomesFrom(
-                recurringSeriesId = seriesId,
-                date = fromDate
-            )
-        }
+        incomeDao.deleteRecurringIncomesFrom(seriesId = seriesId, fromDate = fromDate)
     }
 
     suspend fun updateRecurringIncomeSeries(
@@ -254,34 +176,31 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         date: Long,
         description: String?
     ) {
-        withContext(Dispatchers.IO) {
-            val seriesItems = incomeQueries.getRecurringIncomesBySeries(seriesId)
-                .executeAsList()
-                .map { income ->
-                    ExistingRecurringIncomeItem(
-                        id = income.id,
-                        date = income.date
-                    )
-                }
-
-            insertIncomes(
-                buildUpdatedRecurringIncomeSeries(
-                    existingItems = seriesItems,
-                    anchorItemId = anchorIncomeId,
-                    anchorDate = date,
-                    amount = amount,
-                    description = description,
-                    recurringSeriesId = seriesId
+        val seriesItems = incomeDao.getRecurringIncomesBySeries(seriesId)
+            .map { income ->
+                ExistingRecurringIncomeItem(
+                    id = income.id,
+                    date = income.date
                 )
+            }
+
+        insertIncomes(
+            buildUpdatedRecurringIncomeSeries(
+                existingItems = seriesItems,
+                anchorItemId = anchorIncomeId,
+                anchorDate = date,
+                amount = amount,
+                description = description,
+                recurringSeriesId = seriesId
             )
-        }
+        )
     }
 
     suspend fun insertExpenses(expenses: List<PendingExpense>) {
-        withContext(Dispatchers.IO) {
-            database.transaction {
-                expenses.forEach { expense ->
-                    expenseQueries.insertExpense(
+        writeTransaction {
+            expenses.forEach { expense ->
+                expenseDao.insertExpense(
+                    Expense(
                         id = expense.id,
                         amount = expense.amount,
                         date = expense.date,
@@ -290,18 +209,13 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         isShared = if (expense.isShared) 1L else 0L,
                         recurringSeriesId = expense.recurringSeriesId
                     )
-                }
+                )
             }
         }
     }
 
     suspend fun cancelRecurringExpenses(seriesId: String, fromDate: Long) {
-        withContext(Dispatchers.IO) {
-            expenseQueries.deleteRecurringExpensesFrom(
-                recurringSeriesId = seriesId,
-                date = fromDate
-            )
-        }
+        expenseDao.deleteRecurringExpensesFrom(seriesId = seriesId, fromDate = fromDate)
     }
 
     suspend fun updateRecurringExpenseSeries(
@@ -313,38 +227,33 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         description: String?,
         isShared: Boolean
     ) {
-        withContext(Dispatchers.IO) {
-            val seriesItems = expenseQueries.getRecurringExpensesBySeries(seriesId)
-                .executeAsList()
-                .map { expense ->
-                    ExistingRecurringExpenseItem(
-                        id = expense.id,
-                        date = expense.date
-                    )
-                }
-
-            insertExpenses(
-                buildUpdatedRecurringExpenseSeries(
-                    existingItems = seriesItems,
-                    anchorItemId = anchorExpenseId,
-                    anchorDate = date,
-                    amount = amount,
-                    categoryId = categoryId,
-                    description = description,
-                    isShared = isShared,
-                    recurringSeriesId = seriesId
+        val seriesItems = expenseDao.getRecurringExpensesBySeries(seriesId)
+            .map { expense ->
+                ExistingRecurringExpenseItem(
+                    id = expense.id,
+                    date = expense.date
                 )
+            }
+
+        insertExpenses(
+            buildUpdatedRecurringExpenseSeries(
+                existingItems = seriesItems,
+                anchorItemId = anchorExpenseId,
+                anchorDate = date,
+                amount = amount,
+                categoryId = categoryId,
+                description = description,
+                isShared = isShared,
+                recurringSeriesId = seriesId
             )
-        }
+        )
     }
 
     suspend fun updateRecurringExpenseShared(seriesId: String, isShared: Boolean) {
-        withContext(Dispatchers.IO) {
-            expenseQueries.updateRecurringExpenseShared(
-                isShared = if (isShared) 1L else 0L,
-                recurringSeriesId = seriesId
-            )
-        }
+        expenseDao.updateRecurringExpenseShared(
+            seriesId = seriesId,
+            isShared = if (isShared) 1L else 0L
+        )
     }
 
     suspend fun replaceAllData(
@@ -352,23 +261,25 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         expenses: List<PendingExpense>,
         incomes: List<PendingIncome>
     ) {
-        withContext(Dispatchers.IO) {
-            database.transaction {
-                expenseQueries.deleteAllExpenses()
-                incomeQueries.deleteAllIncomes()
-                categoryQueries.deleteAllCategories()
+        writeTransaction {
+            expenseDao.deleteAllExpenses()
+            incomeDao.deleteAllIncomes()
+            categoryDao.deleteAllCategories()
 
-                categories.forEach { category ->
-                    categoryQueries.insertCategory(
+            categories.forEach { category ->
+                categoryDao.insertCategory(
+                    Category(
                         id = category.id,
                         name = category.name,
                         icon = category.icon,
                         isCustom = if (category.isCustom) 1L else 0L
                     )
-                }
+                )
+            }
 
-                expenses.forEach { expense ->
-                    expenseQueries.insertExpense(
+            expenses.forEach { expense ->
+                expenseDao.insertExpense(
+                    Expense(
                         id = expense.id,
                         amount = expense.amount,
                         date = expense.date,
@@ -377,17 +288,27 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         isShared = if (expense.isShared) 1L else 0L,
                         recurringSeriesId = expense.recurringSeriesId
                     )
-                }
+                )
+            }
 
-                incomes.forEach { income ->
-                    incomeQueries.insertIncome(
+            incomes.forEach { income ->
+                incomeDao.insertIncome(
+                    Income(
                         id = income.id,
                         amount = income.amount,
                         date = income.date,
                         description = income.description,
                         recurringSeriesId = income.recurringSeriesId
                     )
-                }
+                )
+            }
+        }
+    }
+
+    private suspend fun <T> writeTransaction(block: suspend () -> T): T {
+        return database.useWriterConnection { transactor ->
+            transactor.immediateTransaction {
+                block.invoke()
             }
         }
     }

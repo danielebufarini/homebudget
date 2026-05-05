@@ -1,12 +1,17 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -116,6 +121,7 @@ class MonthlyIncomesScreen(
                     }
                 }
             } else {
+                val expandedState = remember { mutableStateMapOf<String, Boolean>() }
                 androidx.compose.foundation.lazy.LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -125,11 +131,20 @@ class MonthlyIncomesScreen(
                 ) {
                     for ((groupDate, incomesForDate) in groupedIncomes) {
                         item(key = groupDate.toString()) {
+                            val sectionId = groupDate.toString()
+                            val expanded = expandedState.getOrPut(sectionId) { true }
+                            val chevronRotation by animateFloatAsState(
+                                targetValue = if (expanded) 180f else 0f,
+                                label = "MonthlyIncomeSectionChevronRotation"
+                            )
                             PlatformCard(contentPadding = PaddingValues(0.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .clickable {
+                                                expandedState[sectionId] = !expanded
+                                            }
                                             .padding(horizontal = 16.dp, vertical = 14.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -145,17 +160,34 @@ class MonthlyIncomesScreen(
                                             text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), currencySymbol),
                                             textAlign = TextAlign.End
                                         )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.KeyboardArrowDown,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .padding(2.dp)
+                                                    .rotate(chevronRotation),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
 
-                                    HorizontalDivider()
-                                    for (income in incomesForDate) {
-                                        key(income.id) {
-                                            MonthlyIncomeRow(
-                                                income = income,
-                                                onOpenIncome = onOpenIncome,
-                                                onDeleteIncome = deleteIncomeAction
-                                            )
-                                            HorizontalDivider()
+                                    if (expanded) {
+                                        HorizontalDivider()
+                                        for (income in incomesForDate) {
+                                            key(income.id) {
+                                                MonthlyIncomeRow(
+                                                    income = income,
+                                                    onOpenIncome = onOpenIncome,
+                                                    onDeleteIncome = deleteIncomeAction
+                                                )
+                                                HorizontalDivider()
+                                            }
                                         }
                                     }
                                 }
