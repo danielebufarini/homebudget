@@ -1542,13 +1542,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unable to export the backup file"
+            "value": "Unable to save the full app backup to the cloud file."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile esportare il file di backup"
+            "value": "Impossibile salvare il backup completo dell'app nel file cloud."
           }
         }
       }
@@ -1558,13 +1558,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup file exported"
+            "value": "Full app backup saved to the cloud file."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "File di backup esportato"
+            "value": "Backup completo dell'app salvato nel file cloud."
           }
         }
       }
@@ -1574,13 +1574,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unable to read the backup file"
+            "value": "Unable to read the full app backup file."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile leggere il file di backup"
+            "value": "Impossibile leggere il file di backup completo dell'app."
           }
         }
       }
@@ -1622,13 +1622,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unable to restore the backup file"
+            "value": "Unable to restore the full app backup."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile ripristinare il file di backup"
+            "value": "Impossibile ripristinare il backup completo dell'app."
           }
         }
       }
@@ -1638,13 +1638,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup restored: %1$d categories, %2$d expenses, %3$d incomes."
+            "value": "Full app backup restored: %1$d categories, %2$d expenses, %3$d incomes."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup ripristinato: %1$d categorie, %2$d spese, %3$d entrate."
+            "value": "Backup completo dell'app ripristinato: %1$d categorie, %2$d spese, %3$d entrate."
           }
         }
       }
@@ -1654,13 +1654,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This will replace the current data with %1$d categories, %2$d expenses, and %3$d incomes from the backup file."
+            "value": "This will replace all current app data with %1$d categories, %2$d expenses, and %3$d incomes from the cloud backup file."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Questo sostituirà i dati attuali con %1$d categorie, %2$d spese e %3$d entrate del file di backup."
+            "value": "Questa operazione sostituirà tutti i dati attuali dell'app con %1$d categorie, %2$d spese e %3$d entrate del file di backup cloud."
           }
         }
       }
@@ -1693,6 +1693,326 @@
           "stringUnit": {
             "state": "translated",
             "value": "Import/export locale"
+          }
+        }
+      }
+    },
+    "Full Cloud Backup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full Cloud Backup"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup completo cloud"
+          }
+        }
+      }
+    },
+    "CSV Import / Export": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV Import / Export"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import/export CSV"
+          }
+        }
+      }
+    },
+    "Cloud Backup & Restore": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud Backup & Restore"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup e ripristino cloud"
+          }
+        }
+      }
+    },
+    "Save or restore a complete copy of your app data in the cloud.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save or restore a complete copy of your app data in the cloud."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva o ripristina una copia completa dei dati dell'app nel cloud."
+          }
+        }
+      }
+    },
+    "This affects the complete app data.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This affects the complete app data."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa operazione riguarda tutti i dati dell'app."
+          }
+        }
+      }
+    },
+    "Back Up Now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Now"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esegui backup ora"
+          }
+        }
+      }
+    },
+    "Restore Backup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Backup"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina backup"
+          }
+        }
+      }
+    },
+    "CSV Import & Export": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV Import & Export"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import ed export CSV"
+          }
+        }
+      }
+    },
+    "Move selected data using CSV files stored on this phone.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move selected data using CSV files stored on this phone."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sposta dati selezionati usando file CSV salvati su questo telefono."
+          }
+        }
+      }
+    },
+    "Not suitable for full app restore.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not suitable for full app restore."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non adatto a un ripristino completo dell'app."
+          }
+        }
+      }
+    },
+    "Export CSV…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export CSV…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta CSV…"
+          }
+        }
+      }
+    },
+    "Choose the date range for the data you want to export.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the date range for the data you want to export."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli l'intervallo di date dei dati che vuoi esportare."
+          }
+        }
+      }
+    },
+    "Date range": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date range"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo di date"
+          }
+        }
+      }
+    },
+    "All dates": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All dates"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le date"
+          }
+        }
+      }
+    },
+    "Last 30 days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 days"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimi 30 giorni"
+          }
+        }
+      }
+    },
+    "Custom range": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom range"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo personalizzato"
+          }
+        }
+      }
+    },
+    "From": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da"
+          }
+        }
+      }
+    },
+    "To": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        }
+      }
+    },
+    "iCloud backup is unavailable on this device or account.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud backup is unavailable on this device or account."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il backup iCloud non è disponibile su questo dispositivo o account."
+          }
+        }
+      }
+    },
+    "No cloud backup file was found.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No cloud backup file was found."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun file di backup cloud trovato."
           }
         }
       }

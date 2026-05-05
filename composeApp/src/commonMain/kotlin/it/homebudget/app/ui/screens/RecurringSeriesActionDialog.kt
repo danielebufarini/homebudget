@@ -70,32 +70,22 @@ private fun HomeBudgetDeletionContainer(
     onDismiss: () -> Unit,
     actions: @Composable ColumnScope.() -> Unit
 ) {
-    if (rememberIsIosPlatform()) {
-        BasicAlertDialog(onDismissRequest = onDismiss) {
-            HomeBudgetDeletionCard(
-                title = title,
-                message = message,
-                actions = actions
-            )
-        }
-    } else {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 6.dp,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-        ) {
-            HomeBudgetDeletionCard(
-                title = title,
-                message = message,
-                actions = actions,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 20.dp)
-            )
-        }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 6.dp,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        HomeBudgetDeletionCard(
+            title = title,
+            message = message,
+            actions = actions,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp)
+        )
     }
 }
 
@@ -163,7 +153,10 @@ private fun HomeBudgetDeletionDialogButton(
                 contentColor = MaterialTheme.colorScheme.onError
             )
         } else {
-            homeBudgetFilledTonalButtonColors()
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
         }
     ) {
         Text(label)

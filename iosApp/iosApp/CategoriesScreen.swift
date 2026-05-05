@@ -125,11 +125,12 @@ struct NativeCategoriesScreen: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 if category.isCustom {
-                                    Button(role: .destructive) {
+                                    Button {
                                         categoryPendingDelete = category
                                     } label: {
                                         Label(appLocalized("Delete"), systemImage: "trash")
                                     }
+                                    .tint(.red)
                                 }
                             }
                             .listRowSeparator(.hidden)

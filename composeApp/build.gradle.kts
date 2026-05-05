@@ -35,6 +35,10 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.recyclerview)
+            implementation(libs.play.services.auth)
+            implementation(libs.google.api.client.android)
+            implementation(libs.google.api.client.gson)
+            implementation(libs.google.api.services.drive)
             implementation(libs.mlkit.genai.prompt)
             implementation(libs.sqldelight.android)
         }
@@ -84,6 +88,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/DEPENDENCIES"
         }
     }
     buildTypes {

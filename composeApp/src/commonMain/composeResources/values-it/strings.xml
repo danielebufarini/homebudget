@@ -12,12 +12,17 @@
     <string name="add_income">Aggiungi entrata</string>
     <string name="amount">Importo</string>
     <string name="back">Indietro</string>
-    <string name="backup">Backup/ripristino cloud</string>
-    <string name="backup_to_google_drive">Backup su Google Drive</string>
-    <string name="backup_export_failed">Impossibile esportare il file di backup</string>
-    <string name="backup_export_saved">File di backup esportato</string>
-    <string name="backup_restore_failed">Impossibile ripristinare il file di backup</string>
-    <string name="backup_restore_invalid">Impossibile leggere il file di backup</string>
+    <string name="backup">Backup completo cloud</string>
+    <string name="backup_to_google_drive">Esegui backup ora</string>
+    <string name="backup_export_failed">Impossibile salvare il backup completo dell'app nel file cloud.</string>
+    <string name="backup_export_saved">Backup completo dell'app salvato nel file cloud.</string>
+    <string name="backup_restore_failed">Impossibile ripristinare il backup completo dell'app.</string>
+    <string name="backup_restore_invalid">Impossibile leggere il file di backup completo dell'app.</string>
+    <string name="cloud_backup_restore_title">Backup e ripristino cloud</string>
+    <string name="cloud_backup_restore_description">Salva o ripristina una copia completa dei dati dell'app nel cloud.</string>
+    <string name="cloud_backup_restore_note">Questa operazione riguarda tutti i dati dell'app.</string>
+    <string name="cloud_backup_unavailable">Il backup cloud non è disponibile su questo dispositivo o account.</string>
+    <string name="cloud_backup_not_found">Nessun file di backup cloud trovato.</string>
     <string name="by_category">Per categoria</string>
     <string name="by_date">Per data</string>
     <string name="calendar">Calendario</string>
@@ -34,7 +39,10 @@
     <string name="icon_theme_people_and_work">Persone e lavoro</string>
     <string name="icon_theme_general_and_hobbies">Generali e hobby</string>
     <string name="close">Chiudi</string>
-    <string name="csv">Import/export locale</string>
+    <string name="csv">Import/export CSV</string>
+    <string name="csv_transfer_title">Import ed export CSV</string>
+    <string name="csv_transfer_description">Sposta dati selezionati usando file CSV salvati su questo telefono.</string>
+    <string name="csv_transfer_note">Non adatto a un ripristino completo dell'app.</string>
     <string name="custom_category">Categoria personalizzata</string>
     <string name="dashboard">Riepilogo</string>
     <string name="date">Data</string>
@@ -60,12 +68,20 @@
     <string name="expenses_by_category">Spese per categoria</string>
     <string name="export">Esporta</string>
     <string name="export_csv">Esporta CSV</string>
+    <string name="export_csv_ellipsis">Esporta CSV…</string>
+    <string name="export_csv_description">Scegli l'intervallo di date dei dati che vuoi esportare.</string>
     <string name="highest_day">Giorno in cui si è speso di più</string>
     <string name="import_action">Importa</string>
     <string name="import_csv">Importa CSV</string>
     <string name="income">Entrate</string>
     <string name="installments">Rate</string>
     <string name="invalid_date_range">La data iniziale deve essere precedente o uguale a quella finale</string>
+    <string name="all_dates">Tutte le date</string>
+    <string name="last_30_days">Ultimi 30 giorni</string>
+    <string name="custom_range">Intervallo personalizzato</string>
+    <string name="date_range">Intervallo di date</string>
+    <string name="from">Da</string>
+    <string name="to">A</string>
     <string name="monthly_summary">Riepilogo mensile</string>
     <string name="new_expense">Nuova spesa</string>
     <string name="no_expenses_for_day">Nessuna spesa per questo giorno</string>
@@ -78,7 +94,9 @@
     <string name="refresh">Aggiorna</string>
     <string name="restore">Ripristina</string>
     <string name="restore_backup">Ripristina backup</string>
-    <string name="restore_from_google_drive">Ripristina da Google Drive</string>
+    <string name="restore_from_google_drive">Ripristina backup</string>
+    <string name="google_drive_access_cancelled">L'accesso a Google Drive è stato annullato.</string>
+    <string name="google_drive_access_failed">Impossibile accedere a Google Drive per il backup cloud.</string>
     <string name="save">Salva</string>
     <string name="save_expense">Salva spesa</string>
     <string name="saving">Salvataggio...</string>
@@ -148,9 +166,9 @@
     <string name="whole_series">Tutta la serie</string>
     <string name="yes">Sì</string>
     <string name="no">No</string>
-    <string name="csv_import_failed">Impossibile importare il file CSV</string>
+    <string name="csv_import_failed">Impossibile importare il file CSV.</string>
     <string name="csv_import_no_rows">Nessuna riga importabile trovata nel file CSV</string>
-    <string name="csv_export_failed">Impossibile esportare il file CSV</string>
+    <string name="csv_export_failed">Impossibile esportare il file CSV.</string>
     <string name="csv_export_saved">File CSV esportato</string>
     <string name="recurring_expense_series_info">Questa spesa fa parte di una serie mensile ricorrente.</string>
     <string name="recurring_income_series_info">Questa entrata fa parte di una serie mensile ricorrente.</string>
@@ -169,8 +187,8 @@
     <!-- ── CSV import result ──────────────────────────────────────────────── -->
     <string name="csv_import_success">Importate %1$d voci dal CSV</string>
     <string name="csv_import_success_with_skipped">Importate %1$d voci dal CSV, saltate %2$d</string>
-    <string name="backup_restore_confirmation_message">Questo sostituirà i dati attuali con %1$d categorie, %2$d spese e %3$d entrate del file di backup.</string>
-    <string name="backup_restore_success">Backup ripristinato: %1$d categorie, %2$d spese, %3$d entrate.</string>
+    <string name="backup_restore_confirmation_message">Questa operazione sostituirà tutti i dati attuali dell'app con %1$d categorie, %2$d spese e %3$d entrate del file di backup cloud.</string>
+    <string name="backup_restore_success">Backup completo dell'app ripristinato: %1$d categorie, %2$d spese, %3$d entrate.</string>
 
     <!-- ── Default category names ─────────────────────────────────────────── -->
     <string name="category_default_0">Spese casa</string>

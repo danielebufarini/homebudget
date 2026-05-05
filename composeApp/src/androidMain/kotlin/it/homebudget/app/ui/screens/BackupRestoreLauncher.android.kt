@@ -1,5 +1,6 @@
 package it.homebudget.app.ui.screens
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -7,6 +8,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.common.api.ApiException
 import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.BudgetBackupCounters
 import it.homebudget.app.data.ExpenseRepository
@@ -45,21 +49,17 @@ internal actual fun rememberBackupRestoreLauncher(
     val restoreFailedLabel = stringResource(Res.string.backup_restore_failed)
     val restoreConfirmationTemplate = stringResource(Res.string.backup_restore_confirmation_message)
     val restoreSuccessTemplate = stringResource(Res.string.backup_restore_success)
+    val cloudBackupNotFoundLabel = stringResource(Res.string.cloud_backup_not_found)
+    val driveAccessCancelledLabel = stringResource(Res.string.google_drive_access_cancelled)
+    val driveAccessFailedLabel = stringResource(Res.string.google_drive_access_failed)
+    val signInClient = remember(context) { createGoogleDriveBackupSignInClient(context) }
     var pendingRestoreText by remember { mutableStateOf<String?>(null) }
     var pendingRestorePreview by remember { mutableStateOf<BudgetBackupCounters?>(null) }
 
-    val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) {
-            return@rememberLauncherForActivityResult
-        }
-
+    fun prepareRestore(account: GoogleSignInAccount) {
         scope.launch {
             runCatching {
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.readBytes().decodeToString()
-                } ?: error(invalidBackupLabel)
+                downloadBackupFromGoogleDrive(context, account)
             }.onSuccess { backupText ->
                 runCatching {
                     parseBudgetBackup(backupText)
@@ -70,13 +70,42 @@ internal actual fun rememberBackupRestoreLauncher(
                     onRestoreMessage(error.message ?: invalidBackupLabel)
                 }
             }.onFailure { error ->
-                onRestoreMessage(error.message ?: invalidBackupLabel)
+                onRestoreMessage(
+                    when (error.message) {
+                        "CLOUD_BACKUP_NOT_FOUND" -> cloudBackupNotFoundLabel
+                        else -> error.message ?: invalidBackupLabel
+                    }
+                )
             }
         }
     }
 
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) {
+            onRestoreMessage(driveAccessCancelledLabel)
+            return@rememberLauncherForActivityResult
+        }
+
+        val account = runCatching {
+            GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                .getResult(ApiException::class.java)
+        }.getOrElse {
+            onRestoreMessage(it.message ?: driveAccessFailedLabel)
+            return@rememberLauncherForActivityResult
+        }
+
+        if (!hasGoogleDriveBackupAccess(account)) {
+            onRestoreMessage(driveAccessFailedLabel)
+            return@rememberLauncherForActivityResult
+        }
+
+        prepareRestore(account)
+    }
+
     return remember(
-        filePicker,
+        signInClient,
         repository,
         restoreBackupLabel,
         restoreLabel,
@@ -86,11 +115,19 @@ internal actual fun rememberBackupRestoreLauncher(
         restoreConfirmationTemplate,
         restoreSuccessTemplate,
         pendingRestorePreview,
-        pendingRestoreText
+        pendingRestoreText,
+        cloudBackupNotFoundLabel,
+        driveAccessCancelledLabel,
+        driveAccessFailedLabel
     ) {
         BackupRestoreLauncher(
             onOpen = {
-                filePicker.launch(arrayOf("application/json", "text/*"))
+                val account = GoogleSignIn.getLastSignedInAccount(context)
+                if (hasGoogleDriveBackupAccess(account)) {
+                    prepareRestore(requireNotNull(account))
+                } else {
+                    signInLauncher.launch(signInClient.signInIntent)
+                }
             },
             renderContent = {
                 val preview = pendingRestorePreview

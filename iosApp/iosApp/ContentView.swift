@@ -13,26 +13,12 @@ private enum Route: Hashable {
     case categoryExpenses(year: Int, month: Int, categoryName: String)
 }
 
-private struct CsvExportDocument: FileDocument {
-    static let readableContentTypes: [UTType] = [.commaSeparatedText, .plainText]
-
-    var text: String
-
-    init(text: String = "") {
-        self.text = text
-    }
-
-    init(configuration: ReadConfiguration) throws {
-        text = String(decoding: configuration.file.regularFileContents ?? Data(), as: UTF8.self)
-    }
-
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: Data(text.utf8))
-    }
+private enum ImportPickerKind {
+    case csv
 }
 
-private struct BackupExportDocument: FileDocument {
-    static let readableContentTypes: [UTType] = [.json, .plainText]
+private struct CsvExportDocument: FileDocument {
+    static let readableContentTypes: [UTType] = [.commaSeparatedText, .plainText]
 
     var text: String
 
@@ -102,17 +88,15 @@ private final class SafeAreaContainerViewController: UIViewController {
 struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
-    @State private var showCsvImporter = false
+    @State private var showCloudBackupSheet = false
+    @State private var showCsvTransferSheet = false
     @State private var showCsvExportSheet = false
     @State private var showCsvExporter = false
-    @State private var showBackupImporter = false
-    @State private var showBackupExporter = false
+    @State private var activeImportPicker: ImportPickerKind?
     @StateObject private var bannerPresenter = AppGlassBannerPresenter()
     @State private var csvExportDocument = CsvExportDocument()
     @State private var csvExportFilename = "budget.csv"
-    @State private var backupExportDocument = BackupExportDocument()
-    @State private var backupExportFilename = "homebudget-backup.json"
-    @State private var csvExportStartDate = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
+    @State private var csvExportStartDate = Calendar.current.date(byAdding: .day, value: -29, to: Date()) ?? Date()
     @State private var csvExportEndDate = Date()
     @State private var pendingBackupRestoreSelection: PendingBackupRestoreSelection?
     @State private var csvImportController = IosCsvImportController()
@@ -132,20 +116,14 @@ struct ContentView: View {
                             Button(appLocalized("Categories")) {
                                 path.append(Route.categories)
                             }
-                            Menu(appLocalized("CSV")) {
-                                Button(appLocalized("Import CSV")) {
-                                    showCsvImporter = true
-                                }
-                                Button(appLocalized("Export CSV")) {
-                                    showCsvExportSheet = true
+                            Button(appLocalized("Full Cloud Backup")) {
+                                presentAfterMenuDismiss {
+                                    showCloudBackupSheet = true
                                 }
                             }
-                            Menu(appLocalized("Backup")) {
-                                Button(appLocalized("Backup to iCloud")) {
-                                    exportBackup()
-                                }
-                                Button(appLocalized("Restore from iCloud")) {
-                                    showBackupImporter = true
+                            Button(appLocalized("CSV Import / Export")) {
+                                presentAfterMenuDismiss {
+                                    showCsvTransferSheet = true
                                 }
                             }
                         } label: {
@@ -170,6 +148,42 @@ struct ContentView: View {
                     }
                     .appGlassSheetPresentation()
                 }
+                .sheet(isPresented: $showCloudBackupSheet) {
+                    CloudBackupSheet(
+                        onCancel: { showCloudBackupSheet = false },
+                        onBackupNow: {
+                            showCloudBackupSheet = false
+                            presentAfterMenuDismiss {
+                                exportBackup()
+                            }
+                        },
+                        onRestoreBackup: {
+                            showCloudBackupSheet = false
+                            presentAfterMenuDismiss {
+                                beginBackupRestore()
+                            }
+                        }
+                    )
+                    .appGlassSheetPresentation(detents: [.height(320)])
+                }
+                .sheet(isPresented: $showCsvTransferSheet) {
+                    CsvTransferSheet(
+                        onCancel: { showCsvTransferSheet = false },
+                        onExportCsv: {
+                            showCsvTransferSheet = false
+                            presentAfterMenuDismiss {
+                                showCsvExportSheet = true
+                            }
+                        },
+                        onImportCsv: {
+                            showCsvTransferSheet = false
+                            presentAfterMenuDismiss {
+                                activeImportPicker = .csv
+                            }
+                        }
+                    )
+                    .appGlassSheetPresentation(detents: [.height(320)])
+                }
                 .sheet(isPresented: $showCsvExportSheet) {
                     CsvExportSheet(
                         startDate: $csvExportStartDate,
@@ -177,19 +191,20 @@ struct ContentView: View {
                         onCancel: { showCsvExportSheet = false },
                         onExport: exportCsv
                     )
-                    .appGlassSheetPresentation()
+                    .appGlassSheetPresentation(detents: [.height(360)])
                 }
                 .fileImporter(
-                    isPresented: $showCsvImporter,
-                    allowedContentTypes: [.commaSeparatedText, .plainText, .text]
+                    isPresented: Binding(
+                        get: { activeImportPicker != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                activeImportPicker = nil
+                            }
+                        }
+                    ),
+                    allowedContentTypes: activeImportAllowedContentTypes
                 ) { result in
-                    handleCsvSelection(result: result)
-                }
-                .fileImporter(
-                    isPresented: $showBackupImporter,
-                    allowedContentTypes: [.json, .plainText, .text]
-                ) { result in
-                    handleBackupSelection(result: result)
+                    handleImportSelection(result: result)
                 }
                 .fileExporter(
                     isPresented: $showCsvExporter,
@@ -199,21 +214,13 @@ struct ContentView: View {
                 ) { result in
                     handleCsvExport(result: result)
                 }
-                .fileExporter(
-                    isPresented: $showBackupExporter,
-                    document: backupExportDocument,
-                    contentType: .json,
-                    defaultFilename: backupExportFilename
-                ) { result in
-                    handleBackupExport(result: result)
-                }
                 .sheet(item: $pendingBackupRestoreSelection) { selection in
                     BackupRestoreSheet(
                         preview: selection.preview,
                         onCancel: { pendingBackupRestoreSelection = nil },
                         onRestore: { restoreBackup(selection: selection) }
                     )
-                    .appGlassSheetPresentation()
+                    .appGlassSheetPresentation(detents: [.height(300)])
                 }
                 .overlay(alignment: .top) {
                     AppGlassBannerOverlay(presenter: bannerPresenter)
@@ -366,15 +373,18 @@ struct ContentView: View {
         }
     }
 
-    private func exportCsv() {
-        guard csvExportStartDate <= csvExportEndDate else {
+    private func exportCsv(startDate: Date, endDate: Date) {
+        let normalizedStartDate = Calendar.current.startOfDay(for: startDate)
+        let normalizedEndDate = Calendar.current.startOfDay(for: endDate)
+
+        guard normalizedStartDate <= normalizedEndDate else {
             showCsvFeedback(appLocalized("Start date must be on or before end date"), style: .error)
             return
         }
 
         csvExportController.exportCsv(
-            startDateMillis: Int64(csvExportStartDate.timeIntervalSince1970 * 1000),
-            endDateMillis: Int64(csvExportEndDate.timeIntervalSince1970 * 1000)
+            startDateMillis: Int64(normalizedStartDate.timeIntervalSince1970 * 1000),
+            endDateMillis: Int64(normalizedEndDate.timeIntervalSince1970 * 1000)
         ) { fileName, content, errorMessage in
             Task { @MainActor in
                 if let fileName, let content {
@@ -393,27 +403,6 @@ struct ContentView: View {
         switch result {
         case .success:
             showCsvFeedback(appLocalized("CSV file exported"), style: .success)
-        case let .failure(error):
-            showCsvFeedback(error.localizedDescription, style: .error)
-        }
-    }
-
-    private func handleBackupSelection(result: Result<URL, Error>) {
-        switch result {
-        case let .success(url):
-            let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            do {
-                let data = try Data(contentsOf: url)
-                prepareBackupRestore(text: String(decoding: data, as: UTF8.self))
-            } catch {
-                showCsvFeedback(error.localizedDescription, style: .error)
-            }
         case let .failure(error):
             showCsvFeedback(error.localizedDescription, style: .error)
         }
@@ -463,10 +452,13 @@ struct ContentView: View {
     private func exportBackup() {
         backupExportController.exportBackup { fileName, content, errorMessage in
             Task { @MainActor in
-                if let fileName, let content {
-                    backupExportFilename = fileName
-                    backupExportDocument = BackupExportDocument(text: content)
-                    showBackupExporter = true
+                if fileName != nil, let content {
+                    do {
+                        try await ICloudBackupStore.writeBackup(text: content)
+                        showCsvFeedback(appLocalized("Backup file exported"), style: .success)
+                    } catch {
+                        showCsvFeedback(error.localizedDescription, style: .error)
+                    }
                 } else {
                     showCsvFeedback(errorMessage ?? appLocalized("Unable to export the backup file"), style: .error)
                 }
@@ -474,18 +466,37 @@ struct ContentView: View {
         }
     }
 
-    private func handleBackupExport(result: Result<URL, Error>) {
-        switch result {
-        case .success:
-            showCsvFeedback(appLocalized("Backup file exported"), style: .success)
-        case let .failure(error):
-            showCsvFeedback(error.localizedDescription, style: .error)
+    private func beginBackupRestore() {
+        Task { @MainActor in
+            do {
+                let text = try await ICloudBackupStore.readBackup()
+                prepareBackupRestore(text: text)
+            } catch {
+                showCsvFeedback(error.localizedDescription, style: .error)
+            }
         }
     }
 
     @MainActor
     private func showCsvFeedback(_ message: String, style: AppGlassBannerStyle) {
         bannerPresenter.show(message, style: style)
+    }
+
+    private var activeImportAllowedContentTypes: [UTType] {
+        [.commaSeparatedText, .plainText, .text]
+    }
+
+    private func handleImportSelection(result: Result<URL, Error>) {
+        activeImportPicker = nil
+        handleCsvSelection(result: result)
+    }
+
+    private func presentAfterMenuDismiss(_ action: @escaping @MainActor () -> Void) {
+        DispatchQueue.main.async {
+            Task { @MainActor in
+                action()
+            }
+        }
     }
 }
 
@@ -497,7 +508,7 @@ private struct BackupRestoreSheet: View {
     var body: some View {
         NavigationStack {
             AppGlassSheetContentScrollView {
-                AppGlassSheetSection(title: appLocalized("Restore backup")) {
+                AppGlassSheetSection(title: appLocalized("Restore Backup")) {
                     Text(
                         appLocalized(
                             "This will replace the current data with %1$d categories, %2$d expenses, and %3$d incomes from the backup file.",
@@ -512,7 +523,7 @@ private struct BackupRestoreSheet: View {
                 }
             }
             .appGlassSheetChrome()
-            .navigationTitle(appLocalized("Restore backup"))
+            .navigationTitle(appLocalized("Restore Backup"))
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
                 AppGlassSheetActionBar {
@@ -527,50 +538,170 @@ private struct BackupRestoreSheet: View {
     }
 }
 
+private struct CloudBackupSheet: View {
+    let onCancel: () -> Void
+    let onBackupNow: () -> Void
+    let onRestoreBackup: () -> Void
+
+    var body: some View {
+        AppActionSheet(
+            title: appLocalized("Cloud Backup & Restore"),
+            description: appLocalized("Save or restore a complete copy of your app data in the cloud."),
+            note: appLocalized("This affects the complete app data."),
+            primaryLabel: appLocalized("Back Up Now"),
+            primaryAction: onBackupNow,
+            secondaryLabel: appLocalized("Restore Backup"),
+            secondaryAction: onRestoreBackup,
+            onCancel: onCancel
+        )
+    }
+}
+
+private struct CsvTransferSheet: View {
+    let onCancel: () -> Void
+    let onExportCsv: () -> Void
+    let onImportCsv: () -> Void
+
+    var body: some View {
+        AppActionSheet(
+            title: appLocalized("CSV Import & Export"),
+            description: appLocalized("Move selected data using CSV files stored on this phone."),
+            note: appLocalized("Not suitable for full app restore."),
+            primaryLabel: appLocalized("Export CSV…"),
+            primaryAction: onExportCsv,
+            secondaryLabel: appLocalized("Import CSV"),
+            secondaryAction: onImportCsv,
+            onCancel: onCancel
+        )
+    }
+}
+
 private struct CsvExportSheet: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     let onCancel: () -> Void
-    let onExport: () -> Void
+    let onExport: (Date, Date) -> Void
 
     var body: some View {
-        NavigationStack {
-            AppGlassSheetContentScrollView {
-                AppGlassSheetSection(title: appLocalized("Start Date")) {
-                    DatePicker(
-                        "",
-                        selection: $startDate,
-                        displayedComponents: .date
-                    )
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+        AppActionSheet(
+            primaryLabel: appLocalized("Export CSV"),
+            primaryAction: { onExport(startDate, endDate) },
+            secondaryLabel: appLocalized("Cancel"),
+            secondaryAction: onCancel,
+            showCancelButton: false,
+            content: {
+                VStack(spacing: 16) {
+                    AppGlassSheetSection(title: appLocalized("From")) {
+                        DatePicker(
+                            "",
+                            selection: $startDate,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-                AppGlassSheetSection(title: appLocalized("End Date")) {
-                    DatePicker(
-                        "",
-                        selection: $endDate,
-                        displayedComponents: .date
-                    )
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    AppGlassSheetSection(title: appLocalized("To")) {
+                        DatePicker(
+                            "",
+                            selection: $endDate,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
-            .appGlassSheetChrome()
-            .navigationTitle(appLocalized("Export CSV"))
-            .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) {
-                AppGlassSheetActionBar {
-                    Button(appLocalized("Close"), action: onCancel)
+        )
+    }
+}
+
+private struct AppActionSheet<Content: View>: View {
+    let title: String?
+    let description: String?
+    let note: String?
+    let primaryLabel: String
+    let primaryAction: () -> Void
+    let secondaryLabel: String?
+    let secondaryAction: (() -> Void)?
+    let showCancelButton: Bool
+    let onCancel: (() -> Void)?
+    @ViewBuilder let content: Content
+
+    init(
+        title: String? = nil,
+        description: String? = nil,
+        note: String? = nil,
+        primaryLabel: String,
+        primaryAction: @escaping () -> Void,
+        secondaryLabel: String? = nil,
+        secondaryAction: (() -> Void)? = nil,
+        showCancelButton: Bool = true,
+        onCancel: (() -> Void)? = nil,
+        @ViewBuilder content: () -> Content = { EmptyView() }
+    ) {
+        self.title = title
+        self.description = description
+        self.note = note
+        self.primaryLabel = primaryLabel
+        self.primaryAction = primaryAction
+        self.secondaryLabel = secondaryLabel
+        self.secondaryAction = secondaryAction
+        self.showCancelButton = showCancelButton
+        self.onCancel = onCancel
+        self.content = content()
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                if title != nil || description != nil || note != nil {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let title {
+                            Text(title)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                        }
+
+                        if let description {
+                            Text(description)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let note {
+                            Text(note)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                content
+
+                Button(primaryLabel, action: primaryAction)
+                    .buttonStyle(.glassProminent)
+                    .frame(maxWidth: .infinity)
+
+                if let secondaryLabel, let secondaryAction {
+                    Button(secondaryLabel, action: secondaryAction)
                         .buttonStyle(.glass)
+                        .frame(maxWidth: .infinity)
+                }
 
-                    Button(appLocalized("Export"), action: onExport)
-                        .buttonStyle(.glassProminent)
+                if showCancelButton, let onCancel {
+                    Button(appLocalized("Cancel"), action: onCancel)
+                        .buttonStyle(.glass)
+                        .frame(maxWidth: .infinity)
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 20)
         }
+        .appGlassSheetChrome()
     }
 }
 
@@ -728,7 +859,7 @@ private struct ExpenseEditorRootView: View {
                     } label: {
                         AppGlassToolbarIcon(systemName: "trash")
                     }
-                    .buttonStyle(.glass(.regular.tint(.red)))
+                    .buttonStyle(.glass)
                 }
             }
         }
@@ -790,7 +921,7 @@ private struct IncomeEditorRootView: View {
                     } label: {
                         AppGlassToolbarIcon(systemName: "trash")
                     }
-                    .buttonStyle(.glass(.regular.tint(.red)))
+                    .buttonStyle(.glass)
                 }
             }
         }

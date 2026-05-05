@@ -1,13 +1,16 @@
 package it.homebudget.app.ui.screens
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import homebudget.composeapp.generated.resources.Res
-import homebudget.composeapp.generated.resources.backup_export_failed
-import homebudget.composeapp.generated.resources.backup_export_saved
-import it.homebudget.app.data.BudgetBackupFile
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.common.api.ApiException
+import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.exportBudgetBackup
 import kotlinx.coroutines.launch
@@ -37,43 +40,62 @@ internal actual fun rememberBackupExportLauncher(
     val repository: ExpenseRepository = koinInject()
     val backupExportFailedLabel = stringResource(Res.string.backup_export_failed)
     val backupExportSavedLabel = stringResource(Res.string.backup_export_saved)
-    var pendingExport by remember { mutableStateOf<BudgetBackupFile?>(null) }
+    val driveAccessCancelledLabel = stringResource(Res.string.google_drive_access_cancelled)
+    val driveAccessFailedLabel = stringResource(Res.string.google_drive_access_failed)
+    val signInClient = remember(context) { createGoogleDriveBackupSignInClient(context) }
 
-    val saveLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        val exportFile = pendingExport
-        pendingExport = null
-
-        if (uri == null || exportFile == null) {
-            return@rememberLauncherForActivityResult
-        }
-
+    fun runExport(account: GoogleSignInAccount) {
         scope.launch {
-            val result = runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(exportFile.content.encodeToByteArray())
-                } ?: error(backupExportFailedLabel)
+            runCatching {
+                val backup = exportBudgetBackup(repository)
+                uploadBackupToGoogleDrive(context, account, backup)
+            }.onSuccess {
+                onExportMessage(backupExportSavedLabel)
+            }.onFailure { error ->
+                onExportMessage(error.message ?: backupExportFailedLabel)
             }
-
-            onExportMessage(
-                if (result.isSuccess) backupExportSavedLabel else backupExportFailedLabel
-            )
         }
     }
 
-    return remember(saveLauncher, repository, backupExportFailedLabel, backupExportSavedLabel) {
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) {
+            onExportMessage(driveAccessCancelledLabel)
+            return@rememberLauncherForActivityResult
+        }
+
+        val account = runCatching {
+            GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                .getResult(ApiException::class.java)
+        }.getOrElse {
+            onExportMessage(it.message ?: driveAccessFailedLabel)
+            return@rememberLauncherForActivityResult
+        }
+
+        if (!hasGoogleDriveBackupAccess(account)) {
+            onExportMessage(driveAccessFailedLabel)
+            return@rememberLauncherForActivityResult
+        }
+
+        runExport(account)
+    }
+
+    return remember(
+        signInClient,
+        repository,
+        backupExportFailedLabel,
+        backupExportSavedLabel,
+        driveAccessCancelledLabel,
+        driveAccessFailedLabel
+    ) {
         BackupExportLauncher(
             onOpen = {
-                scope.launch {
-                    runCatching {
-                        exportBudgetBackup(repository)
-                    }.onSuccess { exportFile ->
-                        pendingExport = exportFile
-                        saveLauncher.launch(exportFile.fileName)
-                    }.onFailure { error ->
-                        onExportMessage(error.message ?: backupExportFailedLabel)
-                    }
+                val account = GoogleSignIn.getLastSignedInAccount(context)
+                if (hasGoogleDriveBackupAccess(account)) {
+                    runExport(requireNotNull(account))
+                } else {
+                    signInLauncher.launch(signInClient.signInIntent)
                 }
             },
             renderContent = {}

@@ -148,6 +148,7 @@ class AddExpenseScreen(
             description = expense.description.orEmpty()
             selectedCategoryId = expense.categoryId
             selectedDateMillis = expense.date
+            isRecurringMonthly = expense.recurringSeriesId != null
             recurringSeriesId = expense.recurringSeriesId
             isShared = expense.isShared == 1L
             isInitialized = true
@@ -391,7 +392,7 @@ class AddExpenseScreen(
                     }
                 }
 
-                if (expenseId == null) {
+                if (!readOnly && recurringSeriesId == null) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -537,6 +538,17 @@ class AddExpenseScreen(
                                                                 idProvider = ::buildExpenseId
                                                             )
                                                         }
+                                                    } else if (isRecurringMonthly) {
+                                                        buildRecurringMonthlyExpensesFromExistingExpense(
+                                                            existingExpenseId = expenseId,
+                                                            amount = parsedAmount,
+                                                            firstDate = expenseDate,
+                                                            categoryId = selectedCategoryId,
+                                                            description = description,
+                                                            isShared = isShared,
+                                                            recurringSeriesId = buildRecurringSeriesId(),
+                                                            idProvider = ::buildExpenseId
+                                                        )
                                                     } else {
                                                         listOf(
                                                             PendingExpense(

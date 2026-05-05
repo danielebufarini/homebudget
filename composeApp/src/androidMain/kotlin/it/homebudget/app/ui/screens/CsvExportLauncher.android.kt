@@ -2,12 +2,10 @@ package it.homebudget.app.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -16,9 +14,7 @@ import it.homebudget.app.data.CsvExportFile
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.exportBudgetItemsToCsv
 import kotlinx.coroutines.launch
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Clock
@@ -52,20 +48,19 @@ internal actual fun rememberCsvExportLauncher(
     val scope = rememberCoroutineScope()
     val repository: ExpenseRepository = koinInject()
     val exportCsvLabel = stringResource(Res.string.export_csv)
-    val startDateLabel = stringResource(Res.string.start_date)
-    val endDateLabel = stringResource(Res.string.end_date)
-    val exportLabel = stringResource(Res.string.export)
+    val fromLabel = stringResource(Res.string.from)
+    val toLabel = stringResource(Res.string.to)
     val cancelLabel = stringResource(Res.string.cancel)
     val saveLabel = stringResource(Res.string.save)
     val invalidDateRangeLabel = stringResource(Res.string.invalid_date_range)
     val csvExportFailedLabel = stringResource(Res.string.csv_export_failed)
     val csvExportSavedLabel = stringResource(Res.string.csv_export_saved)
     val today = remember { currentAndroidLocalDate() }
-    val defaultStartDate = remember(today) { LocalDate(today.year, today.month, 1) }
+    val defaultStartDate = remember(today) { today.minus(DatePeriod(days = 29)) }
 
     var showDialog by remember { mutableStateOf(false) }
-    var startDate by remember { mutableStateOf(defaultStartDate) }
-    var endDate by remember { mutableStateOf(today) }
+    var startDate by rememberSaveable { mutableStateOf(defaultStartDate) }
+    var endDate by rememberSaveable { mutableStateOf(today) }
     var activeDateField by remember { mutableStateOf<ExportDateField?>(null) }
     var pendingExport by remember { mutableStateOf<CsvExportFile?>(null) }
 
@@ -105,33 +100,35 @@ internal actual fun rememberCsvExportLauncher(
             onOpen = { showDialog = true },
             renderContent = {
                 if (showDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showDialog = false },
-                        title = { Text(exportCsvLabel) },
-                        text = {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showDialog = false }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp)
+                                .padding(bottom = 20.dp),
+                            verticalArrangement = Arrangement.spacedBy(18.dp)
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 ExportDateButton(
-                                    label = startDateLabel,
+                                    label = fromLabel,
                                     value = startDate.toString(),
                                     onClick = { activeDateField = ExportDateField.Start }
                                 )
 
                                 ExportDateButton(
-                                    label = endDateLabel,
+                                    label = toLabel,
                                     value = endDate.toString(),
                                     onClick = { activeDateField = ExportDateField.End }
                                 )
                             }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                colors = homeBudgetTextButtonColors(),
+
+                            Button(
                                 onClick = {
                                     if (startDate > endDate) {
                                         onExportMessage(invalidDateRangeLabel)
-                                        return@TextButton
+                                        return@Button
                                     }
 
                                     scope.launch {
@@ -152,20 +149,22 @@ internal actual fun rememberCsvExportLauncher(
                                             saveLauncher.launch(exportFile.fileName)
                                         }
                                     }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = homeBudgetButtonColors()
+                            ) {
+                                Text(exportCsvLabel)
                             }
-                        ) {
-                                Text(exportLabel)
-                            }
-                        },
-                        dismissButton = {
+
                             TextButton(
                                 onClick = { showDialog = false },
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = homeBudgetTextButtonColors()
                             ) {
                                 Text(cancelLabel)
                             }
                         }
-                    )
+                    }
                 }
 
                 activeDateField?.let { field ->

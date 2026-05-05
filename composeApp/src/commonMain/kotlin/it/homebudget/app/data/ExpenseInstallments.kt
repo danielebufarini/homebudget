@@ -88,6 +88,37 @@ fun buildRecurringMonthlyExpenses(
     }
 }
 
+fun buildRecurringMonthlyExpensesFromExistingExpense(
+    existingExpenseId: String,
+    amount: BigInteger,
+    firstDate: Long,
+    categoryId: String,
+    description: String?,
+    isShared: Boolean,
+    recurringSeriesId: String,
+    idProvider: () -> String,
+    occurrences: Int = RECURRING_MONTHLY_OCCURRENCES,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): List<PendingExpense> {
+    return buildRecurringMonthlyExpenses(
+        amount = amount,
+        firstDate = firstDate,
+        categoryId = categoryId,
+        description = description,
+        isShared = isShared,
+        recurringSeriesId = recurringSeriesId,
+        idProvider = idProvider,
+        occurrences = occurrences,
+        timeZone = timeZone
+    ).mapIndexed { index, expense ->
+        if (index == 0) {
+            expense.copy(id = existingExpenseId)
+        } else {
+            expense
+        }
+    }
+}
+
 fun buildRecurringMonthlyIncomes(
     amount: BigInteger,
     firstDate: Long,

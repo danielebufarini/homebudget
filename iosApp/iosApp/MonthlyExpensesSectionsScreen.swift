@@ -883,7 +883,9 @@ private struct GroupedExpenseRowView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .center, spacing: 8) {
-                    CategoryIconView(colorKey: row.categoryColorKey, iconKey: row.categoryIconKey)
+                    if row.categoryIconKey != nil {
+                        CategoryIconView(colorKey: row.categoryColorKey, iconKey: row.categoryIconKey)
+                    }
                     if row.isRecurring {
                         RecurringBadgeView()
                     }

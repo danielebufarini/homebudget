@@ -12,6 +12,9 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
 import kotlin.time.Instant
 
+val CsvAllDatesStart: LocalDate = LocalDate(1970, 1, 1)
+val CsvAllDatesEnd: LocalDate = LocalDate(3000, 12, 31)
+
 enum class CsvRowType {
     Expense,
     Income
@@ -220,6 +223,9 @@ internal fun buildFullDatabaseCsvExport(
 }
 
 private fun buildCsvFileName(prefix: String, startDate: LocalDate, endDate: LocalDate): String {
+    if (startDate == CsvAllDatesStart && endDate == CsvAllDatesEnd) {
+        return "${prefix}_all_dates.csv"
+    }
     return "${prefix}_${startDate}_$endDate.csv"
 }
 

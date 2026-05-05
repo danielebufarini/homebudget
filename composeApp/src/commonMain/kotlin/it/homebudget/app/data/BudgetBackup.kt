@@ -4,14 +4,13 @@ import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 private const val BACKUP_FORMAT = "homebudget_backup"
 private const val BACKUP_VERSION = 1
+private const val BACKUP_FILE_NAME = "homebudget-backup.json"
 
 private val budgetBackupJson = Json {
     prettyPrint = true
@@ -80,7 +79,7 @@ suspend fun exportBudgetBackup(repository: ExpenseRepository): BudgetBackupFile 
     )
 
     return BudgetBackupFile(
-        fileName = buildBudgetBackupFileName(snapshot.createdAtEpochMillis),
+        fileName = BACKUP_FILE_NAME,
         content = budgetBackupJson.encodeToString(BudgetBackupSnapshot.serializer(), snapshot)
     )
 }
@@ -169,13 +168,6 @@ private fun <T> ensureUniqueIds(
         .filterValues { it > 1 }
         .keys
     require(duplicates.isEmpty()) { "Duplicate $itemType ids: ${duplicates.joinToString(", ")}." }
-}
-
-private fun buildBudgetBackupFileName(createdAtEpochMillis: Long): String {
-    val date = kotlin.time.Instant.fromEpochMilliseconds(createdAtEpochMillis)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
-    return "homebudget-backup-${date.year}-${date.month.ordinal.plus(1).toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}.json"
 }
 
 private fun Category.toBackupModel() = BudgetBackupCategory(

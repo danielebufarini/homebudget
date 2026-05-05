@@ -30,7 +30,6 @@ import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.rememberCategoryNameResolver
-import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringArrayResource
@@ -212,29 +211,21 @@ private fun DashboardScreenScaffold(
 ) {
     val isIos = rememberIsIosPlatform()
     val navigator = LocalNavigator.current
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val importCsvLauncher = rememberCsvImportLauncher { message ->
-        scope.launch { snackbarHostState.showSnackbar(message) }
-    }
-    val exportCsvLauncher = rememberCsvExportLauncher { message ->
-        scope.launch { snackbarHostState.showSnackbar(message) }
-    }
-    val backupExportLauncher = rememberBackupExportLauncher { message ->
-        scope.launch { snackbarHostState.showSnackbar(message) }
-    }
-    val backupRestoreLauncher = rememberBackupRestoreLauncher { message ->
-        scope.launch { snackbarHostState.showSnackbar(message) }
-    }
     var showNavigationRail by remember { mutableStateOf(false) }
+    var showCloudBackupSheet by remember { mutableStateOf(false) }
+    var showCsvTransferSheet by remember { mutableStateOf(false) }
     val addExpenseLabel = stringResource(Res.string.add_expense)
     val dashboardLabel = stringResource(Res.string.dashboard)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        importCsvLauncher.Render()
-        exportCsvLauncher.Render()
-        backupExportLauncher.Render()
-        backupRestoreLauncher.Render()
+        AndroidDataTransferUi(
+            snackbarHostState = snackbarHostState,
+            showCloudBackupSheet = showCloudBackupSheet,
+            onDismissCloudBackupSheet = { showCloudBackupSheet = false },
+            showCsvTransferSheet = showCsvTransferSheet,
+            onDismissCsvTransferSheet = { showCsvTransferSheet = false }
+        )
 
         Scaffold(
             topBar = {
@@ -288,12 +279,9 @@ private fun DashboardScreenScaffold(
             AndroidNavigationRailOverlay(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
                 onDismiss = { showNavigationRail = false },
-                onOpenDashboard = {},
                 onOpenCategories = onOpenCategories,
-                onBackup = { backupExportLauncher.open() },
-                onRestore = { backupRestoreLauncher.open() },
-                onImportCsv = { importCsvLauncher.open() },
-                onExportCsv = { exportCsvLauncher.open() }
+                onOpenFullCloudBackup = { showCloudBackupSheet = true },
+                onOpenCsvTransfer = { showCsvTransferSheet = true }
             )
         }
     }

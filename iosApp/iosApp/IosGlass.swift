@@ -44,8 +44,12 @@ extension View {
             .scrollEdgeEffectStyle(.soft, for: .top)
     }
 
-    func appGlassSheetPresentation() -> some View {
-        presentationCornerRadius(28)
+    func appGlassSheetPresentation(
+        detents: Set<PresentationDetent> = [.medium]
+    ) -> some View {
+        self
+            .presentationDetents(detents)
+            .presentationCornerRadius(28)
             .presentationDragIndicator(.visible)
     }
 }
