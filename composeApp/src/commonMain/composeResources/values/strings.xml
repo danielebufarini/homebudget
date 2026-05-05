@@ -12,7 +12,7 @@
     <string name="add_income">Add Income</string>
     <string name="amount">Amount</string>
     <string name="back">Back</string>
-    <string name="backup">Backup</string>
+    <string name="backup">Cloud backup/restore</string>
     <string name="backup_to_google_drive">Backup to Google Drive</string>
     <string name="backup_export_failed">Unable to export the backup file</string>
     <string name="backup_export_saved">Backup file exported</string>
@@ -34,6 +34,7 @@
     <string name="icon_theme_people_and_work">People &amp; Work</string>
     <string name="icon_theme_general_and_hobbies">General &amp; Hobbies</string>
     <string name="close">Close</string>
+    <string name="csv">Local import/export</string>
     <string name="custom_category">Custom category</string>
     <string name="dashboard">Dashboard</string>
     <string name="date">Date</string>

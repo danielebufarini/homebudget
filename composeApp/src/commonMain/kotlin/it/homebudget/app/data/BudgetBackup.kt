@@ -25,13 +25,7 @@ data class BudgetBackupFile(
     val content: String
 )
 
-data class BudgetBackupPreview(
-    val categoriesCount: Int,
-    val expensesCount: Int,
-    val incomesCount: Int
-)
-
-data class BudgetBackupRestoreResult(
+data class BudgetBackupCounters(
     val categoriesCount: Int,
     val expensesCount: Int,
     val incomesCount: Int
@@ -91,9 +85,9 @@ suspend fun exportBudgetBackup(repository: ExpenseRepository): BudgetBackupFile 
     )
 }
 
-fun parseBudgetBackup(jsonText: String): BudgetBackupPreview {
+fun parseBudgetBackup(jsonText: String): BudgetBackupCounters {
     val snapshot = decodeBudgetBackupSnapshot(jsonText)
-    return BudgetBackupPreview(
+    return BudgetBackupCounters(
         categoriesCount = snapshot.categories.size,
         expensesCount = snapshot.expenses.size,
         incomesCount = snapshot.incomes.size
@@ -103,7 +97,7 @@ fun parseBudgetBackup(jsonText: String): BudgetBackupPreview {
 suspend fun restoreBudgetBackup(
     repository: ExpenseRepository,
     jsonText: String
-): BudgetBackupRestoreResult {
+): BudgetBackupCounters {
     val snapshot = decodeBudgetBackupSnapshot(jsonText)
 
     repository.replaceAllData(
@@ -137,7 +131,7 @@ suspend fun restoreBudgetBackup(
         }
     )
 
-    return BudgetBackupRestoreResult(
+    return BudgetBackupCounters(
         categoriesCount = snapshot.categories.size,
         expensesCount = snapshot.expenses.size,
         incomesCount = snapshot.incomes.size

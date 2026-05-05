@@ -8,7 +8,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import homebudget.composeapp.generated.resources.*
-import it.homebudget.app.data.BudgetBackupPreview
+import it.homebudget.app.data.BudgetBackupCounters
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.parseBudgetBackup
 import it.homebudget.app.data.restoreBudgetBackup
@@ -46,7 +46,7 @@ internal actual fun rememberBackupRestoreLauncher(
     val restoreConfirmationTemplate = stringResource(Res.string.backup_restore_confirmation_message)
     val restoreSuccessTemplate = stringResource(Res.string.backup_restore_success)
     var pendingRestoreText by remember { mutableStateOf<String?>(null) }
-    var pendingRestorePreview by remember { mutableStateOf<BudgetBackupPreview?>(null) }
+    var pendingRestorePreview by remember { mutableStateOf<BudgetBackupCounters?>(null) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()

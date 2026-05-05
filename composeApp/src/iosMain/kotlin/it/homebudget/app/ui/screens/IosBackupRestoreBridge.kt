@@ -3,7 +3,10 @@ package it.homebudget.app.ui.screens
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.backup_restore_failed
 import homebudget.composeapp.generated.resources.backup_restore_invalid
-import it.homebudget.app.data.*
+import it.homebudget.app.data.BudgetBackupCounters
+import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.parseBudgetBackup
+import it.homebudget.app.data.restoreBudgetBackup
 import it.homebudget.app.di.initKoin
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -22,7 +25,7 @@ class IosBackupRestoreController {
 
     fun prepareRestore(
         text: String,
-        onComplete: (BudgetBackupPreview?, String?) -> Unit
+        onComplete: (BudgetBackupCounters?, String?) -> Unit
     ) {
         scope.launch {
             val result = runCatching {
@@ -38,7 +41,7 @@ class IosBackupRestoreController {
 
     fun restoreBackup(
         text: String,
-        onComplete: (BudgetBackupRestoreResult?, String?) -> Unit
+        onComplete: (BudgetBackupCounters?, String?) -> Unit
     ) {
         scope.launch {
             val result = runCatching {

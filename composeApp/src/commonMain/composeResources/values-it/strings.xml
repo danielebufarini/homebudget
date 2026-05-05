@@ -12,7 +12,7 @@
     <string name="add_income">Aggiungi entrata</string>
     <string name="amount">Importo</string>
     <string name="back">Indietro</string>
-    <string name="backup">Backup</string>
+    <string name="backup">Backup/ripristino cloud</string>
     <string name="backup_to_google_drive">Backup su Google Drive</string>
     <string name="backup_export_failed">Impossibile esportare il file di backup</string>
     <string name="backup_export_saved">File di backup esportato</string>
@@ -34,6 +34,7 @@
     <string name="icon_theme_people_and_work">Persone e lavoro</string>
     <string name="icon_theme_general_and_hobbies">Generali e hobby</string>
     <string name="close">Chiudi</string>
+    <string name="csv">Import/export locale</string>
     <string name="custom_category">Categoria personalizzata</string>
     <string name="dashboard">Riepilogo</string>
     <string name="date">Data</string>

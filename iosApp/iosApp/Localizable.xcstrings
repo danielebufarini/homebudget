@@ -1664,6 +1664,38 @@
           }
         }
       }
+    },
+    "Backup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud backup/restore"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup/ripristino cloud"
+          }
+        }
+      }
+    },
+    "CSV": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local import/export"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import/export locale"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

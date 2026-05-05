@@ -4,10 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import homebudget.composeapp.generated.resources.*
 import kotlinx.coroutines.launch
@@ -31,8 +30,12 @@ internal fun AndroidNavigationRailOverlay(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
+    var csvExpanded by remember { mutableStateOf(false) }
+    var backupExpanded by remember { mutableStateOf(false) }
     val dashboardLabel = stringResource(Res.string.dashboard)
     val categoriesLabel = stringResource(Res.string.categories)
+    val csvLabel = stringResource(Res.string.csv)
+    val backupMenuLabel = stringResource(Res.string.backup)
     val backupLabel = stringResource(Res.string.backup_to_google_drive)
     val restoreLabel = stringResource(Res.string.restore_from_google_drive)
     val importCsvLabel = stringResource(Res.string.import_csv)
@@ -101,75 +104,93 @@ internal fun AndroidNavigationRailOverlay(
 
                     NavigationDrawerItem(
                         selected = false,
-                        label = { Text(backupLabel) },
+                        label = { Text(backupMenuLabel) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.Save,
-                                contentDescription = backupLabel,
+                                contentDescription = backupMenuLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
+                        badge = {
+                            Icon(
+                                imageVector = if (backupExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                onBackup()
-                            }
+                            backupExpanded = !backupExpanded
                         }
                     )
 
-                    NavigationDrawerItem(
-                        selected = false,
-                        label = { Text(restoreLabel) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Filled.Restore,
-                                contentDescription = restoreLabel,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                onRestore()
+                    if (backupExpanded) {
+                        SubmenuDrawerButton(
+                            label = backupLabel,
+                            icon = Icons.Filled.Save,
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    onBackup()
+                                }
                             }
-                        }
-                    )
+                        )
+
+                        SubmenuDrawerButton(
+                            label = restoreLabel,
+                            icon = Icons.Filled.Restore,
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    onRestore()
+                                }
+                            }
+                        )
+                    }
 
                     NavigationDrawerItem(
                         selected = false,
-                        label = { Text(importCsvLabel) },
+                        label = { Text(csvLabel) },
                         icon = {
                             Icon(
-                                imageVector = Icons.Filled.FileUpload,
-                                contentDescription = importCsvLabel,
+                                imageVector = Icons.Filled.FolderZip,
+                                contentDescription = csvLabel,
                                 modifier = Modifier.size(22.dp)
                             )
                         },
+                        badge = {
+                            Icon(
+                                imageVector = if (csvExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                onImportCsv()
-                            }
+                            csvExpanded = !csvExpanded
                         }
                     )
 
-                    NavigationDrawerItem(
-                        selected = false,
-                        label = { Text(exportCsvLabel) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Filled.FileDownload,
-                                contentDescription = exportCsvLabel,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                onExportCsv()
+                    if (csvExpanded) {
+                        SubmenuDrawerButton(
+                            label = importCsvLabel,
+                            icon = Icons.Filled.FileUpload,
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    onImportCsv()
+                                }
                             }
-                        }
-                    )
+                        )
+
+                        SubmenuDrawerButton(
+                            label = exportCsvLabel,
+                            icon = Icons.Filled.FileDownload,
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    onExportCsv()
+                                }
+                            }
+                        )
+                    }
                 }
             }
         },
@@ -177,4 +198,33 @@ internal fun AndroidNavigationRailOverlay(
             Box(modifier = Modifier.fillMaxSize())
         }
     )
+}
+
+@Composable
+private fun SubmenuDrawerButton(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
 }

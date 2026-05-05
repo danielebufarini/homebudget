@@ -52,7 +52,7 @@ private struct BackupExportDocument: FileDocument {
 private struct PendingBackupRestoreSelection: Identifiable {
     let id = UUID()
     let text: String
-    let preview: BudgetBackupPreview
+    let preview: BudgetBackupCounters
 }
 
 private struct KotlinViewControllerHost: UIViewControllerRepresentable {
@@ -132,17 +132,21 @@ struct ContentView: View {
                             Button(appLocalized("Categories")) {
                                 path.append(Route.categories)
                             }
-                            Button(appLocalized("Import CSV")) {
-                                showCsvImporter = true
+                            Menu(appLocalized("CSV")) {
+                                Button(appLocalized("Import CSV")) {
+                                    showCsvImporter = true
+                                }
+                                Button(appLocalized("Export CSV")) {
+                                    showCsvExportSheet = true
+                                }
                             }
-                            Button(appLocalized("Export CSV")) {
-                                showCsvExportSheet = true
-                            }
-                            Button(appLocalized("Backup to iCloud")) {
-                                exportBackup()
-                            }
-                            Button(appLocalized("Restore from iCloud")) {
-                                showBackupImporter = true
+                            Menu(appLocalized("Backup")) {
+                                Button(appLocalized("Backup to iCloud")) {
+                                    exportBackup()
+                                }
+                                Button(appLocalized("Restore from iCloud")) {
+                                    showBackupImporter = true
+                                }
                             }
                         } label: {
                             AppGlassToolbarIcon(systemName: "line.3.horizontal")
@@ -486,7 +490,7 @@ struct ContentView: View {
 }
 
 private struct BackupRestoreSheet: View {
-    let preview: BudgetBackupPreview
+    let preview: BudgetBackupCounters
     let onCancel: () -> Void
     let onRestore: () -> Void
 
