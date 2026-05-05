@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -223,7 +222,6 @@ private fun DashboardScreenScaffold(
     }
     var showNavigationRail by remember { mutableStateOf(false) }
     val addExpenseLabel = stringResource(Res.string.add_expense)
-    val calendarLabel = stringResource(Res.string.calendar)
     val dashboardLabel = stringResource(Res.string.dashboard)
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -250,12 +248,6 @@ private fun DashboardScreenScaffold(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { navigator?.push(CalendarExpensesScreen()) }) {
-                            Icon(
-                                imageVector = Icons.Filled.CalendarMonth,
-                                contentDescription = calendarLabel
-                            )
-                        }
                         DashboardVoiceExpenseAction()
                     }
                 )

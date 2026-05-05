@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 
 private enum Route: Hashable {
     case categories
-    case calendar
     case addExpense(expenseId: String?, readOnly: Bool)
     case addIncome(incomeId: String?, year: Int?, month: Int?)
     case monthlyIncomes(year: Int, month: Int)
@@ -114,25 +113,14 @@ struct ContentView: View {
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        AppGlassToolbarCluster {
-                            Button {
-                                path.append(Route.calendar)
-                            } label: {
-                                Image(systemName: "calendar")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .frame(width: 36, height: 36)
-                            }
-                            .buttonStyle(.glass)
-
-                            Button {
-                                showVoiceExpenseSheet = true
-                            } label: {
-                                Image(systemName: "waveform.badge.mic")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .frame(width: 36, height: 36)
-                            }
-                            .buttonStyle(.glass)
+                        Button {
+                            showVoiceExpenseSheet = true
+                        } label: {
+                            Image(systemName: "waveform.badge.mic")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 36, height: 36)
                         }
+                        .buttonStyle(.glass)
                     }
                 }
                 .sheet(isPresented: $showVoiceExpenseSheet) {
@@ -173,15 +161,6 @@ struct ContentView: View {
                         CategoriesRootView()
                             .appGlassHostedScreenChrome()
                             .navigationTitle(appLocalized("Categories"))
-                            .navigationBarTitleDisplayMode(.inline)
-                            .navigationBarBackButtonHidden()
-                            .toolbar {
-                                backToolbar
-                            }
-                    case .calendar:
-                        CalendarRootView(path: $path)
-                            .appGlassHostedScreenChrome()
-                            .navigationTitle(appLocalized("Calendar"))
                             .navigationBarTitleDisplayMode(.inline)
                             .navigationBarBackButtonHidden()
                             .toolbar {
@@ -726,19 +705,6 @@ private struct MonthlyIncomesRootView: View {
 private struct CategoriesRootView: View {
     var body: some View {
         NativeCategoriesScreen()
-    }
-}
-
-private struct CalendarRootView: View {
-    @Binding var path: NavigationPath
-
-    var body: some View {
-        KotlinViewControllerHost {
-            MainViewControllerKt.CalendarExpensesViewController { expenseId in
-                path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
-            }
-        }
-        .appGlassHostedScreenChrome()
     }
 }
 
