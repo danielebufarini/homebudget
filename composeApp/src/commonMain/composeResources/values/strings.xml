@@ -36,6 +36,8 @@
     <string name="delete_category">Delete category</string>
     <string name="delete_expense">Delete expense</string>
     <string name="delete_income">Delete income</string>
+    <string name="delete_item_confirmation_message">"%1$s" will be permanently deleted.</string>
+    <string name="delete_recurring_item_confirmation_message">Choose whether to delete only this instance of "%1$s" or the whole series.</string>
     <string name="delete_recurring_expense_title">Delete recurring expense?</string>
     <string name="delete_recurring_income_title">Delete recurring income?</string>
     <string name="description">Description</string>

@@ -4,6 +4,10 @@ func appLocalized(_ key: String) -> String {
     NSLocalizedString(key, comment: "")
 }
 
+func appLocalized(_ key: String, _ args: CVarArg...) -> String {
+    String(format: appLocalized(key), locale: Locale.current, arguments: args)
+}
+
 func appCurrencySymbol() -> String {
     Locale.current.language.languageCode?.identifier == "it" ? "€" : "$"
 }

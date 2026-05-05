@@ -100,7 +100,9 @@ private final class CategoriesViewModel: ObservableObject {
 
 struct NativeCategoriesScreen: View {
     @StateObject private var viewModel = CategoriesViewModel()
+    @StateObject private var bannerPresenter = AppGlassBannerPresenter()
     @State private var categoryBeingEdited: NativeCategory?
+    @State private var categoryPendingDelete: NativeCategory?
     @State private var isEditorPresented = false
 
     var body: some View {
@@ -121,10 +123,10 @@ struct NativeCategoriesScreen: View {
                                     isEditorPresented = true
                                 }
                             }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 if category.isCustom {
                                     Button(role: .destructive) {
-                                        viewModel.delete(category)
+                                        categoryPendingDelete = category
                                     } label: {
                                         Label(appLocalized("Delete"), systemImage: "trash")
                                     }
@@ -141,6 +143,11 @@ struct NativeCategoriesScreen: View {
                     Color.clear.frame(height: 8)
                 }
             }
+
+            VStack {
+                AppGlassBannerOverlay(presenter: bannerPresenter)
+                Spacer()
+            }
         }
         .appGlassHostedScreenChrome()
         .toolbar {
@@ -154,7 +161,7 @@ struct NativeCategoriesScreen: View {
                 } label: {
                     AppGlassToolbarIcon(systemName: "plus")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
             }
         }
         .sheet(isPresented: $isEditorPresented) {
@@ -175,23 +182,31 @@ struct NativeCategoriesScreen: View {
                     }
                 }
             )
-            .presentationCornerRadius(28)
-            .presentationDragIndicator(.visible)
+            .appGlassSheetPresentation()
         }
-        .alert(
-            appLocalized("Categories"),
-            isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        viewModel.errorMessage = nil
-                    }
+        .overlay {
+            if let categoryPendingDelete {
+                AppGlassDialogOverlay {
+                    AppGlassDeleteConfirmationDialog(
+                        message: appLocalized("\"%@\" will be permanently deleted.", categoryPendingDelete.name),
+                        onDelete: {
+                            viewModel.delete(categoryPendingDelete)
+                            self.categoryPendingDelete = nil
+                        },
+                        onCancel: {
+                            self.categoryPendingDelete = nil
+                        }
+                    )
                 }
-            )
-        ) {
-            Button(appLocalized("Close"), role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "")
+            }
+        }
+        .onChange(of: viewModel.errorMessage) { _, message in
+            guard let message else {
+                return
+            }
+
+            bannerPresenter.show(message, style: .error)
+            viewModel.errorMessage = nil
         }
         .onAppear {
             viewModel.start()
@@ -200,6 +215,7 @@ struct NativeCategoriesScreen: View {
             viewModel.stop()
         }
     }
+
 }
 
 private struct CategoryRow: View {
@@ -259,35 +275,35 @@ private struct CategoryEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(appLocalized("Category Name"))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        TextField(appLocalized("Category Name"), text: $name)
-                            .textInputAutocapitalization(.words)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                            .appGlassSurface(cornerRadius: 16)
-                    }
-
-                    CategoryIconPicker(selectedIconKey: $selectedIconKey)
+            AppGlassSheetContentScrollView(
+                spacing: 18,
+                horizontalPadding: 20
+            ) {
+                AppGlassSheetSection(
+                    title: appLocalized("Category Name"),
+                    spacing: 8
+                ) {
+                    TextField(appLocalized("Category Name"), text: $name)
+                        .textInputAutocapitalization(.words)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .appGlassSurface(cornerRadius: 16)
                 }
-                .padding(20)
+
+                CategoryIconPicker(selectedIconKey: $selectedIconKey)
             }
             .appGlassSheetChrome()
             .navigationTitle(category == nil ? appLocalized("Add Category") : appLocalized("Edit Category"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+            .safeAreaInset(edge: .bottom) {
+                AppGlassSheetActionBar {
                     Button(appLocalized("Cancel"), action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
+                        .buttonStyle(.glass)
+
                     Button(category == nil ? appLocalized("Add") : appLocalized("Update")) {
                         onSave(name, selectedIconKey)
                     }
+                    .buttonStyle(.glassProminent)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

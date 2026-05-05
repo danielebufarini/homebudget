@@ -1,18 +1,36 @@
 package it.homebudget.app.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import homebudget.composeapp.generated.resources.Res
-import homebudget.composeapp.generated.resources.cancel
-import homebudget.composeapp.generated.resources.this_instance_only
-import homebudget.composeapp.generated.resources.whole_series
+import androidx.compose.ui.unit.dp
+import homebudget.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+
+@Composable
+internal fun DeleteConfirmationDialog(
+    message: String,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    HomeBudgetDeletionContainer(
+        title = stringResource(Res.string.delete),
+        message = message,
+        onDismiss = onDismiss
+    ) {
+        HomeBudgetDeletionDialogButton(
+            label = stringResource(Res.string.delete),
+            isDestructive = true,
+            onClick = onDelete
+        )
+        HomeBudgetDeletionDialogButton(
+            label = stringResource(Res.string.cancel),
+            onClick = onDismiss
+        )
+    }
+}
 
 @Composable
 internal fun RecurringSeriesActionDialog(
@@ -22,36 +40,132 @@ internal fun RecurringSeriesActionDialog(
     onWholeSeries: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(message) },
-        confirmButton = {
-            TextButton(
-                onClick = onWholeSeries,
-                colors = homeBudgetTextButtonColors()
-            ) {
-                Text(stringResource(Res.string.whole_series))
-            }
-        },
-        dismissButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = onThisInstanceOnly,
-                    colors = homeBudgetTextButtonColors()
-                ) {
-                    Text(stringResource(Res.string.this_instance_only))
-                }
-                TextButton(
-                    onClick = onDismiss,
-                    colors = homeBudgetTextButtonColors()
-                ) {
-                    Text(stringResource(Res.string.cancel))
-                }
-            }
+    HomeBudgetDeletionContainer(
+        title = title,
+        message = message,
+        onDismiss = onDismiss
+    ) {
+        HomeBudgetDeletionDialogButton(
+            label = stringResource(Res.string.this_instance_only),
+            isDestructive = true,
+            onClick = onThisInstanceOnly
+        )
+        HomeBudgetDeletionDialogButton(
+            label = stringResource(Res.string.whole_series),
+            isDestructive = true,
+            onClick = onWholeSeries
+        )
+        HomeBudgetDeletionDialogButton(
+            label = stringResource(Res.string.cancel),
+            onClick = onDismiss
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeBudgetDeletionContainer(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    actions: @Composable ColumnScope.() -> Unit
+) {
+    if (rememberIsIosPlatform()) {
+        BasicAlertDialog(onDismissRequest = onDismiss) {
+            HomeBudgetDeletionCard(
+                title = title,
+                message = message,
+                actions = actions
+            )
         }
-    )
+    } else {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 6.dp,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            HomeBudgetDeletionCard(
+                title = title,
+                message = message,
+                actions = actions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeBudgetDeletionCard(
+    title: String,
+    message: String,
+    actions: @Composable ColumnScope.() -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .widthIn(max = 420.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 20.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                content = actions
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeBudgetDeletionDialogButton(
+    label: String,
+    isDestructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = if (isDestructive) {
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError
+            )
+        } else {
+            homeBudgetFilledTonalButtonColors()
+        }
+    ) {
+        Text(label)
+    }
 }

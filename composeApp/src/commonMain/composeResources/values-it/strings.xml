@@ -36,6 +36,8 @@
     <string name="delete_category">Elimina categoria</string>
     <string name="delete_expense">Elimina spesa</string>
     <string name="delete_income">Elimina entrata</string>
+    <string name="delete_item_confirmation_message">"%1$s" verrà eliminato definitivamente.</string>
+    <string name="delete_recurring_item_confirmation_message">Scegli se eliminare solo questa occorrenza di "%1$s" o l'intera serie.</string>
     <string name="delete_recurring_expense_title">Eliminare la spesa ricorrente?</string>
     <string name="delete_recurring_income_title">Eliminare l\'entrata ricorrente?</string>
     <string name="description">Descrizione</string>

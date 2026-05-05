@@ -17,6 +17,7 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Income
+import it.homebudget.app.localization.formatResourceArgs
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
@@ -63,11 +64,13 @@ class MonthlyIncomesScreen(
         val addIncomeLabel = stringResource(Res.string.add_income)
         val backLabel = stringResource(Res.string.back)
         val currencySymbol = stringResource(Res.string.currency_symbol)
-        val deleteRecurringIncomeTitle = stringResource(Res.string.delete_recurring_income_title)
-        val incomeActionDeleteMessage = stringResource(Res.string.recurring_income_action_delete)
+        val deleteLabel = stringResource(Res.string.delete)
+        val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
+        val recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message)
         val incomeLabel = stringResource(Res.string.income)
         val noIncomeForMonthLabel = stringResource(Res.string.no_income_for_month)
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
+        var incomeToDelete by remember { mutableStateOf<Income?>(null) }
         var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
         val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
 
@@ -90,7 +93,7 @@ class MonthlyIncomesScreen(
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
             val income = filteredIncomes.find { it.id == incomeId } ?: return@deleteAction
             if (income.recurringSeriesId.isNullOrBlank()) {
-                scope.launch { repository.deleteIncome(incomeId) }
+                incomeToDelete = income
             } else {
                 recurringIncomeToDelete = income
             }
@@ -203,10 +206,27 @@ class MonthlyIncomesScreen(
             content(PaddingValues(0.dp))
         }
 
+        incomeToDelete?.let { income ->
+            val incomeDisplayName = income.description?.ifBlank { incomeLabel } ?: incomeLabel
+            DeleteConfirmationDialog(
+                message = deleteItemConfirmationMessageTemplate.formatResourceArgs(incomeDisplayName),
+                onDelete = {
+                    incomeToDelete = null
+                    scope.launch {
+                        repository.deleteIncome(income.id)
+                    }
+                },
+                onDismiss = {
+                    incomeToDelete = null
+                }
+            )
+        }
+
         recurringIncomeToDelete?.let { income ->
+            val incomeDisplayName = income.description?.ifBlank { incomeLabel } ?: incomeLabel
             RecurringSeriesActionDialog(
-                title = deleteRecurringIncomeTitle,
-                message = incomeActionDeleteMessage,
+                title = deleteLabel,
+                message = recurringDeleteMessageTemplate.formatResourceArgs(incomeDisplayName),
                 onThisInstanceOnly = {
                     recurringIncomeToDelete = null
                     scope.launch {

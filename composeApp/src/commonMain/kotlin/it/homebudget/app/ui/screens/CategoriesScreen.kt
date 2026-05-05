@@ -18,6 +18,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.localizedCategoryName
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -46,6 +47,7 @@ fun CategoriesRoute(
     val repository: ExpenseRepository = koinInject()
     val isIos = rememberIsIosPlatform()
     var categoryBeingEdited by remember { mutableStateOf<it.homebudget.app.database.Category?>(null) }
+    var categoryPendingDelete by remember { mutableStateOf<it.homebudget.app.database.Category?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -54,6 +56,7 @@ fun CategoriesRoute(
     val editCategoryLabel = stringResource(Res.string.edit_category)
     val addLabel = stringResource(Res.string.add)
     val updateLabel = stringResource(Res.string.update)
+    val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
     val unableToDeleteCategoryLabel = stringResource(Res.string.unable_to_delete_category)
 
     fun deleteCategory(categoryId: String) {
@@ -99,7 +102,9 @@ fun CategoriesRoute(
                         .fillMaxSize()
                         .padding(padding)
                         .padding(16.dp),
-                    onDeleteCategory = ::deleteCategory,
+                    onDeleteCategory = { categoryId ->
+                        categoryPendingDelete = categories.find { it.id == categoryId }
+                    },
                     onEditCategory = { categoryBeingEdited = it }
                 )
             }
@@ -121,7 +126,9 @@ fun CategoriesRoute(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
-                    onDeleteCategory = ::deleteCategory,
+                    onDeleteCategory = { categoryId ->
+                        categoryPendingDelete = categories.find { it.id == categoryId }
+                    },
                     onEditCategory = { categoryBeingEdited = it }
                 )
             }
@@ -190,6 +197,19 @@ fun CategoriesRoute(
                     showAddDialog = false
                     categoryBeingEdited = null
                 }
+            }
+        )
+    }
+
+    categoryPendingDelete?.let { category ->
+        DeleteConfirmationDialog(
+            message = deleteItemConfirmationMessageTemplate.formatResourceArgs(localizedCategoryName(category)),
+            onDelete = {
+                categoryPendingDelete = null
+                deleteCategory(category.id)
+            },
+            onDismiss = {
+                categoryPendingDelete = null
             }
         )
     }

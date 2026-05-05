@@ -8,6 +8,7 @@ import SwiftUI
 final class VoiceExpenseEntryViewModel: ObservableObject {
     @Published var transcript = ""
     @Published var statusMessage: String?
+    @Published var errorMessage: String?
     @Published var draft: VoiceExpenseDraft?
     @Published var isRecording = false
     @Published var isBusy = false
@@ -52,6 +53,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         isBusy = true
         busyLabel = voiceExpenseCommitBusyLabel(for: draft.intent)
         statusMessage = nil
+        errorMessage = nil
 
         Task {
             let result = await controller.persist(draft: draft)
@@ -68,7 +70,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 if finalResult.success {
                     onSuccess()
                 } else {
-                    statusMessage = voiceExpenseCommitFailureMessage(finalResult.message)
+                    errorMessage = voiceExpenseCommitFailureMessage(finalResult.message)
                 }
             }
         }
@@ -81,11 +83,13 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
 
     private func loadSnapshot() {
         statusMessage = voiceExpenseSnapshotLoadingMessage()
+        errorMessage = nil
         Task {
             let snapshotData = await controller.loadSnapshotData()
             await MainActor.run {
                 guard let snapshotData else {
-                    statusMessage = voiceExpenseSnapshotLoadFailureMessage()
+                    statusMessage = nil
+                    errorMessage = voiceExpenseSnapshotLoadFailureMessage()
                     return
                 }
 
@@ -96,6 +100,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
 
     private func startRecording() {
         statusMessage = nil
+        errorMessage = nil
         draft = nil
         transcript = ""
         isBusy = true
@@ -112,7 +117,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
             } catch {
                 isBusy = false
                 busyLabel = ""
-                statusMessage = error.localizedDescription
+                errorMessage = error.localizedDescription
             }
         }
     }
@@ -122,7 +127,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         isRecording = false
 
         guard !capturedTranscript.isEmpty else {
-            statusMessage = voiceExpenseNoSpeechMessage()
+            errorMessage = voiceExpenseNoSpeechMessage()
             return
         }
 
@@ -132,18 +137,19 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
 
     private func interpretTranscript(_ text: String) {
         guard snapshotLoaded else {
-            statusMessage = voiceExpenseSnapshotStillLoadingMessage()
+            errorMessage = voiceExpenseSnapshotStillLoadingMessage()
             return
         }
 
         guard languageModel.isAvailable else {
-            statusMessage = availabilityMessage(for: languageModel.availability)
+            errorMessage = availabilityMessage(for: languageModel.availability)
             return
         }
 
         isBusy = true
         busyLabel = voiceExpenseUnderstandingMessage()
         statusMessage = nil
+        errorMessage = nil
         draft = nil
 
         Task {
@@ -177,6 +183,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                     await MainActor.run {
                         draft = fallbackDraft
                         statusMessage = nil
+                        errorMessage = nil
                         isBusy = false
                         busyLabel = ""
                     }
@@ -186,7 +193,7 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 await MainActor.run {
                     isBusy = false
                     busyLabel = ""
-                    statusMessage = expenseParsingFailureMessage(for: error)
+                    errorMessage = expenseParsingFailureMessage(for: error)
                 }
             }
         }

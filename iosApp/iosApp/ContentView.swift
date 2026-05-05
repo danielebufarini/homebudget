@@ -82,8 +82,7 @@ struct ContentView: View {
     @State private var showCsvImporter = false
     @State private var showCsvExportSheet = false
     @State private var showCsvExporter = false
-    @State private var csvImportMessage: String?
-    @State private var csvExportMessage: String?
+    @StateObject private var bannerPresenter = AppGlassBannerPresenter()
     @State private var csvExportDocument = CsvExportDocument()
     @State private var csvExportFilename = "budget.csv"
     @State private var csvExportStartDate = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
@@ -95,7 +94,7 @@ struct ContentView: View {
         NavigationStack(path: $path) {
             DashboardRootView(path: $path)
                 .appGlassHostedScreenChrome()
-                .navigationTitle("Dashboard")
+                .navigationTitle(appLocalized("Dashboard"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -111,6 +110,7 @@ struct ContentView: View {
                             }
                         } label: {
                             AppGlassToolbarIcon(systemName: "line.3.horizontal")
+                                .appGlassSurface(cornerRadius: 18)
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
@@ -122,7 +122,7 @@ struct ContentView: View {
                                     .font(.system(size: 15, weight: .semibold))
                                     .frame(width: 36, height: 36)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.glass)
 
                             Button {
                                 showVoiceExpenseSheet = true
@@ -131,7 +131,7 @@ struct ContentView: View {
                                     .font(.system(size: 15, weight: .semibold))
                                     .frame(width: 36, height: 36)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.glass)
                         }
                     }
                 }
@@ -139,8 +139,7 @@ struct ContentView: View {
                     VoiceExpenseEntrySheet {
                         showVoiceExpenseSheet = false
                     }
-                    .presentationCornerRadius(28)
-                    .presentationDragIndicator(.visible)
+                    .appGlassSheetPresentation()
                 }
                 .sheet(isPresented: $showCsvExportSheet) {
                     CsvExportSheet(
@@ -149,8 +148,7 @@ struct ContentView: View {
                         onCancel: { showCsvExportSheet = false },
                         onExport: exportCsv
                     )
-                    .presentationCornerRadius(28)
-                    .presentationDragIndicator(.visible)
+                    .appGlassSheetPresentation()
                 }
                 .fileImporter(
                     isPresented: $showCsvImporter,
@@ -166,42 +164,15 @@ struct ContentView: View {
                 ) { result in
                     handleCsvExport(result: result)
                 }
-                .alert(
-                    appLocalized("Import CSV"),
-                    isPresented: Binding(
-                        get: { csvImportMessage != nil },
-                        set: { isPresented in
-                            if !isPresented {
-                                csvImportMessage = nil
-                            }
-                        }
-                    )
-                ) {
-                    Button(appLocalized("Close"), role: .cancel) {}
-                } message: {
-                    Text(csvImportMessage ?? "")
-                }
-                .alert(
-                    appLocalized("Export CSV"),
-                    isPresented: Binding(
-                        get: { csvExportMessage != nil },
-                        set: { isPresented in
-                            if !isPresented {
-                                csvExportMessage = nil
-                            }
-                        }
-                    )
-                ) {
-                    Button(appLocalized("Close"), role: .cancel) {}
-                } message: {
-                    Text(csvExportMessage ?? "")
+                .overlay(alignment: .top) {
+                    AppGlassBannerOverlay(presenter: bannerPresenter)
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .categories:
                         CategoriesRootView()
                             .appGlassHostedScreenChrome()
-                            .navigationTitle("Categories")
+                            .navigationTitle(appLocalized("Categories"))
                             .navigationBarTitleDisplayMode(.inline)
                             .navigationBarBackButtonHidden()
                             .toolbar {
@@ -309,7 +280,7 @@ struct ContentView: View {
             } label: {
                 AppGlassBackButton()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
         }
     }
 
@@ -327,29 +298,33 @@ struct ContentView: View {
                 let data = try Data(contentsOf: url)
                 importCsv(text: String(decoding: data, as: UTF8.self))
             } catch {
-                csvImportMessage = error.localizedDescription
+                showCsvFeedback(error.localizedDescription, style: .error)
             }
         case let .failure(error):
-            csvImportMessage = error.localizedDescription
+            showCsvFeedback(error.localizedDescription, style: .error)
         }
     }
 
     private func importCsv(text: String) {
         guard !text.isEmpty else {
-            csvImportMessage = appLocalized("Unable to import the CSV file")
+            showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)
             return
         }
 
         csvImportController.importCsv(text: text) { successMessage, errorMessage in
             Task { @MainActor in
-                csvImportMessage = successMessage ?? errorMessage
+                if let successMessage {
+                    showCsvFeedback(successMessage, style: .success)
+                } else if let errorMessage {
+                    showCsvFeedback(errorMessage, style: .error)
+                }
             }
         }
     }
 
     private func exportCsv() {
         guard csvExportStartDate <= csvExportEndDate else {
-            csvExportMessage = appLocalized("Start date must be on or before end date")
+            showCsvFeedback(appLocalized("Start date must be on or before end date"), style: .error)
             return
         }
 
@@ -364,7 +339,7 @@ struct ContentView: View {
                     showCsvExportSheet = false
                     showCsvExporter = true
                 } else {
-                    csvExportMessage = errorMessage ?? appLocalized("Unable to export the CSV file")
+                    showCsvFeedback(errorMessage ?? appLocalized("Unable to export the CSV file"), style: .error)
                 }
             }
         }
@@ -373,10 +348,15 @@ struct ContentView: View {
     private func handleCsvExport(result: Result<URL, Error>) {
         switch result {
         case .success:
-            csvExportMessage = appLocalized("CSV file exported")
+            showCsvFeedback(appLocalized("CSV file exported"), style: .success)
         case let .failure(error):
-            csvExportMessage = error.localizedDescription
+            showCsvFeedback(error.localizedDescription, style: .error)
         }
+    }
+
+    @MainActor
+    private func showCsvFeedback(_ message: String, style: AppGlassBannerStyle) {
+        bannerPresenter.show(message, style: style)
     }
 }
 
@@ -388,28 +368,39 @@ private struct CsvExportSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                DatePicker(
-                    appLocalized("Start Date"),
-                    selection: $startDate,
-                    displayedComponents: .date
-                )
+            AppGlassSheetContentScrollView {
+                AppGlassSheetSection(title: appLocalized("Start Date")) {
+                    DatePicker(
+                        "",
+                        selection: $startDate,
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
-                DatePicker(
-                    appLocalized("End Date"),
-                    selection: $endDate,
-                    displayedComponents: .date
-                )
+                AppGlassSheetSection(title: appLocalized("End Date")) {
+                    DatePicker(
+                        "",
+                        selection: $endDate,
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .appGlassSheetChrome()
             .navigationTitle(appLocalized("Export CSV"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+            .safeAreaInset(edge: .bottom) {
+                AppGlassSheetActionBar {
                     Button(appLocalized("Close"), action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
+                        .buttonStyle(.glass)
+
                     Button(appLocalized("Export"), action: onExport)
+                        .buttonStyle(.glassProminent)
                 }
             }
         }
@@ -570,42 +561,34 @@ private struct ExpenseEditorRootView: View {
                     } label: {
                         AppGlassToolbarIcon(systemName: "trash")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass(.regular.tint(.red)))
                 }
             }
         }
-        .confirmationDialog(
-            "Delete",
-            isPresented: recurringDialogBinding,
-            titleVisibility: .visible
-        ) {
-            if let expenseId {
-                Button("This instance only", role: .destructive) {
-                    deletionViewModel.pendingSeriesId = nil
-                    deletionViewModel.deleteExpense(
-                        expenseId: expenseId,
-                        onClose: onClose
+        .overlay {
+            if deletionViewModel.pendingSeriesId != nil, let expenseId {
+                AppGlassDialogOverlay {
+                    AppGlassRecurringDeleteConfirmationDialog(
+                        message: appLocalized("Choose whether to delete only this instance or the whole series."),
+                        onDeleteInstance: {
+                            deletionViewModel.pendingSeriesId = nil
+                            deletionViewModel.deleteExpense(
+                                expenseId: expenseId,
+                                onClose: onClose
+                            )
+                        },
+                        onDeleteSeries: {
+                            deletionViewModel.deleteWholeSeries(onClose: onClose)
+                        },
+                        onCancel: {
+                            deletionViewModel.pendingSeriesId = nil
+                        }
                     )
                 }
-            }
-            Button("Whole series", role: .destructive) {
-                deletionViewModel.deleteWholeSeries(onClose: onClose)
             }
         }
     }
 
-    private var recurringDialogBinding: Binding<Bool> {
-        Binding(
-            get: {
-                deletionViewModel.pendingSeriesId != nil
-            },
-            set: { isPresented in
-                if !isPresented {
-                    deletionViewModel.pendingSeriesId = nil
-                }
-            }
-        )
-    }
 }
 
 private struct IncomeEditorRootView: View {
@@ -640,42 +623,34 @@ private struct IncomeEditorRootView: View {
                     } label: {
                         AppGlassToolbarIcon(systemName: "trash")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass(.regular.tint(.red)))
                 }
             }
         }
-        .confirmationDialog(
-            "Delete",
-            isPresented: recurringDialogBinding,
-            titleVisibility: .visible
-        ) {
-            if let incomeId {
-                Button("This instance only", role: .destructive) {
-                    deletionViewModel.pendingSeriesId = nil
-                    deletionViewModel.deleteIncome(
-                        incomeId: incomeId,
-                        onClose: onClose
+        .overlay {
+            if deletionViewModel.pendingSeriesId != nil, let incomeId {
+                AppGlassDialogOverlay {
+                    AppGlassRecurringDeleteConfirmationDialog(
+                        message: appLocalized("Choose whether to delete only this instance or the whole series."),
+                        onDeleteInstance: {
+                            deletionViewModel.pendingSeriesId = nil
+                            deletionViewModel.deleteIncome(
+                                incomeId: incomeId,
+                                onClose: onClose
+                            )
+                        },
+                        onDeleteSeries: {
+                            deletionViewModel.deleteWholeSeries(onClose: onClose)
+                        },
+                        onCancel: {
+                            deletionViewModel.pendingSeriesId = nil
+                        }
                     )
                 }
-            }
-            Button("Whole series", role: .destructive) {
-                deletionViewModel.deleteWholeSeries(onClose: onClose)
             }
         }
     }
 
-    private var recurringDialogBinding: Binding<Bool> {
-        Binding(
-            get: {
-                deletionViewModel.pendingSeriesId != nil
-            },
-            set: { isPresented in
-                if !isPresented {
-                    deletionViewModel.pendingSeriesId = nil
-                }
-            }
-        )
-    }
 }
 
 private struct DashboardRootView: View {
@@ -742,7 +717,7 @@ private struct MonthlyIncomesRootView: View {
                 } label: {
                     AppGlassToolbarIcon(systemName: "plus")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
             }
         }
     }

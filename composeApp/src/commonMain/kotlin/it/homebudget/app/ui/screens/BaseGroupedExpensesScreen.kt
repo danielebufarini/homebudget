@@ -21,6 +21,7 @@ import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
+import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
@@ -83,8 +84,9 @@ abstract class BaseGroupedExpensesScreen(
         val byCategoryLabel = stringResource(Res.string.by_category)
         val byDateLabel = stringResource(Res.string.by_date)
         val currencySymbol = stringResource(Res.string.currency_symbol)
-        val deleteRecurringExpenseTitle = stringResource(Res.string.delete_recurring_expense_title)
-        val recurringExpenseDeleteMessage = stringResource(Res.string.recurring_expense_action_delete)
+        val deleteLabel = stringResource(Res.string.delete)
+        val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
+        val recurringExpenseDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message)
         val unknownCategoryLabel = stringResource(Res.string.unknown_category)
         val fullMonthNames = stringArrayResource(Res.array.full_month_names)
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
@@ -94,6 +96,7 @@ abstract class BaseGroupedExpensesScreen(
         val navigationDescriptor = monthNavigationDescriptor()
         var selectedMonth by remember { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
+        var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
         var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
         val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
@@ -182,7 +185,7 @@ abstract class BaseGroupedExpensesScreen(
             deleteAction@{ expenseId ->
                 val expense = filteredExpenses.find { it.id == expenseId } ?: return@deleteAction
                 if (expense.recurringSeriesId.isNullOrBlank()) {
-                    scope.launch { repository.deleteExpense(expenseId) }
+                    expenseToDelete = expense
                 } else {
                     recurringExpenseToDelete = expense
                 }
@@ -285,10 +288,45 @@ abstract class BaseGroupedExpensesScreen(
             )
         }
 
+        expenseToDelete?.let { expense ->
+            val expenseDisplayName = groupedExpenseRowPresentation(
+                expense = expense,
+                categoriesById = categoriesById,
+                isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
+                expenseFallbackTitle = expenseFallbackTitle,
+                unknownCategoryLabel = unknownCategoryLabel,
+                resolveCategoryName = { category ->
+                    resolveCategoryName(category.id, category.name, category.isCustom)
+                }
+            ).title
+            DeleteConfirmationDialog(
+                message = deleteItemConfirmationMessageTemplate.formatResourceArgs(expenseDisplayName),
+                onDelete = {
+                    expenseToDelete = null
+                    scope.launch {
+                        repository.deleteExpense(expense.id)
+                    }
+                },
+                onDismiss = {
+                    expenseToDelete = null
+                }
+            )
+        }
+
         recurringExpenseToDelete?.let { expense ->
+            val expenseDisplayName = groupedExpenseRowPresentation(
+                expense = expense,
+                categoriesById = categoriesById,
+                isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
+                expenseFallbackTitle = expenseFallbackTitle,
+                unknownCategoryLabel = unknownCategoryLabel,
+                resolveCategoryName = { category ->
+                    resolveCategoryName(category.id, category.name, category.isCustom)
+                }
+            ).title
             RecurringSeriesActionDialog(
-                title = deleteRecurringExpenseTitle,
-                message = recurringExpenseDeleteMessage,
+                title = deleteLabel,
+                message = recurringExpenseDeleteMessageTemplate.formatResourceArgs(expenseDisplayName),
                 onThisInstanceOnly = {
                     recurringExpenseToDelete = null
                     scope.launch {

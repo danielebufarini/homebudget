@@ -314,31 +314,13 @@ struct GroupedExpensesSectionsScreen: View {
             year: selectedMonth.year,
             month: selectedMonth.month,
             selectedMonth: selectedMonth,
-            groupingMode: groupingMode,
+            groupingMode: $groupingMode,
             onAddExpense: onAddExpense,
             onPreviousMonth: supportsMonthNavigation ? { selectedMonth = selectedMonth.previous() } : nil,
             onNextMonth: supportsMonthNavigation ? { selectedMonth = selectedMonth.next() } : nil,
             onOpenExpense: onOpenExpense
         )
         .id("\(kind.screenType)-\(selectedMonth.id)")
-        .safeAreaInset(edge: .bottom) {
-            Color.clear
-                .frame(height: 86)
-                .allowsHitTesting(false)
-        }
-        .overlay(alignment: .bottom) {
-            Picker("Expense Grouping", selection: $groupingMode) {
-                Text("By Category").tag(ExpenseGroupingMode.byCategory)
-                Text("By Date").tag(ExpenseGroupingMode.byDate)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .appGlassSurface(cornerRadius: 24)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-        }
         .toolbarBackground(.hidden, for: .navigationBar)
     }
 
@@ -349,6 +331,49 @@ struct GroupedExpensesSectionsScreen: View {
         case .category:
             return false
         }
+    }
+}
+
+private struct ExpenseGroupingGlassControl: View {
+    @Binding var selection: ExpenseGroupingMode
+
+    var body: some View {
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 12) {
+                ExpenseGroupingGlassButton(
+                    title: appLocalized("By Category"),
+                    isSelected: selection == .byCategory
+                ) {
+                    selection = .byCategory
+                }
+
+                ExpenseGroupingGlassButton(
+                    title: appLocalized("By Date"),
+                    isSelected: selection == .byDate
+                ) {
+                    selection = .byDate
+                }
+            }
+        }
+    }
+}
+
+private struct ExpenseGroupingGlassButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Group {
+            if isSelected {
+                Button(title, action: action)
+                    .buttonStyle(.glassProminent)
+            } else {
+                Button(title, action: action)
+                    .buttonStyle(.glass)
+            }
+        }
+        .font(.subheadline.weight(.semibold))
     }
 }
 
@@ -383,7 +408,7 @@ private struct MonthlyIncomesSectionsContent: View {
     let onOpenIncome: (String) -> Void
 
     @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
-    @State private var recurringIncomeToDelete: GroupedExpenseRowModel?
+    @State private var pendingIncomeDeleteID: String?
 
     init(
         selectedMonth: MonthCursor,
@@ -426,33 +451,13 @@ private struct MonthlyIncomesSectionsContent: View {
                                     GroupedExpenseRowView(row: row)
                                 }
                                 .buttonStyle(.plain)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: !row.isRecurring) {
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button {
-                                        if row.isRecurring {
-                                            recurringIncomeToDelete = row
-                                        } else {
-                                            viewModel.deleteIncome(row.id)
-                                        }
+                                        pendingIncomeDeleteID = row.id
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label(appLocalized("Delete"), systemImage: "trash")
                                     }
                                     .tint(.red)
-                                }
-                                .confirmationDialog(
-                                    "Delete",
-                                    isPresented: dialogSelectionBinding(selection: $recurringIncomeToDelete, matching: row),
-                                    titleVisibility: .visible
-                                ) {
-                                    Button("This instance only", role: .destructive) {
-                                        viewModel.deleteIncome(row.id)
-                                        recurringIncomeToDelete = nil
-                                    }
-                                    Button("Whole series", role: .destructive) {
-                                        if let seriesID = row.recurringSeriesId {
-                                            viewModel.deleteRecurringIncomeSeries(seriesID)
-                                        }
-                                        recurringIncomeToDelete = nil
-                                    }
                                 }
                             }
                         }
@@ -489,6 +494,13 @@ private struct MonthlyIncomesSectionsContent: View {
         .onDisappear {
             viewModel.stop()
         }
+        .overlay {
+            if let pendingIncomeDeleteRow {
+                AppGlassDialogOverlay {
+                    incomeDeleteDialog(for: pendingIncomeDeleteRow)
+                }
+            }
+        }
     }
 
     private func toggleExpandedSection(_ sectionID: String) {
@@ -499,6 +511,53 @@ private struct MonthlyIncomesSectionsContent: View {
         }
     }
 
+    @ViewBuilder
+    private func incomeDeleteDialog(for row: GroupedExpenseRowModel) -> some View {
+        if row.isRecurring {
+            AppGlassRecurringDeleteConfirmationDialog(
+                message: appLocalized("Choose whether to delete only this instance of \"%@\" or the whole series.", row.title),
+                onDeleteInstance: {
+                    viewModel.deleteIncome(row.id)
+                    pendingIncomeDeleteID = nil
+                },
+                onDeleteSeries: {
+                    if let seriesID = row.recurringSeriesId {
+                        viewModel.deleteRecurringIncomeSeries(seriesID)
+                    }
+                    pendingIncomeDeleteID = nil
+                },
+                onCancel: {
+                    pendingIncomeDeleteID = nil
+                }
+            )
+        } else {
+            AppGlassDeleteConfirmationDialog(
+                message: appLocalized("\"%@\" will be permanently deleted.", row.title),
+                onDelete: {
+                    viewModel.deleteIncome(row.id)
+                    pendingIncomeDeleteID = nil
+                },
+                onCancel: {
+                    pendingIncomeDeleteID = nil
+                }
+            )
+        }
+    }
+
+    private var pendingIncomeDeleteRow: GroupedExpenseRowModel? {
+        guard let pendingIncomeDeleteID else {
+            return nil
+        }
+
+        for section in viewModel.sections {
+            if let row = section.rows.first(where: { $0.id == pendingIncomeDeleteID }) {
+                return row
+            }
+        }
+
+        return nil
+    }
+
 }
 
 private struct GroupedExpensesSectionsList: View {
@@ -506,21 +565,21 @@ private struct GroupedExpensesSectionsList: View {
     let year: Int
     let month: Int
     let selectedMonth: MonthCursor
-    let groupingMode: ExpenseGroupingMode
     let onAddExpense: (() -> Void)?
     let onPreviousMonth: (() -> Void)?
     let onNextMonth: (() -> Void)?
     let onOpenExpense: (String) -> Void
 
+    @Binding private var groupingMode: ExpenseGroupingMode
     @StateObject private var viewModel: GroupedExpensesSectionsViewModel
-    @State private var recurringExpenseToDelete: GroupedExpenseRowModel?
+    @State private var pendingExpenseDeleteID: String?
 
     init(
         kind: GroupedExpensesKind,
         year: Int,
         month: Int,
         selectedMonth: MonthCursor,
-        groupingMode: ExpenseGroupingMode,
+        groupingMode: Binding<ExpenseGroupingMode>,
         onAddExpense: (() -> Void)?,
         onPreviousMonth: (() -> Void)?,
         onNextMonth: (() -> Void)?,
@@ -530,17 +589,17 @@ private struct GroupedExpensesSectionsList: View {
         self.year = year
         self.month = month
         self.selectedMonth = selectedMonth
-        self.groupingMode = groupingMode
         self.onAddExpense = onAddExpense
         self.onPreviousMonth = onPreviousMonth
         self.onNextMonth = onNextMonth
         self.onOpenExpense = onOpenExpense
+        _groupingMode = groupingMode
         _viewModel = StateObject(
             wrappedValue: GroupedExpensesSectionsViewModel(
                 year: year,
                 month: month,
                 kind: kind,
-                groupingMode: groupingMode
+                groupingMode: groupingMode.wrappedValue
             )
         )
     }
@@ -606,7 +665,7 @@ private struct GroupedExpensesSectionsList: View {
                     Button(action: onAddExpense) {
                         AppGlassToolbarIcon(systemName: "plus")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass)
                 }
             }
         }
@@ -619,6 +678,19 @@ private struct GroupedExpensesSectionsList: View {
         }
         .onDisappear {
             viewModel.stop()
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ExpenseGroupingGlassControl(selection: $groupingMode)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+        }
+        .overlay {
+            if let pendingExpenseDeleteRow {
+                AppGlassDialogOverlay {
+                    expenseDeleteDialog(for: pendingExpenseDeleteRow)
+                }
+            }
         }
     }
 
@@ -662,6 +734,39 @@ private struct GroupedExpensesSectionsList: View {
     }
 
     @ViewBuilder
+    private func expenseDeleteDialog(for row: GroupedExpenseRowModel) -> some View {
+        if row.isRecurring {
+            AppGlassRecurringDeleteConfirmationDialog(
+                message: appLocalized("Choose whether to delete only this instance of \"%@\" or the whole series.", row.title),
+                onDeleteInstance: {
+                    viewModel.deleteExpense(row.id)
+                    pendingExpenseDeleteID = nil
+                },
+                onDeleteSeries: {
+                    if let seriesID = row.recurringSeriesId {
+                        viewModel.deleteRecurringExpenseSeries(seriesID)
+                    }
+                    pendingExpenseDeleteID = nil
+                },
+                onCancel: {
+                    pendingExpenseDeleteID = nil
+                }
+            )
+        } else {
+            AppGlassDeleteConfirmationDialog(
+                message: appLocalized("\"%@\" will be permanently deleted.", row.title),
+                onDelete: {
+                    viewModel.deleteExpense(row.id)
+                    pendingExpenseDeleteID = nil
+                },
+                onCancel: {
+                    pendingExpenseDeleteID = nil
+                }
+            )
+        }
+    }
+
+    @ViewBuilder
     private func rowView(for row: GroupedExpenseRowModel) -> some View {
         if kind.allowsDelete {
             Button {
@@ -670,33 +775,13 @@ private struct GroupedExpensesSectionsList: View {
                 GroupedExpenseRowView(row: row)
             }
             .buttonStyle(.plain)
-            .swipeActions(edge: .trailing, allowsFullSwipe: !row.isRecurring) {
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button {
-                    if row.isRecurring {
-                        recurringExpenseToDelete = row
-                    } else {
-                        viewModel.deleteExpense(row.id)
-                    }
+                    pendingExpenseDeleteID = row.id
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(appLocalized("Delete"), systemImage: "trash")
                 }
                 .tint(.red)
-            }
-            .confirmationDialog(
-                "Delete",
-                isPresented: dialogSelectionBinding(selection: $recurringExpenseToDelete, matching: row),
-                titleVisibility: .visible
-            ) {
-                Button("This instance only", role: .destructive) {
-                    viewModel.deleteExpense(row.id)
-                    recurringExpenseToDelete = nil
-                }
-                Button("Whole series", role: .destructive) {
-                    if let seriesID = row.recurringSeriesId {
-                        viewModel.deleteRecurringExpenseSeries(seriesID)
-                    }
-                    recurringExpenseToDelete = nil
-                }
             }
         } else {
             Button {
@@ -706,6 +791,20 @@ private struct GroupedExpensesSectionsList: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var pendingExpenseDeleteRow: GroupedExpenseRowModel? {
+        guard let pendingExpenseDeleteID else {
+            return nil
+        }
+
+        for section in viewModel.sections {
+            if let row = section.rows.first(where: { $0.id == pendingExpenseDeleteID }) {
+                return row
+            }
+        }
+
+        return nil
     }
 
 }
@@ -739,22 +838,6 @@ private struct GroupedExpenseSectionHeaderView: View {
     }
 }
 
-private func dialogSelectionBinding<Item: Identifiable>(
-    selection: Binding<Item?>,
-    matching item: Item
-) -> Binding<Bool> where Item.ID: Equatable {
-    Binding(
-        get: {
-            selection.wrappedValue?.id == item.id
-        },
-        set: { isPresented in
-            if !isPresented {
-                selection.wrappedValue = nil
-            }
-        }
-    )
-}
-
 private struct MonthNavigationToolbarTitle: View {
     let selectedMonth: MonthCursor
     let subtitle: String
@@ -769,20 +852,21 @@ private struct MonthNavigationToolbarTitle: View {
                         .font(.system(size: 15, weight: .semibold))
                         .frame(width: 30, height: 30)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
 
                 Text(selectedMonth.label)
                     .font(.headline)
                     .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .appGlassSurface(cornerRadius: 18)
 
                 Button(action: onNextMonth) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 15, weight: .semibold))
                         .frame(width: 30, height: 30)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
             }
-            .padding(.horizontal, 2)
 
             Text(subtitle)
                 .font(.caption)
