@@ -48,6 +48,67 @@ private val chartPalette: List<Color> = listOf(
     Color(0xFF7A5C00)
 )
 
+private data class DashboardStrings(
+    val dashboard: String,
+    val expenses: String,
+    val shared: String,
+    val income: String,
+    val topCategory: String,
+    val highestDay: String,
+    val monthlySummary: String,
+    val noExpensesForMonth: String,
+    val noExpensesInPeriod: String,
+    val unknownCategory: String,
+    val currencySymbol: String,
+    val weekdayNames: List<String>
+)
+
+@Composable
+private fun rememberDashboardStrings(): DashboardStrings {
+    val dashboard = stringResource(Res.string.dashboard)
+    val expenses = stringResource(Res.string.expenses)
+    val shared = stringResource(Res.string.shared)
+    val income = stringResource(Res.string.income)
+    val topCategory = stringResource(Res.string.top_category)
+    val highestDay = stringResource(Res.string.highest_day)
+    val monthlySummary = stringResource(Res.string.monthly_summary)
+    val noExpensesForMonth = stringResource(Res.string.no_expenses_for_month)
+    val noExpensesInPeriod = stringResource(Res.string.no_expenses_in_period)
+    val unknownCategory = stringResource(Res.string.unknown_category)
+    val currencySymbol = stringResource(Res.string.currency_symbol)
+    val weekdayNames = stringArrayResource(Res.array.full_weekday_names).toList()
+
+    return remember(
+        dashboard,
+        expenses,
+        shared,
+        income,
+        topCategory,
+        highestDay,
+        monthlySummary,
+        noExpensesForMonth,
+        noExpensesInPeriod,
+        unknownCategory,
+        currencySymbol,
+        weekdayNames
+    ) {
+        DashboardStrings(
+            dashboard = dashboard,
+            expenses = expenses,
+            shared = shared,
+            income = income,
+            topCategory = topCategory,
+            highestDay = highestDay,
+            monthlySummary = monthlySummary,
+            noExpensesForMonth = noExpensesForMonth,
+            noExpensesInPeriod = noExpensesInPeriod,
+            unknownCategory = unknownCategory,
+            currencySymbol = currencySymbol,
+            weekdayNames = weekdayNames
+        )
+    }
+}
+
 class DashboardScreen : Screen {
     @Composable
     override fun Content() {
@@ -210,21 +271,16 @@ private fun DashboardScreenScaffold(
     content: @Composable (Modifier) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
-    val navigator = LocalNavigator.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val dataTransferState = rememberAndroidDataTransferSheetState()
     var showNavigationRail by remember { mutableStateOf(false) }
-    var showCloudBackupSheet by remember { mutableStateOf(false) }
-    var showCsvTransferSheet by remember { mutableStateOf(false) }
     val addExpenseLabel = stringResource(Res.string.add_expense)
-    val dashboardLabel = stringResource(Res.string.dashboard)
+    val dashboardStrings = rememberDashboardStrings()
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidDataTransferUi(
             snackbarHostState = snackbarHostState,
-            showCloudBackupSheet = showCloudBackupSheet,
-            onDismissCloudBackupSheet = { showCloudBackupSheet = false },
-            showCsvTransferSheet = showCsvTransferSheet,
-            onDismissCsvTransferSheet = { showCsvTransferSheet = false }
+            state = dataTransferState
         )
 
         Scaffold(
@@ -242,7 +298,7 @@ private fun DashboardScreenScaffold(
                         IconButton(onClick = { if (!isIos) showNavigationRail = true }) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
-                                contentDescription = dashboardLabel
+                                contentDescription = dashboardStrings.dashboard
                             )
                         }
                     },
@@ -280,8 +336,8 @@ private fun DashboardScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = onOpenCategories,
-                onOpenFullCloudBackup = { showCloudBackupSheet = true },
-                onOpenCsvTransfer = { showCsvTransferSheet = true }
+                onOpenFullCloudBackup = dataTransferState::openCloudBackupSheet,
+                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet
             )
         }
     }
@@ -394,30 +450,21 @@ private fun ExpenseSummary(
     onTopCategoryClick: () -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
-    val currencySymbol = stringResource(Res.string.currency_symbol)
-    val expensesLabel = stringResource(Res.string.expenses)
-    val sharedLabel = stringResource(Res.string.shared)
-    val incomeLabel = stringResource(Res.string.income)
-    val topCategoryLabel = stringResource(Res.string.top_category)
-    val highestDayLabel = stringResource(Res.string.highest_day)
-    val monthlySummaryLabel = stringResource(Res.string.monthly_summary)
-    val noExpensesForMonthLabel = stringResource(Res.string.no_expenses_for_month)
-    val unknownCategoryLabel = stringResource(Res.string.unknown_category)
-    val weekdayNames = stringArrayResource(Res.array.full_weekday_names)
+    val strings = rememberDashboardStrings()
     val resolveCategoryName = rememberCategoryNameResolver()
     val topCategoryIconKey = remember(summary.topCategoryId, categoriesById) {
         summary.topCategoryId
             ?.let(categoriesById::get)
             ?.icon
     }
-    val topCategoryValue = remember(summary.topCategoryId, categoriesById, unknownCategoryLabel, resolveCategoryName) {
+    val topCategoryValue = remember(summary.topCategoryId, categoriesById, strings.unknownCategory, resolveCategoryName) {
         summary.topCategoryId
             ?.let(categoriesById::get)
             ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
             ?: "-"
     }
-    val highestDayValue = remember(summary.highestDayEpochMillis, weekdayNames) {
-        summary.highestDayEpochMillis?.toEpochDayLabel(weekdayNames) ?: "-"
+    val highestDayValue = remember(summary.highestDayEpochMillis, strings.weekdayNames) {
+        summary.highestDayEpochMillis?.toEpochDayLabel(strings.weekdayNames) ?: "-"
     }
 
     val colorScheme = MaterialTheme.colorScheme
@@ -425,37 +472,32 @@ private fun ExpenseSummary(
         summary,
         topCategoryValue,
         highestDayValue,
-        currencySymbol,
-        expensesLabel,
-        sharedLabel,
-        incomeLabel,
-        topCategoryLabel,
-        highestDayLabel,
+        strings,
         colorScheme,
     ) {
         listOf(
             SummaryMetricUi(
-                label = expensesLabel,
+                label = strings.expenses,
                 value = summary.expenseCount.toString(),
                 containerColor = colorScheme.primaryContainer,
                 contentColor = colorScheme.onPrimaryContainer
             ),
             SummaryMetricUi(
-                label = sharedLabel,
-                value = formatAmount(summary.sharedAmount, currencySymbol),
+                label = strings.shared,
+                value = formatAmount(summary.sharedAmount, strings.currencySymbol),
                 containerColor = colorScheme.secondaryContainer,
                 contentColor = colorScheme.onSecondaryContainer,
                 onClick = onSharedClick
             ),
             SummaryMetricUi(
-                label = incomeLabel,
-                value = formatAmount(summary.incomeAmount, currencySymbol),
+                label = strings.income,
+                value = formatAmount(summary.incomeAmount, strings.currencySymbol),
                 containerColor = colorScheme.tertiaryContainer,
                 contentColor = colorScheme.onTertiaryContainer,
                 onClick = onIncomeClick
             ),
             SummaryMetricUi(
-                label = topCategoryLabel,
+                label = strings.topCategory,
                 value = topCategoryValue,
                 valueIconColorKey = summary.topCategoryId,
                 valueIconKey = topCategoryIconKey,
@@ -464,11 +506,11 @@ private fun ExpenseSummary(
                 onClick = onTopCategoryClick
             ),
             SummaryMetricUi(
-                label = highestDayLabel,
+                label = strings.highestDay,
                 value = highestDayValue,
                 containerColor = colorScheme.surfaceVariant,
                 contentColor = colorScheme.onSurfaceVariant,
-                trailingValue = formatAmount(summary.highestDayAmount, currencySymbol),
+                trailingValue = formatAmount(summary.highestDayAmount, strings.currencySymbol),
                 onClick = onHighestDayClick
             )
         ).chunked(2)
@@ -486,13 +528,13 @@ private fun ExpenseSummary(
             verticalArrangement = Arrangement.spacedBy(if (isIos) 12.dp else 14.dp)
         ) {
             Text(
-                text = monthlySummaryLabel,
+                text = strings.monthlySummary,
                 style = MaterialTheme.typography.titleLarge
             )
 
             if (summary.expenseCount == 0) {
                 Text(
-                    text = noExpensesForMonthLabel,
+                    text = strings.noExpensesForMonth,
                     style = if (isIos) MaterialTheme.typography.bodyMedium
                     else MaterialTheme.typography.bodyLarge
                 )
@@ -696,12 +738,10 @@ private fun DashboardCharts(
 
 @Composable
 private fun LineChartPage(state: LineChartState) {
+    val strings = rememberDashboardStrings()
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val xAxisLabelBandHeight = 28.dp
-    val noExpensesInPeriodLabel = stringResource(Res.string.no_expenses_in_period)
-    val expensesLabel = stringResource(Res.string.expenses)
-    val incomeLabel = stringResource(Res.string.income)
     val xAxisLabels = remember(state.months) { state.months }
 
     Column(
@@ -711,7 +751,7 @@ private fun LineChartPage(state: LineChartState) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (state.series.isEmpty()) {
-            Text(text = noExpensesInPeriodLabel, style = MaterialTheme.typography.bodyLarge)
+            Text(text = strings.noExpensesInPeriod, style = MaterialTheme.typography.bodyLarge)
             return@Column
         }
 
@@ -847,8 +887,8 @@ private fun LineChartPage(state: LineChartState) {
                         )
                         Text(
                             text = when (series.kind) {
-                                ChartSeriesKind.Expenses -> expensesLabel
-                                ChartSeriesKind.Income -> incomeLabel
+                                ChartSeriesKind.Expenses -> strings.expenses
+                                ChartSeriesKind.Income -> strings.income
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = onSurfaceVariant
@@ -865,9 +905,7 @@ private fun CategoryBreakdownPage(
     categoryTotals: List<CategoryTotal>,
     categoriesById: Map<String, Category>
 ) {
-    val currencySymbol = stringResource(Res.string.currency_symbol)
-    val noExpensesForMonthLabel = stringResource(Res.string.no_expenses_for_month)
-    val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+    val strings = rememberDashboardStrings()
     val resolveCategoryName = rememberCategoryNameResolver()
 
     Column(
@@ -875,7 +913,7 @@ private fun CategoryBreakdownPage(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (categoryTotals.isEmpty()) {
-            Text(text = noExpensesForMonthLabel, style = MaterialTheme.typography.bodyLarge)
+            Text(text = strings.noExpensesForMonth, style = MaterialTheme.typography.bodyLarge)
             return@Column
         }
 
@@ -887,7 +925,7 @@ private fun CategoryBreakdownPage(
                 val categoryName = categoryTotal.categoryId
                     ?.let(categoriesById::get)
                     ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
-                    ?: unknownCategoryLabel
+                    ?: strings.unknownCategory
                 val categoryIconKey = categoryTotal.categoryId
                     ?.let(categoriesById::get)
                     ?.icon
@@ -915,7 +953,7 @@ private fun CategoryBreakdownPage(
                                 maxLines = 1
                             )
                         }
-                        Text(formatAmount(categoryTotal.amount, currencySymbol), style = MaterialTheme.typography.labelLarge)
+                        Text(formatAmount(categoryTotal.amount, strings.currencySymbol), style = MaterialTheme.typography.labelLarge)
                     }
                     Box(
                         modifier = Modifier

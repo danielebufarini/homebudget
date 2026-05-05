@@ -5,21 +5,44 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import homebudget.composeapp.generated.resources.*
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
+@Stable
+internal class AndroidDataTransferSheetState {
+    var showCloudBackupSheet by mutableStateOf(false)
+    var showCsvTransferSheet by mutableStateOf(false)
+
+    fun openCloudBackupSheet() {
+        showCloudBackupSheet = true
+    }
+
+    fun dismissCloudBackupSheet() {
+        showCloudBackupSheet = false
+    }
+
+    fun openCsvTransferSheet() {
+        showCsvTransferSheet = true
+    }
+
+    fun dismissCsvTransferSheet() {
+        showCsvTransferSheet = false
+    }
+}
+
+@Composable
+internal fun rememberAndroidDataTransferSheetState(): AndroidDataTransferSheetState {
+    return remember { AndroidDataTransferSheetState() }
+}
+
 @Composable
 internal fun AndroidDataTransferUi(
     snackbarHostState: SnackbarHostState,
-    showCloudBackupSheet: Boolean,
-    onDismissCloudBackupSheet: () -> Unit,
-    showCsvTransferSheet: Boolean,
-    onDismissCsvTransferSheet: () -> Unit
+    state: AndroidDataTransferSheetState
 ) {
     val scope = rememberCoroutineScope()
     val importCsvLauncher = rememberCsvImportLauncher { message ->
@@ -40,39 +63,39 @@ internal fun AndroidDataTransferUi(
     backupExportLauncher.Render()
     backupRestoreLauncher.Render()
 
-    if (showCloudBackupSheet) {
+    if (state.showCloudBackupSheet) {
         ActionSheet(
             title = stringResource(Res.string.cloud_backup_restore_title),
             description = stringResource(Res.string.cloud_backup_restore_description),
             note = stringResource(Res.string.cloud_backup_restore_note),
-            onDismiss = onDismissCloudBackupSheet,
+            onDismiss = state::dismissCloudBackupSheet,
             primaryLabel = stringResource(Res.string.backup_to_google_drive),
             primaryAction = {
-                onDismissCloudBackupSheet()
+                state.dismissCloudBackupSheet()
                 backupExportLauncher.open()
             },
             secondaryLabel = stringResource(Res.string.restore_backup),
             secondaryAction = {
-                onDismissCloudBackupSheet()
+                state.dismissCloudBackupSheet()
                 backupRestoreLauncher.open()
             }
         )
     }
 
-    if (showCsvTransferSheet) {
+    if (state.showCsvTransferSheet) {
         ActionSheet(
             title = stringResource(Res.string.csv_transfer_title),
             description = stringResource(Res.string.csv_transfer_description),
             note = stringResource(Res.string.csv_transfer_note),
-            onDismiss = onDismissCsvTransferSheet,
+            onDismiss = state::dismissCsvTransferSheet,
             primaryLabel = stringResource(Res.string.export_csv_ellipsis),
             primaryAction = {
-                onDismissCsvTransferSheet()
+                state.dismissCsvTransferSheet()
                 exportCsvLauncher.open()
             },
             secondaryLabel = stringResource(Res.string.import_csv),
             secondaryAction = {
-                onDismissCsvTransferSheet()
+                state.dismissCsvTransferSheet()
                 importCsvLauncher.open()
             }
         )

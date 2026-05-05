@@ -226,20 +226,15 @@ private fun CategoriesScreenScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
-    val navigator = LocalNavigator.current
+    val dataTransferState = rememberAndroidDataTransferSheetState()
     var showNavigationRail by remember { mutableStateOf(false) }
-    var showCloudBackupSheet by remember { mutableStateOf(false) }
-    var showCsvTransferSheet by remember { mutableStateOf(false) }
     val addCategoryLabel = stringResource(Res.string.add_category)
     val categoriesLabel = stringResource(Res.string.categories)
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidDataTransferUi(
             snackbarHostState = snackbarHostState,
-            showCloudBackupSheet = showCloudBackupSheet,
-            onDismissCloudBackupSheet = { showCloudBackupSheet = false },
-            showCsvTransferSheet = showCsvTransferSheet,
-            onDismissCsvTransferSheet = { showCsvTransferSheet = false }
+            state = dataTransferState
         )
 
         Scaffold(
@@ -294,8 +289,8 @@ private fun CategoriesScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Categories,
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = {},
-                onOpenFullCloudBackup = { showCloudBackupSheet = true },
-                onOpenCsvTransfer = { showCsvTransferSheet = true }
+                onOpenFullCloudBackup = dataTransferState::openCloudBackupSheet,
+                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet
             )
         }
     }
