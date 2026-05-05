@@ -5,6 +5,8 @@ import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.loadCategoryNameResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -25,7 +27,9 @@ suspend fun importBudgetItemsFromCsv(
     repository.insertDefaultCategoriesIfEmpty()
     val resolveCategoryName = loadCategoryNameResolver()
 
-    val parsedRows = parseUnifiedCsvRows(csvText)
+    val parsedRows = withContext(Dispatchers.Default) {
+        parseUnifiedCsvRows(csvText)
+    }
     if (parsedRows.isEmpty()) {
         return CsvImportResult(importedCount = 0, skippedCount = 0)
     }

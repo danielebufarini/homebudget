@@ -1,6 +1,5 @@
 package it.homebudget.app.ui.screens
 
-import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -83,16 +82,20 @@ internal actual fun rememberBackupRestoreLauncher(
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode != Activity.RESULT_OK) {
-            onRestoreMessage(driveAccessCancelledLabel)
-            return@rememberLauncherForActivityResult
-        }
-
         val account = runCatching {
             GoogleSignIn.getSignedInAccountFromIntent(result.data)
                 .getResult(ApiException::class.java)
         }.getOrElse {
-            onRestoreMessage(it.message ?: driveAccessFailedLabel)
+            val message = if (it is ApiException) {
+                mapGoogleDriveSignInErrorMessage(
+                    error = it,
+                    driveAccessCancelledLabel = driveAccessCancelledLabel,
+                    driveAccessFailedLabel = driveAccessFailedLabel
+                )
+            } else {
+                it.message ?: driveAccessFailedLabel
+            }
+            onRestoreMessage(message)
             return@rememberLauncherForActivityResult
         }
 

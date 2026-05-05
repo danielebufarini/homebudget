@@ -1,11 +1,11 @@
 package it.homebudget.app.ui.screens
 
 import android.content.Context
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import android.util.Log
+import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.Scopes
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Scope
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream
 private const val GoogleDriveBackupFileName = "homebudget-backup.json"
 private const val GoogleDriveBackupMimeType = "application/json"
 private const val GoogleDriveAppName = "HomeBudget"
+private const val GoogleDriveBackupLogTag = "GoogleDriveBackup"
 
 internal fun googleDriveBackupScope(): Scope = Scope(Scopes.DRIVE_APPFOLDER)
 
@@ -34,6 +35,31 @@ internal fun createGoogleDriveBackupSignInClient(context: Context): GoogleSignIn
 
 internal fun hasGoogleDriveBackupAccess(account: GoogleSignInAccount?): Boolean {
     return account != null && GoogleSignIn.hasPermissions(account, googleDriveBackupScope())
+}
+
+internal fun mapGoogleDriveSignInErrorMessage(
+    error: ApiException,
+    driveAccessCancelledLabel: String,
+    driveAccessFailedLabel: String
+): String {
+    val statusCode = error.statusCode
+    val statusCodeName = when (statusCode) {
+        GoogleSignInStatusCodes.SIGN_IN_CANCELLED,
+        CommonStatusCodes.CANCELED -> "SIGN_IN_CANCELLED"
+        else -> GoogleSignInStatusCodes.getStatusCodeString(statusCode)
+    }
+
+    Log.w(
+        GoogleDriveBackupLogTag,
+        "Google Drive sign-in failed. code=$statusCode name=$statusCodeName message=${error.message}",
+        error
+    )
+
+    return when (statusCode) {
+        GoogleSignInStatusCodes.SIGN_IN_CANCELLED,
+        CommonStatusCodes.CANCELED -> driveAccessCancelledLabel
+        else -> "$driveAccessFailedLabel ($statusCodeName)"
+    }
 }
 
 internal suspend fun uploadBackupToGoogleDrive(

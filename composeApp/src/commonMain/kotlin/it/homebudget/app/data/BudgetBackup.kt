@@ -4,6 +4,8 @@ import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
@@ -69,35 +71,45 @@ private data class BudgetBackupIncome(
 )
 
 suspend fun exportBudgetBackup(repository: ExpenseRepository): BudgetBackupFile {
-    val snapshot = BudgetBackupSnapshot(
-        format = BACKUP_FORMAT,
-        version = BACKUP_VERSION,
-        createdAtEpochMillis = Clock.System.now().toEpochMilliseconds(),
-        categories = repository.getAllCategoriesSnapshot().map(Category::toBackupModel),
-        expenses = repository.getAllExpensesSnapshot().map(Expense::toBackupModel),
-        incomes = repository.getAllIncomesSnapshot().map(Income::toBackupModel)
-    )
+    val categories = repository.getAllCategoriesSnapshot()
+    val expenses = repository.getAllExpensesSnapshot()
+    val incomes = repository.getAllIncomesSnapshot()
 
-    return BudgetBackupFile(
-        fileName = BACKUP_FILE_NAME,
-        content = budgetBackupJson.encodeToString(BudgetBackupSnapshot.serializer(), snapshot)
-    )
+    return withContext(Dispatchers.Default) {
+        val snapshot = BudgetBackupSnapshot(
+            format = BACKUP_FORMAT,
+            version = BACKUP_VERSION,
+            createdAtEpochMillis = Clock.System.now().toEpochMilliseconds(),
+            categories = categories.map(Category::toBackupModel),
+            expenses = expenses.map(Expense::toBackupModel),
+            incomes = incomes.map(Income::toBackupModel)
+        )
+
+        BudgetBackupFile(
+            fileName = BACKUP_FILE_NAME,
+            content = budgetBackupJson.encodeToString(BudgetBackupSnapshot.serializer(), snapshot)
+        )
+    }
 }
 
-fun parseBudgetBackup(jsonText: String): BudgetBackupCounters {
-    val snapshot = decodeBudgetBackupSnapshot(jsonText)
-    return BudgetBackupCounters(
-        categoriesCount = snapshot.categories.size,
-        expensesCount = snapshot.expenses.size,
-        incomesCount = snapshot.incomes.size
-    )
+suspend fun parseBudgetBackup(jsonText: String): BudgetBackupCounters {
+    return withContext(Dispatchers.Default) {
+        val snapshot = decodeBudgetBackupSnapshot(jsonText)
+        BudgetBackupCounters(
+            categoriesCount = snapshot.categories.size,
+            expensesCount = snapshot.expenses.size,
+            incomesCount = snapshot.incomes.size
+        )
+    }
 }
 
 suspend fun restoreBudgetBackup(
     repository: ExpenseRepository,
     jsonText: String
 ): BudgetBackupCounters {
-    val snapshot = decodeBudgetBackupSnapshot(jsonText)
+    val snapshot = withContext(Dispatchers.Default) {
+        decodeBudgetBackupSnapshot(jsonText)
+    }
 
     repository.replaceAllData(
         categories = snapshot.categories.map { category ->

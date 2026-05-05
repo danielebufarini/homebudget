@@ -6,6 +6,8 @@ import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.loadCategoryNameResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -32,34 +34,23 @@ suspend fun exportBudgetItemsToCsv(
 ): CsvExportFile {
     require(startDate <= endDate) { "startDate must be on or before endDate" }
     val resolveCategoryName = loadCategoryNameResolver()
+    val expenses = repository.getAllExpensesSnapshot()
+    val incomes = repository.getAllIncomesSnapshot()
+    val categories = repository.getAllCategoriesSnapshot()
 
-    return exportFullDatabaseCsv(
-        repository = repository,
-        startDate = startDate,
-        endDate = endDate,
-        localizeCategoryName = { category ->
-            resolveCategoryName(category.id, category.name, category.isCustom)
-        },
-        unknownCategory = getString(Res.string.unknown_category)
-    )
-}
-
-private suspend fun exportFullDatabaseCsv(
-    repository: ExpenseRepository,
-    startDate: LocalDate,
-    endDate: LocalDate,
-    localizeCategoryName: (Category) -> String,
-    unknownCategory: String
-): CsvExportFile {
-    return buildFullDatabaseCsvExport(
-        expenses = repository.getAllExpensesSnapshot(),
-        incomes = repository.getAllIncomesSnapshot(),
-        categories = repository.getAllCategoriesSnapshot(),
-        startDate = startDate,
-        endDate = endDate,
-        localizeCategoryName = localizeCategoryName,
-        unknownCategory = unknownCategory
-    )
+    return withContext(Dispatchers.Default) {
+        buildFullDatabaseCsvExport(
+            expenses = expenses,
+            incomes = incomes,
+            categories = categories,
+            startDate = startDate,
+            endDate = endDate,
+            localizeCategoryName = { category ->
+                resolveCategoryName(category.id, category.name, category.isCustom)
+            },
+            unknownCategory = getString(Res.string.unknown_category)
+        )
+    }
 }
 
 internal fun buildExpensesCsvExport(
