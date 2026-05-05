@@ -220,6 +220,12 @@ private fun DashboardScreenScaffold(
     val exportCsvLauncher = rememberCsvExportLauncher { message ->
         scope.launch { snackbarHostState.showSnackbar(message) }
     }
+    val backupExportLauncher = rememberBackupExportLauncher { message ->
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    val backupRestoreLauncher = rememberBackupRestoreLauncher { message ->
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
     var showNavigationRail by remember { mutableStateOf(false) }
     val addExpenseLabel = stringResource(Res.string.add_expense)
     val dashboardLabel = stringResource(Res.string.dashboard)
@@ -227,6 +233,8 @@ private fun DashboardScreenScaffold(
     Box(modifier = Modifier.fillMaxSize()) {
         importCsvLauncher.Render()
         exportCsvLauncher.Render()
+        backupExportLauncher.Render()
+        backupRestoreLauncher.Render()
 
         Scaffold(
             topBar = {
@@ -282,6 +290,8 @@ private fun DashboardScreenScaffold(
                 onDismiss = { showNavigationRail = false },
                 onOpenDashboard = {},
                 onOpenCategories = onOpenCategories,
+                onBackup = { backupExportLauncher.open() },
+                onRestore = { backupRestoreLauncher.open() },
                 onImportCsv = { importCsvLauncher.open() },
                 onExportCsv = { exportCsvLauncher.open() }
             )

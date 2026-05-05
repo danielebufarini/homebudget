@@ -12,6 +12,12 @@
     <string name="add_income">Aggiungi entrata</string>
     <string name="amount">Importo</string>
     <string name="back">Indietro</string>
+    <string name="backup">Backup</string>
+    <string name="backup_to_google_drive">Backup su Google Drive</string>
+    <string name="backup_export_failed">Impossibile esportare il file di backup</string>
+    <string name="backup_export_saved">File di backup esportato</string>
+    <string name="backup_restore_failed">Impossibile ripristinare il file di backup</string>
+    <string name="backup_restore_invalid">Impossibile leggere il file di backup</string>
     <string name="by_category">Per categoria</string>
     <string name="by_date">Per data</string>
     <string name="calendar">Calendario</string>
@@ -69,6 +75,9 @@
     <string name="nothing_to_save">Niente da salvare</string>
     <string name="recurring_monthly">Mensile ricorrente</string>
     <string name="refresh">Aggiorna</string>
+    <string name="restore">Ripristina</string>
+    <string name="restore_backup">Ripristina backup</string>
+    <string name="restore_from_google_drive">Ripristina da Google Drive</string>
     <string name="save">Salva</string>
     <string name="save_expense">Salva spesa</string>
     <string name="saving">Salvataggio...</string>
@@ -159,6 +168,8 @@
     <!-- ── CSV import result ──────────────────────────────────────────────── -->
     <string name="csv_import_success">Importate %1$d voci dal CSV</string>
     <string name="csv_import_success_with_skipped">Importate %1$d voci dal CSV, saltate %2$d</string>
+    <string name="backup_restore_confirmation_message">Questo sostituirà i dati attuali con %1$d categorie, %2$d spese e %3$d entrate del file di backup.</string>
+    <string name="backup_restore_success">Backup ripristinato: %1$d categorie, %2$d spese, %3$d entrate.</string>
 
     <!-- ── Default category names ─────────────────────────────────────────── -->
     <string name="category_default_0">Spese casa</string>

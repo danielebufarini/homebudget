@@ -22,6 +22,9 @@ SELECT * FROM income WHERE recurringSeriesId = ? ORDER BY date ASC;
 deleteIncome:
 DELETE FROM income WHERE id = ?;
 
+deleteAllIncomes:
+DELETE FROM income;
+
 deleteRecurringIncomeSeries:
 DELETE FROM income WHERE recurringSeriesId = ?;
 

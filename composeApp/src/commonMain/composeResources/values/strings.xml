@@ -12,6 +12,12 @@
     <string name="add_income">Add Income</string>
     <string name="amount">Amount</string>
     <string name="back">Back</string>
+    <string name="backup">Backup</string>
+    <string name="backup_to_google_drive">Backup to Google Drive</string>
+    <string name="backup_export_failed">Unable to export the backup file</string>
+    <string name="backup_export_saved">Backup file exported</string>
+    <string name="backup_restore_failed">Unable to restore the backup file</string>
+    <string name="backup_restore_invalid">Unable to read the backup file</string>
     <string name="by_category">By Category</string>
     <string name="by_date">By Date</string>
     <string name="calendar">Calendar</string>
@@ -69,6 +75,9 @@
     <string name="nothing_to_save">Nothing to save</string>
     <string name="recurring_monthly">Recurring Monthly</string>
     <string name="refresh">Refresh</string>
+    <string name="restore">Restore</string>
+    <string name="restore_backup">Restore backup</string>
+    <string name="restore_from_google_drive">Restore from Google Drive</string>
     <string name="save">Save</string>
     <string name="save_expense">Save Expense</string>
     <string name="saving">Saving...</string>
@@ -168,6 +177,8 @@
     <string name="csv_import_success">Imported %1$d items from CSV</string>
     <!-- csvImportSuccess(importedCount, skippedCount > 0) -->
     <string name="csv_import_success_with_skipped">Imported %1$d items from CSV, skipped %2$d</string>
+    <string name="backup_restore_confirmation_message">This will replace the current data with %1$d categories, %2$d expenses, and %3$d incomes from the backup file.</string>
+    <string name="backup_restore_success">Backup restored: %1$d categories, %2$d expenses, %3$d incomes.</string>
 
     <!-- ── Default category names (categoryName() logic) ─────────────────── -->
     <!-- Custom categories always use their stored name; only built-ins need translation. -->

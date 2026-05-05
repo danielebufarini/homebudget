@@ -25,6 +25,9 @@ SELECT * FROM expense WHERE recurringSeriesId = ? ORDER BY date ASC;
 deleteExpense:
 DELETE FROM expense WHERE id = ?;
 
+deleteAllExpenses:
+DELETE FROM expense;
+
 deleteRecurringExpenseSeries:
 DELETE FROM expense WHERE recurringSeriesId = ?;
 

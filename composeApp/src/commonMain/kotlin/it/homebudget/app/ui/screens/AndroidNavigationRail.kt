@@ -2,10 +2,7 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +24,8 @@ internal fun AndroidNavigationRailOverlay(
     onDismiss: () -> Unit,
     onOpenDashboard: () -> Unit,
     onOpenCategories: () -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit,
     onImportCsv: () -> Unit,
     onExportCsv: () -> Unit
 ) {
@@ -34,6 +33,8 @@ internal fun AndroidNavigationRailOverlay(
     val scope = rememberCoroutineScope()
     val dashboardLabel = stringResource(Res.string.dashboard)
     val categoriesLabel = stringResource(Res.string.categories)
+    val backupLabel = stringResource(Res.string.backup_to_google_drive)
+    val restoreLabel = stringResource(Res.string.restore_from_google_drive)
     val importCsvLabel = stringResource(Res.string.import_csv)
     val exportCsvLabel = stringResource(Res.string.export_csv)
 
@@ -94,6 +95,42 @@ internal fun AndroidNavigationRailOverlay(
                                 if (selectedDestination != AndroidNavigationDestination.Categories) {
                                     onOpenCategories()
                                 }
+                            }
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        selected = false,
+                        label = { Text(backupLabel) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Save,
+                                contentDescription = backupLabel,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onBackup()
+                            }
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        selected = false,
+                        label = { Text(restoreLabel) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Restore,
+                                contentDescription = restoreLabel,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onRestore()
                             }
                         }
                     )

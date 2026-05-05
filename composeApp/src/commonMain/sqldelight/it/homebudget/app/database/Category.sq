@@ -23,5 +23,8 @@ WHERE id = ?;
 deleteCategory:
 DELETE FROM category WHERE id = ?;
 
+deleteAllCategories:
+DELETE FROM category;
+
 countCategories:
 SELECT count(*) FROM category;

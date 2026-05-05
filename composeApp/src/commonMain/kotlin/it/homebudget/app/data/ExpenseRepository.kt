@@ -17,6 +17,13 @@ private data class DefaultCategorySeed(
     val icon: String
 )
 
+data class RestoredCategory(
+    val id: String,
+    val name: String,
+    val icon: String,
+    val isCustom: Boolean
+)
+
 class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
     private val expenseQueries = database.expenseQueries
@@ -337,6 +344,51 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 isShared = if (isShared) 1L else 0L,
                 recurringSeriesId = seriesId
             )
+        }
+    }
+
+    suspend fun replaceAllData(
+        categories: List<RestoredCategory>,
+        expenses: List<PendingExpense>,
+        incomes: List<PendingIncome>
+    ) {
+        withContext(Dispatchers.IO) {
+            database.transaction {
+                expenseQueries.deleteAllExpenses()
+                incomeQueries.deleteAllIncomes()
+                categoryQueries.deleteAllCategories()
+
+                categories.forEach { category ->
+                    categoryQueries.insertCategory(
+                        id = category.id,
+                        name = category.name,
+                        icon = category.icon,
+                        isCustom = if (category.isCustom) 1L else 0L
+                    )
+                }
+
+                expenses.forEach { expense ->
+                    expenseQueries.insertExpense(
+                        id = expense.id,
+                        amount = expense.amount,
+                        date = expense.date,
+                        categoryId = expense.categoryId,
+                        description = expense.description,
+                        isShared = if (expense.isShared) 1L else 0L,
+                        recurringSeriesId = expense.recurringSeriesId
+                    )
+                }
+
+                incomes.forEach { income ->
+                    incomeQueries.insertIncome(
+                        id = income.id,
+                        amount = income.amount,
+                        date = income.date,
+                        description = income.description,
+                        recurringSeriesId = income.recurringSeriesId
+                    )
+                }
+            }
         }
     }
 }
