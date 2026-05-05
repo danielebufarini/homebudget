@@ -396,6 +396,7 @@ private fun AndroidGroupedExpenseSectionCard(
             ) {
                 CategoryLabel(
                     iconKey = section.categoryIconKey,
+                    showIcon = section.categoryIconKey != null,
                     colorKey = section.categoryColorKey,
                     text = section.title,
                     modifier = Modifier.weight(1f),

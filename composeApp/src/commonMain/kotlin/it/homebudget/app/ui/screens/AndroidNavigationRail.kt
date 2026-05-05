@@ -2,7 +2,10 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,7 +18,6 @@ import org.jetbrains.compose.resources.stringResource
 
 internal enum class AndroidNavigationDestination {
     Dashboard,
-    Calendar,
     Categories
 }
 
@@ -24,7 +26,6 @@ internal fun AndroidNavigationRailOverlay(
     selectedDestination: AndroidNavigationDestination,
     onDismiss: () -> Unit,
     onOpenDashboard: () -> Unit,
-    onOpenCalendar: () -> Unit,
     onOpenCategories: () -> Unit,
     onImportCsv: () -> Unit,
     onExportCsv: () -> Unit
@@ -32,7 +33,6 @@ internal fun AndroidNavigationRailOverlay(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
     val dashboardLabel = stringResource(Res.string.dashboard)
-    val calendarLabel = stringResource(Res.string.calendar)
     val categoriesLabel = stringResource(Res.string.categories)
     val importCsvLabel = stringResource(Res.string.import_csv)
     val exportCsvLabel = stringResource(Res.string.export_csv)
@@ -73,26 +73,6 @@ internal fun AndroidNavigationRailOverlay(
                                 drawerState.close()
                                 if (selectedDestination != AndroidNavigationDestination.Dashboard) {
                                     onOpenDashboard()
-                                }
-                            }
-                        }
-                    )
-
-                    NavigationDrawerItem(
-                        selected = selectedDestination == AndroidNavigationDestination.Calendar,
-                        label = { Text(calendarLabel) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Filled.CalendarMonth,
-                                contentDescription = calendarLabel,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                if (selectedDestination != AndroidNavigationDestination.Calendar) {
-                                    onOpenCalendar()
                                 }
                             }
                         }

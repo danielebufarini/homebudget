@@ -36,37 +36,6 @@ internal fun groupedExpenseRowPresentation(
     )
 }
 
-internal fun calendarExpenseRowPresentation(
-    expense: Expense,
-    categoriesById: Map<String, Category>,
-    sharedLabel: String,
-    selectedDateLabel: String,
-    unknownCategoryLabel: String,
-    resolveCategoryName: (Category) -> String
-): ExpenseRowPresentation {
-    val category = categoriesById[expense.categoryId]
-    val categoryName = expense.categoryName(
-        categoriesById = categoriesById,
-        unknownCategoryLabel = unknownCategoryLabel,
-        resolveCategoryName = resolveCategoryName
-    )
-    val title = expense.description?.takeIf { it.isNotBlank() } ?: categoryName
-    val subtitleText = when {
-        title != categoryName && expense.isShared == 1L -> "$categoryName • $sharedLabel"
-        title != categoryName -> categoryName
-        expense.isShared == 1L -> sharedLabel
-        else -> selectedDateLabel
-    }
-
-    return ExpenseRowPresentation(
-        title = title,
-        subtitleText = subtitleText,
-        categoryColorKey = category?.id,
-        categoryIconKey = category?.icon,
-        isRecurring = !expense.recurringSeriesId.isNullOrBlank()
-    )
-}
-
 private fun Expense.displayName(fallbackTitle: String): String {
     return description?.ifBlank { fallbackTitle } ?: fallbackTitle
 }

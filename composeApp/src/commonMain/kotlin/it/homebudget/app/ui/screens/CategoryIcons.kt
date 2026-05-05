@@ -186,6 +186,7 @@ internal fun CategoryLabel(
     iconKey: String?,
     text: String,
     modifier: Modifier = Modifier,
+    showIcon: Boolean = true,
     colorKey: String? = null,
     textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
@@ -198,13 +199,15 @@ internal fun CategoryLabel(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        CategoryIcon(
-            iconKey = iconKey,
-            modifier = Modifier.size(iconSize),
-            contentDescription = null,
-            colorKey = colorKey,
-            tint = iconTint
-        )
+        if (showIcon) {
+            CategoryIcon(
+                iconKey = iconKey,
+                modifier = Modifier.size(iconSize),
+                contentDescription = null,
+                colorKey = colorKey,
+                tint = iconTint
+            )
+        }
         Text(
             text = text,
             style = textStyle,

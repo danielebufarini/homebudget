@@ -281,7 +281,6 @@ private fun DashboardScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
                 onDismiss = { showNavigationRail = false },
                 onOpenDashboard = {},
-                onOpenCalendar = { navigator?.push(CalendarExpensesScreen()) },
                 onOpenCategories = onOpenCategories,
                 onImportCsv = { importCsvLauncher.open() },
                 onExportCsv = { exportCsvLauncher.open() }

@@ -824,7 +824,8 @@ private struct GroupedExpenseSectionHeaderView: View {
             CategoryIconLabelView(
                 colorKey: section.categoryColorKey,
                 iconKey: section.categoryIconKey,
-                text: section.title
+                text: section.title,
+                showIcon: section.categoryIconKey != nil
             )
 
             Spacer()
@@ -910,10 +911,13 @@ private struct CategoryIconLabelView: View {
     let colorKey: String?
     let iconKey: String?
     let text: String
+    var showIcon: Bool = true
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            CategoryIconView(colorKey: colorKey, iconKey: iconKey)
+            if showIcon {
+                CategoryIconView(colorKey: colorKey, iconKey: iconKey)
+            }
             Text(text)
                 .lineLimit(1)
         }

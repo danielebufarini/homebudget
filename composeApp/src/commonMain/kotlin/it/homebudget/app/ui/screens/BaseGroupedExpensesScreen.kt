@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -242,7 +243,6 @@ abstract class BaseGroupedExpensesScreen(
                 }
             ) { padding ->
                 GroupedExpensesContent(
-                    isIos = isIos,
                     groupedExpenses = groupedExpenses,
                     categoriesById = categoriesById,
                     modifier = Modifier
@@ -266,7 +266,6 @@ abstract class BaseGroupedExpensesScreen(
             }
         } else {
             GroupedExpensesContent(
-                isIos = isIos,
                 groupedExpenses = groupedExpenses,
                 categoriesById = categoriesById,
                 modifier = Modifier
@@ -348,7 +347,6 @@ abstract class BaseGroupedExpensesScreen(
 
     @Composable
     private fun GroupedExpensesContent(
-        isIos: Boolean,
         groupedExpenses: List<Pair<String, List<Expense>>>,
         categoriesById: Map<String, Category>,
         modifier: Modifier,
@@ -369,36 +367,19 @@ abstract class BaseGroupedExpensesScreen(
                 .fillMaxSize()
                 .padding(bottom = 84.dp)
 
-            if (!isIos) {
-                AndroidGroupedExpensesRecyclerView(
-                    groupedExpenses = groupedExpenses,
-                    categoriesById = categoriesById,
-                    isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
-                    modifier = listModifier,
-                    emptyStateText = emptyStateText,
-                    expenseFallbackTitle = expenseFallbackTitle,
-                    currencySymbol = currencySymbol,
-                    unknownCategoryLabel = unknownCategoryLabel,
-                    resolveCategoryName = resolveCategoryName,
-                    groupsExpandedByDefault = groupsExpandedByDefault(),
-                    onOpenExpense = onOpenExpense,
-                    onDeleteExpense = onDeleteExpense
-                )
-            } else {
-                GroupedExpensesList(
-                    groupedExpenses = groupedExpenses,
-                    categoriesById = categoriesById,
-                    groupingMode = groupingMode,
-                    modifier = listModifier,
-                    onOpenExpense = onOpenExpense,
-                    onDeleteExpense = onDeleteExpense,
-                    emptyStateText = emptyStateText,
-                    expenseFallbackTitle = expenseFallbackTitle,
-                    currencySymbol = currencySymbol,
-                    unknownCategoryLabel = unknownCategoryLabel,
-                    resolveCategoryName = resolveCategoryName
-                )
-            }
+            GroupedExpensesList(
+                groupedExpenses = groupedExpenses,
+                categoriesById = categoriesById,
+                groupingMode = groupingMode,
+                modifier = listModifier,
+                onOpenExpense = onOpenExpense,
+                onDeleteExpense = onDeleteExpense,
+                emptyStateText = emptyStateText,
+                expenseFallbackTitle = expenseFallbackTitle,
+                currencySymbol = currencySymbol,
+                unknownCategoryLabel = unknownCategoryLabel,
+                resolveCategoryName = resolveCategoryName
+            )
 
             GroupingModeButtons(
                 groupingMode = groupingMode,
@@ -475,6 +456,7 @@ abstract class BaseGroupedExpensesScreen(
 
                                 CategoryLabel(
                                     iconKey = sectionIconKey,
+                                    showIcon = groupingMode == ExpenseGroupingMode.ByCategory,
                                     colorKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
                                         categoryExpenses.firstOrNull()?.categoryId
                                     } else {
@@ -605,24 +587,60 @@ abstract class BaseGroupedExpensesScreen(
         byDateLabel: String,
         modifier: Modifier = Modifier
     ) {
-        val options = listOf(
-            ExpenseGroupingMode.ByCategory to byCategoryLabel,
-            ExpenseGroupingMode.ByDate to byDateLabel
-        )
+        Surface(
+            modifier = modifier,
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 2.dp,
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AndroidGroupingModeButton(
+                    label = byCategoryLabel,
+                    selected = groupingMode == ExpenseGroupingMode.ByCategory,
+                    onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
+                )
+                AndroidGroupingModeButton(
+                    label = byDateLabel,
+                    selected = groupingMode == ExpenseGroupingMode.ByDate,
+                    onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
+                )
+            }
+        }
+    }
 
-        SingleChoiceSegmentedButtonRow(modifier = modifier) {
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = groupingMode == mode,
-                    onClick = { onGroupingModeChange(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = options.size
-                    ),
-                    icon = {}
-                ) {
-                    Text(label)
-                }
+    @Composable
+    private fun AndroidGroupingModeButton(
+        label: String,
+        selected: Boolean,
+        onClick: () -> Unit
+    ) {
+        if (selected) {
+            FilledTonalButton(
+                onClick = onClick,
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(label)
+            }
+        } else {
+            OutlinedButton(
+                onClick = onClick,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(label)
             }
         }
     }

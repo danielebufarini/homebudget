@@ -298,9 +298,6 @@ private fun CategoriesScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Categories,
                 onDismiss = { showNavigationRail = false },
                 onOpenDashboard = onBack,
-                onOpenCalendar = {
-                    navigator?.push(CalendarExpensesScreen())
-                },
                 onOpenCategories = {},
                 onImportCsv = { importCsvLauncher.open() },
                 onExportCsv = { exportCsvLauncher.open() }
