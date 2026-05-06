@@ -21,62 +21,69 @@ enum ICloudBackupStore {
     private static let backupFileName = "homebudget-backup.json"
     private static let backupDirectoryName = "Data"
 
-    static func writeBackup(text: String) async throws {
-        let backupURL = try await backupFileURL()
+    static func writeBackupSync(text: String) throws {
+        let backupURL = try backupFileURLSync()
         let data = Data(text.utf8)
+        try data.write(to: backupURL, options: .atomic)
+    }
 
+    static func writeBackup(text: String) async throws {
         try await runOffMain {
-            try data.write(to: backupURL, options: .atomic)
+            try writeBackupSync(text: text)
         }
     }
 
-    static func readBackup() async throws -> String {
-        let backupURL = try await backupFileURL()
+    static func readBackupSync() throws -> String {
+        let backupURL = try backupFileURLSync()
 
-        let fileExists = try await runOffMain {
-            FileManager.default.fileExists(atPath: backupURL.path)
-        }
-
-        guard fileExists else {
+        guard FileManager.default.fileExists(atPath: backupURL.path) else {
             throw ICloudBackupStoreError.notFound
         }
 
         let fileManager = FileManager.default
         if fileManager.isUbiquitousItem(at: backupURL) {
             try? fileManager.startDownloadingUbiquitousItem(at: backupURL)
-            try await waitUntilDownloaded(backupURL)
+            try waitUntilDownloadedSync(backupURL)
         }
 
-        let data = try await runOffMain {
-            try Data(contentsOf: backupURL)
-        }
+        let data = try Data(contentsOf: backupURL)
         guard let text = String(data: data, encoding: .utf8) else {
             throw ICloudBackupStoreError.unreadable
         }
         return text
     }
 
+    static func readBackup() async throws -> String {
+        try await runOffMain {
+            try readBackupSync()
+        }
+    }
+
     private static func backupFileURL() async throws -> URL {
         return try await runOffMain {
-            let fileManager = FileManager.default
-
-            guard fileManager.ubiquityIdentityToken != nil else {
-                throw ICloudBackupStoreError.unavailable
-            }
-
-            guard let containerURL = fileManager.url(forUbiquityContainerIdentifier: nil) else {
-                throw ICloudBackupStoreError.unavailable
-            }
-
-            let backupDirectory = containerURL
-                .appendingPathComponent(backupDirectoryName, isDirectory: true)
-            try fileManager.createDirectory(
-                at: backupDirectory,
-                withIntermediateDirectories: true
-            )
-
-            return backupDirectory.appendingPathComponent(backupFileName, isDirectory: false)
+            try backupFileURLSync()
         }
+    }
+
+    private static func backupFileURLSync() throws -> URL {
+        let fileManager = FileManager.default
+
+        guard fileManager.ubiquityIdentityToken != nil else {
+            throw ICloudBackupStoreError.unavailable
+        }
+
+        guard let containerURL = fileManager.url(forUbiquityContainerIdentifier: nil) else {
+            throw ICloudBackupStoreError.unavailable
+        }
+
+        let backupDirectory = containerURL
+            .appendingPathComponent(backupDirectoryName, isDirectory: true)
+        try fileManager.createDirectory(
+            at: backupDirectory,
+            withIntermediateDirectories: true
+        )
+
+        return backupDirectory.appendingPathComponent(backupFileName, isDirectory: false)
     }
 
     private static func waitUntilDownloaded(_ url: URL) async throws {
@@ -90,6 +97,20 @@ enum ICloudBackupStore {
             }
 
             try await Task.sleep(for: .milliseconds(250))
+        }
+    }
+
+    private static func waitUntilDownloadedSync(_ url: URL) throws {
+        let timeout = Date().addingTimeInterval(10)
+
+        while Date() < timeout {
+            let values = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
+
+            if values.ubiquitousItemDownloadingStatus == URLUbiquitousItemDownloadingStatus.current {
+                return
+            }
+
+            Thread.sleep(forTimeInterval: 0.25)
         }
     }
 

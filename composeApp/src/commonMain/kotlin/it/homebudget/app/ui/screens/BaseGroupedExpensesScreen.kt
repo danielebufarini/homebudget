@@ -133,26 +133,25 @@ abstract class BaseGroupedExpensesScreen(
             unknownCategoryLabel,
             shortMonthNames
         ) {
+            val resolveExpenseCategoryLabel: (Expense) -> String = { expense ->
+                categoriesById[expense.categoryId]
+                    ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+                    ?: unknownCategoryLabel
+            }
+            val expenseComparator =
+                compareByDescending<Expense> { it.date }
+                    .thenBy(resolveExpenseCategoryLabel)
+                    .thenBy { it.description ?: "" }
             when (groupingMode) {
                 ExpenseGroupingMode.ByCategory -> {
                     filteredExpenses
                         .groupBy { expense ->
-                            categoriesById[expense.categoryId]
-                                ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
-                                ?: unknownCategoryLabel
+                            resolveExpenseCategoryLabel(expense)
                         }
                         .toList()
                         .sortedBy { it.first }
                         .map { (groupKey, groupExpenses) ->
-                            val sortedExpenses = groupExpenses.sortedWith(
-                                compareByDescending<Expense> { it.date }
-                                    .thenBy { expense ->
-                                        categoriesById[expense.categoryId]
-                                            ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
-                                            ?: unknownCategoryLabel
-                                    }
-                                    .thenBy { it.description ?: "" }
-                            )
+                            val sortedExpenses = groupExpenses.sortedWith(expenseComparator)
                             groupKey to sortedExpenses
                         }
                 }
@@ -164,15 +163,7 @@ abstract class BaseGroupedExpensesScreen(
                             groupExpenses.maxOf { it.date }
                         }
                         .map { (groupDate, groupExpenses) ->
-                            val sortedExpenses = groupExpenses.sortedWith(
-                                compareByDescending<Expense> { it.date }
-                                    .thenBy { expense ->
-                                        categoriesById[expense.categoryId]
-                                            ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
-                                            ?: unknownCategoryLabel
-                                    }
-                                    .thenBy { it.description ?: "" }
-                            )
+                            val sortedExpenses = groupExpenses.sortedWith(expenseComparator)
                             formatDateGroupTitle(groupDate, shortMonthNames) to sortedExpenses
                         }
                 }

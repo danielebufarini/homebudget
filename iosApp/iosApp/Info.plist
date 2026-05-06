@@ -15,7 +15,15 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record a spoken expense command.</string>
-        <key>NSSpeechRecognitionUsageDescription</key>
-        <string>Convert your spoken expense command into text.</string>
-    </dict>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Convert your spoken expense command into text.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>it.homebudget.app.cloudsync</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
+</dict>
 </plist>

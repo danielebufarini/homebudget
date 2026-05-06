@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Optional Web client ID for Credential Manager returning-user Google account retrieval. -->
+    <string name="google_web_client_id"></string>
+</resources>

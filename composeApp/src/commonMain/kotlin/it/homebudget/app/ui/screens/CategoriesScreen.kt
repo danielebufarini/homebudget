@@ -1,7 +1,15 @@
 package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,13 +17,42 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
-import homebudget.composeapp.generated.resources.*
+import cafe.adriel.voyager.navigator.LocalNavigator
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.add
+import homebudget.composeapp.generated.resources.add_category
+import homebudget.composeapp.generated.resources.categories
+import homebudget.composeapp.generated.resources.custom_category
+import homebudget.composeapp.generated.resources.default_category
+import homebudget.composeapp.generated.resources.delete_category
+import homebudget.composeapp.generated.resources.delete_item_confirmation_message
+import homebudget.composeapp.generated.resources.edit_category
+import homebudget.composeapp.generated.resources.unable_to_delete_category
+import homebudget.composeapp.generated.resources.update
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.localizedCategoryName
@@ -26,9 +63,12 @@ import org.koin.compose.koinInject
 class CategoriesScreen : Screen {
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.current
+
         CategoriesRoute(
             showNavigationChrome = true,
-            showFab = true
+            showFab = true,
+            onOpenSettings = { navigator?.push(platformSettingsScreen()) }
         )
     }
 }
@@ -57,7 +97,8 @@ private fun rememberCategoriesScreenStrings(): CategoriesScreenStrings =
 fun CategoriesRoute(
     showNavigationChrome: Boolean,
     showFab: Boolean,
-    addCategoryRequestKey: Int = 0
+    addCategoryRequestKey: Int = 0,
+    onOpenSettings: () -> Unit = {}
 ) {
     val repository: ExpenseRepository = koinInject()
     val isIos = rememberIsIosPlatform()
@@ -91,7 +132,8 @@ fun CategoriesRoute(
         CategoriesScreenScaffold(
             showFab = showFab,
             onShowAddDialog = { showAddDialog = true },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onOpenSettings = onOpenSettings
         ) { padding ->
             if (isIos) {
                 CategoriesList(
@@ -229,6 +271,7 @@ private fun CategoriesScreenScaffold(
     showFab: Boolean,
     onShowAddDialog: () -> Unit,
     snackbarHostState: SnackbarHostState,
+    onOpenSettings: () -> Unit,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
@@ -293,8 +336,8 @@ private fun CategoriesScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Categories,
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = {},
-                onOpenFullCloudBackup = dataTransferState::openCloudBackupSheet,
-                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet
+                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet,
+                onOpenSettings = onOpenSettings
             )
         }
     }

@@ -4,26 +4,35 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import homebudget.composeapp.generated.resources.*
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.cancel
+import homebudget.composeapp.generated.resources.csv_transfer_description
+import homebudget.composeapp.generated.resources.csv_transfer_note
+import homebudget.composeapp.generated.resources.csv_transfer_title
+import homebudget.composeapp.generated.resources.export_csv_ellipsis
+import homebudget.composeapp.generated.resources.import_csv
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 @Stable
 internal class AndroidDataTransferSheetState {
-    var showCloudBackupSheet by mutableStateOf(false)
     var showCsvTransferSheet by mutableStateOf(false)
-
-    fun openCloudBackupSheet() {
-        showCloudBackupSheet = true
-    }
-
-    fun dismissCloudBackupSheet() {
-        showCloudBackupSheet = false
-    }
 
     fun openCsvTransferSheet() {
         showCsvTransferSheet = true
@@ -51,36 +60,9 @@ internal fun AndroidDataTransferUi(
     val exportCsvLauncher = rememberCsvExportLauncher { message ->
         scope.launch { snackbarHostState.showSnackbar(message) }
     }
-    val backupExportLauncher = rememberBackupExportLauncher { message ->
-        scope.launch { snackbarHostState.showSnackbar(message) }
-    }
-    val backupRestoreLauncher = rememberBackupRestoreLauncher { message ->
-        scope.launch { snackbarHostState.showSnackbar(message) }
-    }
 
     importCsvLauncher.Render()
     exportCsvLauncher.Render()
-    backupExportLauncher.Render()
-    backupRestoreLauncher.Render()
-
-    if (state.showCloudBackupSheet) {
-        ActionSheet(
-            title = stringResource(Res.string.cloud_backup_restore_title),
-            description = stringResource(Res.string.cloud_backup_restore_description),
-            note = stringResource(Res.string.cloud_backup_restore_note),
-            onDismiss = state::dismissCloudBackupSheet,
-            primaryLabel = stringResource(Res.string.backup_to_google_drive),
-            primaryAction = {
-                state.dismissCloudBackupSheet()
-                backupExportLauncher.open()
-            },
-            secondaryLabel = stringResource(Res.string.restore_backup),
-            secondaryAction = {
-                state.dismissCloudBackupSheet()
-                backupRestoreLauncher.open()
-            }
-        )
-    }
 
     if (state.showCsvTransferSheet) {
         ActionSheet(

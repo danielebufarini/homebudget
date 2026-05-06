@@ -12,7 +12,8 @@ import kotlin.time.Clock
 
 private const val BACKUP_FORMAT = "homebudget_backup"
 private const val BACKUP_VERSION = 1
-private const val BACKUP_FILE_NAME = "homebudget-backup.json"
+const val BACKUP_FILE_NAME = "homebudget-backup.json"
+const val CLOUD_BACKUP_DIRECTORY_NAME = "Data"
 
 private val budgetBackupJson = Json {
     prettyPrint = true

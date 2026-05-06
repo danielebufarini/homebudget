@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.ksp)
@@ -11,7 +11,17 @@ plugins {
 }
 
 kotlin {
-    androidTarget {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+    android {
+        namespace = "it.homebudget.shared"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        androidResources {
+            enable = true
+        }
+        withHostTest {}
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
@@ -25,6 +35,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            binaryOption("bundleId", "it.homebudget.composeapp")
         }
     }
 
@@ -32,18 +43,21 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services.auth)
             implementation(libs.androidx.recyclerview)
             implementation(libs.play.services.auth)
             implementation(libs.google.api.client.android)
             implementation(libs.google.api.client.gson)
             implementation(libs.google.api.services.drive)
+            implementation(libs.googleid)
             implementation(libs.mlkit.genai.prompt)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
-            implementation(compose.materialIconsExtended)
+            implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
@@ -68,41 +82,11 @@ kotlin {
     }
 }
 
-android {
-    namespace = "it.homebudget.app"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "it.homebudget.app"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "/META-INF/INDEX.LIST"
-            excludes += "/META-INF/DEPENDENCIES"
-        }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
 dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     add("kspIosX64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
-    debugImplementation(libs.compose.uiTooling)
 }
 
 room {

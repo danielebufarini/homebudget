@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="file" path="Data/homebudget-backup.json" />
+        <exclude domain="database" path="homebudget-room.db-wal" />
+        <exclude domain="database" path="homebudget-room.db-shm" />
+        <exclude domain="database" path="homebudget-room.db-journal" />
+    </cloud-backup>
+
+    <device-transfer>
+        <include domain="file" path="Data/homebudget-backup.json" />
+    </device-transfer>
+
+    <cross-platform-transfer platform="ios">
+        <include domain="file" path="Data/homebudget-backup.json" />
+        <platform-specific-params
+            bundleId="it.homebudget.app.daniele"
+            teamId="264H653993"
+            contentVersion="json-v1" />
+    </cross-platform-transfer>
+</data-extraction-rules>

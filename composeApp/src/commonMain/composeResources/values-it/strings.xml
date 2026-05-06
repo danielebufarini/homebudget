@@ -18,9 +18,9 @@
     <string name="backup_export_saved">Backup completo dell'app salvato nel file cloud.</string>
     <string name="backup_restore_failed">Impossibile ripristinare il backup completo dell'app.</string>
     <string name="backup_restore_invalid">Impossibile leggere il file di backup completo dell'app.</string>
-    <string name="cloud_backup_restore_title">Backup e ripristino cloud</string>
-    <string name="cloud_backup_restore_description">Salva o ripristina una copia completa dei dati dell'app nel cloud.</string>
-    <string name="cloud_backup_restore_note">Questa operazione riguarda tutti i dati dell'app.</string>
+    <string name="auto_backup_title">Backup completo cloud</string>
+    <string name="auto_backup_description">Android prepara un file JSON di backup completo per la sincronizzazione cloud. Il backup di sistema puo ripristinare questo file durante la configurazione del dispositivo o la reinstallazione dell'app.</string>
+    <string name="auto_backup_note">Quando un account Google ha gia concesso l'accesso a Drive, la sincronizzazione in background carica lo stesso file JSON nello spazio privato dell'app su Drive.</string>
     <string name="cloud_backup_unavailable">Il backup cloud non è disponibile su questo dispositivo o account.</string>
     <string name="cloud_backup_not_found">Nessun file di backup cloud trovato.</string>
     <string name="by_category">Per categoria</string>
@@ -31,6 +31,17 @@
     <string name="categories">Categorie</string>
     <string name="category">Categoria</string>
     <string name="category_name">Nome categoria</string>
+    <string name="cloud_backup_drive_toggle">Sincronizzazione Google Drive</string>
+    <string name="cloud_backup_drive_toggle_description">Carica il JSON di backup dell'app nello spazio AppData di Google Drive dopo che concedi l'accesso.</string>
+    <string name="cloud_backup_disabled">Il backup cloud e spento. L'app mantiene solo il file di backup locale.</string>
+    <string name="cloud_backup_enabled">Il backup cloud e attivo. La sincronizzazione in background usa Google Drive quando l'autorizzazione e disponibile.</string>
+    <string name="cloud_backup_requires_consent">L'accesso a Google Drive non e ancora stato concesso. Attiva questa opzione per aprire il flusso di consenso.</string>
+    <string name="cloud_backup_authorized">L'accesso a Google Drive e gia autorizzato.</string>
+    <string name="cloud_backup_checking">Verifica dell'autorizzazione Google Drive…</string>
+    <string name="cloud_backup_enabling">Preparazione dell'autorizzazione Google Drive…</string>
+    <string name="cloud_backup_settings_title">Backup cloud</string>
+    <string name="cloud_backup_toggle_cancelled">Il backup Google Drive non e stato abilitato.</string>
+    <string name="cloud_backup_google_setup_required">Il backup Google Drive richiede la configurazione OAuth di Google. Configura il client OAuth Android per questo package e SHA-1, poi imposta google_web_client_id per il sign-in silenzioso.</string>
     <string name="icon">Icona</string>
     <string name="icon_theme_home_and_bills">Casa e bollette</string>
     <string name="icon_theme_food_and_dining">Cibo e ristorazione</string>
@@ -103,6 +114,7 @@
     <string name="select_category">Seleziona categoria</string>
     <string name="select_date">Seleziona una data</string>
     <string name="select_installments">Seleziona rate</string>
+    <string name="settings">Impostazioni</string>
     <string name="shared">Condivise</string>
     <string name="shared_expense">Spesa condivisa</string>
     <string name="shared_expenses">Spese condivise</string>
@@ -187,8 +199,9 @@
     <!-- ── CSV import result ──────────────────────────────────────────────── -->
     <string name="csv_import_success">Importate %1$d voci dal CSV</string>
     <string name="csv_import_success_with_skipped">Importate %1$d voci dal CSV, saltate %2$d</string>
-    <string name="backup_restore_confirmation_message">Questa operazione sostituirà tutti i dati attuali dell'app con %1$d categorie, %2$d spese e %3$d entrate del file di backup cloud.</string>
+    <string name="backup_restore_confirmation_message">E stato trovato un backup cloud. Ripristinandolo verranno caricati nell'app %1$d categorie, %2$d spese e %3$d entrate.</string>
     <string name="backup_restore_success">Backup completo dell'app ripristinato: %1$d categorie, %2$d spese, %3$d entrate.</string>
+    <string name="skip">Salta</string>
 
     <!-- ── Default category names ─────────────────────────────────────────── -->
     <string name="category_default_0">Spese casa</string>

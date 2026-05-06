@@ -18,9 +18,9 @@
     <string name="backup_export_saved">Full app backup saved to the cloud file.</string>
     <string name="backup_restore_failed">Unable to restore the full app backup.</string>
     <string name="backup_restore_invalid">Unable to read the full app backup file.</string>
-    <string name="cloud_backup_restore_title">Cloud Backup &amp; Restore</string>
-    <string name="cloud_backup_restore_description">Save or restore a complete copy of your app data in the cloud.</string>
-    <string name="cloud_backup_restore_note">This affects the complete app data.</string>
+    <string name="auto_backup_title">Full Cloud Backup</string>
+    <string name="auto_backup_description">Android stages a full JSON backup file for cloud sync. System backup can restore that file during device setup or app reinstall.</string>
+    <string name="auto_backup_note">When a Google account already granted Drive access, background sync also uploads the same JSON file to the app\'s private Drive storage.</string>
     <string name="cloud_backup_unavailable">Cloud backup is unavailable on this device or account.</string>
     <string name="cloud_backup_not_found">No cloud backup file was found.</string>
     <string name="by_category">By Category</string>
@@ -31,6 +31,17 @@
     <string name="categories">Categories</string>
     <string name="category">Category</string>
     <string name="category_name">Category Name</string>
+    <string name="cloud_backup_drive_toggle">Google Drive sync</string>
+    <string name="cloud_backup_drive_toggle_description">Upload the app backup JSON to Google Drive AppData after you grant access.</string>
+    <string name="cloud_backup_disabled">Cloud backup is off. The app keeps the local backup file only.</string>
+    <string name="cloud_backup_enabled">Cloud backup is on. Background sync uses Google Drive when authorization is available.</string>
+    <string name="cloud_backup_requires_consent">Google Drive access has not been granted yet. Turn this on to review the consent flow.</string>
+    <string name="cloud_backup_authorized">Google Drive access is already authorized.</string>
+    <string name="cloud_backup_checking">Checking Google Drive authorization…</string>
+    <string name="cloud_backup_enabling">Preparing Google Drive authorization…</string>
+    <string name="cloud_backup_settings_title">Cloud Backup</string>
+    <string name="cloud_backup_toggle_cancelled">Google Drive backup was not enabled.</string>
+    <string name="cloud_backup_google_setup_required">Google Drive backup needs Google OAuth setup. Configure the Android OAuth client for this package and SHA-1, then set google_web_client_id for silent sign-in.</string>
     <string name="icon">Icon</string>
     <string name="icon_theme_home_and_bills">Home &amp; Bills</string>
     <string name="icon_theme_food_and_dining">Food &amp; Dining</string>
@@ -103,6 +114,7 @@
     <string name="select_category">Select Category</string>
     <string name="select_date">Select a date</string>
     <string name="select_installments">Select Installments</string>
+    <string name="settings">Settings</string>
     <string name="shared">Shared</string>
     <string name="shared_expense">Shared Expense</string>
     <string name="shared_expenses">Shared Expenses</string>
@@ -196,8 +208,9 @@
     <string name="csv_import_success">Imported %1$d items from CSV</string>
     <!-- csvImportSuccess(importedCount, skippedCount > 0) -->
     <string name="csv_import_success_with_skipped">Imported %1$d items from CSV, skipped %2$d</string>
-    <string name="backup_restore_confirmation_message">This will replace all current app data with %1$d categories, %2$d expenses, and %3$d incomes from the cloud backup file.</string>
+    <string name="backup_restore_confirmation_message">A cloud backup was found. Restoring it will load %1$d categories, %2$d expenses, and %3$d incomes into the app.</string>
     <string name="backup_restore_success">Full app backup restored: %1$d categories, %2$d expenses, %3$d incomes.</string>
+    <string name="skip">Skip</string>
 
     <!-- ── Default category names (categoryName() logic) ─────────────────── -->
     <!-- Custom categories always use their stored name; only built-ins need translation. -->

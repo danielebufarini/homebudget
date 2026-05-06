@@ -1,6 +1,7 @@
 package it.homebudget.app.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import it.homebudget.app.data.CloudSyncService
 import it.homebudget.app.data.DatabaseBuilderFactory
 import it.homebudget.app.data.ExpenseRepository
 import org.koin.core.context.startKoin
@@ -17,6 +18,7 @@ val sharedModule = module {
             .build()
     }
     single { ExpenseRepository(get()) }
+    single { CloudSyncService(get()) }
 }
 
 fun initKoin(appModule: Module? = null) {

@@ -7,11 +7,12 @@ import org.koin.dsl.module
 class HomeBudgetApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        
+
         initKoin(
             module {
                 single<android.content.Context> { this@HomeBudgetApplication }
             }
         )
+        CloudBackupWorkScheduler.schedule(this)
     }
 }

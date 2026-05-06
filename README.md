@@ -23,11 +23,11 @@ The project is not structured as a generic “shared everything” sample. Most 
 - `androidMain`
   - Android entry points (`MainActivity`, `Application`)
   - Android-specific DI bootstrap
-  - Android-only integrations such as speech recognition and Google Drive cloud-backup access
+  - Android-only integrations such as speech recognition, WorkManager backup scheduling, Google Drive AppData sync, and startup-restore detection
 - `iosMain`
   - `ComposeUIViewController` factories used by the SwiftUI app
   - iOS-specific DI bootstrap
-  - iOS bridge objects used by Swift code for grouped expenses, categories, CSV import/export, backup/restore, and voice entry
+  - iOS bridge objects used by Swift code for grouped expenses, categories, CSV import/export, backup preview/restore, and voice entry
 
 ### `iosApp`
 
@@ -35,7 +35,7 @@ The project is not structured as a generic “shared everything” sample. Most 
 
 - the SwiftUI root navigation stack
 - CSV file import/export UI
-- fixed-file iCloud backup/restore UI
+- iCloud background backup scheduling and startup restore confirmation
 - some native list, category-management, and voice-entry flows
 - hosting shared Compose screens inside `UIViewControllerRepresentable`
 
@@ -103,7 +103,7 @@ The shared application entry point is [`App.kt`](./composeApp/src/commonMain/kot
 Android uses the shared Compose screens as the primary UI, but a few paths remain platform-specific:
 
 - speech recognition and Gemini-related voice input
-- Google Drive access for fixed-file cloud backup/restore
+- cloud-backup scheduling and restore confirmation before the shared navigator starts
 - a native RecyclerView host for the categories screen
 
 Those Android-only pieces live under `androidMain/ui/screens`.
@@ -188,7 +188,7 @@ Examples:
 - grouped expenses snapshots
 - categories snapshots and mutations
 - CSV import/export controllers
-- backup export/restore controllers
+- backup preview/restore controllers
 - voice-entry persistence and lookup support
 - deletion flows for expenses/incomes
 
@@ -196,29 +196,63 @@ These classes sit in `composeApp/src/iosMain/kotlin/.../ui/screens` and exist sp
 
 ### 8. Data Transfer and Backup
 
-The app exposes two distinct data-transfer paths in the UI:
+The app currently exposes one explicit data-transfer path in the UI:
 
-- `Full Cloud Backup`
 - `CSV Import / Export`
 
-They are intentionally separate because they solve different problems.
+Full cloud backup is no longer a manual backup action. It runs silently in the background once enabled, and restore is gated by a startup confirmation dialog when a backup is found.
 
 #### Full Cloud Backup
 
-Full backup/restore is complete-database transfer, not a CSV export.
+Full cloud backup is complete-database transfer, not a CSV export. The shared flow is:
 
-- Android stores a fixed JSON backup file in Google Drive app data:
-  - [`GoogleDriveBackup.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/GoogleDriveBackup.android.kt)
-- iOS stores a fixed JSON backup file in the app's iCloud container:
-  - [`ICloudBackupStore.swift`](./iosApp/iosApp/ICloudBackupStore.swift)
-- shared backup serialization lives in:
-  - [`BudgetBackup.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
+1. build a canonical JSON snapshot from shared Kotlin
+2. write it atomically to platform storage
+3. let the platform cloud mechanism sync that file
+4. on first launch after reinstall or device migration, detect the file and ask the user before restoring
 
-The fixed backup filename is `homebudget-backup.json`.
+The shared pieces are:
+
+- backup format and file name in [`BudgetBackup.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
+- orchestration in [`CloudSyncService.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CloudSyncService.kt)
+
+Android implementation:
+
+- the canonical backup file is stored under `files/Data/homebudget-backup.json`
+- writes are atomic in [`AndroidCloudBackupStore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/AndroidCloudBackupStore.android.kt)
+- periodic and bootstrap sync are scheduled through WorkManager in [`CloudBackupWorkScheduler.kt`](./androidApp/src/main/kotlin/it/homebudget/app/CloudBackupWorkScheduler.kt) and [`CloudBackupWorker.kt`](./androidApp/src/main/kotlin/it/homebudget/app/CloudBackupWorker.kt)
+- Android Auto Backup includes only the JSON backup artifact and excludes redundant SQLite journals:
+  - [`androidApp/src/main/AndroidManifest.xml`](./androidApp/src/main/AndroidManifest.xml)
+  - [`androidApp/src/main/res/xml/data_extraction_rules.xml`](./androidApp/src/main/res/xml/data_extraction_rules.xml)
+  - [`androidApp/src/main/res/xml/backup_rules.xml`](./androidApp/src/main/res/xml/backup_rules.xml)
+- Google Drive AppData mirroring is handled by:
+  - [`GoogleDriveAuthorizationManager.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAuthorizationManager.android.kt)
+  - [`GoogleDriveAppDataStore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAppDataStore.android.kt)
+- the app checks authorization silently in the background and only syncs to Drive when an access token is already available
+- if Drive has not been authorized yet, Android exposes a `Settings > Cloud Backup` toggle that starts the explicit Google consent flow on demand:
+  - shared route declaration in [`PlatformSettingsScreen.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/PlatformSettingsScreen.kt)
+  - Android screen in [`PlatformSettingsScreen.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/PlatformSettingsScreen.android.kt)
+- the optional Credential Manager returning-user path is enabled only when `google_web_client_id` is configured in [`composeApp/src/androidMain/res/values/google_identity.xml`](./composeApp/src/androidMain/res/values/google_identity.xml)
+- startup restore detection lives in [`AndroidStartupRestore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/AndroidStartupRestore.android.kt) and the confirmation dialog is rendered by the shared Compose entry point in [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
+
+iOS implementation:
+
+- the canonical backup file is stored in the app's iCloud ubiquity container at `Data/homebudget-backup.json`
+- file IO is handled in [`ICloudBackupStore.swift`](./iosApp/iosApp/ICloudBackupStore.swift)
+- background backup scheduling uses BGTaskScheduler in [`CloudBackupBackgroundTasks.swift`](./iosApp/iosApp/CloudBackupBackgroundTasks.swift)
+- startup restore confirmation is handled in [`iOSApp.swift`](./iosApp/iosApp/iOSApp.swift)
+
+On both platforms, restore is no longer automatic. If the local database is still empty and a cloud backup file is present, the app asks the user for permission before importing it.
+
+Android caveats:
+
+- local JSON backup plus Android Auto Backup work without any Google OAuth setup
+- custom Drive AppData sync requires Google OAuth client configuration for the app's package name and SHA-1
+- the current repository does not implement true Android 16 Restore Credentials account-link restore, because that flow needs an app-account/backend integration in addition to Google client setup
 
 #### CSV Import / Export
 
-CSV import/export is file-based transfer for selected data ranges. It is deliberately not presented as a full backup mechanism.
+CSV import/export is file-based transfer for selected data ranges. It remains separate from full cloud backup.
 
 - shared CSV import/export logic:
   - [`CsvBudgetImport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetImport.kt)
@@ -271,20 +305,35 @@ The iOS implementation is intentionally more native because the recording and UX
 
 ## Build and Run
 
+The current toolchain baseline in the repository is:
+
+- AGP `9.2.1`
+- Kotlin `2.3.21`
+- Android compile/target SDK `36`
+- JDK `21` pinned in [`gradle/gradle-daemon-jvm.properties`](./gradle/gradle-daemon-jvm.properties)
+
 ### Android
 
 Build the debug APK:
 
 ```sh
-./gradlew :composeApp:assembleDebug
+./gradlew :androidApp:assembleDebug
 ```
+
+Google Drive AppData sync also needs Android-specific Google OAuth configuration:
+
+1. Create an Android OAuth client for the app package and signing SHA-1 used by the build you install.
+2. If you want Credential Manager returning-user sign-in, also create a Web OAuth client.
+3. Put that Web client ID into [`composeApp/src/androidMain/res/values/google_identity.xml`](./composeApp/src/androidMain/res/values/google_identity.xml).
+
+Without that setup, the app still keeps the canonical JSON backup locally and through Android Auto Backup, but the custom Drive consent toggle cannot complete end-to-end.
 
 ### iOS
 
 Open [`iosApp`](./iosApp) in Xcode and run the `iosApp` scheme, or build from the command line:
 
 ```sh
-xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -destination 'generic/platform=iOS Simulator' build
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.3.1' build
 ```
 
 ## Notes

@@ -35,12 +35,6 @@ private struct CsvExportDocument: FileDocument {
     }
 }
 
-private struct PendingBackupRestoreSelection: Identifiable {
-    let id = UUID()
-    let text: String
-    let preview: BudgetBackupCounters
-}
-
 private struct KotlinViewControllerHost: UIViewControllerRepresentable {
     let makeViewController: () -> UIViewController
 
@@ -88,7 +82,6 @@ private final class SafeAreaContainerViewController: UIViewController {
 struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
-    @State private var showCloudBackupSheet = false
     @State private var showCsvTransferSheet = false
     @State private var showCsvExportSheet = false
     @State private var showCsvExporter = false
@@ -98,11 +91,8 @@ struct ContentView: View {
     @State private var csvExportFilename = "budget.csv"
     @State private var csvExportStartDate = Calendar.current.date(byAdding: .day, value: -29, to: Date()) ?? Date()
     @State private var csvExportEndDate = Date()
-    @State private var pendingBackupRestoreSelection: PendingBackupRestoreSelection?
     @State private var csvImportController = IosCsvImportController()
     @State private var csvExportController = IosCsvExportController()
-    @State private var backupExportController = IosBackupExportController()
-    @State private var backupRestoreController = IosBackupRestoreController()
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -115,11 +105,6 @@ struct ContentView: View {
                         Menu {
                             Button(appLocalized("Categories")) {
                                 path.append(Route.categories)
-                            }
-                            Button(appLocalized("Full Cloud Backup")) {
-                                presentAfterMenuDismiss {
-                                    showCloudBackupSheet = true
-                                }
                             }
                             Button(appLocalized("CSV Import / Export")) {
                                 presentAfterMenuDismiss {
@@ -147,24 +132,6 @@ struct ContentView: View {
                         showVoiceExpenseSheet = false
                     }
                     .appGlassSheetPresentation()
-                }
-                .sheet(isPresented: $showCloudBackupSheet) {
-                    CloudBackupSheet(
-                        onCancel: { showCloudBackupSheet = false },
-                        onBackupNow: {
-                            showCloudBackupSheet = false
-                            presentAfterMenuDismiss {
-                                exportBackup()
-                            }
-                        },
-                        onRestoreBackup: {
-                            showCloudBackupSheet = false
-                            presentAfterMenuDismiss {
-                                beginBackupRestore()
-                            }
-                        }
-                    )
-                    .appGlassSheetPresentation(detents: [.height(320)])
                 }
                 .sheet(isPresented: $showCsvTransferSheet) {
                     CsvTransferSheet(
@@ -213,14 +180,6 @@ struct ContentView: View {
                     defaultFilename: csvExportFilename
                 ) { result in
                     handleCsvExport(result: result)
-                }
-                .sheet(item: $pendingBackupRestoreSelection) { selection in
-                    BackupRestoreSheet(
-                        preview: selection.preview,
-                        onCancel: { pendingBackupRestoreSelection = nil },
-                        onRestore: { restoreBackup(selection: selection) }
-                    )
-                    .appGlassSheetPresentation(detents: [.height(300)])
                 }
                 .overlay(alignment: .top) {
                     AppGlassBannerOverlay(presenter: bannerPresenter)
@@ -316,8 +275,6 @@ struct ContentView: View {
         .onDisappear {
             csvImportController.dispose()
             csvExportController.dispose()
-            backupExportController.dispose()
-            backupRestoreController.dispose()
         }
     }
 
@@ -408,75 +365,6 @@ struct ContentView: View {
         }
     }
 
-    private func prepareBackupRestore(text: String) {
-        guard !text.isEmpty else {
-            showCsvFeedback(appLocalized("Unable to read the backup file"), style: .error)
-            return
-        }
-
-        backupRestoreController.prepareRestore(text: text) { preview, errorMessage in
-            Task { @MainActor in
-                if let preview {
-                    pendingBackupRestoreSelection = PendingBackupRestoreSelection(
-                        text: text,
-                        preview: preview
-                    )
-                } else {
-                    showCsvFeedback(errorMessage ?? appLocalized("Unable to read the backup file"), style: .error)
-                }
-            }
-        }
-    }
-
-    private func restoreBackup(selection: PendingBackupRestoreSelection) {
-        backupRestoreController.restoreBackup(text: selection.text) { result, errorMessage in
-            Task { @MainActor in
-                pendingBackupRestoreSelection = nil
-                if let result {
-                    showCsvFeedback(
-                        appLocalized(
-                            "Backup restored: %1$d categories, %2$d expenses, %3$d incomes.",
-                            result.categoriesCount,
-                            result.expensesCount,
-                            result.incomesCount
-                        ),
-                        style: .success
-                    )
-                } else {
-                    showCsvFeedback(errorMessage ?? appLocalized("Unable to restore the backup file"), style: .error)
-                }
-            }
-        }
-    }
-
-    private func exportBackup() {
-        backupExportController.exportBackup { fileName, content, errorMessage in
-            Task { @MainActor in
-                if fileName != nil, let content {
-                    do {
-                        try await ICloudBackupStore.writeBackup(text: content)
-                        showCsvFeedback(appLocalized("Backup file exported"), style: .success)
-                    } catch {
-                        showCsvFeedback(error.localizedDescription, style: .error)
-                    }
-                } else {
-                    showCsvFeedback(errorMessage ?? appLocalized("Unable to export the backup file"), style: .error)
-                }
-            }
-        }
-    }
-
-    private func beginBackupRestore() {
-        Task { @MainActor in
-            do {
-                let text = try await ICloudBackupStore.readBackup()
-                prepareBackupRestore(text: text)
-            } catch {
-                showCsvFeedback(error.localizedDescription, style: .error)
-            }
-        }
-    }
-
     @MainActor
     private func showCsvFeedback(_ message: String, style: AppGlassBannerStyle) {
         bannerPresenter.show(message, style: style)
@@ -497,63 +385,6 @@ struct ContentView: View {
                 action()
             }
         }
-    }
-}
-
-private struct BackupRestoreSheet: View {
-    let preview: BudgetBackupCounters
-    let onCancel: () -> Void
-    let onRestore: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            AppGlassSheetContentScrollView {
-                AppGlassSheetSection(title: appLocalized("Restore Backup")) {
-                    Text(
-                        appLocalized(
-                            "This will replace the current data with %1$d categories, %2$d expenses, and %3$d incomes from the backup file.",
-                            preview.categoriesCount,
-                            preview.expensesCount,
-                            preview.incomesCount
-                        )
-                    )
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .appGlassSheetChrome()
-            .navigationTitle(appLocalized("Restore Backup"))
-            .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) {
-                AppGlassSheetActionBar {
-                    Button(appLocalized("Cancel"), action: onCancel)
-                        .buttonStyle(.glass)
-
-                    Button(appLocalized("Restore"), action: onRestore)
-                        .buttonStyle(.glassProminent)
-                }
-            }
-        }
-    }
-}
-
-private struct CloudBackupSheet: View {
-    let onCancel: () -> Void
-    let onBackupNow: () -> Void
-    let onRestoreBackup: () -> Void
-
-    var body: some View {
-        AppActionSheet(
-            title: appLocalized("Cloud Backup & Restore"),
-            description: appLocalized("Save or restore a complete copy of your app data in the cloud."),
-            note: appLocalized("This affects the complete app data."),
-            primaryLabel: appLocalized("Back Up Now"),
-            primaryAction: onBackupNow,
-            secondaryLabel: appLocalized("Restore Backup"),
-            secondaryAction: onRestoreBackup,
-            onCancel: onCancel
-        )
     }
 }
 

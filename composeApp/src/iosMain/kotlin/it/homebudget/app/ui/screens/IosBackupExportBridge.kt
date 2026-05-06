@@ -2,8 +2,7 @@ package it.homebudget.app.ui.screens
 
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.backup_export_failed
-import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.exportBudgetBackup
+import it.homebudget.app.data.CloudSyncService
 import it.homebudget.app.di.initKoin
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -13,11 +12,11 @@ import org.koin.mp.KoinPlatformTools
 
 class IosBackupExportController {
     private val scope = MainScope()
-    private val repository: ExpenseRepository by lazy {
+    private val cloudSyncService: CloudSyncService by lazy {
         if (KoinPlatformTools.defaultContext().getOrNull() == null) {
             initKoin()
         }
-        KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+        KoinPlatformTools.defaultContext().get().get<CloudSyncService>()
     }
 
     fun exportBackup(
@@ -25,7 +24,7 @@ class IosBackupExportController {
     ) {
         scope.launch {
             val result = runCatching {
-                val backup = exportBudgetBackup(repository)
+                val backup = cloudSyncService.buildBackupFile()
                 Triple(backup.fileName, backup.content, null as String?)
             }.getOrElse { error ->
                 Triple(null, null, error.message ?: getString(Res.string.backup_export_failed))
