@@ -98,6 +98,12 @@ Most screens are implemented in shared Kotlin under `commonMain/ui/screens`, for
 
 The shared application entry point is [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt). It wraps the app in the shared theme and starts a Voyager `Navigator` with `DashboardScreen`.
 
+The shared dashboard includes:
+
+- the monthly summary cards
+- the `Cash Flow` chart
+- a tap-to-inspect chart popup that appears next to a tapped month marker and shows expenses, income, and the monthly difference; tapping elsewhere dismisses it
+
 #### Android-specific UI integrations
 
 Android uses the shared Compose screens as the primary UI, but a few paths remain platform-specific:

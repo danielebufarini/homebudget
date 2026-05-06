@@ -59,6 +59,7 @@
     <string name="date">Data</string>
     <string name="default_category">Categoria predefinita</string>
     <string name="delete">Elimina</string>
+    <string name="difference">Differenza</string>
     <string name="delete_category">Elimina categoria</string>
     <string name="delete_expense">Elimina spesa</string>
     <string name="delete_income">Elimina entrata</string>

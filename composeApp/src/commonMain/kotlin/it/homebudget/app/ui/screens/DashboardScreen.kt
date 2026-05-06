@@ -4,8 +4,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,15 +16,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
@@ -52,8 +55,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -63,6 +72,7 @@ import homebudget.composeapp.generated.resources.add_expense
 import homebudget.composeapp.generated.resources.cash_flow
 import homebudget.composeapp.generated.resources.currency_symbol
 import homebudget.composeapp.generated.resources.dashboard
+import homebudget.composeapp.generated.resources.difference
 import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.expenses_by_category
 import homebudget.composeapp.generated.resources.full_weekday_names
@@ -72,6 +82,7 @@ import homebudget.composeapp.generated.resources.monthly_summary
 import homebudget.composeapp.generated.resources.no_expenses_for_month
 import homebudget.composeapp.generated.resources.no_expenses_in_period
 import homebudget.composeapp.generated.resources.shared
+import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.top_category
 import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
@@ -88,6 +99,9 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -106,6 +120,7 @@ private data class DashboardStrings(
     val expenses: String,
     val shared: String,
     val income: String,
+    val difference: String,
     val topCategory: String,
     val highestDay: String,
     val monthlySummary: String,
@@ -125,6 +140,7 @@ private fun rememberDashboardStrings(): DashboardStrings {
         expenses = stringResource(Res.string.expenses),
         shared = stringResource(Res.string.shared),
         income = stringResource(Res.string.income),
+        difference = stringResource(Res.string.difference),
         topCategory = stringResource(Res.string.top_category),
         highestDay = stringResource(Res.string.highest_day),
         monthlySummary = stringResource(Res.string.monthly_summary),
@@ -234,9 +250,6 @@ fun DashboardRoute(
             },
             onOpenSharedExpenses = {
                 onOpenSharedExpenses(selectedMonth.year, selectedMonth.month)
-            },
-            onOpenExpenseDetails = { expenseId ->
-                onOpenExpenseDetails(expenseId, false)
             },
             onOpenCategoryExpenses = { categoryName ->
                 onOpenCategoryExpenses(selectedMonth.year, selectedMonth.month, categoryName)
@@ -390,7 +403,6 @@ private fun DashboardBody(
     onOpenMonthlyExpenses: () -> Unit,
     onOpenDayExpenses: (Int) -> Unit,
     onOpenSharedExpenses: () -> Unit,
-    onOpenExpenseDetails: (String) -> Unit,
     onOpenCategoryExpenses: (String) -> Unit
 ) {
     val resolveCategoryName = rememberCategoryNameResolver()
@@ -779,160 +791,281 @@ private fun LineChartPage(state: LineChartState) {
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val xAxisLabelBandHeight = 28.dp
     val xAxisLabels = remember(state.months) { state.months }
+    val density = LocalDensity.current
+    var selectedPoint by remember(state) { mutableStateOf<SelectedChartPoint?>(null) }
+    var rootPositionInRoot by remember { mutableStateOf(Offset.Zero) }
+    var rootSize by remember { mutableStateOf(IntSize.Zero) }
+    var chartPositionInRoot by remember { mutableStateOf(Offset.Zero) }
+    var chartSize by remember { mutableStateOf(IntSize.Zero) }
+    var popupSize by remember { mutableStateOf(IntSize.Zero) }
+    val topInsetPx = with(density) { 8.dp.toPx() }
+    val hitTargetRadiusPx = with(density) { 18.dp.toPx() }
+    val chartGeometry = remember(state, chartSize, topInsetPx) {
+        state.buildChartGeometry(chartSize = chartSize, topInsetPx = topInsetPx)
+    }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        if (state.series.isEmpty()) {
-            Text(text = strings.noExpensesInPeriod, style = MaterialTheme.typography.bodyLarge)
-            return@Column
-        }
+            .padding(horizontal = 16.dp)
+            .onGloballyPositioned { coordinates ->
+                rootPositionInRoot = coordinates.positionInRoot()
+                rootSize = coordinates.size
+            }
+            .pointerInput(chartGeometry, chartPositionInRoot, rootPositionInRoot, chartSize, hitTargetRadiusPx) {
+                detectTapGestures { tapOffset ->
+                    val chartOrigin = chartPositionInRoot - rootPositionInRoot
+                    val tapInChart = tapOffset - chartOrigin
+                    val insideChart = tapInChart.x in 0f..chartSize.width.toFloat() &&
+                        tapInChart.y in 0f..chartSize.height.toFloat()
 
-        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            // Y-axis labels
-            Column(
-                modifier = Modifier.fillMaxHeight().padding(end = 8.dp)
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                    horizontalAlignment = Alignment.End
-                ) {
-                    state.yAxisLabels.forEach { label ->
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = onSurfaceVariant
+                    val nearestPoint = if (insideChart) {
+                        chartGeometry?.findNearestPoint(
+                            tapOffset = tapInChart,
+                            hitTargetRadiusPx = hitTargetRadiusPx
+                        )
+                    } else {
+                        null
+                    }
+
+                    selectedPoint = nearestPoint?.let { point ->
+                        SelectedChartPoint(
+                            monthIndex = point.monthIndex,
+                            detail = state.monthSnapshots[point.monthIndex],
+                            anchor = point.center + chartOrigin
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(xAxisLabelBandHeight))
+            }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (state.series.isEmpty()) {
+                Text(text = strings.noExpensesInPeriod, style = MaterialTheme.typography.bodyLarge)
+                return@Column
             }
 
-            // Chart area
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val width = size.width
-                        val height = size.height
-                        val topInset = 8.dp.toPx()
-                        val plotHeight = (height - topInset).coerceAtLeast(1f)
-                        val maxValue = state.maxValue.coerceAtLeast(1.0)
-                        val lineWidth = 2.75.dp.toPx()
-                        val gridStroke = 1.dp.toPx()
-
-                        fun xFor(index: Int): Float =
-                            if (state.pointCount == 1) width / 2f
-                            else width * index / (state.pointCount - 1).toFloat()
-
-                        // Horizontal grid lines
-                        listOf(0f, 0.5f, 1f).forEach { marker ->
-                            val y = topInset + plotHeight * (1f - marker)
-                            drawLine(
-                                color = outlineVariant,
-                                start = Offset(0f, y),
-                                end = Offset(width, y),
-                                strokeWidth = gridStroke
+            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxHeight().padding(end = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        state.yAxisLabels.forEach { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = onSurfaceVariant
                             )
                         }
+                    }
+                    Spacer(modifier = Modifier.height(xAxisLabelBandHeight))
+                }
 
-                        // Vertical grid lines
-                        repeat(state.pointCount) { index ->
-                            val x = xFor(index)
-                            drawLine(
-                                color = outlineVariant,
-                                start = Offset(x, 0f),
-                                end = Offset(x, height),
-                                strokeWidth = gridStroke
-                            )
-                        }
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .onGloballyPositioned { coordinates ->
+                                chartPositionInRoot = coordinates.positionInRoot()
+                                chartSize = coordinates.size
+                            }
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val lineWidth = 2.75.dp.toPx()
+                            val gridStroke = 1.dp.toPx()
+                            val geometry = chartGeometry ?: return@Canvas
 
-                        state.series.forEach { series ->
-                            val points = series.values.mapIndexed { index, value ->
-                                Offset(
-                                    x = xFor(index),
-                                    y = topInset + plotHeight -
-                                            (value / maxValue).toFloat() * plotHeight
+                            geometry.horizontalGridYs.forEach { y ->
+                                drawLine(
+                                    color = outlineVariant,
+                                    start = Offset(0f, y),
+                                    end = Offset(size.width, y),
+                                    strokeWidth = gridStroke
                                 )
                             }
 
-                            val path = Path().apply {
-                                points.forEachIndexed { index, offset ->
-                                    if (index == 0) moveTo(offset.x, offset.y)
-                                    else lineTo(offset.x, offset.y)
-                                }
+                            geometry.verticalGridXs.forEach { x ->
+                                drawLine(
+                                    color = outlineVariant,
+                                    start = Offset(x, 0f),
+                                    end = Offset(x, size.height),
+                                    strokeWidth = gridStroke
+                                )
                             }
-                            drawPath(
-                                path = path,
-                                color = series.color,
-                                style = Stroke(width = lineWidth, cap = StrokeCap.Round)
-                            )
 
-                            points.forEachIndexed { index, offset ->
-                                if (index in series.markerDays) {
+                            geometry.series.forEach { series ->
+                                drawPath(
+                                    path = series.path,
+                                    color = series.color,
+                                    style = Stroke(width = lineWidth, cap = StrokeCap.Round)
+                                )
+
+                                series.markers.forEach { marker ->
                                     drawCircle(
                                         color = series.color,
-                                        radius = 5.75.dp.toPx(),
-                                        center = offset
+                                        radius = if (selectedPoint?.monthIndex == marker.monthIndex) 6.5.dp.toPx() else 5.75.dp.toPx(),
+                                        center = marker.center
                                     )
                                 }
                             }
                         }
                     }
-                }
 
-                // X-axis labels
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(xAxisLabelBandHeight),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    xAxisLabels.forEach { month ->
-                        Text(
-                            text = month.shortLabel(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.CenterVertically)
-                        )
-                    }
-                }
-            }
-        }
-
-        if (state.series.size > 1) {
-            HorizontalDivider()
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                state.series.forEach { series ->
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth().height(xAxisLabelBandHeight),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(series.color, CircleShape)
-                        )
-                        Text(
-                            text = when (series.kind) {
-                                ChartSeriesKind.Expenses -> strings.expenses
-                                ChartSeriesKind.Income -> strings.income
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = onSurfaceVariant
-                        )
+                        xAxisLabels.forEach { month ->
+                            Text(
+                                text = month.shortLabel(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = onSurfaceVariant,
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (state.series.size > 1) {
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    state.series.forEach { series ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(series.color, CircleShape)
+                            )
+                            Text(
+                                text = when (series.kind) {
+                                    ChartSeriesKind.Expenses -> strings.expenses
+                                    ChartSeriesKind.Income -> strings.income
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
+
+        selectedPoint?.let { popupPoint ->
+            CashFlowPointPopup(
+                point = popupPoint,
+                rootSize = rootSize,
+                popupSize = popupSize,
+                onPopupSizeChanged = { popupSize = it }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.CashFlowPointPopup(
+    point: SelectedChartPoint,
+    rootSize: IntSize,
+    popupSize: IntSize,
+    onPopupSizeChanged: (IntSize) -> Unit
+) {
+    val strings = rememberDashboardStrings()
+    val shortMonthNames = stringArrayResource(Res.array.short_month_names)
+    val xMarginPx = with(LocalDensity.current) { 12.dp.toPx() }
+    val yMarginPx = with(LocalDensity.current) { 8.dp.toPx() }
+    val preferredX = point.anchor.x + xMarginPx
+    val preferredY = point.anchor.y - popupSize.height / 2f
+    val clampedX = if (rootSize.width == 0) {
+        preferredX
+    } else {
+        min(
+            max(8f, preferredX),
+            max(8f, rootSize.width - popupSize.width - 8f)
+        )
+    }
+    val clampedY = if (rootSize.height == 0) {
+        preferredY
+    } else {
+        min(
+            max(8f, preferredY),
+            max(8f, rootSize.height - popupSize.height - yMarginPx)
+        )
+    }
+
+    Card(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .offset { IntOffset(clampedX.roundToInt(), clampedY.roundToInt()) }
+            .onGloballyPositioned { coordinates -> onPopupSizeChanged(coordinates.size) },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                text = point.detail.month.shortLabelWithFullYear(shortMonthNames),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            CashFlowPointPopupRow(
+                label = strings.expenses,
+                value = formatAmount(point.detail.expenseAmount, strings.currencySymbol)
+            )
+            CashFlowPointPopupRow(
+                label = strings.income,
+                value = formatAmount(point.detail.incomeAmount, strings.currencySymbol)
+            )
+            CashFlowPointPopupRow(
+                label = strings.difference,
+                value = formatAmount(point.detail.differenceAmount, strings.currencySymbol)
+            )
+        }
+    }
+}
+
+private fun MonthCursor.shortLabelWithFullYear(shortMonthNames: List<String>): String =
+    "${shortMonthNames[month - 1]} $year"
+
+@Composable
+private fun CashFlowPointPopupRow(
+    label: String,
+    value: String
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
@@ -953,11 +1086,11 @@ private fun CategoryBreakdownPage(
             return@Column
         }
 
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            categoryTotals.forEach { categoryTotal ->
+            itemsIndexed(categoryTotals) { _, categoryTotal ->
                 val categoryName = categoryTotal.categoryId
                     ?.let(categoriesById::get)
                     ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
@@ -1099,17 +1232,17 @@ private fun buildDashboardDataCache(
             )
         },
         monthlyExpenseTotalsByMonth = expensesByMonth.mapValues { (_, monthExpenses) ->
-            monthExpenses.sumBigIntegerOf(Expense::amount).toDisplayDouble()
+            monthExpenses.sumBigIntegerOf(Expense::amount)
         },
         monthlyIncomeTotalsByMonth = incomesByMonth.mapValues { (_, monthIncomes) ->
-            monthIncomes.sumBigIntegerOf(Income::amount).toDisplayDouble()
+            monthIncomes.sumBigIntegerOf(Income::amount)
         }
     )
 }
 
 private fun buildCashFlowChartState(
-    expenseTotalsByMonth: Map<MonthCursor, Double>,
-    incomeTotalsByMonth: Map<MonthCursor, Double>,
+    expenseTotalsByMonth: Map<MonthCursor, BigInteger>,
+    incomeTotalsByMonth: Map<MonthCursor, BigInteger>,
     selectedMonth: MonthCursor,
 ): LineChartState {
     val months = selectedMonth.trailingMonths(count = 6)
@@ -1120,12 +1253,20 @@ private fun buildCashFlowChartState(
             maxValue = 0.0,
             months = months,
             yAxisLabels = listOf("0", "0", "0"),
+            monthSnapshots = emptyList(),
             series = emptyList()
         )
     }
 
-    val expenseValues = months.map { month -> expenseTotalsByMonth[month] ?: 0.0 }
-    val incomeValues = months.map { month -> incomeTotalsByMonth[month] ?: 0.0 }
+    val monthSnapshots = months.map { month ->
+        ChartMonthSnapshot(
+            month = month,
+            expenseAmount = expenseTotalsByMonth[month] ?: BigInteger.ZERO,
+            incomeAmount = incomeTotalsByMonth[month] ?: BigInteger.ZERO
+        )
+    }
+    val expenseValues = monthSnapshots.map { it.expenseAmount.toDisplayDouble() }
+    val incomeValues = monthSnapshots.map { it.incomeAmount.toDisplayDouble() }
 
     val expenseMarkerDays = buildSet {
         months.forEachIndexed { index, month ->
@@ -1153,6 +1294,7 @@ private fun buildCashFlowChartState(
             formatAxisAmount(maxValue / 2),
             formatAxisAmount(0.0)
         ),
+        monthSnapshots = monthSnapshots,
         series = listOf(
             LineSeries(
                 kind = ChartSeriesKind.Expenses,
@@ -1211,8 +1353,8 @@ private data class MonthlySummary(
 
 private data class DashboardDataCache(
     val monthlySummaries: Map<MonthCursor, MonthlySummary>,
-    val monthlyExpenseTotalsByMonth: Map<MonthCursor, Double>,
-    val monthlyIncomeTotalsByMonth: Map<MonthCursor, Double>
+    val monthlyExpenseTotalsByMonth: Map<MonthCursor, BigInteger>,
+    val monthlyIncomeTotalsByMonth: Map<MonthCursor, BigInteger>
 )
 
 private data class CategoryTotal(
@@ -1238,6 +1380,7 @@ private data class LineChartState(
     val maxValue: Double,
     val months: List<MonthCursor>,
     val yAxisLabels: List<String>,
+    val monthSnapshots: List<ChartMonthSnapshot>,
     val series: List<LineSeries>
 )
 
@@ -1252,3 +1395,115 @@ private data class LineSeries(
     val values: List<Double>,
     val markerDays: Set<Int> = emptySet()
 )
+
+private data class ChartMonthSnapshot(
+    val month: MonthCursor,
+    val expenseAmount: BigInteger,
+    val incomeAmount: BigInteger
+) {
+    val differenceAmount: BigInteger
+        get() = incomeAmount - expenseAmount
+}
+
+private data class ChartPoint(
+    val monthIndex: Int,
+    val kind: ChartSeriesKind,
+    val center: Offset
+)
+
+private data class SelectedChartPoint(
+    val monthIndex: Int,
+    val detail: ChartMonthSnapshot,
+    val anchor: Offset
+)
+
+private data class RenderedLineSeries(
+    val color: Color,
+    val path: Path,
+    val markers: List<ChartPoint>
+)
+
+private data class LineChartGeometry(
+    val horizontalGridYs: List<Float>,
+    val verticalGridXs: List<Float>,
+    val series: List<RenderedLineSeries>,
+    val points: List<ChartPoint>
+) {
+    fun findNearestPoint(
+        tapOffset: Offset,
+        hitTargetRadiusPx: Float
+    ): ChartPoint? {
+        var nearestPoint: ChartPoint? = null
+        var nearestDistance = hitTargetRadiusPx
+
+        points.forEach { point ->
+            val distance = hypot(
+                (tapOffset.x - point.center.x).toDouble(),
+                (tapOffset.y - point.center.y).toDouble()
+            ).toFloat()
+            if (distance <= nearestDistance) {
+                nearestDistance = distance
+                nearestPoint = point
+            }
+        }
+
+        return nearestPoint
+    }
+}
+
+private fun LineChartState.buildChartGeometry(
+    chartSize: IntSize,
+    topInsetPx: Float
+): LineChartGeometry? {
+    if (chartSize.width <= 0 || chartSize.height <= 0 || pointCount <= 0 || series.isEmpty()) {
+        return null
+    }
+
+    val plotHeight = (chartSize.height - topInsetPx).coerceAtLeast(1f)
+    val normalizedMaxValue = maxValue.coerceAtLeast(1.0)
+
+    fun xFor(index: Int): Float =
+        if (pointCount == 1) chartSize.width / 2f
+        else chartSize.width * index / (pointCount - 1).toFloat()
+
+    val horizontalGridYs = listOf(0f, 0.5f, 1f).map { marker ->
+        topInsetPx + plotHeight * (1f - marker)
+    }
+    val verticalGridXs = List(pointCount, ::xFor)
+    val renderedSeries = series.map { series ->
+        val points = series.values.mapIndexed { index, value ->
+            Offset(
+                x = xFor(index),
+                y = topInsetPx + plotHeight -
+                    (value / normalizedMaxValue).toFloat() * plotHeight
+            )
+        }
+        val path = Path().apply {
+            points.forEachIndexed { index, offset ->
+                if (index == 0) moveTo(offset.x, offset.y)
+                else lineTo(offset.x, offset.y)
+            }
+        }
+        val markers = series.markerDays.map { index ->
+            ChartPoint(
+                monthIndex = index,
+                kind = series.kind,
+                center = points[index]
+            )
+        }
+        RenderedLineSeries(
+            color = series.color,
+            path = path,
+            markers = markers
+        )
+    }
+    val chartPoints = buildList {
+        renderedSeries.forEach { addAll(it.markers) }
+    }
+    return LineChartGeometry(
+        horizontalGridYs = horizontalGridYs,
+        verticalGridXs = verticalGridXs,
+        series = renderedSeries,
+        points = chartPoints
+    )
+}
