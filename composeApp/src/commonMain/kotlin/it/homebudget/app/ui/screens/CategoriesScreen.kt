@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add
 import homebudget.composeapp.generated.resources.add_category
@@ -63,12 +62,9 @@ import org.koin.compose.koinInject
 class CategoriesScreen : Screen {
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.current
-
         CategoriesRoute(
             showNavigationChrome = true,
-            showFab = true,
-            onOpenSettings = { navigator?.push(platformSettingsScreen()) }
+            showFab = true
         )
     }
 }
@@ -97,8 +93,7 @@ private fun rememberCategoriesScreenStrings(): CategoriesScreenStrings =
 fun CategoriesRoute(
     showNavigationChrome: Boolean,
     showFab: Boolean,
-    addCategoryRequestKey: Int = 0,
-    onOpenSettings: () -> Unit = {}
+    addCategoryRequestKey: Int = 0
 ) {
     val repository: ExpenseRepository = koinInject()
     val isIos = rememberIsIosPlatform()
@@ -132,8 +127,7 @@ fun CategoriesRoute(
         CategoriesScreenScaffold(
             showFab = showFab,
             onShowAddDialog = { showAddDialog = true },
-            snackbarHostState = snackbarHostState,
-            onOpenSettings = onOpenSettings
+            snackbarHostState = snackbarHostState
         ) { padding ->
             if (isIos) {
                 CategoriesList(
@@ -271,7 +265,6 @@ private fun CategoriesScreenScaffold(
     showFab: Boolean,
     onShowAddDialog: () -> Unit,
     snackbarHostState: SnackbarHostState,
-    onOpenSettings: () -> Unit,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
@@ -336,8 +329,7 @@ private fun CategoriesScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Categories,
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = {},
-                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet,
-                onOpenSettings = onOpenSettings
+                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet
             )
         }
     }

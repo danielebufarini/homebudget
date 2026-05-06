@@ -39,7 +39,6 @@ fun DashboardContentViewController(
             showNavigationChrome = false,
             showFab = false,
             onOpenCategories = onOpenCategories,
-            onOpenSettings = {},
             onOpenAddExpense = onOpenAddExpense,
             onOpenMonthlyIncomes = onOpenMonthlyIncomes,
             onOpenMonthlyExpenses = onOpenMonthlyExpenses,

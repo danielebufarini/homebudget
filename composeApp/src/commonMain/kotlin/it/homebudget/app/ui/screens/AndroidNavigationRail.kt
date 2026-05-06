@@ -4,13 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ImportExport
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -26,14 +27,12 @@ import androidx.compose.ui.unit.dp
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.categories
 import homebudget.composeapp.generated.resources.csv
-import homebudget.composeapp.generated.resources.settings
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 internal enum class AndroidNavigationDestination {
     Dashboard,
-    Categories,
-    Settings
+    Categories
 }
 
 @Composable
@@ -41,14 +40,12 @@ internal fun AndroidNavigationRailOverlay(
     selectedDestination: AndroidNavigationDestination,
     onDismiss: () -> Unit,
     onOpenCategories: () -> Unit,
-    onOpenCsvTransfer: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenCsvTransfer: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
     val categoriesLabel = stringResource(Res.string.categories)
     val csvLabel = stringResource(Res.string.csv)
-    val settingsLabel = stringResource(Res.string.settings)
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -109,25 +106,11 @@ internal fun AndroidNavigationRailOverlay(
                         }
                     )
 
-                    NavigationDrawerItem(
-                        selected = selectedDestination == AndroidNavigationDestination.Settings,
-                        label = { Text(settingsLabel) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = settingsLabel,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                                if (selectedDestination != AndroidNavigationDestination.Settings) {
-                                    onOpenSettings()
-                                }
-                            }
-                        }
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        PlatformCloudBackupDrawerSection()
+                    }
                 }
             }
         },

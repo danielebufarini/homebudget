@@ -145,7 +145,6 @@ class DashboardScreen : Screen {
             showNavigationChrome = true,
             showFab = false,
             onOpenCategories = { navigator?.push(CategoriesScreen()) },
-            onOpenSettings = { navigator?.push(platformSettingsScreen()) },
             onOpenAddExpense = { navigator?.push(AddExpenseScreen()) },
             onOpenMonthlyIncomes = { year, month ->
                 navigator?.push(MonthlyIncomesScreen(year = year, month = month))
@@ -177,7 +176,6 @@ fun DashboardRoute(
     showNavigationChrome: Boolean,
     showFab: Boolean,
     onOpenCategories: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenAddExpense: () -> Unit,
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
@@ -245,7 +243,6 @@ fun DashboardRoute(
             totalAmount = summary.totalAmount,
             showFab = showFab,
             onOpenCategories = onOpenCategories,
-            onOpenSettings = onOpenSettings,
             onOpenAddExpense = onOpenAddExpense,
             onPreviousMonth = { selectedMonth = selectedMonth.previous() },
             onNextMonth = { selectedMonth = selectedMonth.next() }
@@ -295,7 +292,6 @@ private fun DashboardScreenScaffold(
     totalAmount: BigInteger,
     showFab: Boolean,
     onOpenCategories: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenAddExpense: () -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -367,8 +363,7 @@ private fun DashboardScreenScaffold(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = onOpenCategories,
-                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet,
-                onOpenSettings = onOpenSettings
+                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet
             )
         }
     }

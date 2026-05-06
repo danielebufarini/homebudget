@@ -229,9 +229,9 @@ Android implementation:
   - [`GoogleDriveAuthorizationManager.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAuthorizationManager.android.kt)
   - [`GoogleDriveAppDataStore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAppDataStore.android.kt)
 - the app checks authorization silently in the background and only syncs to Drive when an access token is already available
-- if Drive has not been authorized yet, Android exposes a `Settings > Cloud Backup` toggle that starts the explicit Google consent flow on demand:
-  - shared route declaration in [`PlatformSettingsScreen.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/PlatformSettingsScreen.kt)
-  - Android screen in [`PlatformSettingsScreen.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/PlatformSettingsScreen.android.kt)
+- if Drive has not been authorized yet, Android exposes a `Full Cloud Backup` toggle directly in the navigation drawer, with the backup description and note rendered underneath in small text; toggling it on starts the explicit Google consent flow on demand:
+  - shared drawer hook in [`AndroidNavigationRail.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/AndroidNavigationRail.kt)
+  - Android drawer section in [`PlatformCloudBackupDrawerSection.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/PlatformCloudBackupDrawerSection.android.kt)
 - the optional Credential Manager returning-user path is enabled only when `google_web_client_id` is configured in [`composeApp/src/androidMain/res/values/google_identity.xml`](./composeApp/src/androidMain/res/values/google_identity.xml)
 - startup restore detection lives in [`AndroidStartupRestore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/AndroidStartupRestore.android.kt) and the confirmation dialog is rendered by the shared Compose entry point in [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
 
