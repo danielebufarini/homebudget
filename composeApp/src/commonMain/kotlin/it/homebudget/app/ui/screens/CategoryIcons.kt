@@ -43,32 +43,6 @@ private data class CategoryIconSection(
     val iconKeys: List<String>
 )
 
-internal val PRELOADED_CATEGORY_ICON_KEYS = listOf(
-    "home",
-    "receipt",
-    "build",
-    "shopping_cart",
-    "restaurant",
-    "local_cafe",
-    "cake",
-    "directions_car",
-    "directions_bus",
-    "train",
-    "local_taxi",
-    "flight",
-    "hotel",
-    "beach_access",
-    "local_hospital",
-    "healing",
-    "fitness_center",
-    "spa",
-    "person",
-    "work",
-    "school",
-    "pets",
-    "category"
-)
-
 private val categoryIconSections = listOf(
     CategoryIconSection(
         titleRes = Res.string.icon_theme_home_and_bills,

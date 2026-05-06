@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.*
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.localization.formatResourceArgs
@@ -27,19 +26,35 @@ import org.koin.compose.koinInject
 class CategoriesScreen : Screen {
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.current
-
         CategoriesRoute(
-            onBack = { navigator?.pop() },
             showNavigationChrome = true,
             showFab = true
         )
     }
 }
 
+private data class CategoriesScreenStrings(
+    val addCategory: String,
+    val editCategory: String,
+    val add: String,
+    val update: String,
+    val deleteItemConfirmationMessageTemplate: String,
+    val unableToDeleteCategory: String
+)
+
+@Composable
+private fun rememberCategoriesScreenStrings(): CategoriesScreenStrings =
+    CategoriesScreenStrings(
+        addCategory = stringResource(Res.string.add_category),
+        editCategory = stringResource(Res.string.edit_category),
+        add = stringResource(Res.string.add),
+        update = stringResource(Res.string.update),
+        deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
+        unableToDeleteCategory = stringResource(Res.string.unable_to_delete_category)
+    )
+
 @Composable
 fun CategoriesRoute(
-    onBack: () -> Unit,
     showNavigationChrome: Boolean,
     showFab: Boolean,
     addCategoryRequestKey: Int = 0
@@ -52,19 +67,14 @@ fun CategoriesRoute(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-    val addCategoryLabel = stringResource(Res.string.add_category)
-    val editCategoryLabel = stringResource(Res.string.edit_category)
-    val addLabel = stringResource(Res.string.add)
-    val updateLabel = stringResource(Res.string.update)
-    val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
-    val unableToDeleteCategoryLabel = stringResource(Res.string.unable_to_delete_category)
+    val strings = rememberCategoriesScreenStrings()
 
     fun deleteCategory(categoryId: String) {
         scope.launch {
             runCatching {
                 repository.deleteCategory(categoryId)
             }.onFailure {
-                snackbarHostState.showSnackbar(unableToDeleteCategoryLabel)
+                snackbarHostState.showSnackbar(strings.unableToDeleteCategory)
             }
         }
     }
@@ -79,9 +89,7 @@ fun CategoriesRoute(
 
     if (showNavigationChrome) {
         CategoriesScreenScaffold(
-            showNavigationChrome = true,
             showFab = showFab,
-            onBack = onBack,
             onShowAddDialog = { showAddDialog = true },
             snackbarHostState = snackbarHostState
         ) { padding ->
@@ -152,7 +160,7 @@ fun CategoriesRoute(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = addCategoryLabel
+                            contentDescription = strings.addCategory
                         )
                     }
                 }
@@ -174,8 +182,8 @@ fun CategoriesRoute(
                 showAddDialog = false
                 categoryBeingEdited = null
             },
-            title = if (editingCategory == null) addCategoryLabel else editCategoryLabel,
-            confirmLabel = if (editingCategory == null) addLabel else updateLabel,
+            title = if (editingCategory == null) strings.addCategory else strings.editCategory,
+            confirmLabel = if (editingCategory == null) strings.add else strings.update,
             initialName = editingCategory?.name.orEmpty(),
             initialIconKey = editingCategory?.icon ?: DEFAULT_CATEGORY_ICON_KEY,
             onConfirm = { name, iconKey ->
@@ -203,7 +211,7 @@ fun CategoriesRoute(
 
     categoryPendingDelete?.let { category ->
         DeleteConfirmationDialog(
-            message = deleteItemConfirmationMessageTemplate.formatResourceArgs(localizedCategoryName(category)),
+            message = strings.deleteItemConfirmationMessageTemplate.formatResourceArgs(localizedCategoryName(category)),
             onDelete = {
                 categoryPendingDelete = null
                 deleteCategory(category.id)
@@ -218,9 +226,7 @@ fun CategoriesRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoriesScreenScaffold(
-    showNavigationChrome: Boolean,
     showFab: Boolean,
-    onBack: () -> Unit,
     onShowAddDialog: () -> Unit,
     snackbarHostState: SnackbarHostState,
     content: @Composable (PaddingValues) -> Unit
@@ -239,25 +245,23 @@ private fun CategoriesScreenScaffold(
 
         Scaffold(
             topBar = {
-                if (showNavigationChrome) {
-                    CenterAlignedTopAppBar(
-                        title = { Text(categoriesLabel) },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = {
-                                    if (!isIos) {
-                                        showNavigationRail = true
-                                    }
+                CenterAlignedTopAppBar(
+                    title = { Text(categoriesLabel) },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                if (!isIos) {
+                                    showNavigationRail = true
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Menu,
-                                    contentDescription = categoriesLabel
-                                )
                             }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Menu,
+                                contentDescription = categoriesLabel
+                            )
                         }
-                    )
-                }
+                    }
+                )
             },
             floatingActionButton = {
                 if (showFab) {

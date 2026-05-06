@@ -3,15 +3,12 @@ package it.homebudget.app.ui.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,6 +25,30 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Instant
+
+private data class MonthlyIncomeStrings(
+    val addIncome: String,
+    val back: String,
+    val currencySymbol: String,
+    val delete: String,
+    val deleteItemConfirmationMessageTemplate: String,
+    val recurringDeleteMessageTemplate: String,
+    val income: String,
+    val noIncomeForMonth: String
+)
+
+@Composable
+private fun rememberMonthlyIncomeStrings(): MonthlyIncomeStrings =
+    MonthlyIncomeStrings(
+        addIncome = stringResource(Res.string.add_income),
+        back = stringResource(Res.string.back),
+        currencySymbol = stringResource(Res.string.currency_symbol),
+        delete = stringResource(Res.string.delete),
+        deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
+        recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message),
+        income = stringResource(Res.string.income),
+        noIncomeForMonth = stringResource(Res.string.no_income_for_month)
+    )
 
 class MonthlyIncomesScreen(
     private val year: Int,
@@ -66,14 +87,7 @@ class MonthlyIncomesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
-        val addIncomeLabel = stringResource(Res.string.add_income)
-        val backLabel = stringResource(Res.string.back)
-        val currencySymbol = stringResource(Res.string.currency_symbol)
-        val deleteLabel = stringResource(Res.string.delete)
-        val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
-        val recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message)
-        val incomeLabel = stringResource(Res.string.income)
-        val noIncomeForMonthLabel = stringResource(Res.string.no_income_for_month)
+        val strings = rememberMonthlyIncomeStrings()
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
         var incomeToDelete by remember { mutableStateOf<Income?>(null) }
         var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
@@ -115,7 +129,7 @@ class MonthlyIncomesScreen(
                 ) {
                     PlatformCard {
                         Text(
-                            text = noIncomeForMonthLabel,
+                            text = strings.noIncomeForMonth,
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -157,24 +171,11 @@ class MonthlyIncomesScreen(
                                         )
                                         Spacer(modifier = Modifier.width(16.dp))
                                         Text(
-                                            text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), currencySymbol),
+                                            text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), strings.currencySymbol),
                                             textAlign = TextAlign.End
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.KeyboardArrowDown,
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .padding(2.dp)
-                                                    .rotate(chevronRotation),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                        ExpandableSectionChevron(rotation = chevronRotation)
                                     }
 
                                     if (expanded) {
@@ -205,7 +206,7 @@ class MonthlyIncomesScreen(
                         title = {
                             MonthNavigationTitle(
                                 selectedMonth = selectedMonth,
-                                subtitle = "$incomeLabel • ${formatAmount(totalAmount, currencySymbol)}",
+                                subtitle = "${strings.income} • ${formatAmount(totalAmount, strings.currencySymbol)}",
                                 onPreviousMonth = { selectedMonth = selectedMonth.previous() },
                                 onNextMonth = { selectedMonth = selectedMonth.next() }
                             )
@@ -213,7 +214,7 @@ class MonthlyIncomesScreen(
                         navigationIcon = {
                             if (isIos) {
                                 TextButton(onClick = onBack) {
-                                    Text(backLabel)
+                                    Text(strings.back)
                                 }
                             }
                         }
@@ -226,7 +227,7 @@ class MonthlyIncomesScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = addIncomeLabel
+                                contentDescription = strings.addIncome
                             )
                         }
                     }
@@ -239,9 +240,9 @@ class MonthlyIncomesScreen(
         }
 
         incomeToDelete?.let { income ->
-            val incomeDisplayName = income.description?.ifBlank { incomeLabel } ?: incomeLabel
+            val incomeDisplayName = income.description?.ifBlank { strings.income } ?: strings.income
             DeleteConfirmationDialog(
-                message = deleteItemConfirmationMessageTemplate.formatResourceArgs(incomeDisplayName),
+                message = strings.deleteItemConfirmationMessageTemplate.formatResourceArgs(incomeDisplayName),
                 onDelete = {
                     incomeToDelete = null
                     scope.launch {
@@ -255,10 +256,10 @@ class MonthlyIncomesScreen(
         }
 
         recurringIncomeToDelete?.let { income ->
-            val incomeDisplayName = income.description?.ifBlank { incomeLabel } ?: incomeLabel
+            val incomeDisplayName = income.description?.ifBlank { strings.income } ?: strings.income
             RecurringSeriesActionDialog(
-                title = deleteLabel,
-                message = recurringDeleteMessageTemplate.formatResourceArgs(incomeDisplayName),
+                title = strings.delete,
+                message = strings.recurringDeleteMessageTemplate.formatResourceArgs(incomeDisplayName),
                 onThisInstanceOnly = {
                     recurringIncomeToDelete = null
                     scope.launch {

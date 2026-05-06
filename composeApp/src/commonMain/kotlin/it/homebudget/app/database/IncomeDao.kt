@@ -31,13 +31,4 @@ interface IncomeDao {
 
     @Query("DELETE FROM income WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringIncomeSeries(seriesId: String)
-
-    @Query(
-        """
-        DELETE FROM income
-        WHERE recurringSeriesId = :seriesId
-          AND date >= :fromDate
-        """
-    )
-    suspend fun deleteRecurringIncomesFrom(seriesId: String, fromDate: Long)
 }

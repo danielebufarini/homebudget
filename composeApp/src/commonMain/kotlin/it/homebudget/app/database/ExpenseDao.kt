@@ -31,22 +31,4 @@ interface ExpenseDao {
 
     @Query("DELETE FROM expense WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringExpenseSeries(seriesId: String)
-
-    @Query(
-        """
-        DELETE FROM expense
-        WHERE recurringSeriesId = :seriesId
-          AND date >= :fromDate
-        """
-    )
-    suspend fun deleteRecurringExpensesFrom(seriesId: String, fromDate: Long)
-
-    @Query(
-        """
-        UPDATE expense
-        SET isShared = :isShared
-        WHERE recurringSeriesId = :seriesId
-        """
-    )
-    suspend fun updateRecurringExpenseShared(seriesId: String, isShared: Long)
 }

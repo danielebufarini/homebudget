@@ -106,29 +106,6 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         incomeDao.deleteRecurringIncomeSeries(seriesId)
     }
 
-    suspend fun insertExpense(
-        id: String,
-        amount: BigInteger,
-        date: Long,
-        categoryId: String,
-        description: String?,
-        isShared: Boolean
-    ) {
-        insertExpenses(
-            listOf(
-                PendingExpense(
-                    id = id,
-                    amount = amount,
-                    date = date,
-                    categoryId = categoryId,
-                    description = description,
-                    isShared = isShared,
-                    recurringSeriesId = null
-                )
-            )
-        )
-    }
-
     suspend fun insertIncome(
         id: String,
         amount: BigInteger,
@@ -163,10 +140,6 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 )
             }
         }
-    }
-
-    suspend fun cancelRecurringIncomes(seriesId: String, fromDate: Long) {
-        incomeDao.deleteRecurringIncomesFrom(seriesId = seriesId, fromDate = fromDate)
     }
 
     suspend fun updateRecurringIncomeSeries(
@@ -214,10 +187,6 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
-    suspend fun cancelRecurringExpenses(seriesId: String, fromDate: Long) {
-        expenseDao.deleteRecurringExpensesFrom(seriesId = seriesId, fromDate = fromDate)
-    }
-
     suspend fun updateRecurringExpenseSeries(
         anchorExpenseId: String,
         seriesId: String,
@@ -246,13 +215,6 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 isShared = isShared,
                 recurringSeriesId = seriesId
             )
-        )
-    }
-
-    suspend fun updateRecurringExpenseShared(seriesId: String, isShared: Boolean) {
-        expenseDao.updateRecurringExpenseShared(
-            seriesId = seriesId,
-            isShared = if (isShared) 1L else 0L
         )
     }
 

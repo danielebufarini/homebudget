@@ -191,70 +191,37 @@ private fun buildAndroidVoiceExpensePrompt(
         "- id=${expense.id} | amount=${expense.amountInput} | category=${expense.categoryName} | description=${expense.description.orEmpty()} | date=${formatAndroidVoiceExpenseDate(expense.date)} | shared=${expense.isShared}"
     }
 
-    return when (Locale.getDefault().language.lowercase(Locale.ROOT)) {
-        "it" -> {
-            """
-            Estrai un'azione relativa a una spesa domestica da un comando vocale.
-            L'input può essere in italiano o in inglese.
+    val prompt =
+        """
+        You extract a household expense action from a spoken command.
+        The input may be in Italian or English.
 
-            Data di oggi: $today
+        Today's date: $today
 
-            Categorie valide:
-            $categoryList
+        Valid categories:
+        $categoryList
 
-            Spese recenti che potrebbero essere aggiornate:
-            $expenseList
+        Recent expenses that may be updated:
+        $expenseList
 
-            Regole:
-            - Restituisci solo JSON. Non usare markdown.
-            - Usa action=create quando l'utente sta aggiungendo una nuova spesa.
-            - Usa action=update solo quando l'utente intende chiaramente una delle spese recenti elencate. In quel caso copia il suo id esattamente in targetExpenseId.
-            - Usa action=ignore quando la trascrizione non descrive un comando di spesa utilizzabile.
-            - amount deve essere una stringa con separatore decimale punto e esattamente due decimali, per esempio 12.50.
-            - categoryName deve corrispondere esattamente a una delle categorie valide sopra.
-            - date deve essere nel formato YYYY-MM-DD. Se l'utente non specifica una data, usa la data di oggi.
-            - shared deve essere true solo quando l'utente dice chiaramente che la spesa è condivisa o divisa.
-            - description deve essere breve e utile. Omettila quando non serve.
+        Rules:
+        - Return JSON only. Do not wrap it in markdown.
+        - Use action=create when the user is adding a new expense.
+        - Use action=update only when the user clearly means one of the listed recent expenses. When you do that, copy its id exactly into targetExpenseId.
+        - Use action=ignore when the transcript is not a usable expense command.
+        - amount must be a string using a dot decimal separator and exactly two decimals, for example 12.50.
+        - categoryName must exactly match one of the valid categories above.
+        - date must be in YYYY-MM-DD format. If the user does not specify a date, use today's date.
+        - shared must be true only when the user clearly says the expense is shared or split.
+        - description should be short and useful. Omit it when none is needed.
 
-            Restituisci questo schema:
-            {"action":"create|update|ignore","targetExpenseId":"string or null","amount":"12.50 or null","categoryName":"exact category or null","description":"string or null","date":"YYYY-MM-DD or null","shared":true}
+        Return this schema:
+        {"action":"create|update|ignore","targetExpenseId":"string or null","amount":"12.50 or null","categoryName":"exact category or null","description":"string or null","date":"YYYY-MM-DD or null","shared":true}
 
-            Trascrizione:
-            $transcript
-            """.trimIndent()
-        }
-        else -> {
-            """
-            You extract a household expense action from a spoken command.
-            The input may be in Italian or English.
-
-            Today's date: $today
-
-            Valid categories:
-            $categoryList
-
-            Recent expenses that may be updated:
-            $expenseList
-
-            Rules:
-            - Return JSON only. Do not wrap it in markdown.
-            - Use action=create when the user is adding a new expense.
-            - Use action=update only when the user clearly means one of the listed recent expenses. When you do that, copy its id exactly into targetExpenseId.
-            - Use action=ignore when the transcript is not a usable expense command.
-            - amount must be a string using a dot decimal separator and exactly two decimals, for example 12.50.
-            - categoryName must exactly match one of the valid categories above.
-            - date must be in YYYY-MM-DD format. If the user does not specify a date, use today's date.
-            - shared must be true only when the user clearly says the expense is shared or split.
-            - description should be short and useful. Omit it when none is needed.
-
-            Return this schema:
-            {"action":"create|update|ignore","targetExpenseId":"string or null","amount":"12.50 or null","categoryName":"exact category or null","description":"string or null","date":"YYYY-MM-DD or null","shared":true}
-
-            Transcript:
-            $transcript
-            """.trimIndent()
-        }
-    }
+        Transcript:
+        $transcript
+        """.trimIndent()
+    return prompt
 }
 
 private fun extractAndroidVoiceExpenseJson(rawResponse: String): JSONObject {
@@ -265,7 +232,7 @@ private fun extractAndroidVoiceExpenseJson(rawResponse: String): JSONObject {
         .trim()
     val start = cleaned.indexOf('{')
     val end = cleaned.lastIndexOf('}')
-    val jsonText = if (start >= 0 && end > start) {
+    val jsonText = if (start in 0..<end) {
         cleaned.substring(start, end + 1)
     } else {
         cleaned

@@ -106,13 +106,13 @@ private fun HomeBudgetDeletionCard(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 24.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
                     text = title,
@@ -131,7 +131,7 @@ private fun HomeBudgetDeletionCard(
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 20.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 content = actions
             )
         }

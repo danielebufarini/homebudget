@@ -65,48 +65,22 @@ private data class DashboardStrings(
 
 @Composable
 private fun rememberDashboardStrings(): DashboardStrings {
-    val dashboard = stringResource(Res.string.dashboard)
-    val expenses = stringResource(Res.string.expenses)
-    val shared = stringResource(Res.string.shared)
-    val income = stringResource(Res.string.income)
-    val topCategory = stringResource(Res.string.top_category)
-    val highestDay = stringResource(Res.string.highest_day)
-    val monthlySummary = stringResource(Res.string.monthly_summary)
-    val noExpensesForMonth = stringResource(Res.string.no_expenses_for_month)
-    val noExpensesInPeriod = stringResource(Res.string.no_expenses_in_period)
-    val unknownCategory = stringResource(Res.string.unknown_category)
-    val currencySymbol = stringResource(Res.string.currency_symbol)
     val weekdayNames = stringArrayResource(Res.array.full_weekday_names).toList()
 
-    return remember(
-        dashboard,
-        expenses,
-        shared,
-        income,
-        topCategory,
-        highestDay,
-        monthlySummary,
-        noExpensesForMonth,
-        noExpensesInPeriod,
-        unknownCategory,
-        currencySymbol,
-        weekdayNames
-    ) {
-        DashboardStrings(
-            dashboard = dashboard,
-            expenses = expenses,
-            shared = shared,
-            income = income,
-            topCategory = topCategory,
-            highestDay = highestDay,
-            monthlySummary = monthlySummary,
-            noExpensesForMonth = noExpensesForMonth,
-            noExpensesInPeriod = noExpensesInPeriod,
-            unknownCategory = unknownCategory,
-            currencySymbol = currencySymbol,
-            weekdayNames = weekdayNames
-        )
-    }
+    return DashboardStrings(
+        dashboard = stringResource(Res.string.dashboard),
+        expenses = stringResource(Res.string.expenses),
+        shared = stringResource(Res.string.shared),
+        income = stringResource(Res.string.income),
+        topCategory = stringResource(Res.string.top_category),
+        highestDay = stringResource(Res.string.highest_day),
+        monthlySummary = stringResource(Res.string.monthly_summary),
+        noExpensesForMonth = stringResource(Res.string.no_expenses_for_month),
+        noExpensesInPeriod = stringResource(Res.string.no_expenses_in_period),
+        unknownCategory = stringResource(Res.string.unknown_category),
+        currencySymbol = stringResource(Res.string.currency_symbol),
+        weekdayNames = weekdayNames
+    )
 }
 
 class DashboardScreen : Screen {

@@ -49,7 +49,6 @@ fun CategoriesContentViewController(
 ) {
     AppTheme {
         CategoriesRoute(
-            onBack = {},
             showNavigationChrome = false,
             showFab = false,
             addCategoryRequestKey = addCategoryRequestKey

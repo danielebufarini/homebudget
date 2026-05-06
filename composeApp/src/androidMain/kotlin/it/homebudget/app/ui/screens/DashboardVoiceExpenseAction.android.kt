@@ -1,6 +1,5 @@
 package it.homebudget.app.ui.screens
 
-import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,9 +22,6 @@ import org.koin.compose.koinInject
 
 @Composable
 internal actual fun DashboardVoiceExpenseAction() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-        return
-    }
 
     val repository: ExpenseRepository = koinInject()
     val scope = rememberCoroutineScope()
