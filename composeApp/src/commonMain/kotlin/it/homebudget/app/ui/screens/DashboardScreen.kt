@@ -146,6 +146,9 @@ class DashboardScreen : Screen {
             showFab = false,
             onOpenCategories = { navigator?.push(CategoriesScreen()) },
             onOpenAddExpense = { navigator?.push(AddExpenseScreen()) },
+            onOpenDayExpenses = { year, month, day ->
+                navigator?.push(DayExpensesScreen(year = year, month = month, day = day))
+            },
             onOpenMonthlyIncomes = { year, month ->
                 navigator?.push(MonthlyIncomesScreen(year = year, month = month))
             },
@@ -177,6 +180,7 @@ fun DashboardRoute(
     showFab: Boolean,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
+    onOpenDayExpenses: (Int, Int, Int) -> Unit,
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
@@ -224,6 +228,9 @@ fun DashboardRoute(
             },
             onOpenMonthlyExpenses = {
                 onOpenMonthlyExpenses(selectedMonth.year, selectedMonth.month)
+            },
+            onOpenDayExpenses = { day ->
+                onOpenDayExpenses(selectedMonth.year, selectedMonth.month, day)
             },
             onOpenSharedExpenses = {
                 onOpenSharedExpenses(selectedMonth.year, selectedMonth.month)
@@ -381,6 +388,7 @@ private fun DashboardBody(
     onNextMonth: () -> Unit,
     onOpenMonthlyIncomes: () -> Unit,
     onOpenMonthlyExpenses: () -> Unit,
+    onOpenDayExpenses: (Int) -> Unit,
     onOpenSharedExpenses: () -> Unit,
     onOpenExpenseDetails: (String) -> Unit,
     onOpenCategoryExpenses: (String) -> Unit
@@ -406,7 +414,9 @@ private fun DashboardBody(
             categoriesById = categoriesById,
             onIncomeClick = onOpenMonthlyIncomes,
             onSharedClick = onOpenSharedExpenses,
-            onHighestDayClick = { summary.highestExpenseId?.let(onOpenExpenseDetails) },
+            onHighestDayClick = {
+                summary.highestDayEpochMillis?.let { onOpenDayExpenses(it.epochDayOfMonth()) }
+            },
             onTopCategoryClick = {
                 summary.topCategoryId
                     ?.let { categoriesById[it] }
@@ -1028,8 +1038,6 @@ private fun buildMonthlySummary(
     }
     val highestDay = dayAmounts.maxByOrNull { (_, amount) -> amount }
     val highestDayExpenses = highestDay?.key?.let(dayGroups::get).orEmpty()
-    val highestExpense = highestDayExpenses.maxByOrNull { it.amount }
-
     val categoryTotals = categoryAmounts
         .toList()
         .sortedByDescending { (_, amount) -> amount }
@@ -1051,7 +1059,6 @@ private fun buildMonthlySummary(
         topCategoryId = topCategoryId,
         highestDayEpochMillis = highestDayExpenses.firstOrNull()?.date,
         highestDayAmount = highestDay?.value ?: BigInteger.ZERO,
-        highestExpenseId = highestExpense?.id,
         categoryTotals = categoryTotals
     )
 }
@@ -1065,7 +1072,6 @@ private fun emptyMonthlySummary() = MonthlySummary(
     topCategoryId = null,
     highestDayEpochMillis = null,
     highestDayAmount = BigInteger.ZERO,
-    highestExpenseId = null,
     categoryTotals = emptyList()
 )
 
@@ -1200,7 +1206,6 @@ private data class MonthlySummary(
     val topCategoryId: String?,
     val highestDayEpochMillis: Long?,
     val highestDayAmount: BigInteger,
-    val highestExpenseId: String?,
     val categoryTotals: List<CategoryTotal>
 )
 

@@ -116,6 +116,13 @@ iOS uses a mixed architecture:
 - shared Compose screens are exposed through `ComposeUIViewController` factories in [`MainViewController.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
 - some flows remain native SwiftUI, notably grouped expense/income lists, categories, and voice entry
 
+The grouped expense lists on iOS now cover:
+
+- monthly expenses
+- shared expenses
+- category-filtered monthly expenses
+- the dashboard `Highest Day` route, which reuses the same native list and is locked to category grouping for that single-day view
+
 The categories route is the clearest example of the "native interface, shared logic" approach:
 
 - SwiftUI screen: [`CategoriesScreen.swift`](./iosApp/iosApp/CategoriesScreen.swift)
@@ -140,6 +147,8 @@ SwiftUI owns navigation through a `NavigationStack` and a local `Route` enum in 
 When a route needs a shared screen, SwiftUI creates a host view that wraps the corresponding `ComposeUIViewController`.
 
 When a route has been promoted to native iOS UI, SwiftUI talks to a small Kotlin bridge instead of hosting a Compose controller. The categories screen currently uses this pattern.
+
+The `Highest Day` dashboard card also follows the native-route pattern on iOS: SwiftUI pushes a native grouped-expenses screen for the selected day instead of a Compose day-details screen.
 
 ### 5. Localization
 
@@ -173,6 +182,8 @@ Where data needs to cross into SwiftUI, Kotlin-side bridge classes expose stable
 
 - Kotlin bridge: [`IosGroupedExpensesBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosGroupedExpensesBridge.kt)
 - SwiftUI consumer: [`MonthlyExpensesSectionsScreen.swift`](./iosApp/iosApp/MonthlyExpensesSectionsScreen.swift)
+
+That same bridge now supports day-of-month filtering so the iOS `Highest Day` destination can reuse the native monthly expenses list implementation.
 
 The categories path uses the same pattern:
 

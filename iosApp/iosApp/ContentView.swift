@@ -7,6 +7,7 @@ private enum Route: Hashable {
     case categories
     case addExpense(expenseId: String?, readOnly: Bool)
     case addIncome(incomeId: String?, year: Int?, month: Int?)
+    case dayExpenses(year: Int, month: Int, day: Int)
     case monthlyIncomes(year: Int, month: Int)
     case monthlyExpenses(year: Int, month: Int)
     case sharedExpenses(year: Int, month: Int)
@@ -228,6 +229,16 @@ struct ContentView: View {
                         .toolbar {
                             backToolbar
                         }
+                    case let .dayExpenses(year, month, day):
+                        GroupedExpensesSectionsScreen(
+                            kind: .day(day: day),
+                            year: Int(year),
+                            month: Int(month)
+                        ) { expenseId in
+                            path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
+                        }
+                        .navigationTitle("\(day) \(monthName(month))")
+                        .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyIncomes(year, month):
                         MonthlyIncomesRootView(
                             year: Int(year),
@@ -793,6 +804,15 @@ private struct DashboardRootView: View {
                 },
                 onOpenAddExpense: {
                     path.append(Route.addExpense(expenseId: nil, readOnly: false))
+                },
+                onOpenDayExpenses: { year, month, day in
+                    path.append(
+                        Route.dayExpenses(
+                            year: year.intValue,
+                            month: month.intValue,
+                            day: day.intValue
+                        )
+                    )
                 },
                 onOpenMonthlyIncomes: { year, month in
                     path.append(Route.monthlyIncomes(year: year.intValue, month: month.intValue))

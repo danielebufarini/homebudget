@@ -1,7 +1,19 @@
 package it.homebudget.app.ui.screens
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
-import homebudget.composeapp.generated.resources.*
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.category
+import homebudget.composeapp.generated.resources.currency_symbol
+import homebudget.composeapp.generated.resources.expense
+import homebudget.composeapp.generated.resources.income
+import homebudget.composeapp.generated.resources.no_expenses_for_category_this_month
+import homebudget.composeapp.generated.resources.no_expenses_for_day
+import homebudget.composeapp.generated.resources.no_expenses_for_month
+import homebudget.composeapp.generated.resources.no_income_for_month
+import homebudget.composeapp.generated.resources.no_shared_expenses_for_month
+import homebudget.composeapp.generated.resources.shared_expense
+import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.sumBigIntegerOf
@@ -11,8 +23,18 @@ import it.homebudget.app.database.Income
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.loadCategoryNameResolver
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
@@ -70,7 +92,8 @@ internal data class GroupedExpensesCacheKey(
     val year: Int,
     val month: Int,
     val screenType: String,
-    val categoryName: String?
+    val categoryName: String?,
+    val dayOfMonth: Int? = null
 )
 
 private data class PreparedIosExpense(
@@ -96,6 +119,7 @@ private data class IosGroupedLocalization(
     val income: String,
     val sharedExpense: String,
     val category: String,
+    val noExpensesForDay: String,
     val noExpensesForMonth: String,
     val noSharedExpensesForMonth: String,
     val noIncomeForMonth: String,
@@ -229,6 +253,7 @@ class IosGroupedExpensesObserver(
     private val month: Int,
     private val screenType: String,
     private val categoryName: String?,
+    private val dayOfMonth: Int? = null,
     initialGroupingMode: String
 ) {
     private val scope = MainScope()
@@ -240,7 +265,8 @@ class IosGroupedExpensesObserver(
         year = year,
         month = month,
         screenType = screenType,
-        categoryName = categoryName
+        categoryName = categoryName,
+        dayOfMonth = dayOfMonth
     )
 
     private val store: IosGroupedExpensesStore by lazy {
@@ -382,6 +408,7 @@ private fun buildSnapshotsCache(
     val filteredExpenses = preparedExpenses.filter { expense ->
         expense.year == key.year &&
             expense.month == key.month &&
+            (key.dayOfMonth == null || epochMillisToLocalDate(expense.dateMillis).day == key.dayOfMonth) &&
             includeExpense(expense, key.screenType) &&
             includeCategory(expense.categoryName, key.screenType, key.categoryName)
     }
@@ -580,6 +607,7 @@ private fun emptyStateText(
     localization: IosGroupedLocalization
 ): String = when (screenType) {
     "shared" -> localization.noSharedExpensesForMonth
+    "day" -> localization.noExpensesForDay
     "category" -> localization.noExpensesForCategoryThisMonthTemplate
         .formatResourceArgs(categoryName ?: localization.category)
     else -> localization.noExpensesForMonth
@@ -596,6 +624,7 @@ private suspend fun loadIosGroupedLocalization(): IosGroupedLocalization {
         income = getString(Res.string.income),
         sharedExpense = getString(Res.string.shared_expense),
         category = getString(Res.string.category),
+        noExpensesForDay = getString(Res.string.no_expenses_for_day),
         noExpensesForMonth = getString(Res.string.no_expenses_for_month),
         noSharedExpensesForMonth = getString(Res.string.no_shared_expenses_for_month),
         noIncomeForMonth = getString(Res.string.no_income_for_month),

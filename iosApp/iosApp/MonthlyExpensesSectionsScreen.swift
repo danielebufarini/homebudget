@@ -5,6 +5,7 @@ enum GroupedExpensesKind: Hashable {
     case monthly
     case shared
     case category(name: String)
+    case day(day: Int)
 
     var screenType: String {
         switch self {
@@ -14,6 +15,8 @@ enum GroupedExpensesKind: Hashable {
             return "shared"
         case .category:
             return "category"
+        case .day:
+            return "day"
         }
     }
 
@@ -21,7 +24,16 @@ enum GroupedExpensesKind: Hashable {
         switch self {
         case let .category(name):
             return name
-        case .monthly, .shared:
+        case .monthly, .shared, .day:
+            return nil
+        }
+    }
+
+    var dayOfMonth: KotlinInt? {
+        switch self {
+        case let .day(day):
+            return KotlinInt(int: Int32(day))
+        case .monthly, .shared, .category:
             return nil
         }
     }
@@ -111,6 +123,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
             month: Int32(month),
             screenType: kind.screenType,
             categoryName: kind.categoryName,
+            dayOfMonth: kind.dayOfMonth,
             initialGroupingMode: groupingMode.bridgeValue
         )
     }
@@ -328,7 +341,7 @@ struct GroupedExpensesSectionsScreen: View {
         switch kind {
         case .monthly, .shared:
             return true
-        case .category:
+        case .category, .day:
             return false
         }
     }
@@ -680,10 +693,12 @@ private struct GroupedExpensesSectionsList: View {
             viewModel.stop()
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ExpenseGroupingGlassControl(selection: $groupingMode)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+            if showsGroupingControl {
+                ExpenseGroupingGlassControl(selection: $groupingMode)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+            }
         }
         .overlay {
             if let pendingExpenseDeleteRow {
@@ -710,6 +725,8 @@ private struct GroupedExpensesSectionsList: View {
             return appMonthlyTitle(month: selectedMonth.month, key: "Shared Expenses")
         case let .category(name):
             return "\(monthName(selectedMonth.month)) \(name)"
+        case let .day(day):
+            return "\(day) \(monthName(selectedMonth.month))"
         }
     }
 
@@ -721,6 +738,8 @@ private struct GroupedExpensesSectionsList: View {
             return appLocalized("Shared Expenses")
         case let .category(name):
             return name
+        case let .day(day):
+            return "\(day) \(monthName(selectedMonth.month))"
         }
     }
 
@@ -728,8 +747,17 @@ private struct GroupedExpensesSectionsList: View {
         switch kind {
         case .monthly:
             return true
-        case .shared, .category:
+        case .shared, .category, .day:
             return false
+        }
+    }
+
+    private var showsGroupingControl: Bool {
+        switch kind {
+        case .day:
+            return false
+        case .monthly, .shared, .category:
+            return true
         }
     }
 

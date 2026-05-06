@@ -7,6 +7,7 @@ import it.homebudget.app.ui.screens.AddIncomeScreen
 import it.homebudget.app.ui.screens.CategoriesRoute
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DashboardRoute
+import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
@@ -24,6 +25,7 @@ fun MainViewController() = ComposeUIViewController(
 fun DashboardContentViewController(
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
+    onOpenDayExpenses: (Int, Int, Int) -> Unit,
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
@@ -40,6 +42,7 @@ fun DashboardContentViewController(
             showFab = false,
             onOpenCategories = onOpenCategories,
             onOpenAddExpense = onOpenAddExpense,
+            onOpenDayExpenses = onOpenDayExpenses,
             onOpenMonthlyIncomes = onOpenMonthlyIncomes,
             onOpenMonthlyExpenses = onOpenMonthlyExpenses,
             onOpenSharedExpenses = onOpenSharedExpenses,
@@ -118,6 +121,25 @@ fun MonthlyExpensesViewController(
             showNavigationChrome = false,
             onBack = {},
             onAddExpense = {},
+            onOpenExpense = onOpenExpense
+        )
+    }
+}
+
+fun DayExpensesViewController(
+    year: Int,
+    month: Int,
+    day: Int,
+    onOpenExpense: (String) -> Unit
+) = ComposeUIViewController(
+    configure = {
+        ensureKoinStarted()
+    }
+) {
+    AppTheme {
+        DayExpensesScreen(year = year, month = month, day = day).RouteContent(
+            showNavigationChrome = false,
+            onBack = {},
             onOpenExpense = onOpenExpense
         )
     }
