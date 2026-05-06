@@ -11,6 +11,31 @@ interface IncomeDao {
     @Query("SELECT * FROM income ORDER BY date DESC")
     fun getAllIncomes(): Flow<List<Income>>
 
+    @Query(
+        """
+        SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
+        FROM income
+        WHERE CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :year
+          AND CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :month
+        """
+    )
+    fun getIncomeMonthTotal(year: Int, month: Int): Flow<Long>
+
+    @Query(
+        """
+        SELECT
+            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
+            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month,
+            COALESCE(SUM(CAST(amount AS INTEGER)), 0) AS amount
+        FROM income
+        GROUP BY
+            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER),
+            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER)
+        ORDER BY year, month
+        """
+    )
+    fun getMonthlyIncomeTotals(): Flow<List<MonthTotalRow>>
+
     @Query("SELECT * FROM income ORDER BY date DESC")
     suspend fun getAllIncomesSnapshot(): List<Income>
 

@@ -3,11 +3,18 @@ package it.homebudget.app.data
 import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.database.Category
+import it.homebudget.app.database.CategoryTotalRow
 import it.homebudget.app.database.Expense
+import it.homebudget.app.database.ExpenseMonthSummaryRow
+import it.homebudget.app.database.HighestDaySummaryRow
 import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Income
+import it.homebudget.app.database.MonthTotalRow
+import it.homebudget.app.database.TopCategorySummaryRow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 private data class DefaultCategorySeed(
     val name: String,
@@ -19,6 +26,34 @@ data class RestoredCategory(
     val name: String,
     val icon: String,
     val isCustom: Boolean
+)
+
+data class DashboardMonthTotal(
+    val year: Int,
+    val month: Int,
+    val amount: BigInteger
+)
+
+data class DashboardCategoryTotal(
+    val categoryId: String,
+    val amount: BigInteger
+)
+
+data class DashboardMonthSummary(
+    val expenseCount: Int,
+    val totalAmount: BigInteger,
+    val incomeAmount: BigInteger,
+    val sharedAmount: BigInteger,
+    val averageAmount: BigInteger,
+    val topCategoryId: String?,
+    val highestDayOfMonth: Int?,
+    val highestDayAmount: BigInteger,
+    val categoryTotals: List<DashboardCategoryTotal>
+)
+
+data class DashboardCashFlow(
+    val expenseTotalsByMonth: List<DashboardMonthTotal>,
+    val incomeTotalsByMonth: List<DashboardMonthTotal>
 )
 
 class ExpenseRepository(private val database: HomeBudgetDatabase) {
@@ -81,6 +116,36 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeDao.getAllIncomesSnapshot()
 
     suspend fun getAllCategoriesSnapshot(): List<Category> = categoryDao.getAllCategoriesSnapshot()
+
+    fun getDashboardMonthSummary(year: Int, month: Int): Flow<DashboardMonthSummary> {
+        return combine(
+            expenseDao.getExpenseMonthSummary(year, month),
+            incomeDao.getIncomeMonthTotal(year, month),
+            expenseDao.getMonthCategoryTotals(year, month),
+            expenseDao.getMonthTopCategory(year, month),
+            expenseDao.getMonthHighestDay(year, month)
+        ) { expenseSummary, incomeAmount, categoryTotals, topCategory, highestDay ->
+            buildDashboardMonthSummary(
+                expenseSummary = expenseSummary,
+                incomeAmount = incomeAmount,
+                categoryTotals = categoryTotals,
+                topCategory = topCategory,
+                highestDay = highestDay
+            )
+        }
+    }
+
+    fun getDashboardCashFlow(): Flow<DashboardCashFlow> {
+        return combine(
+            expenseDao.getMonthlyExpenseTotals(),
+            incomeDao.getMonthlyIncomeTotals()
+        ) { expenseTotals, incomeTotals ->
+            DashboardCashFlow(
+                expenseTotalsByMonth = expenseTotals.map(MonthTotalRow::toDashboardMonthTotal),
+                incomeTotalsByMonth = incomeTotals.map(MonthTotalRow::toDashboardMonthTotal)
+            )
+        }
+    }
 
     suspend fun getExpenseById(id: String): Expense? = expenseDao.getExpenseById(id)
 
@@ -275,3 +340,36 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 }
+
+private fun buildDashboardMonthSummary(
+    expenseSummary: ExpenseMonthSummaryRow,
+    incomeAmount: Long,
+    categoryTotals: List<CategoryTotalRow>,
+    topCategory: TopCategorySummaryRow?,
+    highestDay: HighestDaySummaryRow?
+): DashboardMonthSummary {
+    val totalAmount = expenseSummary.totalAmount.toBigInteger()
+    return DashboardMonthSummary(
+        expenseCount = expenseSummary.expenseCount,
+        totalAmount = totalAmount,
+        incomeAmount = incomeAmount.toBigInteger(),
+        sharedAmount = expenseSummary.sharedAmount.toBigInteger(),
+        averageAmount = averageAmount(totalAmount, expenseSummary.expenseCount),
+        topCategoryId = topCategory?.categoryId,
+        highestDayOfMonth = highestDay?.dayOfMonth,
+        highestDayAmount = highestDay?.amount?.toBigInteger() ?: BigInteger.ZERO,
+        categoryTotals = categoryTotals.map { row ->
+            DashboardCategoryTotal(
+                categoryId = row.categoryId,
+                amount = row.amount.toBigInteger()
+            )
+        }
+    )
+}
+
+private fun MonthTotalRow.toDashboardMonthTotal(): DashboardMonthTotal =
+    DashboardMonthTotal(
+        year = year,
+        month = month,
+        amount = amount.toBigInteger()
+    )

@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add_expense
 import homebudget.composeapp.generated.resources.cash_flow
@@ -85,14 +86,13 @@ import homebudget.composeapp.generated.resources.shared
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.top_category
 import homebudget.composeapp.generated.resources.unknown_category
+import it.homebudget.app.data.DashboardCashFlow
+import it.homebudget.app.data.DashboardCategoryTotal
+import it.homebudget.app.data.DashboardMonthSummary
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.averageAmount
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.data.toDisplayDouble
 import it.homebudget.app.database.Category
-import it.homebudget.app.database.Expense
-import it.homebudget.app.database.Income
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -104,7 +104,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.time.Clock
-import kotlin.time.Instant
 
 private val chartPalette: List<Color> = listOf(
     Color(0xFF006874),
@@ -204,8 +203,6 @@ fun DashboardRoute(
     onOpenCategoryExpenses: (Int, Int, String) -> Unit
 ) {
     val repository: ExpenseRepository = koinInject()
-    val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
-    val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
     val categoriesById = remember(categories) { categories.associateBy { it.id } }
     var selectedMonth by remember { mutableStateOf(currentMonthCursor()) }
@@ -213,18 +210,21 @@ fun DashboardRoute(
 
     EnsureDefaultCategoriesInserted(repository)
 
-    val dashboardData = remember(expenses, incomes) {
-        buildDashboardDataCache(expenses, incomes)
+    val summaryData by remember(repository, selectedMonth) {
+        repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
+    }.collectAsState(initial = emptyDashboardMonthSummary())
+
+    val cashFlowData by remember(repository) {
+        repository.getDashboardCashFlow()
+    }.collectAsState(initial = emptyDashboardCashFlow())
+
+    val summary = remember(summaryData) {
+        summaryData.toUiMonthlySummary()
     }
 
-    val summary = remember(dashboardData, selectedMonth) {
-        dashboardData.monthlySummaries[selectedMonth] ?: emptyMonthlySummary()
-    }
-
-    val chartState = remember(dashboardData, selectedMonth) {
+    val chartState = remember(cashFlowData, selectedMonth) {
         buildCashFlowChartState(
-            expenseTotalsByMonth = dashboardData.monthlyExpenseTotalsByMonth,
-            incomeTotalsByMonth = dashboardData.monthlyIncomeTotalsByMonth,
+            cashFlow = cashFlowData,
             selectedMonth = selectedMonth,
         )
     }
@@ -422,12 +422,13 @@ private fun DashboardBody(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpenMonthlyExpenses),
+            selectedMonth = selectedMonth,
             summary = summary,
             categoriesById = categoriesById,
             onIncomeClick = onOpenMonthlyIncomes,
             onSharedClick = onOpenSharedExpenses,
             onHighestDayClick = {
-                summary.highestDayEpochMillis?.let { onOpenDayExpenses(it.epochDayOfMonth()) }
+                summary.highestDayOfMonth?.let(onOpenDayExpenses)
             },
             onTopCategoryClick = {
                 summary.topCategoryId
@@ -490,6 +491,7 @@ private fun DashboardMonthHeader(
 @Composable
 private fun ExpenseSummary(
     modifier: Modifier,
+    selectedMonth: MonthCursor,
     summary: MonthlySummary,
     categoriesById: Map<String, Category>,
     onIncomeClick: () -> Unit,
@@ -511,8 +513,8 @@ private fun ExpenseSummary(
             ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
             ?: "-"
     }
-    val highestDayValue = remember(summary.highestDayEpochMillis, strings.weekdayNames) {
-        summary.highestDayEpochMillis?.toEpochDayLabel(strings.weekdayNames) ?: "-"
+    val highestDayValue = remember(selectedMonth, summary.highestDayOfMonth, strings.weekdayNames) {
+        summary.highestDayOfMonth?.let { selectedMonth.toDayLabel(it, strings.weekdayNames) } ?: "-"
     }
 
     val colorScheme = MaterialTheme.colorScheme
@@ -1146,106 +1148,66 @@ private fun CategoryBreakdownPage(
     }
 }
 
-private fun buildMonthlySummary(
-    expenses: List<Expense>,
-    incomes: List<Income>,
-): MonthlySummary {
-    val incomeAmount = incomes.sumBigIntegerOf(Income::amount)
-
-    if (expenses.isEmpty()) {
-        return emptyMonthlySummary().copy(incomeAmount = incomeAmount)
-    }
-
-    val totalAmount = expenses.sumBigIntegerOf(Expense::amount)
-    val sharedAmount = expenses.sumBigIntegerOf { expense ->
-        if (expense.isShared == 1L) expense.amount else BigInteger.ZERO
-    }
-    val categoryGroups = expenses.groupBy(Expense::categoryId)
-    val categoryAmounts = categoryGroups.mapValues { (_, groupedExpenses) ->
-        groupedExpenses.sumBigIntegerOf(Expense::amount)
-    }
-    val topCategoryId = categoryAmounts.maxByOrNull { (_, amount) -> amount }?.key
-    val dayGroups = expenses.groupBy { it.date.epochDayOfMonth() }
-    val dayAmounts = dayGroups.mapValues { (_, dayExpenses) ->
-        dayExpenses.sumBigIntegerOf(Expense::amount)
-    }
-    val highestDay = dayAmounts.maxByOrNull { (_, amount) -> amount }
-    val highestDayExpenses = highestDay?.key?.let(dayGroups::get).orEmpty()
-    val categoryTotals = categoryAmounts
-        .toList()
-        .sortedByDescending { (_, amount) -> amount }
-        .mapIndexed { index, (categoryId, amount) ->
-            CategoryTotal(
-                categoryId = categoryId,
-                amount = amount,
-                fraction = amount.toDisplayDouble() / totalAmount.toDisplayDouble().coerceAtLeast(0.01),
-                color = chartPalette[index % chartPalette.size]
-            )
-        }
-
-    return MonthlySummary(
-        totalAmount = totalAmount,
-        expenseCount = expenses.size,
-        incomeAmount = incomeAmount,
-        sharedAmount = sharedAmount,
-        averageAmount = averageAmount(totalAmount, expenses.size),
-        topCategoryId = topCategoryId,
-        highestDayEpochMillis = highestDayExpenses.firstOrNull()?.date,
-        highestDayAmount = highestDay?.value ?: BigInteger.ZERO,
-        categoryTotals = categoryTotals
-    )
-}
-
-private fun emptyMonthlySummary() = MonthlySummary(
-    totalAmount = BigInteger.ZERO,
+private fun emptyDashboardMonthSummary() = DashboardMonthSummary(
     expenseCount = 0,
-    incomeAmount = BigInteger.ZERO,
-    sharedAmount = BigInteger.ZERO,
-    averageAmount = BigInteger.ZERO,
+    totalAmount = ZERO,
+    incomeAmount = ZERO,
+    sharedAmount = ZERO,
+    averageAmount = ZERO,
     topCategoryId = null,
-    highestDayEpochMillis = null,
-    highestDayAmount = BigInteger.ZERO,
+    highestDayOfMonth = null,
+    highestDayAmount = ZERO,
     categoryTotals = emptyList()
 )
 
-private fun buildDashboardDataCache(
-    expenses: List<Expense>,
-    incomes: List<Income>,
-): DashboardDataCache {
-    if (expenses.isEmpty() && incomes.isEmpty()) {
-        return DashboardDataCache(
-            monthlySummaries = emptyMap(),
-            monthlyExpenseTotalsByMonth = emptyMap(),
-            monthlyIncomeTotalsByMonth = emptyMap()
-        )
-    }
+private fun emptyDashboardCashFlow() = DashboardCashFlow(
+    expenseTotalsByMonth = emptyList(),
+    incomeTotalsByMonth = emptyList()
+)
 
-    val expensesByMonth = expenses.groupBy { it.date.toMonthCursor() }
-    val incomesByMonth = incomes.groupBy { it.date.toMonthCursor() }
-    val allMonths = expensesByMonth.keys + incomesByMonth.keys
-
-    return DashboardDataCache(
-        monthlySummaries = allMonths.associateWith { month ->
-            buildMonthlySummary(
-                expenses = expensesByMonth[month].orEmpty(),
-                incomes = incomesByMonth[month].orEmpty(),
+private fun DashboardMonthSummary.toUiMonthlySummary(): MonthlySummary {
+    val totalAmountDouble = totalAmount.toDisplayDouble().coerceAtLeast(0.01)
+    return MonthlySummary(
+        totalAmount = totalAmount,
+        expenseCount = expenseCount,
+        incomeAmount = incomeAmount,
+        sharedAmount = sharedAmount,
+        averageAmount = averageAmount,
+        topCategoryId = topCategoryId,
+        highestDayOfMonth = highestDayOfMonth,
+        highestDayAmount = highestDayAmount,
+        categoryTotals = categoryTotals.mapIndexed { index, categoryTotal ->
+            categoryTotal.toUiCategoryTotal(
+                totalAmount = totalAmountDouble,
+                color = chartPalette[index % chartPalette.size]
             )
-        },
-        monthlyExpenseTotalsByMonth = expensesByMonth.mapValues { (_, monthExpenses) ->
-            monthExpenses.sumBigIntegerOf(Expense::amount)
-        },
-        monthlyIncomeTotalsByMonth = incomesByMonth.mapValues { (_, monthIncomes) ->
-            monthIncomes.sumBigIntegerOf(Income::amount)
         }
+    )
+}
+
+private fun DashboardCategoryTotal.toUiCategoryTotal(
+    totalAmount: Double,
+    color: Color
+): CategoryTotal {
+    return CategoryTotal(
+        categoryId = categoryId,
+        amount = amount,
+        fraction = amount.toDisplayDouble() / totalAmount,
+        color = color
     )
 }
 
 private fun buildCashFlowChartState(
-    expenseTotalsByMonth: Map<MonthCursor, BigInteger>,
-    incomeTotalsByMonth: Map<MonthCursor, BigInteger>,
+    cashFlow: DashboardCashFlow,
     selectedMonth: MonthCursor,
 ): LineChartState {
     val months = selectedMonth.trailingMonths(count = 6)
+    val expenseTotalsByMonth = cashFlow.expenseTotalsByMonth.associate { total ->
+        MonthCursor(total.year, total.month) to total.amount
+    }
+    val incomeTotalsByMonth = cashFlow.incomeTotalsByMonth.associate { total ->
+        MonthCursor(total.year, total.month) to total.amount
+    }
 
     if (expenseTotalsByMonth.isEmpty() && incomeTotalsByMonth.isEmpty()) {
         return LineChartState(
@@ -1261,8 +1223,8 @@ private fun buildCashFlowChartState(
     val monthSnapshots = months.map { month ->
         ChartMonthSnapshot(
             month = month,
-            expenseAmount = expenseTotalsByMonth[month] ?: BigInteger.ZERO,
-            incomeAmount = incomeTotalsByMonth[month] ?: BigInteger.ZERO
+            expenseAmount = expenseTotalsByMonth[month] ?: ZERO,
+            incomeAmount = incomeTotalsByMonth[month] ?: ZERO
         )
     }
     val expenseValues = monthSnapshots.map { it.expenseAmount.toDisplayDouble() }
@@ -1314,24 +1276,9 @@ private fun buildCashFlowChartState(
 
 private fun formatAxisAmount(amount: Double): String = amount.roundToInt().toString()
 
-private fun Long.toEpochDayLabel(weekdayNames: List<String>): String {
-    val date = Instant.fromEpochMilliseconds(this)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
-    return "${weekdayNames[date.dayOfWeek.ordinal]} ${date.day}"
-}
-
-private fun Long.epochDayOfMonth(): Int =
-    Instant.fromEpochMilliseconds(this)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
-        .day
-
-private fun Long.toMonthCursor(): MonthCursor {
-    val date = Instant.fromEpochMilliseconds(this)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
-    return MonthCursor(date.year, date.month.ordinal + 1)
+private fun MonthCursor.toDayLabel(dayOfMonth: Int, weekdayNames: List<String>): String {
+    val dayOfWeek = kotlinx.datetime.LocalDate(year, month, dayOfMonth).dayOfWeek
+    return "${weekdayNames[dayOfWeek.ordinal]} $dayOfMonth"
 }
 
 private fun currentMonthCursor(): MonthCursor {
@@ -1346,15 +1293,9 @@ private data class MonthlySummary(
     val sharedAmount: BigInteger,
     val averageAmount: BigInteger,
     val topCategoryId: String?,
-    val highestDayEpochMillis: Long?,
+    val highestDayOfMonth: Int?,
     val highestDayAmount: BigInteger,
     val categoryTotals: List<CategoryTotal>
-)
-
-private data class DashboardDataCache(
-    val monthlySummaries: Map<MonthCursor, MonthlySummary>,
-    val monthlyExpenseTotalsByMonth: Map<MonthCursor, BigInteger>,
-    val monthlyIncomeTotalsByMonth: Map<MonthCursor, BigInteger>
 )
 
 private data class CategoryTotal(
