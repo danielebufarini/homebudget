@@ -28,14 +28,19 @@ interface IncomeDao {
 
     @Query(
         """
-        SELECT
-            amount,
-            date
-        FROM income
-        ORDER BY date ASC
-        """
+    SELECT
+        amount,
+        date
+    FROM income
+    WHERE date >= :fromInclusiveMillis
+      AND date < :toExclusiveMillis
+    ORDER BY date ASC
+    """
     )
-    fun getAllIncomeAmountRows(): Flow<List<IncomeAmountRow>>
+    fun getIncomeAmountRowsBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<List<IncomeAmountRow>>
 
     @Query("SELECT * FROM income ORDER BY date DESC")
     suspend fun getAllIncomesSnapshot(): List<Income>

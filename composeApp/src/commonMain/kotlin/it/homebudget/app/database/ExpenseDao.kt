@@ -31,16 +31,21 @@ interface ExpenseDao {
 
     @Query(
         """
-        SELECT
-            amount,
-            isShared,
-            date,
-            categoryId
-        FROM expense
-        ORDER BY date ASC
-        """
+    SELECT
+        amount,
+        isShared,
+        date,
+        categoryId
+    FROM expense
+    WHERE date >= :fromInclusiveMillis
+      AND date < :toExclusiveMillis
+    ORDER BY date ASC
+    """
     )
-    fun getAllDashboardExpenseRows(): Flow<List<DashboardExpenseRow>>
+    fun getDashboardExpenseRowsBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<List<DashboardExpenseRow>>
 
     @Query("SELECT * FROM expense ORDER BY date DESC")
     suspend fun getAllExpensesSnapshot(): List<Expense>

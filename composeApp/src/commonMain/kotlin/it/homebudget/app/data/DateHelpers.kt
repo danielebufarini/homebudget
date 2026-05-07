@@ -15,6 +15,19 @@ data class MonthKey(
     val month: Int
 )
 
+fun MonthKey.plusMonths(monthsToAdd: Int): MonthKey {
+    val monthIndex = year * 12 + (month - 1) + monthsToAdd
+
+    return MonthKey(
+        year = monthIndex / 12,
+        month = monthIndex % 12 + 1
+    )
+}
+
+fun MonthKey.minusMonths(monthsToSubtract: Int): MonthKey {
+    return plusMonths(-monthsToSubtract)
+}
+
 fun monthBounds(
     year: Int,
     month: Int,

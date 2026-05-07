@@ -1,11 +1,18 @@
 package it.homebudget.app.database
 
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import com.ionspin.kotlin.bignum.integer.BigInteger
 
 @Entity(
     tableName = "expense",
-    indices = [Index("categoryId")],
+    indices = [
+        Index(value = ["categoryId"]),
+        Index(value = ["date"])
+    ],
     foreignKeys = [
         ForeignKey(
             entity = Category::class,

@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -104,6 +105,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.time.Clock
+
+private const val CASH_FLOW_CHART_MONTH_COUNT = 6
 
 private val chartPalette: List<Color> = listOf(
     Color(0xFF006874),
@@ -209,6 +212,7 @@ fun DashboardRoute(
 ) {
     val repository: ExpenseRepository = koinInject()
     val strings = rememberDashboardStrings()
+
     val categoriesFlow = remember(repository) {
         repository.getAllCategories()
     }
@@ -216,6 +220,7 @@ fun DashboardRoute(
     val categoriesById = remember(categories) {
         categories.associateBy { it.id }
     }
+
     var selectedMonth by remember {
         mutableStateOf(currentMonthCursor())
     }
@@ -226,20 +231,14 @@ fun DashboardRoute(
         repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
     }.collectAsState(initial = emptyDashboardMonthSummary())
 
-    val cashFlowData by remember(repository) {
-        repository.getDashboardCashFlow()
-    }.collectAsState(initial = emptyDashboardCashFlow())
-
     val summary = remember(summaryData) {
         summaryData.toUiMonthlySummary()
     }
 
-    val chartState = remember(cashFlowData, selectedMonth) {
-        buildCashFlowChartState(
-            cashFlow = cashFlowData,
-            selectedMonth = selectedMonth
-        )
-    }
+    val chartState by rememberCashFlowChartState(
+        repository = repository,
+        selectedMonth = selectedMonth
+    )
 
     val dashboardBody: @Composable (Modifier) -> Unit = { modifier ->
         DashboardBody(
@@ -290,6 +289,7 @@ fun DashboardRoute(
                     .fillMaxSize()
                     .padding(16.dp)
             )
+
             if (showFab) {
                 FloatingActionButton(
                     onClick = onOpenAddExpense,
@@ -1224,10 +1224,39 @@ private fun emptyDashboardMonthSummary() = DashboardMonthSummary(
     categoryTotals = emptyList()
 )
 
-private fun emptyDashboardCashFlow() = DashboardCashFlow(
-    expenseTotalsByMonth = emptyList(),
-    incomeTotalsByMonth = emptyList()
-)
+@Composable
+private fun rememberCashFlowChartState(
+    repository: ExpenseRepository,
+    selectedMonth: MonthCursor
+) = produceState(
+    initialValue = emptyLineChartState(selectedMonth),
+    repository,
+    selectedMonth
+) {
+    repository.getDashboardCashFlow(
+        selectedYear = selectedMonth.year,
+        selectedMonth = selectedMonth.month,
+        trailingMonthCount = CASH_FLOW_CHART_MONTH_COUNT
+    ).collect { cashFlow ->
+        value = buildCashFlowChartState(
+            cashFlow = cashFlow,
+            selectedMonth = selectedMonth
+        )
+    }
+}
+
+private fun emptyLineChartState(selectedMonth: MonthCursor): LineChartState {
+    val months = selectedMonth.trailingMonths(count = CASH_FLOW_CHART_MONTH_COUNT)
+    return LineChartState(
+        pointCount = months.size,
+        minValue = 0.0,
+        maxValue = 0.0,
+        months = months,
+        yAxisLabels = listOf("0", "0", "0"),
+        monthSnapshots = emptyList(),
+        series = emptyList()
+    )
+}
 
 private fun DashboardMonthSummary.toUiMonthlySummary(): MonthlySummary {
     val totalAmountDouble = totalAmount.toDisplayDouble().coerceAtLeast(0.01)
@@ -1265,7 +1294,7 @@ private fun buildCashFlowChartState(
     cashFlow: DashboardCashFlow,
     selectedMonth: MonthCursor
 ): LineChartState {
-    val months = selectedMonth.trailingMonths(count = 6)
+    val months = selectedMonth.trailingMonths(count = CASH_FLOW_CHART_MONTH_COUNT)
     val expenseTotalsByMonth = cashFlow.expenseTotalsByMonth.associate { total ->
         MonthCursor(total.year, total.month) to total.amount
     }
