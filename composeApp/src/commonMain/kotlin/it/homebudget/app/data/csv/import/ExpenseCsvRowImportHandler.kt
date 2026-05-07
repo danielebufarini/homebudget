@@ -9,7 +9,7 @@ import it.homebudget.app.data.csv.normalizeDescription
 import it.homebudget.app.data.csv.registerCategoryNames
 import it.homebudget.app.data.csv.resolveImportCategory
 
-internal class ExpenseCsvRowImportHandler : CsvRowImportHandler {
+internal object ExpenseCsvRowImportHandler : CsvRowImportHandler {
     override suspend fun importRow(
         row: ParsedUnifiedCsvRow,
         rowIndex: Int,

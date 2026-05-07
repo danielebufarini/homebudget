@@ -7,7 +7,7 @@ import it.homebudget.app.data.csv.ParsedUnifiedCsvRow
 import it.homebudget.app.data.csv.buildImportedIncomeId
 import it.homebudget.app.data.csv.normalizeDescription
 
-internal class IncomeCsvRowImportHandler : CsvRowImportHandler {
+internal object IncomeCsvRowImportHandler : CsvRowImportHandler {
     override suspend fun importRow(
         row: ParsedUnifiedCsvRow,
         rowIndex: Int,
