@@ -3,7 +3,7 @@ package it.homebudget.app.data
 import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import com.ionspin.kotlin.bignum.integer.BigInteger
-import com.ionspin.kotlin.bignum.integer.toBigInteger
+import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.CategoryTotalRow
 import it.homebudget.app.database.Expense
@@ -15,6 +15,11 @@ import it.homebudget.app.database.MonthTotalRow
 import it.homebudget.app.database.TopCategorySummaryRow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 private data class DefaultCategorySeed(
     val name: String,
@@ -117,14 +122,23 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
     suspend fun getAllCategoriesSnapshot(): List<Category> = categoryDao.getAllCategoriesSnapshot()
 
-    fun getDashboardMonthSummary(year: Int, month: Int): Flow<DashboardMonthSummary> {
+    fun getDashboardMonthSummary(
+        year: Int,
+        month: Int
+    ): Flow<DashboardMonthSummary> {
+        val (startMillis, endMillis) = monthBounds(year, month)
+
         return combine(
-            expenseDao.getExpenseMonthSummary(year, month),
-            incomeDao.getIncomeMonthTotal(year, month),
-            expenseDao.getMonthCategoryTotals(year, month),
-            expenseDao.getMonthTopCategory(year, month),
-            expenseDao.getMonthHighestDay(year, month)
-        ) { expenseSummary, incomeAmount, categoryTotals, topCategory, highestDay ->
+            expenseDao.getDashboardExpenseRows(startMillis, endMillis),
+            incomeDao.getIncomeAmountRows(startMillis, endMillis)
+        ) { expenseRows, incomeRows ->
+            val expenseSummary = expenseRows.toExpenseMonthSummary()
+            val incomeAmount = incomeRows.fold(ZERO) { acc, row ->
+                acc + row.amount.toAmountBigInteger()
+            }
+            val categoryTotals = expenseRows.toCategoryTotals()
+            val topCategory = expenseRows.toTopCategorySummary()
+            val highestDay = expenseRows.toHighestDaySummary()
             buildDashboardMonthSummary(
                 expenseSummary = expenseSummary,
                 incomeAmount = incomeAmount,
@@ -135,14 +149,62 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         }
     }
 
+    fun getMonthlyExpenseTotals(): Flow<List<MonthTotalRow>> {
+        return expenseDao.getAllDashboardExpenseRows()
+            .map { rows ->
+                rows
+                    .groupBy { row ->
+                        row.date.toMonthKey()
+                    }
+                    .map { (monthKey, monthRows) ->
+                        MonthTotalRow(
+                            date = monthKey.toStartOfMonthMillis(),
+                            amount = monthRows.fold(ZERO) { acc, row ->
+                                acc + row.amount.toAmountBigInteger()
+                            }
+                        )
+                    }
+                    .sortedBy { row ->
+                        row.date
+                    }
+            }
+    }
+
+    fun getMonthlyIncomeTotals(): Flow<List<MonthTotalRow>> {
+        return incomeDao.getAllIncomeAmountRows()
+            .map { rows ->
+                rows
+                    .groupBy { row ->
+                        row.date.toMonthKey()
+                    }
+                    .map { (monthKey, monthRows) ->
+                        MonthTotalRow(
+                            date = monthKey.toStartOfMonthMillis(),
+                            amount = monthRows.fold(ZERO) { acc, row ->
+                                acc + row.amount.toAmountBigInteger()
+                            }
+                        )
+                    }
+                    .sortedBy { row ->
+                        row.date
+                    }
+            }
+    }
+
     fun getDashboardCashFlow(): Flow<DashboardCashFlow> {
+        val timeZone = TimeZone.currentSystemDefault()
+
         return combine(
-            expenseDao.getMonthlyExpenseTotals(),
-            incomeDao.getMonthlyIncomeTotals()
+            getMonthlyExpenseTotals(),
+            getMonthlyIncomeTotals()
         ) { expenseTotals, incomeTotals ->
             DashboardCashFlow(
-                expenseTotalsByMonth = expenseTotals.map(MonthTotalRow::toDashboardMonthTotal),
-                incomeTotalsByMonth = incomeTotals.map(MonthTotalRow::toDashboardMonthTotal)
+                expenseTotalsByMonth = expenseTotals.map { row ->
+                    row.toDashboardMonthTotal(timeZone)
+                },
+                incomeTotalsByMonth = incomeTotals.map { row ->
+                    row.toDashboardMonthTotal(timeZone)
+                }
             )
         }
     }
@@ -343,33 +405,39 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
 private fun buildDashboardMonthSummary(
     expenseSummary: ExpenseMonthSummaryRow,
-    incomeAmount: Long,
+    incomeAmount: BigInteger,
     categoryTotals: List<CategoryTotalRow>,
     topCategory: TopCategorySummaryRow?,
     highestDay: HighestDaySummaryRow?
 ): DashboardMonthSummary {
-    val totalAmount = expenseSummary.totalAmount.toBigInteger()
+    val totalAmount = expenseSummary.totalAmount
     return DashboardMonthSummary(
         expenseCount = expenseSummary.expenseCount,
         totalAmount = totalAmount,
-        incomeAmount = incomeAmount.toBigInteger(),
-        sharedAmount = expenseSummary.sharedAmount.toBigInteger(),
+        incomeAmount = incomeAmount,
+        sharedAmount = expenseSummary.sharedAmount,
         averageAmount = averageAmount(totalAmount, expenseSummary.expenseCount),
         topCategoryId = topCategory?.categoryId,
         highestDayOfMonth = highestDay?.dayOfMonth,
-        highestDayAmount = highestDay?.amount?.toBigInteger() ?: BigInteger.ZERO,
+        highestDayAmount = highestDay?.amount ?: ZERO,
         categoryTotals = categoryTotals.map { row ->
             DashboardCategoryTotal(
                 categoryId = row.categoryId,
-                amount = row.amount.toBigInteger()
+                amount = row.amount
             )
         }
     )
 }
 
-private fun MonthTotalRow.toDashboardMonthTotal(): DashboardMonthTotal =
-    DashboardMonthTotal(
-        year = year,
-        month = month,
-        amount = amount.toBigInteger()
+private fun MonthTotalRow.toDashboardMonthTotal(
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): DashboardMonthTotal {
+    val localDate = Instant.fromEpochMilliseconds(date)
+        .toLocalDateTime(timeZone)
+        .date
+    return DashboardMonthTotal(
+        year = localDate.year,
+        month = localDate.month.number,
+        amount = amount
     )
+}

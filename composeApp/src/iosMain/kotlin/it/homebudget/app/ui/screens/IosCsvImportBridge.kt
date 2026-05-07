@@ -1,7 +1,7 @@
 package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.importBudgetItemsFromCsv
+import it.homebudget.app.data.csv.importBudgetItemsFromCsv
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.csvImportFailedMessage
 import it.homebudget.app.localization.csvImportNoRowsMessage

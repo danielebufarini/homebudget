@@ -36,8 +36,16 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
+
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        }
     }
 }
 
@@ -48,4 +56,5 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.koin.core)
     debugImplementation(libs.compose.uiTooling)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

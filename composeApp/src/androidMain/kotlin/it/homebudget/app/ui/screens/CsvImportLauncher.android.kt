@@ -6,9 +6,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import homebudget.composeapp.generated.resources.*
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.csv_import_failed
+import homebudget.composeapp.generated.resources.csv_import_no_rows
+import homebudget.composeapp.generated.resources.csv_import_success
+import homebudget.composeapp.generated.resources.csv_import_success_with_skipped
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.importBudgetItemsFromCsv
+import it.homebudget.app.data.csv.importBudgetItemsFromCsv
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject

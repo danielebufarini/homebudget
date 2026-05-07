@@ -1,6 +1,14 @@
-package it.homebudget.app.data
+package it.homebudget.app.data.csv
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.PendingExpense
+import it.homebudget.app.data.PendingIncome
+import it.homebudget.app.data.csv.import.CsvImportState
+import it.homebudget.app.data.csv.import.CsvRowImportHandlerFactory
+import it.homebudget.app.data.csv.import.ImportedRecurringExpenseSeriesCompleter
+import it.homebudget.app.data.csv.import.ImportedRecurringIncomeSeriesCompleter
+import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -42,102 +50,70 @@ suspend fun importBudgetItemsFromCsv(
         registerCategoryNames(category, categoriesByNormalizedName, resolveCategoryName)
     }
 
-    val existingExpenseKeys = repository.getAllExpensesSnapshot()
-        .mapTo(mutableSetOf()) { it.asImportKey() }
-    val existingIncomeKeys = repository.getAllIncomesSnapshot()
-        .mapTo(mutableSetOf()) { it.asImportKey() }
+    val importState = CsvImportState(
+        repository = repository,
+        resolveCategoryName = resolveCategoryName,
+        categoriesById = categoriesById,
+        categoriesByNormalizedName = categoriesByNormalizedName,
+        existingExpenseKeys = repository.getAllExpensesSnapshot()
+            .mapTo(mutableSetOf()) { expense -> expense.asImportKey() },
+        existingIncomeKeys = repository.getAllIncomesSnapshot()
+            .mapTo(mutableSetOf()) { income -> income.asImportKey() }
+    )
 
-    val expensesToInsert = mutableListOf<PendingExpense>()
-    val incomesToInsert = mutableListOf<PendingIncome>()
-    var skippedCount = 0
+    val rowImportHandlerFactory = CsvRowImportHandlerFactory()
 
     parsedRows.forEachIndexed { index, row ->
         val amount = parseAmountInput(row.amountText)
         if (amount == null || amount <= BigInteger.ZERO) {
-            skippedCount += 1
+            importState.skippedCount += 1
             return@forEachIndexed
         }
 
-        val itemDate = row.date.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+        val itemDate = row.date
+            .atStartOfDayIn(TimeZone.currentSystemDefault())
+            .toEpochMilliseconds()
 
-        when (row.type) {
-            CsvRowType.Expense -> {
-                val rawCategoryName = row.categoryName
-                if (rawCategoryName.isNullOrBlank()) {
-                    skippedCount += 1
-                    return@forEachIndexed
-                }
+        val imported = rowImportHandlerFactory
+            .create(row.type)
+            .importRow(
+                row = row,
+                rowIndex = index,
+                amount = amount,
+                itemDate = itemDate,
+                state = importState
+            )
 
-                val category = resolveImportCategory(
-                    rawCategoryName = rawCategoryName,
-                    categoriesByNormalizedName = categoriesByNormalizedName
-                )
-
-                if (categoriesById[category.id] == null) {
-                    repository.insertCategory(
-                        id = category.id,
-                        name = category.name,
-                        icon = category.icon,
-                        isCustom = category.isCustom == 1L
-                    )
-                    categoriesById[category.id] = category
-                    registerCategoryNames(category, categoriesByNormalizedName, resolveCategoryName)
-                }
-
-                val expenseKey = CsvImportedExpenseKey(
-                    date = itemDate,
-                    categoryId = category.id,
-                    amount = amount,
-                    description = normalizeDescription(row.description)
-                )
-                if (!existingExpenseKeys.add(expenseKey)) {
-                    skippedCount += 1
-                    return@forEachIndexed
-                }
-
-                expensesToInsert += PendingExpense(
-                    id = buildImportedExpenseId(),
-                    amount = amount,
-                    date = itemDate,
-                    categoryId = category.id,
-                    description = row.description?.takeIf { it.isNotBlank() },
-                    isShared = row.isShared,
-                    recurringSeriesId = row.buildRecurringSeriesId(index)
-                )
-            }
-
-            CsvRowType.Income -> {
-                val incomeKey = CsvImportedIncomeKey(
-                    date = itemDate,
-                    amount = amount,
-                    description = normalizeDescription(row.description)
-                )
-                if (!existingIncomeKeys.add(incomeKey)) {
-                    skippedCount += 1
-                    return@forEachIndexed
-                }
-
-                incomesToInsert += PendingIncome(
-                    id = buildImportedIncomeId(),
-                    amount = amount,
-                    date = itemDate,
-                    description = row.description?.takeIf { it.isNotBlank() },
-                    recurringSeriesId = row.buildRecurringSeriesId(index)
-                )
-            }
+        if (!imported) {
+            importState.skippedCount += 1
         }
     }
 
-    if (expensesToInsert.isNotEmpty()) repository.insertExpenses(expensesToInsert)
-    if (incomesToInsert.isNotEmpty()) repository.insertIncomes(incomesToInsert)
+    val completedExpensesToInsert = ImportedRecurringExpenseSeriesCompleter().complete(
+        itemsToInsert = importState.expensesToInsert,
+        existingKeys = importState.existingExpenseKeys
+    )
+
+    val completedIncomesToInsert = ImportedRecurringIncomeSeriesCompleter().complete(
+        itemsToInsert = importState.incomesToInsert,
+        existingKeys = importState.existingIncomeKeys
+    )
+
+    if (completedExpensesToInsert.isNotEmpty()) {
+        repository.insertExpenses(completedExpensesToInsert)
+    }
+
+    if (completedIncomesToInsert.isNotEmpty()) {
+        repository.insertIncomes(completedIncomesToInsert)
+    }
 
     return CsvImportResult(
-        importedCount = expensesToInsert.size + incomesToInsert.size,
-        skippedCount = skippedCount
+        importedCount = completedExpensesToInsert.size + completedIncomesToInsert.size,
+        skippedCount = importState.skippedCount
     )
 }
 
-private data class ParsedUnifiedCsvRow(
+internal data class ParsedUnifiedCsvRow(
     val type: CsvRowType,
     val date: LocalDate,
     val categoryName: String?,
@@ -154,20 +130,20 @@ private data class ParsedUnifiedCsvRow(
     }
 }
 
-private data class CsvImportedExpenseKey(
+internal data class CsvImportedExpenseKey(
     val date: Long,
     val categoryId: String,
     val amount: BigInteger,
     val description: String
 )
 
-private data class CsvImportedIncomeKey(
+internal data class CsvImportedIncomeKey(
     val date: Long,
     val amount: BigInteger,
     val description: String
 )
 
-private fun registerCategoryNames(
+internal fun registerCategoryNames(
     category: Category,
     map: MutableMap<String, Category>,
     resolveCategoryName: (String, String, Long) -> String
@@ -246,12 +222,17 @@ private fun parseCsvDate(value: String): LocalDate? {
     val year = yearStr.toIntOrNull() ?: return null
     val month = monthStr.toIntOrNull() ?: return null
     val day = dayStr.toIntOrNull() ?: return null
-    return runCatching { LocalDate(year = year, month = month, day = day) }.getOrNull()
+
+    return runCatching {
+        LocalDate(
+            year = year,
+            monthNumber = month,
+            dayOfMonth = day
+        )
+    }.getOrNull()
 }
 
-// ── Category resolution ──────────────────────────────────────────────────────
-
-private fun resolveImportCategory(
+internal fun resolveImportCategory(
     rawCategoryName: String,
     categoriesByNormalizedName: Map<String, Category>
 ): Category {
@@ -266,12 +247,10 @@ private fun resolveImportCategory(
     )
 }
 
-// ── Normalisation helpers ────────────────────────────────────────────────────
-
 private fun normalizeCategoryToken(value: String): String =
     value.trim().lowercase().replace(nonAlphanumericRegex, " ").trim()
 
-private fun normalizeDescription(value: String?): String = value?.trim()?.lowercase().orEmpty()
+internal fun normalizeDescription(value: String?): String = value?.trim()?.lowercase().orEmpty()
 
 private fun String.toCsvBoolean(): Boolean =
     when (trim().lowercase()) {
@@ -286,16 +265,27 @@ private fun String.toCsvRowType(): CsvRowType? =
         else -> null
     }
 
-// ── Key factories ────────────────────────────────────────────────────────────
-
-private fun Expense.asImportKey() = CsvImportedExpenseKey(
+internal fun Expense.asImportKey() = CsvImportedExpenseKey(
     date = date,
     categoryId = categoryId,
     amount = amount,
     description = normalizeDescription(description)
 )
 
-private fun Income.asImportKey() = CsvImportedIncomeKey(
+internal fun PendingExpense.asImportKey() = CsvImportedExpenseKey(
+    date = date,
+    categoryId = categoryId,
+    amount = amount,
+    description = normalizeDescription(description)
+)
+
+internal fun Income.asImportKey() = CsvImportedIncomeKey(
+    date = date,
+    amount = amount,
+    description = normalizeDescription(description)
+)
+
+internal fun PendingIncome.asImportKey() = CsvImportedIncomeKey(
     date = date,
     amount = amount,
     description = normalizeDescription(description)
@@ -304,11 +294,9 @@ private fun Income.asImportKey() = CsvImportedIncomeKey(
 private fun buildImportedId(prefix: String): String =
     "csv-${prefix}_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
 
-private fun buildImportedExpenseId() = buildImportedId("expense")
-private fun buildImportedIncomeId() = buildImportedId("income")
-private fun buildImportedCategoryId() = buildImportedId("category")
-
-// ── Column index mapping ─────────────────────────────────────────────────────
+internal fun buildImportedExpenseId() = buildImportedId("expense")
+internal fun buildImportedIncomeId() = buildImportedId("income")
+internal fun buildImportedCategoryId() = buildImportedId("category")
 
 private data class UnifiedCsvColumnIndices(
     val typeIndex: Int,
@@ -337,13 +325,13 @@ private data class UnifiedCsvColumnIndices(
                 recurringSeriesIdIndex = indexByName["recurring_series_id"] ?: -1
             ).takeIf { indices ->
                 indices.typeIndex >= 0 &&
-                indices.dateIndex >= 0 &&
-                indices.categoryIndex >= 0 &&
-                indices.amountIndex >= 0 &&
-                indices.descriptionIndex >= 0 &&
-                indices.sharedIndex >= 0 &&
-                indices.recurringIndex >= 0 &&
-                indices.recurringSeriesIdIndex >= 0
+                        indices.dateIndex >= 0 &&
+                        indices.categoryIndex >= 0 &&
+                        indices.amountIndex >= 0 &&
+                        indices.descriptionIndex >= 0 &&
+                        indices.sharedIndex >= 0 &&
+                        indices.recurringIndex >= 0 &&
+                        indices.recurringSeriesIdIndex >= 0
             }
         }
     }

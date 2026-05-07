@@ -1,7 +1,7 @@
 package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.exportBudgetItemsToCsv
+import it.homebudget.app.data.csv.exportBudgetItemsToCsv
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.csvExportFailedMessage
 import kotlinx.coroutines.MainScope

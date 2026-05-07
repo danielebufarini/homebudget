@@ -8,80 +8,39 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExpenseDao {
+
     @Query("SELECT * FROM expense ORDER BY date DESC")
     fun getAllExpenses(): Flow<List<Expense>>
 
     @Query(
         """
         SELECT
-            COUNT(*) AS expenseCount,
-            COALESCE(SUM(CAST(amount AS INTEGER)), 0) AS totalAmount,
-            COALESCE(SUM(CASE WHEN isShared = 1 THEN CAST(amount AS INTEGER) ELSE 0 END), 0) AS sharedAmount
+            amount,
+            isShared,
+            date,
+            categoryId
         FROM expense
-        WHERE CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :year
-          AND CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :month
+        WHERE date >= :startMillis
+          AND date < :endMillis
         """
     )
-    fun getExpenseMonthSummary(year: Int, month: Int): Flow<ExpenseMonthSummaryRow>
+    fun getDashboardExpenseRows(
+        startMillis: Long,
+        endMillis: Long
+    ): Flow<List<DashboardExpenseRow>>
 
     @Query(
         """
         SELECT
-            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
-            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month,
-            COALESCE(SUM(CAST(amount AS INTEGER)), 0) AS amount
+            amount,
+            isShared,
+            date,
+            categoryId
         FROM expense
-        GROUP BY
-            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER),
-            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER)
-        ORDER BY year, month
+        ORDER BY date ASC
         """
     )
-    fun getMonthlyExpenseTotals(): Flow<List<MonthTotalRow>>
-
-    @Query(
-        """
-        SELECT
-            categoryId AS categoryId,
-            COALESCE(SUM(CAST(amount AS INTEGER)), 0) AS amount
-        FROM expense
-        WHERE CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :year
-          AND CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :month
-        GROUP BY categoryId
-        ORDER BY amount DESC, MAX(date) DESC
-        """
-    )
-    fun getMonthCategoryTotals(year: Int, month: Int): Flow<List<CategoryTotalRow>>
-
-    @Query(
-        """
-        SELECT
-            categoryId AS categoryId,
-            COALESCE(SUM(CAST(amount AS INTEGER)), 0) AS amount
-        FROM expense
-        WHERE CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :year
-          AND CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :month
-        GROUP BY categoryId
-        ORDER BY amount DESC, MAX(date) DESC
-        LIMIT 1
-        """
-    )
-    fun getMonthTopCategory(year: Int, month: Int): Flow<TopCategorySummaryRow?>
-
-    @Query(
-        """
-        SELECT
-            CAST(strftime('%d', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS dayOfMonth,
-            COALESCE(SUM(CAST(amount AS INTEGER)), 0) AS amount
-        FROM expense
-        WHERE CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :year
-          AND CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) = :month
-        GROUP BY dayOfMonth
-        ORDER BY amount DESC, MAX(date) DESC
-        LIMIT 1
-        """
-    )
-    fun getMonthHighestDay(year: Int, month: Int): Flow<HighestDaySummaryRow?>
+    fun getAllDashboardExpenseRows(): Flow<List<DashboardExpenseRow>>
 
     @Query("SELECT * FROM expense ORDER BY date DESC")
     suspend fun getAllExpensesSnapshot(): List<Expense>

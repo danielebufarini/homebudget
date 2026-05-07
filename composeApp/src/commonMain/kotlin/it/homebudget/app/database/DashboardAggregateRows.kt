@@ -1,28 +1,49 @@
 package it.homebudget.app.database
 
+import com.ionspin.kotlin.bignum.integer.BigInteger
+
+// Raw Room projection: directly read from SQLite.
+data class DashboardExpenseRow(
+    val amount: String,
+    val isShared: Boolean,
+    val date: Long,
+    val categoryId: String
+)
+
+// Raw Room projection: directly read from SQLite.
+data class IncomeAmountRow(
+    val amount: String,
+    val date: Long
+)
+
+// Computed in Kotlin.
 data class ExpenseMonthSummaryRow(
     val expenseCount: Int,
-    val totalAmount: Long,
-    val sharedAmount: Long
+    val totalAmount: BigInteger,
+    val sharedAmount: BigInteger
 )
 
+// Computed in Kotlin.
+// date = first day of the month at start of day, in epoch millis.
 data class MonthTotalRow(
-    val year: Int,
-    val month: Int,
-    val amount: Long
+    val date: Long,
+    val amount: BigInteger
 )
 
+// Computed in Kotlin.
 data class CategoryTotalRow(
     val categoryId: String,
-    val amount: Long
+    val amount: BigInteger
 )
 
+// Computed in Kotlin.
 data class TopCategorySummaryRow(
     val categoryId: String,
-    val amount: Long
+    val amount: BigInteger
 )
 
+// Computed in Kotlin.
 data class HighestDaySummaryRow(
     val dayOfMonth: Int,
-    val amount: Long
+    val amount: BigInteger
 )

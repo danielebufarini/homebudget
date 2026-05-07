@@ -1,7 +1,13 @@
 package it.homebudget.app
 
 import com.ionspin.kotlin.bignum.integer.toBigInteger
-import it.homebudget.app.data.*
+import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
+import it.homebudget.app.data.buildPendingExpenses
+import it.homebudget.app.data.buildRecurringMonthlyExpenses
+import it.homebudget.app.data.buildRecurringMonthlyIncomes
+import it.homebudget.app.data.csv.buildExpensesCsvExport
+import it.homebudget.app.data.csv.buildIncomesCsvExport
+import it.homebudget.app.data.splitAmountIntoInstallments
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -116,7 +122,8 @@ class ComposeAppCommonTest {
                 expense(
                     id = "expense-in-range",
                     amount = 1234.toBigInteger(),
-                    date = LocalDate(2026, 5, 10).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+                    date = LocalDate(2026, 5, 10).atStartOfDayIn(TimeZone.UTC)
+                        .toEpochMilliseconds(),
                     categoryId = "default_1",
                     description = "Groceries",
                     isShared = 1L,
@@ -161,7 +168,8 @@ class ComposeAppCommonTest {
                 income(
                     id = "income-1",
                     amount = 320000.toBigInteger(),
-                    date = LocalDate(2026, 5, 15).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+                    date = LocalDate(2026, 5, 15).atStartOfDayIn(TimeZone.UTC)
+                        .toEpochMilliseconds(),
                     description = "Salary",
                     recurringSeriesId = "income-series"
                 )
