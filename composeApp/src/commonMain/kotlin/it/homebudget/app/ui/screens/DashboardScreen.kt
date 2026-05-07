@@ -279,9 +279,9 @@ fun DashboardRoute(
 
             if (showFab) {
                 if (rememberIsIosPlatform()) {
-                        FloatingActionButton(
-                            onClick = onOpenAddExpense,
-                            modifier = Modifier
+                    FloatingActionButton(
+                        onClick = onOpenAddExpense,
+                        modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp)
                     ) {
@@ -801,6 +801,7 @@ private fun LineChartPage(state: LineChartState) {
     var chartSize by remember { mutableStateOf(IntSize.Zero) }
     var popupSize by remember { mutableStateOf(IntSize.Zero) }
     val topInsetPx = with(density) { 8.dp.toPx() }
+    val zeroAxisLabelHalfHeightPx = with(density) { 8.dp.toPx() }
     val hitTargetRadiusPx = with(density) { 18.dp.toPx() }
     val chartGeometry = remember(state, chartSize, topInsetPx) {
         state.buildChartGeometry(chartSize = chartSize, topInsetPx = topInsetPx)
@@ -819,7 +820,7 @@ private fun LineChartPage(state: LineChartState) {
                     val chartOrigin = chartPositionInRoot - rootPositionInRoot
                     val tapInChart = tapOffset - chartOrigin
                     val insideChart = tapInChart.x in 0f..chartSize.width.toFloat() &&
-                        tapInChart.y in 0f..chartSize.height.toFloat()
+                            tapInChart.y in 0f..chartSize.height.toFloat()
 
                     val nearestPoint = if (insideChart) {
                         chartGeometry?.findNearestPoint(
@@ -853,16 +854,40 @@ private fun LineChartPage(state: LineChartState) {
                 Column(
                     modifier = Modifier.fillMaxHeight().padding(end = 8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.SpaceBetween,
-                        horizontalAlignment = Alignment.End
+                    Box(
+                        modifier = Modifier.weight(1f).width(36.dp)
                     ) {
-                        state.yAxisLabels.forEach { label ->
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            state.yAxisLabels.forEach { label ->
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        chartGeometry?.zeroLineY?.let { zeroY ->
+                            val maxOffsetY = (chartSize.height - zeroAxisLabelHalfHeightPx * 2)
+                                .coerceAtLeast(0f)
                             Text(
-                                text = label,
+                                text = "0",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = onSurfaceVariant
+                                color = onSurfaceVariant,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset {
+                                        IntOffset(
+                                            x = 0,
+                                            y = (zeroY - zeroAxisLabelHalfHeightPx)
+                                                .coerceIn(0f, maxOffsetY)
+                                                .roundToInt()
+                                        )
+                                    }
                             )
                         }
                     }
@@ -893,6 +918,16 @@ private fun LineChartPage(state: LineChartState) {
                                     start = Offset(0f, y),
                                     end = Offset(size.width, y),
                                     strokeWidth = gridStroke
+                                )
+                            }
+
+                            geometry.zeroLineY?.let { zeroY ->
+                                drawLine(
+                                    color = onSurfaceVariant.copy(alpha = 0.72f),
+                                    start = Offset(0f, zeroY),
+                                    end = Offset(size.width, zeroY),
+                                    strokeWidth = 1.5.dp.toPx(),
+                                    cap = StrokeCap.Round
                                 )
                             }
 
@@ -960,6 +995,7 @@ private fun LineChartPage(state: LineChartState) {
                                 text = when (series.kind) {
                                     ChartSeriesKind.Expenses -> strings.expenses
                                     ChartSeriesKind.Income -> strings.income
+                                    ChartSeriesKind.Difference -> strings.difference
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = onSurfaceVariant
@@ -1212,6 +1248,7 @@ private fun buildCashFlowChartState(
     if (expenseTotalsByMonth.isEmpty() && incomeTotalsByMonth.isEmpty()) {
         return LineChartState(
             pointCount = months.size,
+            minValue = 0.0,
             maxValue = 0.0,
             months = months,
             yAxisLabels = listOf("0", "0", "0"),
@@ -1229,6 +1266,7 @@ private fun buildCashFlowChartState(
     }
     val expenseValues = monthSnapshots.map { it.expenseAmount.toDisplayDouble() }
     val incomeValues = monthSnapshots.map { it.incomeAmount.toDisplayDouble() }
+    val differenceValues = monthSnapshots.map { it.differenceAmount.toDisplayDouble() }
 
     val expenseMarkerDays = buildSet {
         months.forEachIndexed { index, month ->
@@ -1240,21 +1278,29 @@ private fun buildCashFlowChartState(
             if (incomeTotalsByMonth[month] != null) add(index)
         }
     }
+    val differenceMarkerDays = expenseMarkerDays + incomeMarkerDays
 
     val maxValue = maxOf(
         expenseValues.maxOrNull() ?: 0.0,
         incomeValues.maxOrNull() ?: 0.0,
+        differenceValues.maxOrNull() ?: 0.0,
         1.0
     )
+    val minValue = minOf(
+        differenceValues.minOrNull() ?: 0.0,
+        0.0
+    )
+    val middleValue = (maxValue + minValue) / 2.0
 
     return LineChartState(
         pointCount = months.size,
+        minValue = minValue,
         maxValue = maxValue,
         months = months,
         yAxisLabels = listOf(
             formatAxisAmount(maxValue),
-            formatAxisAmount(maxValue / 2),
-            formatAxisAmount(0.0)
+            formatAxisAmount(middleValue),
+            formatAxisAmount(minValue)
         ),
         monthSnapshots = monthSnapshots,
         series = listOf(
@@ -1269,6 +1315,12 @@ private fun buildCashFlowChartState(
                 color = Color(0xFF5BC98A),
                 values = incomeValues,
                 markerDays = incomeMarkerDays
+            ),
+            LineSeries(
+                kind = ChartSeriesKind.Difference,
+                color = Color(0xFF1565C0),
+                values = differenceValues,
+                markerDays = differenceMarkerDays
             )
         )
     )
@@ -1318,6 +1370,7 @@ private class SummaryMetricUi(
 
 private data class LineChartState(
     val pointCount: Int,
+    val minValue: Double,
     val maxValue: Double,
     val months: List<MonthCursor>,
     val yAxisLabels: List<String>,
@@ -1327,7 +1380,8 @@ private data class LineChartState(
 
 private enum class ChartSeriesKind {
     Expenses,
-    Income
+    Income,
+    Difference
 }
 
 private data class LineSeries(
@@ -1367,6 +1421,7 @@ private data class RenderedLineSeries(
 private data class LineChartGeometry(
     val horizontalGridYs: List<Float>,
     val verticalGridXs: List<Float>,
+    val zeroLineY: Float?,
     val series: List<RenderedLineSeries>,
     val points: List<ChartPoint>
 ) {
@@ -1401,7 +1456,8 @@ private fun LineChartState.buildChartGeometry(
     }
 
     val plotHeight = (chartSize.height - topInsetPx).coerceAtLeast(1f)
-    val normalizedMaxValue = maxValue.coerceAtLeast(1.0)
+    val normalizedMinValue = minValue
+    val valueRange = (maxValue - normalizedMinValue).coerceAtLeast(1.0)
 
     fun xFor(index: Int): Float =
         if (pointCount == 1) chartSize.width / 2f
@@ -1411,12 +1467,18 @@ private fun LineChartState.buildChartGeometry(
         topInsetPx + plotHeight * (1f - marker)
     }
     val verticalGridXs = List(pointCount, ::xFor)
+    val zeroLineY = if (0.0 in normalizedMinValue..maxValue) {
+        topInsetPx + plotHeight -
+                ((0.0 - normalizedMinValue) / valueRange).toFloat() * plotHeight
+    } else {
+        null
+    }
     val renderedSeries = series.map { series ->
         val points = series.values.mapIndexed { index, value ->
             Offset(
                 x = xFor(index),
                 y = topInsetPx + plotHeight -
-                    (value / normalizedMaxValue).toFloat() * plotHeight
+                        ((value - normalizedMinValue) / valueRange).toFloat() * plotHeight
             )
         }
         val path = Path().apply {
@@ -1444,6 +1506,7 @@ private fun LineChartState.buildChartGeometry(
     return LineChartGeometry(
         horizontalGridYs = horizontalGridYs,
         verticalGridXs = verticalGridXs,
+        zeroLineY = zeroLineY,
         series = renderedSeries,
         points = chartPoints
     )
