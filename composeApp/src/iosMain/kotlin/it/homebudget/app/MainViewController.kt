@@ -6,12 +6,12 @@ import it.homebudget.app.ui.screens.AddExpenseScreen
 import it.homebudget.app.ui.screens.AddIncomeScreen
 import it.homebudget.app.ui.screens.CategoriesRoute
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
-import it.homebudget.app.ui.screens.DashboardRoute
 import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
+import it.homebudget.app.ui.screens.dashboard.DashboardRoute
 import it.homebudget.app.ui.screens.startIosGroupedExpensesStore
 import it.homebudget.app.ui.theme.AppTheme
 import org.koin.mp.KoinPlatformTools

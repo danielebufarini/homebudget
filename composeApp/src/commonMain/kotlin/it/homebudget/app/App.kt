@@ -24,7 +24,7 @@ import homebudget.composeapp.generated.resources.backup_restore_failed
 import homebudget.composeapp.generated.resources.restore
 import homebudget.composeapp.generated.resources.restore_backup
 import homebudget.composeapp.generated.resources.skip
-import it.homebudget.app.ui.screens.DashboardScreen
+import it.homebudget.app.ui.screens.dashboard.DashboardScreen
 import it.homebudget.app.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
