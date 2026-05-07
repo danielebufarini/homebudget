@@ -1,8 +1,13 @@
 package it.homebudget.app.data
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ONE
 import com.ionspin.kotlin.bignum.integer.toBigInteger
-import kotlinx.datetime.*
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
 data class PendingExpense(
@@ -207,7 +212,7 @@ fun splitAmountIntoInstallments(amount: BigInteger, installments: Int): List<Big
     val remainder = (amount % count).intValue()
 
     return List(installments) { index ->
-        if (index < remainder) baseAmount + BigInteger.ONE else baseAmount
+        if (index < remainder) baseAmount + ONE else baseAmount
     }
 }
 

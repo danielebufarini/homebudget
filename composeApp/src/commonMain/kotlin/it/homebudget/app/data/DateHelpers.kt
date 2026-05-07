@@ -1,12 +1,14 @@
 package it.homebudget.app.data
 
 import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 data class MonthKey(
     val year: Int,
@@ -20,8 +22,8 @@ fun monthBounds(
 ): Pair<Long, Long> {
     val startDate = LocalDate(
         year = year,
-        monthNumber = month,
-        dayOfMonth = 1
+        month = Month(month),
+        day = 1
     )
 
     val endDate = startDate.plus(1, DateTimeUnit.MONTH)
@@ -46,7 +48,7 @@ fun Long.toMonthKey(
 
     return MonthKey(
         year = localDate.year,
-        month = localDate.monthNumber
+        month = localDate.month.number
     )
 }
 
@@ -55,8 +57,8 @@ fun MonthKey.toStartOfMonthMillis(
 ): Long {
     return LocalDate(
         year = year,
-        monthNumber = month,
-        dayOfMonth = 1
+        month = Month(month),
+        day = 1
     )
         .atStartOfDayIn(timeZone)
         .toEpochMilliseconds()
@@ -67,5 +69,5 @@ fun Long.toDayOfMonth(
 ): Int {
     return Instant.fromEpochMilliseconds(this)
         .toLocalDateTime(timeZone)
-        .dayOfMonth
+        .day
 }

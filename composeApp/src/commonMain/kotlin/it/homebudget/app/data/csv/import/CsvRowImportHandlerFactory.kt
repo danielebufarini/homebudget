@@ -2,7 +2,7 @@ package it.homebudget.app.data.csv.import
 
 import it.homebudget.app.data.csv.CsvRowType
 
-internal class CsvRowImportHandlerFactory {
+internal object CsvRowImportHandlerFactory {
 
     fun create(type: CsvRowType): CsvRowImportHandler {
         return when (type) {

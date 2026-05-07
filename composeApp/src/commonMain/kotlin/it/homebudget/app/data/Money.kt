@@ -1,9 +1,10 @@
 package it.homebudget.app.data
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 
-private val ZERO = BigInteger.ZERO
+private val ZERO = ZERO
 private val ONE_HUNDRED = 100.toBigInteger()
 
 fun parseAmountInput(value: String): BigInteger? {
@@ -54,7 +55,7 @@ private fun amountComponents(amount: BigInteger): Triple<BigInteger, String, Str
 }
 
 fun <T> Iterable<T>.sumBigIntegerOf(selector: (T) -> BigInteger): BigInteger =
-    fold(BigInteger.ZERO) { acc, value -> acc + selector(value) }
+    fold(ZERO) { acc, value -> acc + selector(value) }
 
 fun BigInteger.toDisplayDouble(): Double = toString().toDouble() / 100.0
 

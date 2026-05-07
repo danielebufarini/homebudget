@@ -1,6 +1,7 @@
 package it.homebudget.app.data.csv
 
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.PendingIncome
@@ -61,20 +62,16 @@ suspend fun importBudgetItemsFromCsv(
             .mapTo(mutableSetOf()) { income -> income.asImportKey() }
     )
 
-    val rowImportHandlerFactory = CsvRowImportHandlerFactory()
-
     parsedRows.forEachIndexed { index, row ->
         val amount = parseAmountInput(row.amountText)
-        if (amount == null || amount <= BigInteger.ZERO) {
+        if (amount == null || amount <= ZERO) {
             importState.skippedCount += 1
             return@forEachIndexed
         }
-
         val itemDate = row.date
             .atStartOfDayIn(TimeZone.currentSystemDefault())
             .toEpochMilliseconds()
-
-        val imported = rowImportHandlerFactory
+        val imported = CsvRowImportHandlerFactory
             .create(row.type)
             .importRow(
                 row = row,
@@ -83,7 +80,6 @@ suspend fun importBudgetItemsFromCsv(
                 itemDate = itemDate,
                 state = importState
             )
-
         if (!imported) {
             importState.skippedCount += 1
         }
