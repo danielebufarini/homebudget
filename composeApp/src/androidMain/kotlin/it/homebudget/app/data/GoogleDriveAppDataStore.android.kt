@@ -1,9 +1,9 @@
 package it.homebudget.app.data
 
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.client.http.HttpRequest
 import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
@@ -61,16 +61,25 @@ internal suspend fun downloadBackupFromGoogleDrive(
     }
 }
 
+private val httpTransport by lazy {
+    NetHttpTransport()
+}
+
+private val jsonFactory by lazy {
+    GsonFactory.getDefaultInstance()
+}
+
 private fun createGoogleDriveService(accessToken: String): Drive {
     val requestInitializer = HttpRequestInitializer { request: HttpRequest ->
         request.headers.authorization = "Bearer $accessToken"
     }
 
     return Drive.Builder(
-        GoogleNetHttpTransport.newTrustedTransport(),
-        GsonFactory.getDefaultInstance(),
+        httpTransport,
+        jsonFactory,
         requestInitializer
-    ).setApplicationName(GOOGLE_DRIVE_APP_NAME)
+    )
+        .setApplicationName(GOOGLE_DRIVE_APP_NAME)
         .build()
 }
 
