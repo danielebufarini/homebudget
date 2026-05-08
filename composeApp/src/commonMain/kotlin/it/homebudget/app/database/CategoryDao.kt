@@ -1,9 +1,8 @@
 package it.homebudget.app.database
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,8 +13,11 @@ interface CategoryDao {
     @Query("SELECT * FROM category")
     suspend fun getAllCategoriesSnapshot(): List<Category>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertCategory(category: Category)
+
+    @Upsert
+    suspend fun insertCategories(categories: List<Category>)
 
     @Query(
         """

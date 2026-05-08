@@ -1,14 +1,13 @@
 package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
-import java.util.*
-import kotlin.random.Random
-import kotlin.time.Clock
+import java.util.Locale
 
 // Repository-facing snapshot loading and draft persistence for Android voice expense flows.
 
@@ -104,6 +103,4 @@ internal suspend fun persistAndroidVoiceExpenseDraft(
     }
 }
 
-internal fun buildAndroidVoiceExpenseId(): String {
-    return "${Clock.System.now().toEpochMilliseconds()}-${Random.nextLong()}"
-}
+internal fun buildAndroidVoiceExpenseId(): String = IdGenerator.newId("voice-expense")

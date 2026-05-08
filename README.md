@@ -271,6 +271,8 @@ Android caveats:
 
 CSV import/export is file-based transfer for selected data ranges. It remains separate from full cloud backup.
 
+CSV imports are capped at 5 MiB per file. Larger files are rejected before parsing to avoid excessive memory usage and to keep import behavior predictable on mobile devices.
+
 - shared CSV import/export logic:
   - [`CsvBudgetImport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetImport.kt)
   - [`CsvBudgetExport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetExport.kt)

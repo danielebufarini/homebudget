@@ -1,12 +1,36 @@
 package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -14,8 +38,35 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
-import homebudget.composeapp.generated.resources.*
-import it.homebudget.app.data.*
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.add_income
+import homebudget.composeapp.generated.resources.amount
+import homebudget.composeapp.generated.resources.back
+import homebudget.composeapp.generated.resources.cancel
+import homebudget.composeapp.generated.resources.date
+import homebudget.composeapp.generated.resources.delete_income
+import homebudget.composeapp.generated.resources.delete_recurring_income_title
+import homebudget.composeapp.generated.resources.description
+import homebudget.composeapp.generated.resources.edit_income
+import homebudget.composeapp.generated.resources.enter_valid_amount
+import homebudget.composeapp.generated.resources.recurring_income_action_delete
+import homebudget.composeapp.generated.resources.recurring_income_action_update
+import homebudget.composeapp.generated.resources.recurring_income_info
+import homebudget.composeapp.generated.resources.recurring_income_series_info
+import homebudget.composeapp.generated.resources.recurring_monthly
+import homebudget.composeapp.generated.resources.save
+import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unable_to_delete_income
+import homebudget.composeapp.generated.resources.unable_to_save_income
+import homebudget.composeapp.generated.resources.update
+import homebudget.composeapp.generated.resources.update_recurring_income_title
+import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.IdGenerator
+import it.homebudget.app.data.PendingIncome
+import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
+import it.homebudget.app.data.buildRecurringMonthlyIncomes
+import it.homebudget.app.data.formatAmountInput
+import it.homebudget.app.data.parseAmountInput
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -24,7 +75,6 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -463,13 +513,9 @@ class AddIncomeScreen(
     }
 }
 
-private fun buildIncomeId(): String {
-    return "income_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
-}
+private fun buildIncomeId(): String = IdGenerator.newId("income")
 
-private fun buildRecurringIncomeSeriesId(): String {
-    return "recurring-income_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
-}
+private fun buildRecurringIncomeSeriesId(): String = IdGenerator.newId("recurring-income")
 
 private fun buildInitialIncomeDateMillis(
     year: Int?,

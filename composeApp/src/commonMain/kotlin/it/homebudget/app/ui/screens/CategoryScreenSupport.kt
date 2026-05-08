@@ -3,8 +3,7 @@ package it.homebudget.app.ui.screens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import it.homebudget.app.data.ExpenseRepository
-import kotlin.random.Random
-import kotlin.time.Clock
+import it.homebudget.app.data.IdGenerator
 
 @Composable
 internal fun EnsureDefaultCategoriesInserted(repository: ExpenseRepository) {
@@ -13,6 +12,4 @@ internal fun EnsureDefaultCategoriesInserted(repository: ExpenseRepository) {
     }
 }
 
-internal fun buildCustomCategoryId(): String {
-    return "custom_${Clock.System.now().toEpochMilliseconds()}_${Random.nextLong()}"
-}
+internal fun buildCustomCategoryId(): String = IdGenerator.newId("custom-category")

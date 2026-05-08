@@ -12,10 +12,13 @@ import homebudget.composeapp.generated.resources.csv_import_no_rows
 import homebudget.composeapp.generated.resources.csv_import_success
 import homebudget.composeapp.generated.resources.csv_import_success_with_skipped
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.csv.MAX_CSV_IMPORT_BYTES
 import it.homebudget.app.data.csv.importBudgetItemsFromCsv
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 internal actual class CsvImportLauncher(
     private val onOpen: () -> Unit,
@@ -53,7 +56,7 @@ internal actual fun rememberCsvImportLauncher(
         scope.launch {
             runCatching {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.readBytes().decodeToString()
+                    inputStream.readUtf8TextWithLimit(MAX_CSV_IMPORT_BYTES)
                 } ?: error(csvImportFailedLabel)
             }.onSuccess { csvText ->
                 val result = importBudgetItemsFromCsv(
@@ -89,4 +92,21 @@ internal actual fun rememberCsvImportLauncher(
             renderContent = {}
         )
     }
+}
+
+
+private fun InputStream.readUtf8TextWithLimit(maxBytes: Int): String {
+    val output = ByteArrayOutputStream()
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var totalBytes = 0
+
+    while (true) {
+        val read = read(buffer)
+        if (read == -1) break
+        totalBytes += read
+        require(totalBytes <= maxBytes) { "CSV import file is too large." }
+        output.write(buffer, 0, read)
+    }
+
+    return output.toByteArray().decodeToString()
 }

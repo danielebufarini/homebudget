@@ -10,8 +10,11 @@ import it.homebudget.app.database.Income
 import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
 import kotlin.time.Instant
@@ -36,8 +39,9 @@ suspend fun exportBudgetItemsToCsv(
 ): CsvExportFile {
     require(startDate <= endDate) { "startDate must be on or before endDate" }
     val resolveCategoryName = loadCategoryNameResolver()
-    val expenses = repository.getAllExpensesSnapshot()
-    val incomes = repository.getAllIncomesSnapshot()
+    val (startMillis, endExclusiveMillis) = csvExportBounds(startDate, endDate)
+    val expenses = repository.getExpensesSnapshotBetween(startMillis, endExclusiveMillis)
+    val incomes = repository.getIncomesSnapshotBetween(startMillis, endExclusiveMillis)
     val categories = repository.getAllCategoriesSnapshot()
 
     return withContext(Dispatchers.Default) {
@@ -232,7 +236,27 @@ private fun buildCsvContent(headers: List<String>, rows: List<List<String>>): St
 }
 
 private fun String.toCsvCell(): String {
-    return "\"${replace("\"", "\"\"")}\""
+    val safeValue = escapeSpreadsheetFormula()
+    return "\"${safeValue.replace("\"", "\"\"")}\""
+}
+
+private fun String.escapeSpreadsheetFormula(): String {
+    val firstNonWhitespace = firstOrNull { !it.isWhitespace() }
+    return if (firstNonWhitespace in setOf('=', '+', '-', '@')) {
+        "'$this"
+    } else {
+        this
+    }
+}
+
+private fun csvExportBounds(startDate: LocalDate, endDate: LocalDate): Pair<Long, Long> {
+    val timeZone = TimeZone.currentSystemDefault()
+    val startMillis = startDate.atStartOfDayIn(timeZone).toEpochMilliseconds()
+    val endExclusiveMillis = endDate
+        .plus(1, DateTimeUnit.DAY)
+        .atStartOfDayIn(timeZone)
+        .toEpochMilliseconds()
+    return startMillis to endExclusiveMillis
 }
 
 private fun Boolean.toCsvFlag(): String = toString()

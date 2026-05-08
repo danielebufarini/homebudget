@@ -16,6 +16,7 @@ import it.homebudget.app.database.TopCategorySummaryRow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -99,27 +100,39 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                     DefaultCategorySeed("Personal expenses", "person"),
                     DefaultCategorySeed("Miscellaneous", "category")
                 )
-                defaults.forEachIndexed { index, category ->
-                    categoryDao.insertCategory(
+                categoryDao.insertCategories(
+                    defaults.mapIndexed { index, category ->
                         Category(
                             id = "default_$index",
                             name = category.name,
                             icon = category.icon,
                             isCustom = 0L
                         )
-                    )
-                }
+                    }
+                )
             }
         }
     }
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
 
+    fun getExpensesBetween(startMillis: Long, endMillis: Long): Flow<List<Expense>> =
+        expenseDao.getExpensesBetween(startMillis, endMillis)
+
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseDao.getAllExpensesSnapshot()
+
+    suspend fun getExpensesSnapshotBetween(startMillis: Long, endMillis: Long): List<Expense> =
+        expenseDao.getExpensesBetween(startMillis, endMillis).first()
 
     fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes()
 
+    fun getIncomesBetween(startMillis: Long, endMillis: Long): Flow<List<Income>> =
+        incomeDao.getIncomesBetween(startMillis, endMillis)
+
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeDao.getAllIncomesSnapshot()
+
+    suspend fun getIncomesSnapshotBetween(startMillis: Long, endMillis: Long): List<Income> =
+        incomeDao.getIncomesBetween(startMillis, endMillis).first()
 
     suspend fun getAllCategoriesSnapshot(): List<Category> = categoryDao.getAllCategoriesSnapshot()
 
@@ -130,8 +143,8 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         val (startMillis, endMillis) = monthBounds(year, month)
 
         return combine(
-            expenseDao.getDashboardExpenseRows(startMillis, endMillis),
-            incomeDao.getIncomeAmountRows(startMillis, endMillis)
+            expenseDao.getDashboardExpenseRowsBetween(startMillis, endMillis),
+            incomeDao.getIncomeAmountRowsBetween(startMillis, endMillis)
         ) { expenseRows, incomeRows ->
             val expenseSummary = expenseRows.toExpenseMonthSummary()
             val incomeAmount = incomeRows.fold(ZERO) { acc, row ->
@@ -286,9 +299,11 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
     }
 
     suspend fun insertIncomes(incomes: List<PendingIncome>) {
+        if (incomes.isEmpty()) return
+
         writeTransaction {
-            incomes.forEach { income ->
-                incomeDao.insertIncome(
+            incomeDao.insertIncomes(
+                incomes.map { income ->
                     Income(
                         id = income.id,
                         amount = income.amount,
@@ -296,8 +311,8 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         description = income.description,
                         recurringSeriesId = income.recurringSeriesId
                     )
-                )
-            }
+                }
+            )
         }
     }
 
@@ -329,9 +344,11 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
     }
 
     suspend fun insertExpenses(expenses: List<PendingExpense>) {
+        if (expenses.isEmpty()) return
+
         writeTransaction {
-            expenses.forEach { expense ->
-                expenseDao.insertExpense(
+            expenseDao.insertExpenses(
+                expenses.map { expense ->
                     Expense(
                         id = expense.id,
                         amount = expense.amount,
@@ -341,8 +358,8 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         isShared = if (expense.isShared) 1L else 0L,
                         recurringSeriesId = expense.recurringSeriesId
                     )
-                )
-            }
+                }
+            )
         }
     }
 
@@ -387,19 +404,19 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
             incomeDao.deleteAllIncomes()
             categoryDao.deleteAllCategories()
 
-            categories.forEach { category ->
-                categoryDao.insertCategory(
+            categoryDao.insertCategories(
+                categories.map { category ->
                     Category(
                         id = category.id,
                         name = category.name,
                         icon = category.icon,
                         isCustom = if (category.isCustom) 1L else 0L
                     )
-                )
-            }
+                }
+            )
 
-            expenses.forEach { expense ->
-                expenseDao.insertExpense(
+            expenseDao.insertExpenses(
+                expenses.map { expense ->
                     Expense(
                         id = expense.id,
                         amount = expense.amount,
@@ -409,11 +426,11 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         isShared = if (expense.isShared) 1L else 0L,
                         recurringSeriesId = expense.recurringSeriesId
                     )
-                )
-            }
+                }
+            )
 
-            incomes.forEach { income ->
-                incomeDao.insertIncome(
+            incomeDao.insertIncomes(
+                incomes.map { income ->
                     Income(
                         id = income.id,
                         amount = income.amount,
@@ -421,8 +438,8 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         description = income.description,
                         recurringSeriesId = income.recurringSeriesId
                     )
-                )
-            }
+                }
+            )
         }
     }
 

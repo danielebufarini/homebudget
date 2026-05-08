@@ -38,7 +38,7 @@ data class ExistingRecurringIncomeItem(
     val date: Long
 )
 
-const val RECURRING_MONTHLY_OCCURRENCES = 240
+const val RECURRING_MONTHLY_OCCURRENCES = 36
 
 fun buildPendingExpenses(
     amount: BigInteger,

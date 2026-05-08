@@ -6,6 +6,7 @@ import homebudget.composeapp.generated.resources.voice_expense_category_required
 import homebudget.composeapp.generated.resources.voice_expense_invalid_amount
 import homebudget.composeapp.generated.resources.voice_expense_value_amount_positive
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.Category
@@ -15,8 +16,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
-import kotlin.random.Random
-import kotlin.time.Clock
 
 internal suspend fun loadIosVoiceExpenseSnapshot(
     repository: ExpenseRepository
@@ -71,9 +70,7 @@ internal suspend fun validateIosVoiceExpenseInput(
     return parsedAmount to error
 }
 
-internal fun buildIosVoiceExpenseId(): String {
-    return "${Clock.System.now().toEpochMilliseconds()}-${Random.nextLong()}"
-}
+internal fun buildIosVoiceExpenseId(): String = IdGenerator.newId("voice-expense")
 
 internal fun normalizeIosVoiceExpenseDate(date: Long): Long {
     val localDate = kotlin.time.Instant.fromEpochMilliseconds(date)

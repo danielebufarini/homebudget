@@ -3,22 +3,64 @@ package it.homebudget.app.ui.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import homebudget.composeapp.generated.resources.*
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.add_expense
+import homebudget.composeapp.generated.resources.back
+import homebudget.composeapp.generated.resources.by_category
+import homebudget.composeapp.generated.resources.by_date
+import homebudget.composeapp.generated.resources.currency_symbol
+import homebudget.composeapp.generated.resources.delete
+import homebudget.composeapp.generated.resources.delete_item_confirmation_message
+import homebudget.composeapp.generated.resources.delete_recurring_item_confirmation_message
+import homebudget.composeapp.generated.resources.full_month_names
+import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
+import it.homebudget.app.data.monthBounds
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
@@ -100,7 +142,13 @@ abstract class BaseGroupedExpensesScreen(
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
         var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
-        val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
+        val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
+            monthBounds(selectedMonth.year, selectedMonth.month)
+        }
+        val expensesFlow = remember(repository, monthStartMillis, monthEndMillis) {
+            repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+        }
+        val expenses by expensesFlow.collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
 
@@ -114,14 +162,10 @@ abstract class BaseGroupedExpensesScreen(
             unknownCategoryLabel
         ) {
             expenses.filter { expense ->
-                val localDate = epochMillisToLocalDate(expense.date)
                 val categoryName = categoriesById[expense.categoryId]
                     ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
                     ?: unknownCategoryLabel
-                localDate.year == selectedMonth.year &&
-                    localDate.month.ordinal + 1 == selectedMonth.month &&
-                    includeExpense(expense) &&
-                    includeCategory(categoryName)
+                includeExpense(expense) && includeCategory(categoryName)
             }
         }
 

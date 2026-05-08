@@ -3,6 +3,7 @@ package it.homebudget.app.data.csv
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.PendingIncome
 import it.homebudget.app.data.csv.import.CsvImportState
@@ -19,10 +20,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
-import kotlin.random.Random
-import kotlin.time.Clock
 
 private val nonAlphanumericRegex = Regex("[^a-z0-9]+")
+
+const val MAX_CSV_IMPORT_BYTES: Int = 5 * 1024 * 1024
 
 data class CsvImportResult(
     val importedCount: Int,
@@ -33,6 +34,10 @@ suspend fun importBudgetItemsFromCsv(
     repository: ExpenseRepository,
     csvText: String
 ): CsvImportResult {
+    require(csvText.encodeToByteArray().size <= MAX_CSV_IMPORT_BYTES) {
+        "CSV import file is too large."
+    }
+
     repository.insertDefaultCategoriesIfEmpty()
     val resolveCategoryName = loadCategoryNameResolver()
 
@@ -122,7 +127,7 @@ internal data class ParsedUnifiedCsvRow(
     fun buildRecurringSeriesId(index: Int): String? {
         if (!isRecurring) return null
         return recurringSeriesId?.takeIf { it.isNotBlank() }
-            ?: "csv-series-${type.name.lowercase()}-${Clock.System.now().toEpochMilliseconds()}-$index"
+            ?: IdGenerator.newId("csv-series-${type.name.lowercase()}-$index")
     }
 }
 
@@ -287,8 +292,7 @@ internal fun PendingIncome.asImportKey() = CsvImportedIncomeKey(
     description = normalizeDescription(description)
 )
 
-private fun buildImportedId(prefix: String): String =
-    "csv-${prefix}_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1_000, 9_999)}"
+private fun buildImportedId(prefix: String): String = IdGenerator.newId("csv-$prefix")
 
 internal fun buildImportedExpenseId() = buildImportedId("expense")
 internal fun buildImportedIncomeId() = buildImportedId("income")

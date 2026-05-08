@@ -36,7 +36,11 @@ import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
 import it.homebudget.app.localization.rememberCategoryNameResolver
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -80,16 +84,22 @@ class DayExpensesScreen(
             formatExpenseDateGroupTitle(targetDate, shortMonthNames.toList())
         }
 
-        val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
+        val (dayStartMillis, dayEndMillis) = remember(targetDate) {
+            val timeZone = TimeZone.currentSystemDefault()
+            targetDate.atStartOfDayIn(timeZone).toEpochMilliseconds() to
+                targetDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone).toEpochMilliseconds()
+        }
+        val expensesFlow = remember(repository, dayStartMillis, dayEndMillis) {
+            repository.getExpensesBetween(dayStartMillis, dayEndMillis)
+        }
+        val expenses by expensesFlow.collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
 
         EnsureDefaultCategoriesInserted(repository)
 
-        val filteredExpenses = remember(expenses, targetDate) {
-            expenses
-                .filter { epochMillisToLocalDate(it.date) == targetDate }
-                .sortedByDescending(Expense::date)
+        val filteredExpenses = remember(expenses) {
+            expenses.sortedByDescending(Expense::date)
         }
         val totalAmount = remember(filteredExpenses) {
             filteredExpenses.sumBigIntegerOf(Expense::amount)
