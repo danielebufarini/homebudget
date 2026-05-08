@@ -212,6 +212,7 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
     @Published var totalAmountText = appAmountLabel("0.00")
     @Published var emptyStateText = appLocalized("No income for this month")
     @Published var sections: [GroupedExpenseSectionModel] = []
+    @Published var hasLoadedSnapshot = false
     @Published var expandedSectionIDs = Set<String>()
 
     private let observer: IosMonthlyIncomesObserver
@@ -287,6 +288,8 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
                 }
             )
         }
+
+        hasLoadedSnapshot = true
 
         let incomingIDs = Set(sections.lazy.map(\.id))
         if hasLoadedInitialExpansionState {
@@ -443,7 +446,19 @@ private struct MonthlyIncomesSectionsContent: View {
 
     var body: some View {
         List {
-            if viewModel.sections.isEmpty {
+            if !viewModel.hasLoadedSnapshot {
+                Section {
+                    AppGlassListCard {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+            } else if viewModel.sections.isEmpty {
                 Section {
                     AppGlassListCard {
                         Text(viewModel.emptyStateText)

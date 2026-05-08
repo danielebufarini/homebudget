@@ -16,6 +16,7 @@ import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
+import it.homebudget.app.data.monthBounds
 import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
@@ -354,7 +355,9 @@ class IosMonthlyIncomesObserver(
         this.onUpdate = onUpdate
         updatesJob = scope.launch {
             val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-            repository.getAllIncomes().collect { incomes ->
+            val (startMillis, endMillis) = monthBounds(year, month)
+
+            repository.getIncomesBetween(startMillis, endMillis).collect { incomes ->
                 val localization = loadIosGroupedLocalization()
                 val snapshot = withContext(Dispatchers.Default) {
                     buildMonthlyIncomesSnapshot(
