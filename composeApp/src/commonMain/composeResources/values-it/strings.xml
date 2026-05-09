@@ -82,7 +82,8 @@
     <string name="export_csv">Esporta CSV</string>
     <string name="export_csv_ellipsis">Esporta CSV…</string>
     <string name="export_csv_description">Scegli l'intervallo di date dei dati che vuoi esportare.</string>
-    <string name="highest_day">Giorno in cui si è speso di più</string>
+    <string name="highest_day">Giorno record</string>
+    <string name="savings">Risparmio</string>
     <string name="import_action">Importa</string>
     <string name="import_csv">Importa CSV</string>
     <string name="income">Entrate</string>

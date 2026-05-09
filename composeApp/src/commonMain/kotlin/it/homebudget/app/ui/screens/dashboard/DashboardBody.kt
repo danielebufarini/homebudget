@@ -1,6 +1,5 @@
 package it.homebudget.app.ui.screens.dashboard
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import it.homebudget.app.ui.screens.MonthCursor
@@ -19,6 +19,7 @@ internal fun DashboardBody(
     showMonthHeaderCard: Boolean,
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
+    sixMonthSavingsAmount: BigInteger,
     chartState: LineChartState,
     categoriesById: Map<String, Category>,
     onPreviousMonth: () -> Unit,
@@ -44,13 +45,13 @@ internal fun DashboardBody(
         }
 
         ExpenseSummary(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenMonthlyExpenses),
+            modifier = Modifier.fillMaxWidth(),
             strings = strings,
             selectedMonth = selectedMonth,
             summary = summary,
+            sixMonthSavingsAmount = sixMonthSavingsAmount,
             categoriesById = categoriesById,
+            onExpensesClick = onOpenMonthlyExpenses,
             onIncomeClick = onOpenMonthlyIncomes,
             onSharedClick = onOpenSharedExpenses,
             onHighestDayClick = {

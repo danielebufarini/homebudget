@@ -42,6 +42,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
@@ -95,6 +97,26 @@ abstract class BaseGroupedExpensesScreen(
     protected open fun includeCategory(categoryName: String): Boolean = true
     protected open fun canDeleteExpense(): Boolean = true
     protected open fun canAddExpense(): Boolean = false
+    protected open fun showMonthNavigationControls(): Boolean = true
+
+    @Composable
+    protected open fun sectionHeaderContainerColor(): Color = Color.Transparent
+
+    @Composable
+    protected open fun sectionHeaderContentColor(): Color = MaterialTheme.colorScheme.onSurface
+
+    @Composable
+    protected open fun sectionHeaderTextStyle(): TextStyle = MaterialTheme.typography.bodyLarge
+
+    @Composable
+    protected open fun sectionHeaderIconTint(): Color? = null
+
+    @Composable
+    protected open fun sectionHeaderChevronContainerColor(): Color? = null
+
+    @Composable
+    protected open fun sectionHeaderChevronContentColor(): Color? = null
+
     @Composable
     protected open fun monthNavigationDescriptor(): String? = null
 
@@ -236,12 +258,29 @@ abstract class BaseGroupedExpensesScreen(
                     CenterAlignedTopAppBar(
                         title = {
                             if (navigationDescriptor != null) {
-                                MonthNavigationTitle(
-                                    selectedMonth = selectedMonth,
-                                    subtitle = "$navigationDescriptor • ${formatAmount(totalAmount, currencySymbol)}",
-                                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                                    onNextMonth = { selectedMonth = selectedMonth.next() }
-                                )
+                                if (showMonthNavigationControls()) {
+                                    MonthNavigationTitle(
+                                        selectedMonth = selectedMonth,
+                                        subtitle = "$navigationDescriptor • ${formatAmount(totalAmount, currencySymbol)}",
+                                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                                        onNextMonth = { selectedMonth = selectedMonth.next() }
+                                    )
+                                } else {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            text = selectedMonth.label(),
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                        Text(
+                                            text = "$navigationDescriptor • ${formatAmount(totalAmount, currencySymbol)}",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             } else {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -476,47 +515,68 @@ abstract class BaseGroupedExpensesScreen(
                         Column(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        expandedState[categoryName] = !expanded
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val sectionIconKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
-                                    categoryExpenses.firstOrNull()
-                                        ?.categoryId
-                                        ?.let(categoriesById::get)
-                                        ?.icon
-                                } else {
-                                    null
-                                }
+                            val headerContainerColor = sectionHeaderContainerColor()
+                            val headerContentColor = sectionHeaderContentColor()
+                            val headerTextStyle = sectionHeaderTextStyle()
+                            val headerIconTint = sectionHeaderIconTint()
+                            val headerChevronContainerColor = sectionHeaderChevronContainerColor()
+                            val headerChevronContentColor = sectionHeaderChevronContentColor()
 
-                                CategoryLabel(
-                                    iconKey = sectionIconKey,
-                                    showIcon = groupingMode == ExpenseGroupingMode.ByCategory,
-                                    colorKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
-                                        categoryExpenses.firstOrNull()?.categoryId
-                                    } else {
-                                        null
-                                    },
-                                    text = categoryName,
-                                    modifier = Modifier.weight(1f),
-                                    textColor = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = headerContainerColor,
+                                contentColor = headerContentColor
+                            ) {
                                 Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            expandedState[categoryName] = !expanded
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount), currencySymbol),
-                                        textAlign = TextAlign.End
+                                    val sectionIconKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
+                                        categoryExpenses.firstOrNull()
+                                            ?.categoryId
+                                            ?.let(categoriesById::get)
+                                            ?.icon
+                                    } else {
+                                        null
+                                    }
+
+                                    CategoryLabel(
+                                        iconKey = sectionIconKey,
+                                        showIcon = groupingMode == ExpenseGroupingMode.ByCategory,
+                                        colorKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
+                                            categoryExpenses.firstOrNull()?.categoryId
+                                        } else {
+                                            null
+                                        },
+                                        text = categoryName,
+                                        modifier = Modifier.weight(1f),
+                                        textStyle = headerTextStyle,
+                                        textColor = headerContentColor,
+                                        iconTint = headerIconTint,
+                                        maxLines = 1
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    ExpandableSectionChevron(rotation = chevronRotation)
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount), currencySymbol),
+                                            style = headerTextStyle,
+                                            color = headerContentColor,
+                                            textAlign = TextAlign.End
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        ExpandableSectionChevron(
+                                            rotation = chevronRotation,
+                                            containerColor = headerChevronContainerColor,
+                                            contentColor = headerChevronContentColor
+                                        )
+                                    }
                                 }
                             }
                             if (expanded) {

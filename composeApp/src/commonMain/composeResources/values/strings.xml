@@ -83,6 +83,7 @@
     <string name="export_csv_ellipsis">Export CSV…</string>
     <string name="export_csv_description">Choose the date range for the data you want to export.</string>
     <string name="highest_day">Highest Day</string>
+    <string name="savings">Savings</string>
     <string name="import_action">Import</string>
     <string name="import_csv">Import CSV</string>
     <string name="income">Income</string>

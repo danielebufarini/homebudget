@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
@@ -36,7 +37,9 @@ internal fun ExpenseSummary(
     strings: DashboardStrings,
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
+    sixMonthSavingsAmount: BigInteger,
     categoriesById: Map<String, Category>,
+    onExpensesClick: () -> Unit,
     onIncomeClick: () -> Unit,
     onSharedClick: () -> Unit,
     onHighestDayClick: () -> Unit,
@@ -45,7 +48,6 @@ internal fun ExpenseSummary(
     val isIos = rememberIsIosPlatform()
     val resolveCategoryName = rememberCategoryNameResolver()
     val colorScheme = MaterialTheme.colorScheme
-
     val topCategory = summary.topCategoryId?.let(categoriesById::get)
     val topCategoryIconKey = topCategory?.icon
     val topCategoryValue = topCategory
@@ -60,7 +62,8 @@ internal fun ExpenseSummary(
             label = strings.expenses,
             value = summary.expenseCount.toString(),
             containerColor = colorScheme.primaryContainer,
-            contentColor = colorScheme.onPrimaryContainer
+            contentColor = colorScheme.onPrimaryContainer,
+            onClick = onExpensesClick
         ),
         SummaryMetricUi(
             label = strings.shared,
@@ -92,6 +95,12 @@ internal fun ExpenseSummary(
             contentColor = colorScheme.onSurfaceVariant,
             trailingValue = formatAmount(summary.highestDayAmount, strings.currencySymbol),
             onClick = if (summary.highestDayOfMonth != null) onHighestDayClick else null
+        ),
+        SummaryMetricUi(
+            label = strings.savings,
+            value = formatAmount(sixMonthSavingsAmount, strings.currencySymbol),
+            containerColor = colorScheme.primary,
+            contentColor = colorScheme.onPrimary
         )
     ).chunked(2)
 

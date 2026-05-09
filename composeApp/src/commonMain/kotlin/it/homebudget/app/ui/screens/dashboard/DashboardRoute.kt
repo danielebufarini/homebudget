@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.ui.screens.EnsureDefaultCategoriesInserted
 import it.homebudget.app.ui.screens.MonthCursor
@@ -47,8 +48,12 @@ fun DashboardRoute(
         categories.associateBy { it.id }
     }
 
+    val currentMonth = remember {
+        currentMonthCursor()
+    }
+
     var selectedMonth by remember {
-        mutableStateOf(currentMonthCursor())
+        mutableStateOf(currentMonth)
     }
 
     EnsureDefaultCategoriesInserted(repository)
@@ -66,6 +71,12 @@ fun DashboardRoute(
         selectedMonth = selectedMonth
     )
 
+    val sixMonthSavingsAmount = remember(chartState.monthSnapshots) {
+        chartState.monthSnapshots.fold(ZERO) { total, month ->
+            total + month.differenceAmount
+        }
+    }
+
     val dashboardBody: @Composable (Modifier) -> Unit = { modifier ->
         DashboardBody(
             modifier = modifier,
@@ -73,6 +84,7 @@ fun DashboardRoute(
             showMonthHeaderCard = !showNavigationChrome,
             selectedMonth = selectedMonth,
             summary = summary,
+            sixMonthSavingsAmount = sixMonthSavingsAmount,
             chartState = chartState,
             categoriesById = categoriesById,
             onPreviousMonth = { selectedMonth = selectedMonth.previous() },

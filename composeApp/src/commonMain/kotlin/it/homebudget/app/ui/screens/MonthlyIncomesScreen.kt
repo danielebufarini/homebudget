@@ -21,6 +21,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -190,29 +191,42 @@ class MonthlyIncomesScreen(
                             )
                             PlatformCard(contentPadding = PaddingValues(0.dp)) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                expandedState[sectionId] = !expanded
-                                            }
-                                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                     ) {
-                                        Text(
-                                            text = formatExpenseDateGroupTitle(groupDate),
-                                            modifier = Modifier.weight(1f),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Text(
-                                            text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), strings.currencySymbol),
-                                            textAlign = TextAlign.End
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        ExpandableSectionChevron(rotation = chevronRotation)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    expandedState[sectionId] = !expanded
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = formatExpenseDateGroupTitle(groupDate),
+                                                modifier = Modifier.weight(1f),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Text(
+                                                text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), strings.currencySymbol),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                textAlign = TextAlign.End
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            ExpandableSectionChevron(
+                                                rotation = chevronRotation,
+                                                containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f),
+                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
                                     }
 
                                     if (expanded) {

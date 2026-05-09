@@ -1,6 +1,9 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.expense
 import homebudget.composeapp.generated.resources.expenses
@@ -25,6 +28,25 @@ class MonthlyExpensesScreen(
     override fun includeExpense(expense: Expense): Boolean = true
 
     override fun canAddExpense(): Boolean = true
+
+    @Composable
+    override fun sectionHeaderContainerColor(): Color = MaterialTheme.colorScheme.primaryContainer
+
+    @Composable
+    override fun sectionHeaderContentColor(): Color = MaterialTheme.colorScheme.onPrimaryContainer
+
+    @Composable
+    override fun sectionHeaderTextStyle(): TextStyle = MaterialTheme.typography.titleMedium
+
+    @Composable
+    override fun sectionHeaderIconTint(): Color = MaterialTheme.colorScheme.onPrimaryContainer
+
+    @Composable
+    override fun sectionHeaderChevronContainerColor(): Color =
+        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f)
+
+    @Composable
+    override fun sectionHeaderChevronContentColor(): Color = MaterialTheme.colorScheme.onPrimaryContainer
 
     @Composable
     override fun monthNavigationDescriptor(): String = stringResource(Res.string.expenses)

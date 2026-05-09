@@ -11,17 +11,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun ExpandableSectionChevron(
     rotation: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    containerColor: Color? = null,
+    contentColor: Color? = null
 ) {
+    val resolvedContainerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    val resolvedContentColor = contentColor ?: MaterialTheme.colorScheme.onSurfaceVariant
+
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        color = resolvedContainerColor
     ) {
         Icon(
             imageVector = Icons.Filled.KeyboardArrowDown,
@@ -30,7 +36,7 @@ internal fun ExpandableSectionChevron(
                 .size(24.dp)
                 .padding(2.dp)
                 .rotate(rotation),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = resolvedContentColor
         )
     }
 }

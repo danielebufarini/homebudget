@@ -15,6 +15,7 @@ import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.monthly_summary
 import homebudget.composeapp.generated.resources.no_expenses_for_month
 import homebudget.composeapp.generated.resources.no_expenses_in_period
+import homebudget.composeapp.generated.resources.savings
 import homebudget.composeapp.generated.resources.shared
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.top_category
@@ -29,6 +30,7 @@ internal data class DashboardStrings(
     val shared: String,
     val income: String,
     val difference: String,
+    val savings: String,
     val topCategory: String,
     val highestDay: String,
     val monthlySummary: String,
@@ -54,6 +56,7 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         shared = stringResource(Res.string.shared),
         income = stringResource(Res.string.income),
         difference = stringResource(Res.string.difference),
+        savings = stringResource(Res.string.savings),
         topCategory = stringResource(Res.string.top_category),
         highestDay = stringResource(Res.string.highest_day),
         monthlySummary = stringResource(Res.string.monthly_summary),
