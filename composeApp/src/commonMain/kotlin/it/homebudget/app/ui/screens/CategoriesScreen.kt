@@ -53,6 +53,7 @@ import homebudget.composeapp.generated.resources.edit_category
 import homebudget.composeapp.generated.resources.unable_to_delete_category
 import homebudget.composeapp.generated.resources.update
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.database.Category
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.localizedCategoryName
 import kotlinx.coroutines.launch
@@ -97,8 +98,8 @@ fun CategoriesRoute(
 ) {
     val repository: ExpenseRepository = koinInject()
     val isIos = rememberIsIosPlatform()
-    var categoryBeingEdited by remember { mutableStateOf<it.homebudget.app.database.Category?>(null) }
-    var categoryPendingDelete by remember { mutableStateOf<it.homebudget.app.database.Category?>(null) }
+    var categoryBeingEdited by remember { mutableStateOf<Category?>(null) }
+    var categoryPendingDelete by remember { mutableStateOf<Category?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -338,10 +339,10 @@ private fun CategoriesScreenScaffold(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoriesList(
-    categories: List<it.homebudget.app.database.Category>,
+    categories: List<Category>,
     modifier: Modifier = Modifier,
     onDeleteCategory: (String) -> Unit,
-    onEditCategory: (it.homebudget.app.database.Category) -> Unit
+    onEditCategory: (Category) -> Unit
 ) {
     LazyColumn(
         modifier = modifier,
@@ -393,7 +394,7 @@ internal fun DeleteCategoryBackground() {
 
 @Composable
 internal fun CategoryListItem(
-    category: it.homebudget.app.database.Category,
+    category: Category,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {

@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">HomeBudget</string>
+    <string name="widget_description">Current month budget summary</string>
+    <string name="widget_expenses">Expenses</string>
+    <string name="widget_income">Income</string>
+    <string name="widget_add_expense">Add Expense</string>
+    <string name="widget_currency_symbol">$</string>
 </resources>

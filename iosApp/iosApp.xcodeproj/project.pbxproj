@@ -6,8 +6,37 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6A100000000000000000000B /* HomeBudgetWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6A1000000000000000000001 /* HomeBudgetWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6A100000000000000000000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6A1000000000000000000007;
+			remoteInfo = HomeBudgetWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6A100000000000000000000C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6A100000000000000000000B /* HomeBudgetWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		0EEC63C2493FB5B124983070 /* HomeBudget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HomeBudget.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6A1000000000000000000001 /* HomeBudgetWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HomeBudgetWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -18,6 +47,14 @@
 			);
 			target = 1E55858A6559A08CD51F2001 /* iosApp */;
 		};
+		6A1000000000000000000003 /* Exceptions for "HomeBudgetWidget" folder in "HomeBudgetWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				HomeBudgetWidget.entitlements,
+				Info.plist,
+			);
+			target = 6A1000000000000000000007 /* HomeBudgetWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -27,6 +64,14 @@
 				43794822F84CB26FBF13E017 /* Exceptions for "iosApp" folder in "iosApp" target */,
 			);
 			path = iosApp;
+			sourceTree = "<group>";
+		};
+		6A1000000000000000000002 /* HomeBudgetWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6A1000000000000000000003 /* Exceptions for "HomeBudgetWidget" folder in "HomeBudgetWidgetExtension" target */,
+			);
+			path = HomeBudgetWidget;
 			sourceTree = "<group>";
 		};
 		3CDBE807B7135A1722FEF72F /* Configuration */ = {
@@ -44,6 +89,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6A1000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -51,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				0EEC63C2493FB5B124983070 /* HomeBudget.app */,
+				6A1000000000000000000001 /* HomeBudgetWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,6 +113,7 @@
 			children = (
 				3CDBE807B7135A1722FEF72F /* Configuration */,
 				2ED80F9D9E7C0DC6D57A0826 /* iosApp */,
+				6A1000000000000000000002 /* HomeBudgetWidget */,
 				3D1ACA2AD3EFD2A65F1E75D4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -75,10 +129,12 @@
 				9ED5D5CD2ADC12D3EC96AA87 /* Sources */,
 				229CDE7927522DAAD6659938 /* Frameworks */,
 				E4DDB7D2E3AAAC47DC8A00DB /* Resources */,
+				6A100000000000000000000C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6A100000000000000000000E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2ED80F9D9E7C0DC6D57A0826 /* iosApp */,
@@ -89,6 +145,28 @@
 			productName = iosApp;
 			productReference = 0EEC63C2493FB5B124983070 /* HomeBudget.app */;
 			productType = "com.apple.product-type.application";
+		};
+		6A1000000000000000000007 /* HomeBudgetWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6A1000000000000000000008 /* Build configuration list for PBXNativeTarget "HomeBudgetWidgetExtension" */;
+			buildPhases = (
+				6A1000000000000000000004 /* Sources */,
+				6A1000000000000000000005 /* Frameworks */,
+				6A1000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6A1000000000000000000002 /* HomeBudgetWidget */,
+			);
+			name = HomeBudgetWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = HomeBudgetWidgetExtension;
+			productReference = 6A1000000000000000000001 /* HomeBudgetWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -101,6 +179,9 @@
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					1E55858A6559A08CD51F2001 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					6A1000000000000000000007 = {
 						CreatedOnToolsVersion = 16.2;
 					};
 				};
@@ -121,12 +202,20 @@
 			projectRoot = "";
 			targets = (
 				1E55858A6559A08CD51F2001 /* iosApp */,
+				6A1000000000000000000007 /* HomeBudgetWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		E4DDB7D2E3AAAC47DC8A00DB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6A1000000000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -165,7 +254,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6A1000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6A100000000000000000000E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6A1000000000000000000007 /* HomeBudgetWidgetExtension */;
+			targetProxy = 6A100000000000000000000D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		05B8CFABFAA343A9EFD8EA58 /* Release */ = {
@@ -363,6 +467,63 @@
 			};
 			name = Release;
 		};
+		6A1000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = HomeBudgetWidget/HomeBudgetWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GJDF7BKBVD;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HomeBudgetWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = it.homebudget.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6A100000000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = HomeBudgetWidget/HomeBudgetWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GJDF7BKBVD;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HomeBudgetWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = it.homebudget.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -380,6 +541,15 @@
 			buildConfigurations = (
 				94E26E655FEA840231DFBA8A /* Debug */,
 				05B8CFABFAA343A9EFD8EA58 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6A1000000000000000000008 /* Build configuration list for PBXNativeTarget "HomeBudgetWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6A1000000000000000000009 /* Debug */,
+				6A100000000000000000000A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

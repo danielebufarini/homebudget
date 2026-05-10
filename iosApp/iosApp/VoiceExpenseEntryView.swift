@@ -3,7 +3,13 @@ import SwiftUI
 // SwiftUI sheet for recording, reviewing, and committing a voice expense draft.
 
 struct VoiceExpenseEntrySheet: View {
+    let autoStartRequest: Int
     let onClose: () -> Void
+
+    init(autoStartRequest: Int = 0, onClose: @escaping () -> Void) {
+        self.autoStartRequest = autoStartRequest
+        self.onClose = onClose
+    }
 
     @StateObject private var viewModel = VoiceExpenseEntryViewModel()
     @StateObject private var bannerPresenter = AppGlassBannerPresenter()
@@ -96,6 +102,12 @@ struct VoiceExpenseEntrySheet: View {
                     }
                 }
             }
+        }
+        .task(id: autoStartRequest) {
+            guard autoStartRequest > 0 else {
+                return
+            }
+            viewModel.requestAutoStart()
         }
         .onChange(of: viewModel.errorMessage) { _, message in
             guard let message else {

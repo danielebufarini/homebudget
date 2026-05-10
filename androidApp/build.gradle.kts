@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.koin.core)
+    implementation(libs.bignum)
     debugImplementation(libs.compose.uiTooling)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

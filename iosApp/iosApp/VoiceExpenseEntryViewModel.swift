@@ -20,6 +20,8 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
     private var categoriesById: [String: VoiceExpenseCategory] = [:]
     private var expensesById: [String: VoiceExpenseCandidate] = [:]
     private var snapshotLoaded = false
+    private var shouldAutoStartWhenReady = false
+    private var hasHandledAutoStart = false
 
     init() {
         loadSnapshot()
@@ -43,6 +45,12 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
         } else {
             startRecording()
         }
+    }
+
+    func requestAutoStart() {
+        shouldAutoStartWhenReady = true
+        hasHandledAutoStart = false
+        attemptPendingAutoStart()
     }
 
     func commit(onSuccess: @escaping () -> Void) {
@@ -96,6 +104,20 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
                 apply(snapshot: snapshotData)
             }
         }
+    }
+
+    private func attemptPendingAutoStart() {
+        guard shouldAutoStartWhenReady, !hasHandledAutoStart else {
+            return
+        }
+
+        guard canStartCapture, !isBusy, !isRecording else {
+            return
+        }
+
+        shouldAutoStartWhenReady = false
+        hasHandledAutoStart = true
+        startRecording()
     }
 
     private func startRecording() {
@@ -226,5 +248,6 @@ final class VoiceExpenseEntryViewModel: ObservableObject {
             snapshotLoaded: snapshotLoaded,
             availability: languageModel.availability
         )
+        attemptPendingAutoStart()
     }
 }

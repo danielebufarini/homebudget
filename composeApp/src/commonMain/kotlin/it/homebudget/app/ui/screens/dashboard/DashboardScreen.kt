@@ -11,13 +11,16 @@ import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
 
-class DashboardScreen : Screen {
+class DashboardScreen(
+    private val openVoiceExpenseRequest: Int = 0
+) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.current
 
         DashboardRoute(
             showNavigationChrome = true,
+            openVoiceExpenseRequest = openVoiceExpenseRequest,
             showFab = false,
             onOpenCategories = { navigator?.push(CategoriesScreen()) },
             onOpenAddExpense = { navigator?.push(AddExpenseScreen()) },

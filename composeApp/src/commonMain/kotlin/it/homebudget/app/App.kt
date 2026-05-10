@@ -10,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,7 +41,7 @@ private sealed interface AppStartupUiState {
 }
 
 @Composable
-fun App() {
+fun App(openVoiceExpenseRequest: Int = 0) {
     val startupRestore: PlatformStartupRestore = koinInject()
     val scope = rememberCoroutineScope()
     var startupUiState by remember { mutableStateOf<AppStartupUiState>(AppStartupUiState.Loading) }
@@ -63,7 +64,21 @@ fun App() {
     AppTheme {
         when (val state = startupUiState) {
             AppStartupUiState.Ready -> {
-                Navigator(DashboardScreen()) {
+                var lastHandledVoiceExpenseRequest by remember {
+                    mutableIntStateOf(openVoiceExpenseRequest)
+                }
+
+                Navigator(
+                    DashboardScreen(openVoiceExpenseRequest = openVoiceExpenseRequest)
+                ) { navigator ->
+                    LaunchedEffect(openVoiceExpenseRequest) {
+                        if (openVoiceExpenseRequest > lastHandledVoiceExpenseRequest) {
+                            lastHandledVoiceExpenseRequest = openVoiceExpenseRequest
+                            navigator.replaceAll(
+                                DashboardScreen(openVoiceExpenseRequest = openVoiceExpenseRequest)
+                            )
+                        }
+                    }
                     CurrentScreen()
                 }
             }

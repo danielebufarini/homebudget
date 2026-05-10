@@ -8,8 +8,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.mlkit.genai.common.FeatureStatus
@@ -21,7 +35,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
-internal actual fun DashboardVoiceExpenseAction() {
+internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int) {
 
     val repository: ExpenseRepository = koinInject()
     val scope = rememberCoroutineScope()
@@ -115,30 +129,38 @@ internal actual fun DashboardVoiceExpenseAction() {
         showDialog = false
     }
 
-    IconButton(
-        onClick = {
-            resetDialogState()
-            showDialog = true
-            scope.launch {
-                refreshAvailability()
-                when (availability) {
-                    FeatureStatus.AVAILABLE -> speechController.startListening()
-                    FeatureStatus.UNAVAILABLE -> {
-                        statusMessage = uiStrings.voiceExpenseStatusFallbackParser
-                        speechController.startListening()
-                    }
-                    FeatureStatus.DOWNLOADABLE -> {
-                        statusMessage = uiStrings.voiceExpenseStatusDownloadingAvailable
-                    }
-                    FeatureStatus.DOWNLOADING -> {
-                        statusMessage = uiStrings.voiceExpenseStatusDownloadingInProgress
-                    }
-                    else -> {
-                        statusMessage = uiStrings.voiceExpenseStatusCheckingAvailability
-                    }
+    fun openVoiceExpenseDialogAndStartListening() {
+        resetDialogState()
+        showDialog = true
+        scope.launch {
+            refreshAvailability()
+            when (availability) {
+                FeatureStatus.AVAILABLE -> speechController.startListening()
+                FeatureStatus.UNAVAILABLE -> {
+                    statusMessage = uiStrings.voiceExpenseStatusFallbackParser
+                    speechController.startListening()
+                }
+                FeatureStatus.DOWNLOADABLE -> {
+                    statusMessage = uiStrings.voiceExpenseStatusDownloadingAvailable
+                }
+                FeatureStatus.DOWNLOADING -> {
+                    statusMessage = uiStrings.voiceExpenseStatusDownloadingInProgress
+                }
+                else -> {
+                    statusMessage = uiStrings.voiceExpenseStatusCheckingAvailability
                 }
             }
         }
+    }
+
+    LaunchedEffect(openVoiceExpenseRequest) {
+        if (openVoiceExpenseRequest > 0) {
+            openVoiceExpenseDialogAndStartListening()
+        }
+    }
+
+    IconButton(
+        onClick = { openVoiceExpenseDialogAndStartListening() }
     ) {
         Icon(
             imageVector = Icons.Filled.Mic,

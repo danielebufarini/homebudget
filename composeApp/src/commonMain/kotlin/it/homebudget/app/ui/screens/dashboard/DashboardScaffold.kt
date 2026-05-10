@@ -35,6 +35,7 @@ import it.homebudget.app.ui.screens.rememberIsIosPlatform
 @Composable
 internal fun DashboardScreenScaffold(
     strings: DashboardStrings,
+    openVoiceExpenseRequest: Int = 0,
     selectedMonth: MonthCursor,
     totalAmount: BigInteger,
     showFab: Boolean,
@@ -76,7 +77,15 @@ internal fun DashboardScreenScaffold(
                         }
                     },
                     actions = {
-                        DashboardVoiceExpenseAction()
+                        if (!showFab) {
+                            IconButton(onClick = onOpenAddExpense) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = strings.addExpense
+                                )
+                            }
+                        }
+                        DashboardVoiceExpenseAction(openVoiceExpenseRequest = openVoiceExpenseRequest)
                     }
                 )
             },

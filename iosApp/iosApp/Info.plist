@@ -25,5 +25,16 @@
 	<array>
 		<string>processing</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>it.homebudget.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>homebudget</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

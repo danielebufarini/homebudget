@@ -28,6 +28,7 @@ import org.koin.compose.koinInject
 @Composable
 fun DashboardRoute(
     showNavigationChrome: Boolean,
+    openVoiceExpenseRequest: Int = 0,
     showFab: Boolean,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
@@ -110,6 +111,7 @@ fun DashboardRoute(
     if (showNavigationChrome) {
         DashboardScreenScaffold(
             strings = strings,
+            openVoiceExpenseRequest = openVoiceExpenseRequest,
             selectedMonth = selectedMonth,
             totalAmount = summary.totalAmount,
             showFab = showFab,

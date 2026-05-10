@@ -97,6 +97,7 @@ import it.homebudget.app.data.buildRecurringMonthlyExpenses
 import it.homebudget.app.data.buildRecurringMonthlyExpensesFromExistingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -880,9 +881,9 @@ private fun CategorySplitButton(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryPickerSheet(
-    categories: List<it.homebudget.app.database.Category>,
+    categories: List<Category>,
     selectedCategoryId: String,
-    resolveCategoryName: (it.homebudget.app.database.Category) -> String,
+    resolveCategoryName: (Category) -> String,
     onDismiss: () -> Unit,
     onCategorySelected: (String) -> Unit
 ) {

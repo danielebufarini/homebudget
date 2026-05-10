@@ -13,6 +13,7 @@ import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Income
 import it.homebudget.app.database.MonthTotalRow
 import it.homebudget.app.database.TopCategorySummaryRow
+import it.homebudget.app.widget.HomeBudgetWidgetRefresh
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -260,6 +261,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
     suspend fun deleteExpense(id: String) {
         expenseDao.deleteExpense(id)
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     suspend fun deleteCategory(id: String) {
@@ -268,14 +270,17 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
 
     suspend fun deleteRecurringExpenseSeries(seriesId: String) {
         expenseDao.deleteRecurringExpenseSeries(seriesId)
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     suspend fun deleteIncome(id: String) {
         incomeDao.deleteIncome(id)
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     suspend fun deleteRecurringIncomeSeries(seriesId: String) {
         incomeDao.deleteRecurringIncomeSeries(seriesId)
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     suspend fun insertIncome(
@@ -314,6 +319,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 }
             )
         }
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     suspend fun updateRecurringIncomeSeries(
@@ -361,6 +367,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 }
             )
         }
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     suspend fun updateRecurringExpenseSeries(
@@ -441,6 +448,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 }
             )
         }
+        HomeBudgetWidgetRefresh.requestRefresh()
     }
 
     private suspend fun <T> writeTransaction(block: suspend () -> T): T {

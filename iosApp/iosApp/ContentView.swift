@@ -83,6 +83,7 @@ private final class SafeAreaContainerViewController: UIViewController {
 struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
+    @State private var voiceExpenseAutoStartRequest = 0
     @State private var showCsvTransferSheet = false
     @State private var showCsvExportSheet = false
     @State private var showCsvExporter = false
@@ -117,8 +118,19 @@ struct ContentView: View {
                                 .appGlassSurface(cornerRadius: 18)
                         }
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
                         Button {
+                            path.append(Route.addExpense(expenseId: nil, readOnly: false))
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.glass)
+                        .accessibilityLabel(appLocalized("Add Expense"))
+
+                        Button {
+                            voiceExpenseAutoStartRequest += 1
                             showVoiceExpenseSheet = true
                         } label: {
                             Image(systemName: "waveform.badge.mic")
@@ -126,10 +138,11 @@ struct ContentView: View {
                                 .frame(width: 36, height: 36)
                         }
                         .buttonStyle(.glass)
+                        .accessibilityLabel(appLocalized("Voice Expense"))
                     }
                 }
                 .sheet(isPresented: $showVoiceExpenseSheet) {
-                    VoiceExpenseEntrySheet {
+                    VoiceExpenseEntrySheet(autoStartRequest: voiceExpenseAutoStartRequest) {
                         showVoiceExpenseSheet = false
                     }
                     .appGlassSheetPresentation()
@@ -282,6 +295,12 @@ struct ContentView: View {
                         .navigationBarTitleDisplayMode(.inline)
                     }
                 }
+                .onOpenURL { url in
+                    handleIncomingURL(url)
+                }
+                .task {
+                    HomeBudgetWidgetSummaryRefresher.shared.refresh()
+                }
         }
         .onDisappear {
             csvImportController.dispose()
@@ -300,6 +319,22 @@ struct ContentView: View {
                 AppGlassBackButton()
             }
             .buttonStyle(.glass)
+        }
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        guard url.scheme == "homebudget" else {
+            return
+        }
+
+        switch url.host {
+        case "add-expense":
+            path.append(Route.addExpense(expenseId: nil, readOnly: false))
+        case "voice-expense":
+            voiceExpenseAutoStartRequest += 1
+            showVoiceExpenseSheet = true
+        default:
+            break
         }
     }
 
@@ -333,6 +368,7 @@ struct ContentView: View {
         csvImportController.importCsv(text: text) { successMessage, errorMessage in
             Task { @MainActor in
                 if let successMessage {
+                    HomeBudgetWidgetSummaryRefresher.shared.refresh()
                     showCsvFeedback(successMessage, style: .success)
                 } else if let errorMessage {
                     showCsvFeedback(errorMessage, style: .error)
@@ -688,6 +724,7 @@ private struct ExpenseEditorRootView: View {
         }
         .appGlassHostedScreenChrome()
         .onDisappear {
+            HomeBudgetWidgetSummaryRefresher.shared.refresh()
             deletionViewModel.disposeController()
         }
         .toolbar {
@@ -750,6 +787,7 @@ private struct IncomeEditorRootView: View {
         }
         .appGlassHostedScreenChrome()
         .onDisappear {
+            HomeBudgetWidgetSummaryRefresher.shared.refresh()
             deletionViewModel.disposeController()
         }
         .toolbar {
