@@ -426,6 +426,17 @@ private struct MonthlyIncomesSectionsContent: View {
     @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
     @State private var pendingIncomeDeleteID: String?
 
+    private var monthHeader: some View {
+        DashboardStyleMonthNavigationHeader(
+            selectedMonth: selectedMonth,
+            amountText: viewModel.totalAmountText,
+            onPreviousMonth: onPreviousMonth,
+            onNextMonth: onNextMonth
+        )
+        .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
+        .padding(.top, MonthNavigationHeaderLayout.topPadding)
+    }
+
     init(
         selectedMonth: MonthCursor,
         onPreviousMonth: @escaping () -> Void,
@@ -445,17 +456,7 @@ private struct MonthlyIncomesSectionsContent: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            DashboardStyleMonthNavigationHeader(
-                selectedMonth: selectedMonth,
-                amountText: viewModel.totalAmountText,
-                onPreviousMonth: onPreviousMonth,
-                onNextMonth: onNextMonth
-            )
-            .padding(.horizontal, 22)
-            .padding(.top, 28)
-            .padding(.bottom, 22)
-
+        ZStack(alignment: .top) {
             List {
                 if !viewModel.hasLoadedSnapshot {
                 Section {
@@ -517,6 +518,12 @@ private struct MonthlyIncomesSectionsContent: View {
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                Color.clear.frame(height: MonthNavigationHeaderLayout.reservedTopInset)
+            }
+
+            monthHeader
+                .zIndex(1)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -606,6 +613,20 @@ private struct GroupedExpensesSectionsList: View {
     @StateObject private var viewModel: GroupedExpensesSectionsViewModel
     @State private var pendingExpenseDeleteID: String?
 
+    @ViewBuilder
+    private var monthHeader: some View {
+        if let onPreviousMonth, let onNextMonth {
+            DashboardStyleMonthNavigationHeader(
+                selectedMonth: selectedMonth,
+                amountText: viewModel.totalAmountText,
+                onPreviousMonth: onPreviousMonth,
+                onNextMonth: onNextMonth
+            )
+            .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
+            .padding(.top, MonthNavigationHeaderLayout.topPadding)
+        }
+    }
+
     init(
         kind: GroupedExpensesKind,
         year: Int,
@@ -637,19 +658,7 @@ private struct GroupedExpensesSectionsList: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let onPreviousMonth, let onNextMonth {
-                DashboardStyleMonthNavigationHeader(
-                    selectedMonth: selectedMonth,
-                    amountText: viewModel.totalAmountText,
-                    onPreviousMonth: onPreviousMonth,
-                    onNextMonth: onNextMonth
-                )
-                .padding(.horizontal, 22)
-                .padding(.top, 28)
-                .padding(.bottom, 22)
-            }
-
+        ZStack(alignment: .top) {
             List {
                 if viewModel.sections.isEmpty {
                 Section {
@@ -686,6 +695,14 @@ private struct GroupedExpensesSectionsList: View {
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if onPreviousMonth != nil, onNextMonth != nil {
+                    Color.clear.frame(height: MonthNavigationHeaderLayout.reservedTopInset)
+                }
+            }
+
+            monthHeader
+                .zIndex(1)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -879,6 +896,14 @@ private struct GroupedExpenseSectionHeaderView: View {
     }
 }
 
+private enum MonthNavigationHeaderLayout {
+    static let horizontalPadding: CGFloat = 22
+    static let topPadding: CGFloat = 16
+    static let bottomSpacing: CGFloat = 22
+    static let minHeight: CGFloat = 76
+    static var reservedTopInset: CGFloat { topPadding + minHeight + bottomSpacing }
+}
+
 private struct DashboardStyleMonthNavigationHeader: View {
     let selectedMonth: MonthCursor
     let amountText: String
@@ -897,12 +922,12 @@ private struct DashboardStyleMonthNavigationHeader: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(onSurfaceColor)
+                .foregroundStyle(.primary)
                 .accessibilityLabel(appLocalized("Previous month"))
 
                 Text(selectedMonth.label)
                     .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(onSurfaceColor)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
 
                 Button(action: onNextMonth) {
@@ -912,60 +937,28 @@ private struct DashboardStyleMonthNavigationHeader: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(onSurfaceColor)
+                .foregroundStyle(.primary)
                 .accessibilityLabel(appLocalized("Next month"))
             }
 
             Text(amountText)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(onSurfaceVariantColor)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .frame(minHeight: 76)
+        .frame(minHeight: MonthNavigationHeaderLayout.minHeight)
         .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(surfaceColor)
+        .appGlassSurface(cornerRadius: 20)
+        .shadow(
+            color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.10),
+            radius: 18,
+            x: 0,
+            y: 10
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(outlineVariantColor.opacity(0.45), lineWidth: 1)
-        )
-    }
-
-    private var surfaceColor: Color {
-        if colorScheme == .dark {
-            Color(red: 16.0 / 255.0, green: 24.0 / 255.0, blue: 32.0 / 255.0)
-        } else {
-            Color(red: 247.0 / 255.0, green: 250.0 / 255.0, blue: 255.0 / 255.0)
-        }
-    }
-
-    private var onSurfaceColor: Color {
-        if colorScheme == .dark {
-            Color(red: 225.0 / 255.0, green: 232.0 / 255.0, blue: 240.0 / 255.0)
-        } else {
-            Color(red: 21.0 / 255.0, green: 28.0 / 255.0, blue: 36.0 / 255.0)
-        }
-    }
-
-    private var onSurfaceVariantColor: Color {
-        if colorScheme == .dark {
-            Color(red: 192.0 / 255.0, green: 202.0 / 255.0, blue: 214.0 / 255.0)
-        } else {
-            Color(red: 64.0 / 255.0, green: 74.0 / 255.0, blue: 85.0 / 255.0)
-        }
-    }
-
-    private var outlineVariantColor: Color {
-        if colorScheme == .dark {
-            Color(red: 62.0 / 255.0, green: 70.0 / 255.0, blue: 81.0 / 255.0)
-        } else {
-            Color(red: 192.0 / 255.0, green: 202.0 / 255.0, blue: 214.0 / 255.0)
-        }
     }
 }
+
 
 private struct GroupedExpenseRowView: View {
     let row: GroupedExpenseRowModel
