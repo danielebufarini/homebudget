@@ -4,29 +4,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -35,7 +28,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -50,7 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -151,6 +143,7 @@ class AddExpenseScreen(
         val amountLabel = stringResource(Res.string.amount)
         val backLabel = stringResource(Res.string.back)
         val cancelLabel = stringResource(Res.string.cancel)
+        val categoryLabel = stringResource(Res.string.category)
         val closeLabel = stringResource(Res.string.close)
         val dateLabel = stringResource(Res.string.date)
         val deleteExpenseLabel = stringResource(Res.string.delete_expense)
@@ -353,60 +346,62 @@ class AddExpenseScreen(
                     .padding(16.dp)
                     .padding(bottom = if (!isIos && !readOnly && expenseId != null) 88.dp else 0.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                PlatformTextField(
-                    value = amount,
-                    onValueChange = { if (!readOnly) amount = it },
-                    label = amountLabel,
-                    readOnly = readOnly,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                PlatformTextField(
-                    value = description,
-                    onValueChange = { if (!readOnly) description = it },
-                    label = descriptionLabel,
-                    readOnly = readOnly,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !readOnly) {
-                            platformDatePicker.show(selectedDateMillis) { pickedDate ->
-                                selectedDateMillis = pickedDate
-                            }
-                        }
-                ) {
-                    PlatformTextField(
-                        value = selectedDateMillis?.formatDateLabel().orEmpty(),
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = dateLabel,
-                        modifier = Modifier.fillMaxWidth()
+                if (!isInitialized) {
+                    TransactionEditorSkeleton()
+                } else {
+                    TransactionAmountHeader(
+                        value = amount,
+                        onValueChange = { if (!readOnly) amount = it },
+                        label = amountLabel,
+                        kind = TransactionEditorKind.Expense,
+                        readOnly = readOnly
                     )
-                }
 
-                CategorySelectorRow(
-                    categoryName = selectedCategoryName,
-                    categoryColorKey = selectedCategoryId,
-                    categoryIconKey = selectedCategoryIconKey,
-                    enabled = !readOnly,
-                    canSelectCategory = categories.isNotEmpty(),
-                    onSelectCategory = { showCategoryPickerSheet = true },
-                    onAddCategory = { showAddCategorySheet = true }
-                )
+                    SoftSectionCard(title = expenseDetailsLabel) {
+                        SoftCategoryPickerRow(
+                            label = categoryLabel,
+                            categoryName = selectedCategoryName,
+                            categoryIconKey = selectedCategoryIconKey,
+                            categoryColorKey = selectedCategoryId,
+                            placeholder = selectCategoryLabel,
+                            enabled = !readOnly,
+                            onClick = { showCategoryPickerSheet = true }
+                        )
 
-                if (expenseId == null && !isRecurringMonthly) {
-                    if (isIos) {
-                        Box(
+                        SoftPickerRow(
+                            label = dateLabel,
+                            value = selectedDateMillis?.formatDateLabel().orEmpty(),
+                            icon = DateIcon,
+                            enabled = !readOnly,
+                            onClick = {
+                                platformDatePicker.show(selectedDateMillis) { pickedDate ->
+                                    selectedDateMillis = pickedDate
+                                }
+                            }
+                        )
+
+                        SoftTextField(
+                            value = description,
+                            onValueChange = { if (!readOnly) description = it },
+                            label = descriptionLabel,
+                            leadingIcon = DescriptionIcon,
+                            readOnly = readOnly,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(enabled = !readOnly) {
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    SoftSectionCard(title = "Options") {
+                        if (expenseId == null && !isRecurringMonthly) {
+                            SoftPickerRow(
+                                label = installmentsLabel,
+                                value = installmentLabels.getValue(installmentCount),
+                                icon = InstallmentsIcon,
+                                enabled = !readOnly,
+                                onClick = {
                                     val options = installmentOptions.map { installmentLabels.getValue(it) }
                                     platformOptionPicker.show(
                                         title = selectInstallmentsLabel,
@@ -418,153 +413,58 @@ class AddExpenseScreen(
                                         }
                                     }
                                 }
-                        ) {
-                            PlatformTextField(
-                                value = installmentLabels.getValue(installmentCount),
-                                onValueChange = {},
-                                readOnly = true,
-                                enabled = false,
-                                label = installmentsLabel,
-                                modifier = Modifier.fillMaxWidth()
                             )
                         }
-                    } else {
-                        ExposedDropdownMenuBox(
-                            expanded = installmentExpanded && !readOnly,
-                            onExpandedChange = {
-                                if (!readOnly) {
-                                    installmentExpanded = !installmentExpanded
-                                }
-                            }
-                        ) {
-                            PlatformTextField(
-                                value = installmentLabels.getValue(installmentCount),
-                                onValueChange = {},
-                                readOnly = true,
-                                label = installmentsLabel,
-                                trailingIcon = {
-                                    if (!readOnly) {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = installmentExpanded)
+
+                        if (!readOnly && recurringSeriesId == null) {
+                            SoftToggleRow(
+                                label = recurringMonthlyLabel,
+                                description = null,
+                                icon = RecurringIcon,
+                                checked = isRecurringMonthly,
+                                onCheckedChange = {
+                                    isRecurringMonthly = it
+                                    if (it) {
+                                        installmentCount = 1
                                     }
-                                },
-                                enabled = !readOnly,
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth()
-                            )
-                            ExposedDropdownMenu(
-                                expanded = installmentExpanded && !readOnly,
-                                onDismissRequest = { installmentExpanded = false }
-                            ) {
-                                installmentOptions.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(installmentLabels.getValue(option)) },
-                                        onClick = {
-                                            installmentCount = option
-                                            installmentExpanded = false
-                                        }
-                                    )
                                 }
-                            }
-                        }
-                    }
-                }
-
-                if (!readOnly && recurringSeriesId == null) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (isIos) {
-                                Switch(
-                                    checked = isRecurringMonthly,
-                                    onCheckedChange = {
-                                        isRecurringMonthly = it
-                                        if (it) {
-                                            installmentCount = 1
-                                        }
-                                    },
-                                    enabled = !readOnly
-                                )
-                            } else {
-                                Checkbox(
-                                    checked = isRecurringMonthly,
-                                    onCheckedChange = {
-                                        isRecurringMonthly = it
-                                        if (it) {
-                                            installmentCount = 1
-                                        }
-                                    },
-                                    enabled = !readOnly
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Text(recurringMonthlyLabel)
-                        }
-                        if (isRecurringMonthly) {
-                            Text(
+                            )
+                            SoftInlineInfoCard(
+                                visible = isRecurringMonthly,
                                 text = recurringExpenseInfo,
-                                style = MaterialTheme.typography.bodySmall
+                                icon = RecurringIcon
                             )
                         }
-                    }
-                }
 
-                if (recurringSeriesId != null) {
-                    RecurringSeriesNotice(
-                        text = recurringExpenseSeriesInfo
-                    )
-                }
+                        if (recurringSeriesId != null) {
+                            RecurringSeriesNotice(
+                                text = recurringExpenseSeriesInfo
+                            )
+                        }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (isIos) {
-                        Switch(
+                        SoftToggleRow(
+                            label = sharedExpenseLabel,
+                            description = null,
+                            icon = SharedIcon,
                             checked = isShared,
                             onCheckedChange = { if (!readOnly) isShared = it },
                             enabled = !readOnly
+                        )
+                    }
+
+                    if (readOnly) {
+                        SoftSecondaryButton(
+                            text = closeLabel,
+                            onClick = onClose,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        Checkbox(
-                            checked = isShared,
-                            onCheckedChange = { if (!readOnly) isShared = it },
-                            enabled = !readOnly
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(sharedExpenseLabel)
-                }
-
-                if (readOnly) {
-                    TextButton(
-                        onClick = onClose,
-                        colors = homeBudgetTextButtonColors(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(closeLabel)
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = onClose,
-                            colors = homeBudgetButtonColors(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(cancelLabel)
-                        }
-
-                        Button(
-                            enabled = !isSaving,
-                            colors = homeBudgetButtonColors(),
-                            onClick = {
+                        SoftActionBar(
+                            cancelLabel = cancelLabel,
+                            confirmLabel = if (isSaving) savingLabel else if (expenseId == null) saveExpenseLabel else updateExpenseLabel,
+                            confirmEnabled = !isSaving,
+                            onCancel = onClose,
+                            onConfirm = {
                                 scope.launch {
                                     val parsedAmount = parseAmountInput(amount)
                                     val expenseDate = selectedDateMillis
@@ -651,15 +551,8 @@ class AddExpenseScreen(
                                         }
                                     }
                                 }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                if (isSaving) savingLabel
-                                else if (expenseId == null) saveExpenseLabel
-                                else updateExpenseLabel
-                            )
-                        }
+                            }
+                        )
                     }
                 }
             }
@@ -699,6 +592,10 @@ class AddExpenseScreen(
                     resolveCategoryName(category.id, category.name, category.isCustom)
                 },
                 onDismiss = { showCategoryPickerSheet = false },
+                onAddCategory = {
+                    showCategoryPickerSheet = false
+                    showAddCategorySheet = true
+                },
                 onCategorySelected = { categoryId ->
                     selectedCategoryId = categoryId
                     showCategoryPickerSheet = false
@@ -885,9 +782,11 @@ private fun CategoryPickerSheet(
     selectedCategoryId: String,
     resolveCategoryName: (Category) -> String,
     onDismiss: () -> Unit,
+    onAddCategory: () -> Unit,
     onCategorySelected: (String) -> Unit
 ) {
     val selectCategoryLabel = stringResource(Res.string.select_category)
+    val addCategoryLabel = stringResource(Res.string.add_category)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -900,36 +799,48 @@ private fun CategoryPickerSheet(
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = selectCategoryLabel,
                 style = MaterialTheme.typography.titleLarge
             )
-            categories.forEach { category ->
-                val categoryName = resolveCategoryName(category)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onCategorySelected(category.id) }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CategoryLabel(
-                        iconKey = category.icon,
-                        colorKey = category.id,
-                        text = categoryName,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1
-                    )
-                    if (category.id == selectedCategoryId) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null
+
+            SoftDepthCard(contentPadding = PaddingValues(vertical = 6.dp)) {
+                categories.forEach { category ->
+                    val categoryName = resolveCategoryName(category)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { onCategorySelected(category.id) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CategoryLabel(
+                            iconKey = category.icon,
+                            colorKey = category.id,
+                            text = categoryName,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1
                         )
+                        if (category.id == selectedCategoryId) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
+
+            SoftPrimaryButton(
+                text = addCategoryLabel,
+                onClick = onAddCategory,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

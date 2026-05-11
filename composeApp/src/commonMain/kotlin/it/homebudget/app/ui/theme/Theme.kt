@@ -32,11 +32,11 @@ private val FallbackLightColors = lightColorScheme(
     onBackground = md_theme_light_onBackground,
     surface = md_theme_light_surface,
     onSurface = md_theme_light_onSurface,
-    surfaceVariant = Color(0xFFDBE4E6),
-    onSurfaceVariant = Color(0xFF3F484A),
-    outline = Color(0xFF6F797B),
-    outlineVariant = Color(0xFFBFC8CA),
-    inverseSurface = Color(0xFF2E3132),
+    surfaceVariant = Color(0xFFE0EAF4),
+    onSurfaceVariant = Color(0xFF404A55),
+    outline = Color(0xFF707A86),
+    outlineVariant = Color(0xFFC0CAD6),
+    inverseSurface = Color(0xFF2A313A),
     inverseOnSurface = Color(0xFFEFF1F1),
     inversePrimary = md_theme_dark_primary,
     surfaceTint = md_theme_light_primary
@@ -63,10 +63,10 @@ private val FallbackDarkColors = darkColorScheme(
     onBackground = md_theme_dark_onBackground,
     surface = md_theme_dark_surface,
     onSurface = md_theme_dark_onSurface,
-    surfaceVariant = Color(0xFF3F484A),
-    onSurfaceVariant = Color(0xFFBFC8CA),
-    outline = Color(0xFF899294),
-    outlineVariant = Color(0xFF3F484A),
+    surfaceVariant = Color(0xFF3E4651),
+    onSurfaceVariant = Color(0xFFC0CAD6),
+    outline = Color(0xFF8B95A1),
+    outlineVariant = Color(0xFF3E4651),
     inverseSurface = Color(0xFFE1E3E3),
     inverseOnSurface = Color(0xFF191C1D),
     inversePrimary = md_theme_light_primary,
@@ -74,11 +74,11 @@ private val FallbackDarkColors = darkColorScheme(
 )
 
 private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(12.dp),
-    large = RoundedCornerShape(16.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
 )
 
 @Composable

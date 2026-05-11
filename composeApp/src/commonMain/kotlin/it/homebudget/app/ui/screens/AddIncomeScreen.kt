@@ -1,26 +1,16 @@
 package it.homebudget.app.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -31,9 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -284,95 +272,70 @@ class AddIncomeScreen(
                     .padding(16.dp)
                     .padding(bottom = if (!isIos && incomeId != null) 88.dp else 0.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                PlatformTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = amountLabel,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                PlatformTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = descriptionLabel,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            platformDatePicker.show(selectedDateMillis) { pickedDate ->
-                                selectedDateMillis = pickedDate
-                            }
-                        }
-                ) {
-                    PlatformTextField(
-                        value = selectedDateMillis.formatDateLabel(),
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = dateLabel,
-                        modifier = Modifier.fillMaxWidth()
+                if (!isInitialized) {
+                    TransactionEditorSkeleton()
+                } else {
+                    TransactionAmountHeader(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = amountLabel,
+                        kind = TransactionEditorKind.Income
                     )
-                }
 
-                if (incomeId == null) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (isIos) {
-                                Switch(
-                                    checked = isRecurringMonthly,
-                                    onCheckedChange = { isRecurringMonthly = it }
-                                )
-                            } else {
-                                Checkbox(
-                                    checked = isRecurringMonthly,
-                                    onCheckedChange = { isRecurringMonthly = it }
-                                )
+                    SoftSectionCard(title = "Details") {
+                        SoftPickerRow(
+                            label = dateLabel,
+                            value = selectedDateMillis.formatDateLabel(),
+                            icon = DateIcon,
+                            onClick = {
+                                platformDatePicker.show(selectedDateMillis) { pickedDate ->
+                                    selectedDateMillis = pickedDate
+                                }
                             }
-                            Spacer(Modifier.width(8.dp))
-                            Text(recurringMonthlyLabel)
-                        }
-                        if (isRecurringMonthly) {
-                            Text(
+                        )
+
+                        SoftTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = descriptionLabel,
+                            leadingIcon = DescriptionIcon,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    SoftSectionCard(title = "Options") {
+                        if (incomeId == null) {
+                            SoftToggleRow(
+                                label = recurringMonthlyLabel,
+                                description = null,
+                                icon = RecurringIcon,
+                                checked = isRecurringMonthly,
+                                onCheckedChange = { isRecurringMonthly = it }
+                            )
+                            SoftInlineInfoCard(
+                                visible = isRecurringMonthly,
                                 text = recurringIncomeInfo,
-                                style = MaterialTheme.typography.bodySmall
+                                icon = RecurringIcon
+                            )
+                        }
+
+                        if (recurringSeriesId != null) {
+                            RecurringSeriesNotice(
+                                text = recurringIncomeSeriesInfo
                             )
                         }
                     }
-                }
 
-                if (recurringSeriesId != null) {
-                    RecurringSeriesNotice(
-                        text = recurringIncomeSeriesInfo
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = onClose,
-                        colors = homeBudgetButtonColors(),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(cancelLabel)
-                    }
-
-                    Button(
-                        enabled = !isSaving,
-                        colors = homeBudgetButtonColors(),
-                        onClick = {
+                    SoftActionBar(
+                        cancelLabel = cancelLabel,
+                        confirmLabel = if (incomeId == null) saveLabel else updateLabel,
+                        confirmEnabled = !isSaving,
+                        onCancel = onClose,
+                        onConfirm = {
                             scope.launch {
                                 val parsedAmount = parseAmountInput(amount)
 
@@ -435,11 +398,8 @@ class AddIncomeScreen(
                                     }
                                 }
                             }
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (incomeId == null) saveLabel else updateLabel)
-                    }
+                        }
+                    )
                 }
             }
         }
