@@ -1,7 +1,8 @@
 package it.homebudget.app.ui.screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 
 @Composable
-internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int) {
+internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, modifier: Modifier) {
 }

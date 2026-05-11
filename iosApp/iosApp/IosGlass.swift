@@ -452,3 +452,40 @@ struct AppGlassRecurringDeleteConfirmationDialog: View {
         }
     }
 }
+
+struct AppGlassBottomQuickActionsBar: View {
+    let addAccessibilityLabel: String
+    let voiceAccessibilityLabel: String
+    let onAdd: () -> Void
+    let onVoice: () -> Void
+
+    var body: some View {
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                Button(action: onAdd) {
+                    AppGlassBottomQuickActionIcon(systemName: "plus")
+                }
+                .buttonStyle(.glass)
+                .accessibilityLabel(addAccessibilityLabel)
+
+                Button(action: onVoice) {
+                    AppGlassBottomQuickActionIcon(systemName: "waveform.badge.mic")
+                }
+                .buttonStyle(.glass)
+                .accessibilityLabel(voiceAccessibilityLabel)
+            }
+        }
+        .background(.clear)
+    }
+}
+
+private struct AppGlassBottomQuickActionIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .semibold))
+            .frame(width: 32, height: 32)
+            .contentShape(Circle())
+    }
+}

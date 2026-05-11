@@ -12,13 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -155,6 +151,7 @@ class MonthlyIncomesScreen(
                 recurringIncomeToDelete = income
             }
         }
+        val bottomActionPadding = 0.dp
 
         val content: @Composable (PaddingValues) -> Unit = { padding ->
             if (groupedIncomes.isEmpty()) {
@@ -162,7 +159,8 @@ class MonthlyIncomesScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .padding(bottom = bottomActionPadding),
                     contentAlignment = Alignment.Center
                 ) {
                     PlatformCard {
@@ -178,7 +176,8 @@ class MonthlyIncomesScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .padding(bottom = bottomActionPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     for ((groupDate, incomesForDate) in groupedIncomes) {
@@ -268,20 +267,17 @@ class MonthlyIncomesScreen(
                                     Text(strings.back)
                                 }
                             }
+                        },
+                        actions = {
+                            if (!isIos) {
+                                BottomTransactionQuickActions(
+                                    addContentDescription = strings.addIncome,
+                                    onAddTransaction = { onAddIncome(selectedMonth.year, selectedMonth.month) },
+                                    modifier = Modifier.padding(end = 12.dp)
+                                )
+                            }
                         }
                     )
-                },
-                floatingActionButton = {
-                    if (!isIos) {
-                        FloatingActionButton(
-                            onClick = { onAddIncome(selectedMonth.year, selectedMonth.month) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = strings.addIncome
-                            )
-                        }
-                    }
                 }
             ) { padding ->
                 content(padding)

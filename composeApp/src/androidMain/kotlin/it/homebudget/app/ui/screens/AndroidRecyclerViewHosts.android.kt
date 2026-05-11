@@ -2,14 +2,24 @@ package it.homebudget.app.ui.screens
 
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCompositionContext
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -124,6 +134,71 @@ private class CategoriesRecyclerAdapter(
     }
 
     override fun getItemCount(): Int = categories.size
+}
+
+
+@Composable
+private fun CategoryListItem(
+    category: Category,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val clickableModifier = if (onClick != null) {
+        modifier.clickable(onClick = onClick)
+    } else {
+        modifier
+    }
+
+    Card(
+        modifier = clickableModifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            CategoryLabel(
+                iconKey = category.icon,
+                text = category.name,
+                modifier = Modifier.weight(1f),
+                textStyle = MaterialTheme.typography.bodyLarge
+            )
+
+            if (category.isCustom == 1L) {
+                Text(
+                    text = "Custom",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteCategoryBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = MaterialTheme.shapes.large
+            )
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.CenterEnd
+    ) {
+        Text(
+            text = "Delete",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onErrorContainer
+        )
+    }
 }
 
 private class ComposeViewHolder(

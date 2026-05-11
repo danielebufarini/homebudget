@@ -3,8 +3,7 @@ package it.homebudget.app.ui.screens.dashboard
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import it.homebudget.app.ui.screens.AddExpenseScreen
-import it.homebudget.app.ui.screens.CategoriesScreen
+import it.homebudget.app.ui.screens.AddTransactionScreen
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
@@ -22,8 +21,8 @@ class DashboardScreen(
             showNavigationChrome = true,
             openVoiceExpenseRequest = openVoiceExpenseRequest,
             showFab = false,
-            onOpenCategories = { navigator?.push(CategoriesScreen()) },
-            onOpenAddExpense = { navigator?.push(AddExpenseScreen()) },
+            onOpenCategories = {},
+            onOpenAddExpense = { navigator?.push(AddTransactionScreen()) },
             onOpenDayExpenses = { year, month, day ->
                 navigator?.push(DayExpensesScreen(year = year, month = month, day = day))
             },

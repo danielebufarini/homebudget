@@ -445,8 +445,19 @@ private struct MonthlyIncomesSectionsContent: View {
     }
 
     var body: some View {
-        List {
-            if !viewModel.hasLoadedSnapshot {
+        VStack(spacing: 0) {
+            DashboardStyleMonthNavigationHeader(
+                selectedMonth: selectedMonth,
+                amountText: viewModel.totalAmountText,
+                onPreviousMonth: onPreviousMonth,
+                onNextMonth: onNextMonth
+            )
+            .padding(.horizontal, 22)
+            .padding(.top, 28)
+            .padding(.bottom, 22)
+
+            List {
+                if !viewModel.hasLoadedSnapshot {
                 Section {
                     AppGlassListCard {
                         HStack {
@@ -502,20 +513,13 @@ private struct MonthlyIncomesSectionsContent: View {
                     }
                 }
             }
-        }
-        .listStyle(.insetGrouped)
-        .listSectionSpacing(.compact)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                MonthNavigationToolbarTitle(
-                    selectedMonth: selectedMonth,
-                    subtitle: "\(appLocalized("Income")) • \(viewModel.totalAmountText)",
-                    onPreviousMonth: onPreviousMonth,
-                    onNextMonth: onNextMonth
-                )
             }
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .scrollContentBackground(.hidden)
         }
+        .background(AppGlassBackdrop().ignoresSafeArea())
+        .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.start()
         }
@@ -633,8 +637,21 @@ private struct GroupedExpensesSectionsList: View {
     }
 
     var body: some View {
-        List {
-            if viewModel.sections.isEmpty {
+        VStack(spacing: 0) {
+            if let onPreviousMonth, let onNextMonth {
+                DashboardStyleMonthNavigationHeader(
+                    selectedMonth: selectedMonth,
+                    amountText: viewModel.totalAmountText,
+                    onPreviousMonth: onPreviousMonth,
+                    onNextMonth: onNextMonth
+                )
+                .padding(.horizontal, 22)
+                .padding(.top, 28)
+                .padding(.bottom, 22)
+            }
+
+            List {
+                if viewModel.sections.isEmpty {
                 Section {
                     AppGlassListCard {
                         Text(viewModel.emptyStateText)
@@ -665,38 +682,13 @@ private struct GroupedExpensesSectionsList: View {
                     }
                 }
             }
+            }
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .scrollContentBackground(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .listSectionSpacing(.compact)
+        .background(AppGlassBackdrop().ignoresSafeArea())
         .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                if let onPreviousMonth, let onNextMonth {
-                    MonthNavigationToolbarTitle(
-                        selectedMonth: selectedMonth,
-                        subtitle: "\(screenDescriptor) • \(viewModel.totalAmountText)",
-                        onPreviousMonth: onPreviousMonth,
-                        onNextMonth: onNextMonth
-                    )
-                } else {
-                    VStack(spacing: 1) {
-                        Text(screenTitle)
-                            .font(.headline)
-                        Text(viewModel.totalAmountText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            if let onAddExpense, canAddExpense {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: onAddExpense) {
-                        AppGlassToolbarIcon(systemName: "plus")
-                    }
-                    .buttonStyle(.glass)
-                }
-            }
-        }
         .onAppear {
             viewModel.updateGroupingMode(groupingMode)
             viewModel.start()
@@ -709,10 +701,15 @@ private struct GroupedExpensesSectionsList: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsGroupingControl {
-                ExpenseGroupingGlassControl(selection: $groupingMode)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
+                HStack {
+                    Spacer(minLength: 0)
+                    ExpenseGroupingGlassControl(selection: $groupingMode)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
             }
         }
         .overlay {
@@ -882,39 +879,90 @@ private struct GroupedExpenseSectionHeaderView: View {
     }
 }
 
-private struct MonthNavigationToolbarTitle: View {
+private struct DashboardStyleMonthNavigationHeader: View {
     let selectedMonth: MonthCursor
-    let subtitle: String
+    let amountText: String
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        VStack(spacing: 3) {
-            AppGlassToolbarCluster {
+        VStack(spacing: 2) {
+            HStack(spacing: 2) {
                 Button(action: onPreviousMonth) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(width: 30, height: 30)
+                        .font(.system(size: 15, weight: .bold))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.plain)
+                .foregroundStyle(onSurfaceColor)
+                .accessibilityLabel(appLocalized("Previous month"))
 
                 Text(selectedMonth.label)
-                    .font(.headline)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .appGlassSurface(cornerRadius: 18)
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(onSurfaceColor)
+                    .lineLimit(1)
 
                 Button(action: onNextMonth) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(width: 30, height: 30)
+                        .font(.system(size: 15, weight: .bold))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.plain)
+                .foregroundStyle(onSurfaceColor)
+                .accessibilityLabel(appLocalized("Next month"))
             }
 
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(amountText)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(onSurfaceVariantColor)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 76)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(surfaceColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(outlineVariantColor.opacity(0.45), lineWidth: 1)
+        )
+    }
+
+    private var surfaceColor: Color {
+        if colorScheme == .dark {
+            Color(red: 16.0 / 255.0, green: 24.0 / 255.0, blue: 32.0 / 255.0)
+        } else {
+            Color(red: 247.0 / 255.0, green: 250.0 / 255.0, blue: 255.0 / 255.0)
+        }
+    }
+
+    private var onSurfaceColor: Color {
+        if colorScheme == .dark {
+            Color(red: 225.0 / 255.0, green: 232.0 / 255.0, blue: 240.0 / 255.0)
+        } else {
+            Color(red: 21.0 / 255.0, green: 28.0 / 255.0, blue: 36.0 / 255.0)
+        }
+    }
+
+    private var onSurfaceVariantColor: Color {
+        if colorScheme == .dark {
+            Color(red: 192.0 / 255.0, green: 202.0 / 255.0, blue: 214.0 / 255.0)
+        } else {
+            Color(red: 64.0 / 255.0, green: 74.0 / 255.0, blue: 85.0 / 255.0)
+        }
+    }
+
+    private var outlineVariantColor: Color {
+        if colorScheme == .dark {
+            Color(red: 62.0 / 255.0, green: 70.0 / 255.0, blue: 81.0 / 255.0)
+        } else {
+            Color(red: 192.0 / 255.0, green: 202.0 / 255.0, blue: 214.0 / 255.0)
         }
     }
 }

@@ -63,6 +63,9 @@ interface ExpenseDao {
     @Query("DELETE FROM expense")
     suspend fun deleteAllExpenses()
 
+    @Query("UPDATE expense SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId")
+    suspend fun moveExpensesToCategory(oldCategoryId: String, newCategoryId: String)
+
     @Query("DELETE FROM expense WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringExpenseSeries(seriesId: String)
 }

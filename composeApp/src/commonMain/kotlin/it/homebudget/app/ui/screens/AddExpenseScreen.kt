@@ -1,11 +1,15 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -28,6 +32,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -43,7 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ionspin.kotlin.bignum.integer.BigInteger
@@ -56,10 +63,15 @@ import homebudget.composeapp.generated.resources.back
 import homebudget.composeapp.generated.resources.cancel
 import homebudget.composeapp.generated.resources.category
 import homebudget.composeapp.generated.resources.close
+import homebudget.composeapp.generated.resources.custom_category
 import homebudget.composeapp.generated.resources.date
+import homebudget.composeapp.generated.resources.default_category
+import homebudget.composeapp.generated.resources.delete_category
 import homebudget.composeapp.generated.resources.delete_expense
+import homebudget.composeapp.generated.resources.delete_item_confirmation_message
 import homebudget.composeapp.generated.resources.delete_recurring_expense_title
 import homebudget.composeapp.generated.resources.description
+import homebudget.composeapp.generated.resources.edit_category
 import homebudget.composeapp.generated.resources.edit_expense
 import homebudget.composeapp.generated.resources.enter_valid_amount
 import homebudget.composeapp.generated.resources.expense_details
@@ -76,8 +88,10 @@ import homebudget.composeapp.generated.resources.select_date
 import homebudget.composeapp.generated.resources.select_installments
 import homebudget.composeapp.generated.resources.shared_expense
 import homebudget.composeapp.generated.resources.single_payment
+import homebudget.composeapp.generated.resources.unable_to_delete_category
 import homebudget.composeapp.generated.resources.unable_to_delete_expense
 import homebudget.composeapp.generated.resources.unable_to_save_expense
+import homebudget.composeapp.generated.resources.update
 import homebudget.composeapp.generated.resources.update_expense
 import homebudget.composeapp.generated.resources.update_recurring_expense_title
 import it.homebudget.app.data.ExpenseRepository
@@ -90,6 +104,7 @@ import it.homebudget.app.data.buildRecurringMonthlyExpensesFromExistingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.Category
+import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -148,7 +163,9 @@ class AddExpenseScreen(
         val dateLabel = stringResource(Res.string.date)
         val deleteExpenseLabel = stringResource(Res.string.delete_expense)
         val deleteRecurringExpenseTitle = stringResource(Res.string.delete_recurring_expense_title)
+        val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
         val descriptionLabel = stringResource(Res.string.description)
+        val editCategoryLabel = stringResource(Res.string.edit_category)
         val editExpenseLabel = stringResource(Res.string.edit_expense)
         val enterValidAmountLabel = stringResource(Res.string.enter_valid_amount)
         val expenseDetailsLabel = stringResource(Res.string.expense_details)
@@ -168,8 +185,10 @@ class AddExpenseScreen(
         val selectInstallmentsLabel = stringResource(Res.string.select_installments)
         val sharedExpenseLabel = stringResource(Res.string.shared_expense)
         val singlePaymentLabel = stringResource(Res.string.single_payment)
+        val unableToDeleteCategoryLabel = stringResource(Res.string.unable_to_delete_category)
         val unableToDeleteExpenseLabel = stringResource(Res.string.unable_to_delete_expense)
         val unableToSaveExpenseLabel = stringResource(Res.string.unable_to_save_expense)
+        val updateCategoryLabel = stringResource(Res.string.update)
         val updateExpenseLabel = stringResource(Res.string.update_expense)
         val updateRecurringExpenseTitle = stringResource(Res.string.update_recurring_expense_title)
         val resolveCategoryName = rememberCategoryNameResolver()
@@ -186,6 +205,8 @@ class AddExpenseScreen(
         var isSaving by remember { mutableStateOf(false) }
         var showAddCategorySheet by remember { mutableStateOf(false) }
         var showCategoryPickerSheet by remember { mutableStateOf(false) }
+        var categoryBeingEdited by remember { mutableStateOf<Category?>(null) }
+        var categoryPendingDelete by remember { mutableStateOf<Category?>(null) }
         var isInitialized by remember(expenseId) { mutableStateOf(expenseId == null) }
         var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringExpenseUpdate?>(null) }
         var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
@@ -558,24 +579,42 @@ class AddExpenseScreen(
             }
         }
 
-        if (showAddCategorySheet) {
+        if (showAddCategorySheet || categoryBeingEdited != null) {
+            val editingCategory = categoryBeingEdited
             AddCategorySheet(
-                onDismiss = { showAddCategorySheet = false },
-                title = stringResource(Res.string.add_category),
-                confirmLabel = stringResource(Res.string.add),
+                onDismiss = {
+                    showAddCategorySheet = false
+                    categoryBeingEdited = null
+                },
+                title = if (editingCategory == null) addCategoryLabel else editCategoryLabel,
+                confirmLabel = if (editingCategory == null) addLabel else updateCategoryLabel,
+                initialName = editingCategory?.let { category ->
+                    resolveCategoryName(category.id, category.name, category.isCustom)
+                }.orEmpty(),
+                initialIconKey = editingCategory?.icon ?: DEFAULT_CATEGORY_ICON_KEY,
                 onConfirm = { name, iconKey ->
                     scope.launch {
-                        val categoryId = buildCustomCategoryId()
                         runCatching {
-                            repository.insertCategory(
-                                id = categoryId,
-                                name = name,
-                                icon = iconKey,
-                                isCustom = true
-                            )
+                            if (editingCategory == null) {
+                                val categoryId = buildCustomCategoryId()
+                                repository.insertCategory(
+                                    id = categoryId,
+                                    name = name,
+                                    icon = iconKey,
+                                    isCustom = true
+                                )
+                                selectedCategoryId = categoryId
+                            } else {
+                                repository.updateCategory(
+                                    id = editingCategory.id,
+                                    name = name,
+                                    icon = iconKey
+                                )
+                                selectedCategoryId = editingCategory.id
+                            }
                         }.onSuccess {
-                            selectedCategoryId = categoryId
                             showAddCategorySheet = false
+                            categoryBeingEdited = null
                         }.onFailure {
                             snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
                         }
@@ -596,9 +635,40 @@ class AddExpenseScreen(
                     showCategoryPickerSheet = false
                     showAddCategorySheet = true
                 },
+                onEditCategory = { category ->
+                    showCategoryPickerSheet = false
+                    categoryBeingEdited = category
+                },
+                onDeleteCategory = { category ->
+                    showCategoryPickerSheet = false
+                    categoryPendingDelete = category
+                },
                 onCategorySelected = { categoryId ->
                     selectedCategoryId = categoryId
                     showCategoryPickerSheet = false
+                }
+            )
+        }
+
+        categoryPendingDelete?.let { category ->
+            val categoryName = resolveCategoryName(category.id, category.name, category.isCustom)
+            DeleteConfirmationDialog(
+                message = deleteItemConfirmationMessageTemplate.formatResourceArgs(categoryName),
+                onDelete = {
+                    categoryPendingDelete = null
+                    scope.launch {
+                        runCatching {
+                            repository.deleteCategory(category.id)
+                            if (selectedCategoryId == category.id) {
+                                selectedCategoryId = ""
+                            }
+                        }.onFailure {
+                            snackbarHostState.showSnackbar(unableToDeleteCategoryLabel)
+                        }
+                    }
+                },
+                onDismiss = {
+                    categoryPendingDelete = null
                 }
             )
         }
@@ -783,10 +853,317 @@ private fun CategoryPickerSheet(
     resolveCategoryName: (Category) -> String,
     onDismiss: () -> Unit,
     onAddCategory: () -> Unit,
+    onEditCategory: (Category) -> Unit,
+    onDeleteCategory: (Category) -> Unit,
     onCategorySelected: (String) -> Unit
 ) {
     val selectCategoryLabel = stringResource(Res.string.select_category)
     val addCategoryLabel = stringResource(Res.string.add_category)
+    val cancelLabel = stringResource(Res.string.cancel)
+    val categoryLabel = stringResource(Res.string.category)
+    val customCategoryLabel = stringResource(Res.string.custom_category)
+    val defaultCategoryLabel = stringResource(Res.string.default_category)
+    val editCategoryLabel = stringResource(Res.string.edit_category)
+    val deleteCategoryLabel = stringResource(Res.string.delete_category)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val defaultCategories = remember(categories) { categories.filter { it.isCustom != 1L } }
+    val customCategories = remember(categories) { categories.filter { it.isCustom == 1L } }
+    var categoryActionTarget by remember { mutableStateOf<Category?>(null) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = selectCategoryLabel,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            CategoryGridSection(
+                title = customCategoryLabel,
+                categories = customCategories,
+                selectedCategoryId = selectedCategoryId,
+                resolveCategoryName = resolveCategoryName,
+                customCategoryLabel = customCategoryLabel,
+                addCategoryLabel = addCategoryLabel,
+                isCustomSection = true,
+                onAddCategory = onAddCategory,
+                onCategorySelected = { category -> categoryActionTarget = category }
+            )
+
+            CategoryGridSection(
+                title = defaultCategoryLabel,
+                categories = defaultCategories,
+                selectedCategoryId = selectedCategoryId,
+                resolveCategoryName = resolveCategoryName,
+                customCategoryLabel = customCategoryLabel,
+                addCategoryLabel = addCategoryLabel,
+                isCustomSection = false,
+                onAddCategory = onAddCategory,
+                onCategorySelected = { category -> onCategorySelected(category.id) }
+            )
+        }
+    }
+
+    categoryActionTarget?.let { category ->
+        CustomCategoryActionSheet(
+            category = category,
+            categoryName = resolveCategoryName(category),
+            selectCategoryLabel = selectCategoryLabel,
+            categoryLabel = categoryLabel,
+            editCategoryLabel = editCategoryLabel,
+            deleteCategoryLabel = deleteCategoryLabel,
+            cancelLabel = cancelLabel,
+            onDismiss = { categoryActionTarget = null },
+            onSelect = {
+                categoryActionTarget = null
+                onCategorySelected(category.id)
+            },
+            onEdit = {
+                categoryActionTarget = null
+                onEditCategory(category)
+            },
+            onDelete = {
+                categoryActionTarget = null
+                onDeleteCategory(category)
+            }
+        )
+    }
+}
+
+@Composable
+private fun CategoryGridSection(
+    title: String,
+    categories: List<Category>,
+    selectedCategoryId: String,
+    resolveCategoryName: (Category) -> String,
+    customCategoryLabel: String,
+    addCategoryLabel: String,
+    isCustomSection: Boolean,
+    onAddCategory: () -> Unit,
+    onCategorySelected: (Category) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+
+        CategoryGrid(
+            categories = categories,
+            selectedCategoryId = selectedCategoryId,
+            resolveCategoryName = resolveCategoryName,
+            customCategoryLabel = customCategoryLabel,
+            addCategoryLabel = addCategoryLabel,
+            isCustomSection = isCustomSection,
+            onAddCategory = onAddCategory,
+            onCategorySelected = onCategorySelected
+        )
+    }
+}
+
+@Composable
+private fun CategoryGrid(
+    categories: List<Category>,
+    selectedCategoryId: String,
+    resolveCategoryName: (Category) -> String,
+    customCategoryLabel: String,
+    addCategoryLabel: String,
+    isCustomSection: Boolean,
+    onAddCategory: () -> Unit,
+    onCategorySelected: (Category) -> Unit
+) {
+    val columns = 4
+    val entries = if (isCustomSection) listOf<Category?>(null) + categories.map { it } else categories.map { it }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        entries.chunked(columns).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { category ->
+                    if (category == null) {
+                        AddCategoryGridTile(
+                            label = addCategoryLabel,
+                            onClick = onAddCategory,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        CategoryGridTile(
+                            category = category,
+                            categoryName = resolveCategoryName(category),
+                            isSelected = category.id == selectedCategoryId,
+                            isCustom = isCustomSection,
+                            customCategoryLabel = customCategoryLabel,
+                            onClick = { onCategorySelected(category) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                repeat(columns - rowItems.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddCategoryGridTile(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(24.dp)
+    val tileBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val tileBorderColor = MaterialTheme.colorScheme.outlineVariant
+
+    Box(
+        modifier = modifier
+            .aspectRatio(0.90f)
+            .clip(shape)
+            .background(tileBackgroundColor, shape)
+            .border(1.dp, tileBorderColor, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = label,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = label,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 10.sp,
+                    lineHeight = 11.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryGridTile(
+    category: Category,
+    categoryName: String,
+    isSelected: Boolean,
+    isCustom: Boolean,
+    customCategoryLabel: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(24.dp)
+    val tileBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val tileContentColor = MaterialTheme.colorScheme.onSurface
+    val tileBorderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
+    val tileBorderWidth = if (isSelected) 2.dp else 1.dp
+
+    Box(
+        modifier = modifier
+            .aspectRatio(0.90f)
+            .clip(shape)
+            .background(tileBackgroundColor, shape)
+            .border(tileBorderWidth, tileBorderColor, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            CategoryIcon(
+                iconKey = category.icon,
+                colorKey = category.id,
+                modifier = Modifier.size(24.dp),
+                tint = null
+            )
+            Text(
+                text = categoryName,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 10.sp,
+                    lineHeight = 11.sp
+                ),
+                color = tileContentColor,
+                maxLines = 2,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        if (isSelected) {
+            Surface(
+                modifier = Modifier.align(Alignment.TopEnd),
+                shape = RoundedCornerShape(999.dp),
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(14.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomCategoryActionSheet(
+    category: Category,
+    categoryName: String,
+    selectCategoryLabel: String,
+    categoryLabel: String,
+    editCategoryLabel: String,
+    deleteCategoryLabel: String,
+    cancelLabel: String,
+    onDismiss: () -> Unit,
+    onSelect: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -801,46 +1178,54 @@ private fun CategoryPickerSheet(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = selectCategoryLabel,
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            SoftDepthCard(contentPadding = PaddingValues(vertical = 6.dp)) {
-                categories.forEach { category ->
-                    val categoryName = resolveCategoryName(category)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable { onCategorySelected(category.id) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        CategoryLabel(
-                            iconKey = category.icon,
-                            colorKey = category.id,
-                            text = categoryName,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1
-                        )
-                        if (category.id == selectedCategoryId) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+            SoftDepthCard(contentPadding = PaddingValues(18.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CategoryIcon(
+                        iconKey = category.icon,
+                        colorKey = category.id,
+                        modifier = Modifier.size(38.dp)
+                    )
+                    Text(
+                        text = categoryName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = categoryLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
             SoftPrimaryButton(
-                text = addCategoryLabel,
-                onClick = onAddCategory,
+                text = selectCategoryLabel,
+                onClick = onSelect,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            SoftSecondaryButton(
+                text = editCategoryLabel,
+                onClick = onEdit,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            SoftSecondaryButton(
+                text = deleteCategoryLabel,
+                onClick = onDelete,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(cancelLabel)
+            }
         }
     }
 }

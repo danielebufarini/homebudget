@@ -54,10 +54,10 @@
     <string name="csv_transfer_title">Import ed export CSV</string>
     <string name="csv_transfer_description">Sposta dati selezionati usando file CSV salvati su questo telefono.</string>
     <string name="csv_transfer_note">Non adatto a un ripristino completo dell'app.</string>
-    <string name="custom_category">Categoria personalizzata</string>
+    <string name="custom_category">Categorie personalizzate</string>
     <string name="dashboard">Riepilogo</string>
     <string name="date">Data</string>
-    <string name="default_category">Categoria predefinita</string>
+    <string name="default_category">Categorie predefinite</string>
     <string name="delete">Elimina</string>
     <string name="difference">Differenza</string>
     <string name="delete_category">Elimina categoria</string>
@@ -206,15 +206,14 @@
     <string name="skip">Salta</string>
 
     <!-- ── Default category names ─────────────────────────────────────────── -->
-    <string name="category_default_0">Spese casa</string>
+    <string name="category_default_0">Casa</string>
     <string name="category_default_1">Cibo</string>
     <string name="category_default_2">Ristorante</string>
-    <string name="category_default_3">Spese auto</string>
+    <string name="category_default_3">Auto</string>
     <string name="category_default_4">Viaggi</string>
-    <string name="category_default_5">Spese sanitarie</string>
-    <string name="category_default_6">Bollette</string>
-    <string name="category_default_7">Spese personali</string>
-    <string name="category_default_8">Varie</string>
+    <string name="category_default_5">Sanità</string>
+    <string name="category_default_6">Personale</string>
+    <string name="category_default_7">Altro</string>
 
     <!-- ── Plurals ────────────────────────────────────────────────────────── -->
     <plurals name="installment_label">

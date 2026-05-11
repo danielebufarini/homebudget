@@ -15,15 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -301,43 +297,57 @@ abstract class BaseGroupedExpensesScreen(
                                     Text(backLabel)
                                 }
                             }
+                        },
+                        actions = {
+                            if (!isIos && canAddExpense()) {
+                                BottomTransactionQuickActions(
+                                    addContentDescription = addExpenseLabel,
+                                    onAddTransaction = onAddExpense,
+                                    modifier = Modifier.padding(end = 12.dp)
+                                )
+                            }
                         }
                     )
-                },
-                floatingActionButton = {
-                    if (!isIos && canAddExpense()) {
-                        FloatingActionButton(
-                            onClick = onAddExpense
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = addExpenseLabel
-                            )
-                        }
-                    }
                 }
             ) { padding ->
-                GroupedExpensesContent(
-                    groupedExpenses = groupedExpenses,
-                    categoriesById = categoriesById,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    groupingMode = groupingMode,
-                    onGroupingModeChange = { groupingMode = it },
-                    onOpenExpense = onOpenExpense,
-                    onDeleteExpense = deleteExpenseAction,
-                    emptyStateText = emptyStateText,
-                    expenseFallbackTitle = expenseFallbackTitle,
-                    currencySymbol = currencySymbol,
-                    unknownCategoryLabel = unknownCategoryLabel,
-                    resolveCategoryName = { category ->
-                        resolveCategoryName(category.id, category.name, category.isCustom)
-                    },
-                    byCategoryLabel = byCategoryLabel,
-                    byDateLabel = byDateLabel
-                )
+                val showFloatingBottomControls = !isIos
+                Box(modifier = Modifier.fillMaxSize()) {
+                    GroupedExpensesContent(
+                        groupedExpenses = groupedExpenses,
+                        categoriesById = categoriesById,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
+                        groupingMode = groupingMode,
+                        onGroupingModeChange = { groupingMode = it },
+                        onOpenExpense = onOpenExpense,
+                        onDeleteExpense = deleteExpenseAction,
+                        emptyStateText = emptyStateText,
+                        expenseFallbackTitle = expenseFallbackTitle,
+                        currencySymbol = currencySymbol,
+                        unknownCategoryLabel = unknownCategoryLabel,
+                        resolveCategoryName = { category ->
+                            resolveCategoryName(category.id, category.name, category.isCustom)
+                        },
+                        byCategoryLabel = byCategoryLabel,
+                        byDateLabel = byDateLabel,
+                        showGroupingControls = !showFloatingBottomControls,
+                        listBottomContentPadding = if (showFloatingBottomControls) 88.dp else 0.dp
+                    )
+
+                    if (showFloatingBottomControls) {
+                        GroupingModeButtons(
+                            groupingMode = groupingMode,
+                            onGroupingModeChange = { groupingMode = it },
+                            byCategoryLabel = byCategoryLabel,
+                            byDateLabel = byDateLabel,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 16.dp)
+                        )
+                    }
+                }
             }
         } else {
             GroupedExpensesContent(
@@ -435,12 +445,12 @@ abstract class BaseGroupedExpensesScreen(
         unknownCategoryLabel: String,
         resolveCategoryName: (Category) -> String,
         byCategoryLabel: String,
-        byDateLabel: String
+        byDateLabel: String,
+        showGroupingControls: Boolean = true,
+        listBottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp
     ) {
         Box(modifier = modifier) {
-            val listModifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 84.dp)
+            val listModifier = Modifier.fillMaxSize()
 
             GroupedExpensesList(
                 groupedExpenses = groupedExpenses,
@@ -453,18 +463,21 @@ abstract class BaseGroupedExpensesScreen(
                 expenseFallbackTitle = expenseFallbackTitle,
                 currencySymbol = currencySymbol,
                 unknownCategoryLabel = unknownCategoryLabel,
-                resolveCategoryName = resolveCategoryName
+                resolveCategoryName = resolveCategoryName,
+                bottomContentPadding = listBottomContentPadding
             )
 
-            GroupingModeButtons(
-                groupingMode = groupingMode,
-                onGroupingModeChange = onGroupingModeChange,
-                byCategoryLabel = byCategoryLabel,
-                byDateLabel = byDateLabel,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 8.dp)
-            )
+            if (showGroupingControls) {
+                GroupingModeButtons(
+                    groupingMode = groupingMode,
+                    onGroupingModeChange = onGroupingModeChange,
+                    byCategoryLabel = byCategoryLabel,
+                    byDateLabel = byDateLabel,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                )
+            }
         }
     }
 
@@ -481,12 +494,14 @@ abstract class BaseGroupedExpensesScreen(
         expenseFallbackTitle: String,
         currencySymbol: String,
         unknownCategoryLabel: String,
-        resolveCategoryName: (Category) -> String
+        resolveCategoryName: (Category) -> String,
+        bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp
     ) {
         val expandedState = remember { mutableStateMapOf<String, Boolean>() }
 
         LazyColumn(
             modifier = modifier,
+            contentPadding = PaddingValues(bottom = bottomContentPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (groupedExpenses.isEmpty()) {
@@ -696,9 +711,13 @@ abstract class BaseGroupedExpensesScreen(
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 2.dp,
-            shadowElevation = 2.dp
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.68f),
+            tonalElevation = 0.dp,
+            shadowElevation = 16.dp,
+            border = BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            )
         ) {
             Row(
                 modifier = Modifier.padding(6.dp),
@@ -729,7 +748,7 @@ abstract class BaseGroupedExpensesScreen(
             FilledTonalButton(
                 onClick = onClick,
                 colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f),
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
@@ -740,10 +759,10 @@ abstract class BaseGroupedExpensesScreen(
             OutlinedButton(
                 onClick = onClick,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.50f),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(label)

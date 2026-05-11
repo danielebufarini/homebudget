@@ -91,15 +91,14 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         writeTransaction {
             if (categoryDao.countCategories() == 0L) {
                 val defaults = listOf(
-                    DefaultCategorySeed("Household expenses", "home"),
+                    DefaultCategorySeed("Household", "home"),
                     DefaultCategorySeed("Food", "shopping_cart"),
                     DefaultCategorySeed("Restaurant", "restaurant"),
-                    DefaultCategorySeed("Car expenses", "directions_car"),
+                    DefaultCategorySeed("Car", "directions_car"),
                     DefaultCategorySeed("Travel", "flight"),
-                    DefaultCategorySeed("Healthcare expenses", "local_hospital"),
-                    DefaultCategorySeed("Bills", "receipt"),
-                    DefaultCategorySeed("Personal expenses", "person"),
-                    DefaultCategorySeed("Miscellaneous", "category")
+                    DefaultCategorySeed("Healthcare", "local_hospital"),
+                    DefaultCategorySeed("Personal", "person"),
+                    DefaultCategorySeed("Other", "category")
                 )
                 categoryDao.insertCategories(
                     defaults.mapIndexed { index, category ->
@@ -111,8 +110,26 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                         )
                     }
                 )
+            } else {
+                normalizeDefaultCategories()
             }
         }
+    }
+
+    private suspend fun normalizeDefaultCategories() {
+        categoryDao.insertCategory(
+            Category(
+                id = "default_7",
+                name = "Other",
+                icon = "category",
+                isCustom = 0L
+            )
+        )
+        expenseDao.moveExpensesToCategory(
+            oldCategoryId = "default_8",
+            newCategoryId = "default_7"
+        )
+        categoryDao.deleteCategory("default_8")
     }
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()

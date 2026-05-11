@@ -3,8 +3,13 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
+private enum AddTransactionKind: Hashable {
+    case expense
+    case income
+}
+
 private enum Route: Hashable {
-    case categories
+    case addTransaction(initialKind: AddTransactionKind, year: Int?, month: Int?)
     case addExpense(expenseId: String?, readOnly: Bool)
     case addIncome(incomeId: String?, year: Int?, month: Int?)
     case dayExpenses(year: Int, month: Int, day: Int)
@@ -80,6 +85,172 @@ private final class SafeAreaContainerViewController: UIViewController {
     }
 }
 
+private struct InteractivePopGestureRestorer: UIViewControllerRepresentable {
+    func makeCoordinator() -> InteractivePopGestureCoordinator {
+        InteractivePopGestureCoordinator()
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let viewController = InteractivePopGestureRestoringViewController()
+        viewController.coordinator = context.coordinator
+        return viewController
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        if let viewController = uiViewController as? InteractivePopGestureRestoringViewController {
+            viewController.coordinator = context.coordinator
+        }
+        context.coordinator.requestInstall(from: uiViewController)
+    }
+}
+
+private final class InteractivePopGestureRestoringViewController: UIViewController {
+    weak var coordinator: InteractivePopGestureCoordinator?
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        coordinator?.requestInstall(from: self)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        coordinator?.requestInstall(from: self)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        coordinator?.requestInstall(from: self)
+    }
+
+    override func didMove(toParent parent: UIViewController?) {
+        super.didMove(toParent: parent)
+        coordinator?.requestInstall(from: self)
+    }
+}
+
+private final class InteractivePopGestureCoordinator: NSObject, UIGestureRecognizerDelegate {
+    private weak var navigationController: UINavigationController?
+
+    func requestInstall(from viewController: UIViewController) {
+        install(from: viewController)
+
+        // SwiftUI can reassign the interactive pop gesture delegate after layout/navigation
+        // updates, especially when navigationBarBackButtonHidden(true) is used. Re-apply
+        // the delegate a few times on the next run-loop ticks so the hidden visible back
+        // button does not disable the native edge-swipe gesture.
+        [0.05, 0.15, 0.35].forEach { delay in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak viewController] in
+                guard let self, let viewController else {
+                    return
+                }
+                self.install(from: viewController)
+            }
+        }
+    }
+
+    private func install(from viewController: UIViewController) {
+        guard let navigationController = resolveNavigationController(from: viewController),
+              let gesture = navigationController.interactivePopGestureRecognizer else {
+            return
+        }
+
+        self.navigationController = navigationController
+        gesture.isEnabled = true
+        gesture.delegate = self
+    }
+
+    private func resolveNavigationController(from viewController: UIViewController) -> UINavigationController? {
+        if let navigationController = viewController.navigationController {
+            return navigationController
+        }
+
+        var parent = viewController.parent
+        while let current = parent {
+            if let navigationController = current as? UINavigationController {
+                return navigationController
+            }
+            if let navigationController = current.navigationController {
+                return navigationController
+            }
+            parent = current.parent
+        }
+
+        if let window = viewController.view.window,
+           let navigationController = findNavigationController(
+            in: window.rootViewController,
+            containing: viewController.view,
+            matching: window
+           ) {
+            return navigationController
+        }
+
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else {
+                continue
+            }
+            for window in windowScene.windows where window.isKeyWindow {
+                if let navigationController = findNavigationController(
+                    in: window.rootViewController,
+                    containing: nil,
+                    matching: window
+                ) {
+                    return navigationController
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func findNavigationController(
+        in root: UIViewController?,
+        containing view: UIView?,
+        matching window: UIWindow
+    ) -> UINavigationController? {
+        guard let root else {
+            return nil
+        }
+
+        if let navigationController = root as? UINavigationController,
+           navigationController.view.window == window,
+           view == nil || view?.isDescendant(of: navigationController.view) == true {
+            return navigationController
+        }
+
+        if let presented = root.presentedViewController,
+           let navigationController = findNavigationController(in: presented, containing: view, matching: window) {
+            return navigationController
+        }
+
+        for child in root.children {
+            if let navigationController = findNavigationController(in: child, containing: view, matching: window) {
+                return navigationController
+            }
+        }
+
+        return nil
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let navigationController else {
+            return true
+        }
+
+        return navigationController.viewControllers.count > 1 && navigationController.transitionCoordinator == nil
+    }
+}
+
+private extension View {
+    func restoresInteractivePopGesture() -> some View {
+        background(
+            InteractivePopGestureRestorer()
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+        )
+    }
+}
+
+
 struct ContentView: View {
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
@@ -105,9 +276,6 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
-                            Button(appLocalized("Categories")) {
-                                path.append(Route.categories)
-                            }
                             Button(appLocalized("CSV Import / Export")) {
                                 presentAfterMenuDismiss {
                                     showCsvTransferSheet = true
@@ -118,28 +286,7 @@ struct ContentView: View {
                                 .appGlassSurface(cornerRadius: 18)
                         }
                     }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button {
-                            path.append(Route.addExpense(expenseId: nil, readOnly: false))
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 36, height: 36)
-                        }
-                        .buttonStyle(.glass)
-                        .accessibilityLabel(appLocalized("Add Expense"))
-
-                        Button {
-                            voiceExpenseAutoStartRequest += 1
-                            showVoiceExpenseSheet = true
-                        } label: {
-                            Image(systemName: "waveform.badge.mic")
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 36, height: 36)
-                        }
-                        .buttonStyle(.glass)
-                        .accessibilityLabel(appLocalized("Voice Expense"))
-                    }
+                    topQuickActionsToolbar(initialKind: .expense, year: nil, month: nil)
                 }
                 .sheet(isPresented: $showVoiceExpenseSheet) {
                     VoiceExpenseEntrySheet(autoStartRequest: voiceExpenseAutoStartRequest) {
@@ -200,15 +347,23 @@ struct ContentView: View {
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
-                    case .categories:
-                        CategoriesRootView()
-                            .appGlassHostedScreenChrome()
-                            .navigationTitle(appLocalized("Categories"))
-                            .navigationBarTitleDisplayMode(.inline)
-                            .navigationBarBackButtonHidden()
-                            .toolbar {
-                                backToolbar
+                    case let .addTransaction(initialKind, year, month):
+                        TransactionEditorRootView(
+                            initialKind: initialKind,
+                            initialYear: year,
+                            initialMonth: month
+                        ) {
+                            if !path.isEmpty {
+                                path.removeLast()
                             }
+                        }
+                        .appGlassHostedScreenChrome()
+                        .navigationTitle(initialKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"))
+                        .navigationBarTitleDisplayMode(.inline)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            backToolbar
+                        }
                     case let .addExpense(expenseId, readOnly):
                         ExpenseEditorRootView(
                             expenseId: expenseId,
@@ -258,21 +413,37 @@ struct ContentView: View {
                             month: Int(month),
                             path: $path
                         )
-                        .navigationTitle(appMonthlyTitle(month: month, key: "Income"))
+                        .appGlassHostedScreenChrome()
+                        .navigationTitle(appLocalized("Income"))
                         .navigationBarTitleDisplayMode(.inline)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            backToolbar
+                            topQuickActionsToolbar(
+                                initialKind: .income,
+                                year: Int(year),
+                                month: Int(month)
+                            )
+                        }
                     case let .monthlyExpenses(year, month):
                         GroupedExpensesSectionsScreen(
                             kind: .monthly,
                             year: Int(year),
                             month: Int(month),
                             onAddExpense: {
-                                path.append(Route.addExpense(expenseId: nil, readOnly: false))
+                                path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
                             }
                         ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
-                        .navigationTitle(appMonthlyTitle(month: month, key: "Expenses"))
+                        .appGlassHostedScreenChrome()
+                        .navigationTitle(appLocalized("Expenses"))
                         .navigationBarTitleDisplayMode(.inline)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            backToolbar
+                            topQuickActionsToolbar(initialKind: .expense, year: nil, month: nil)
+                        }
                     case let .sharedExpenses(year, month):
                         GroupedExpensesSectionsScreen(
                             kind: .shared,
@@ -302,6 +473,8 @@ struct ContentView: View {
                     HomeBudgetWidgetSummaryRefresher.shared.refresh()
                 }
         }
+        .appGlassHostedScreenChrome()
+        .restoresInteractivePopGesture()
         .onDisappear {
             csvImportController.dispose()
             csvExportController.dispose()
@@ -322,6 +495,64 @@ struct ContentView: View {
         }
     }
 
+    @ToolbarContentBuilder
+    private func topQuickActionsToolbar(
+        initialKind: AddTransactionKind,
+        year: Int?,
+        month: Int?
+    ) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            topQuickActionsBar(initialKind: initialKind, year: year, month: month)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private func leadingBackAndQuickActionsToolbar(
+        initialKind: AddTransactionKind,
+        year: Int?,
+        month: Int?
+    ) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            HStack(spacing: 8) {
+                Button {
+                    if !path.isEmpty {
+                        path.removeLast()
+                    }
+                } label: {
+                    AppGlassBackButton()
+                }
+                .buttonStyle(.glass)
+
+                topQuickActionsBar(initialKind: initialKind, year: year, month: month)
+            }
+        }
+    }
+
+    private func topQuickActionsBar(
+        initialKind: AddTransactionKind,
+        year: Int?,
+        month: Int?
+    ) -> some View {
+        AppGlassBottomQuickActionsBar(
+            addAccessibilityLabel: initialKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
+            voiceAccessibilityLabel: appLocalized("Voice Expense"),
+            onAdd: {
+                path.append(
+                    Route.addTransaction(
+                        initialKind: initialKind,
+                        year: year,
+                        month: month
+                    )
+                )
+            },
+            onVoice: {
+                voiceExpenseAutoStartRequest += 1
+                showVoiceExpenseSheet = true
+            }
+        )
+    }
+
+
     private func handleIncomingURL(_ url: URL) {
         guard url.scheme == "homebudget" else {
             return
@@ -329,7 +560,7 @@ struct ContentView: View {
 
         switch url.host {
         case "add-expense":
-            path.append(Route.addExpense(expenseId: nil, readOnly: false))
+            path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
         case "voice-expense":
             voiceExpenseAutoStartRequest += 1
             showVoiceExpenseSheet = true
@@ -707,6 +938,28 @@ private final class IncomeEditorDeletionViewModel: ObservableObject {
     }
 }
 
+private struct TransactionEditorRootView: View {
+    let initialKind: AddTransactionKind
+    let initialYear: Int?
+    let initialMonth: Int?
+    let onClose: () -> Void
+
+    var body: some View {
+        KotlinViewControllerHost {
+            MainViewControllerKt.AddTransactionViewController(
+                initialIncomeSelected: initialKind == .income,
+                initialIncomeYear: initialYear.map(kotlinInt),
+                initialIncomeMonth: initialMonth.map(kotlinInt),
+                onClose: onClose
+            )
+        }
+        .appGlassHostedScreenChrome()
+        .onDisappear {
+            HomeBudgetWidgetSummaryRefresher.shared.refresh()
+        }
+    }
+}
+
 private struct ExpenseEditorRootView: View {
     let expenseId: String?
     let readOnly: Bool
@@ -837,11 +1090,9 @@ private struct DashboardRootView: View {
     var body: some View {
         KotlinViewControllerHost {
             MainViewControllerKt.DashboardContentViewController(
-                onOpenCategories: {
-                    path.append(Route.categories)
-                },
+                onOpenCategories: {},
                 onOpenAddExpense: {
-                    path.append(Route.addExpense(expenseId: nil, readOnly: false))
+                    path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
                 },
                 onOpenDayExpenses: { year, month, day in
                     path.append(
@@ -891,30 +1142,9 @@ private struct MonthlyIncomesRootView: View {
         ) { incomeId in
             path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    path.append(
-                        Route.addIncome(
-                            incomeId: nil,
-                            year: year,
-                            month: month
-                        )
-                    )
-                } label: {
-                    AppGlassToolbarIcon(systemName: "plus")
-                }
-                .buttonStyle(.glass)
-            }
-        }
     }
 }
 
-private struct CategoriesRootView: View {
-    var body: some View {
-        NativeCategoriesScreen()
-    }
-}
 
 private func addExpenseTitle(expenseId: String?, readOnly: Bool) -> String {
     if readOnly {

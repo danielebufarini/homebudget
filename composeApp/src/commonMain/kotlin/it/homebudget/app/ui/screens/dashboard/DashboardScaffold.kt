@@ -4,17 +4,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +23,7 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.ui.screens.AndroidDataTransferUi
 import it.homebudget.app.ui.screens.AndroidNavigationDestination
 import it.homebudget.app.ui.screens.AndroidNavigationRailOverlay
-import it.homebudget.app.ui.screens.DashboardVoiceExpenseAction
+import it.homebudget.app.ui.screens.BottomTransactionQuickActions
 import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.rememberAndroidDataTransferSheetState
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
@@ -69,7 +66,10 @@ internal fun DashboardScreenScaffold(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { if (!isIos) showNavigationRail = true }) {
+                        IconButton(
+                            onClick = { if (!isIos) showNavigationRail = true },
+                            modifier = Modifier.padding(start = 4.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
                                 contentDescription = strings.dashboard
@@ -77,31 +77,16 @@ internal fun DashboardScreenScaffold(
                         }
                     },
                     actions = {
-                        if (!showFab) {
-                            IconButton(onClick = onOpenAddExpense) {
-                                Icon(
-                                    imageVector = Icons.Filled.Add,
-                                    contentDescription = strings.addExpense
-                                )
-                            }
-                        }
-                        DashboardVoiceExpenseAction(openVoiceExpenseRequest = openVoiceExpenseRequest)
-                    }
-                )
-            },
-            floatingActionButton = {
-                if (showFab) {
-                    FloatingActionButton(onClick = onOpenAddExpense) {
-                        if (isIos) {
-                            Text("+")
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = strings.addExpense
+                        if (!isIos) {
+                            BottomTransactionQuickActions(
+                                addContentDescription = strings.addExpense,
+                                onAddTransaction = onOpenAddExpense,
+                                modifier = Modifier.padding(end = 12.dp),
+                                openVoiceExpenseRequest = openVoiceExpenseRequest
                             )
                         }
                     }
-                }
+                )
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { padding ->

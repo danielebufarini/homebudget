@@ -2,7 +2,21 @@ package it.homebudget.app.localization
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import homebudget.composeapp.generated.resources.*
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.category_default_0
+import homebudget.composeapp.generated.resources.category_default_1
+import homebudget.composeapp.generated.resources.category_default_2
+import homebudget.composeapp.generated.resources.category_default_3
+import homebudget.composeapp.generated.resources.category_default_4
+import homebudget.composeapp.generated.resources.category_default_5
+import homebudget.composeapp.generated.resources.category_default_6
+import homebudget.composeapp.generated.resources.category_default_7
+import homebudget.composeapp.generated.resources.csv_export_failed
+import homebudget.composeapp.generated.resources.csv_import_failed
+import homebudget.composeapp.generated.resources.csv_import_no_rows
+import homebudget.composeapp.generated.resources.csv_import_success
+import homebudget.composeapp.generated.resources.csv_import_success_with_skipped
+import homebudget.composeapp.generated.resources.unable_to_save_expense
 import it.homebudget.app.database.Category
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -60,8 +74,7 @@ private fun rememberDefaultCategoryNamesById(): Map<String, String> {
         stringResource(Res.string.category_default_4),
         stringResource(Res.string.category_default_5),
         stringResource(Res.string.category_default_6),
-        stringResource(Res.string.category_default_7),
-        stringResource(Res.string.category_default_8)
+        stringResource(Res.string.category_default_7)
     )
 
     return remember(defaultCategoryNames) {
@@ -80,8 +93,7 @@ private suspend fun loadDefaultCategoryNamesById(): Map<String, String> {
         getString(Res.string.category_default_4),
         getString(Res.string.category_default_5),
         getString(Res.string.category_default_6),
-        getString(Res.string.category_default_7),
-        getString(Res.string.category_default_8)
+        getString(Res.string.category_default_7)
     ).mapIndexed { index, name ->
         "default_$index" to name
     }.toMap()

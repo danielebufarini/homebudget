@@ -4,13 +4,14 @@ import androidx.compose.ui.window.ComposeUIViewController
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.ui.screens.AddExpenseScreen
 import it.homebudget.app.ui.screens.AddIncomeScreen
-import it.homebudget.app.ui.screens.CategoriesRoute
+import it.homebudget.app.ui.screens.AddTransactionScreen
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
+import it.homebudget.app.ui.screens.TransactionEditorKind
 import it.homebudget.app.ui.screens.dashboard.DashboardRoute
 import it.homebudget.app.ui.screens.startIosGroupedExpensesStore
 import it.homebudget.app.ui.theme.AppTheme
@@ -51,18 +52,28 @@ fun DashboardContentViewController(
     }
 }
 
-fun CategoriesContentViewController(
-    addCategoryRequestKey: Int = 0
+fun AddTransactionViewController(
+    initialIncomeSelected: Boolean = false,
+    initialIncomeYear: Int? = null,
+    initialIncomeMonth: Int? = null,
+    onClose: () -> Unit
 ) = ComposeUIViewController(
     configure = {
         ensureKoinStarted()
     }
 ) {
     AppTheme {
-        CategoriesRoute(
+        AddTransactionScreen(
+            initialKind = if (initialIncomeSelected) {
+                TransactionEditorKind.Income
+            } else {
+                TransactionEditorKind.Expense
+            },
+            initialIncomeYear = initialIncomeYear,
+            initialIncomeMonth = initialIncomeMonth
+        ).RouteContent(
             showNavigationChrome = false,
-            showFab = false,
-            addCategoryRequestKey = addCategoryRequestKey
+            onClose = onClose
         )
     }
 }
