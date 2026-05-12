@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -22,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -99,6 +102,7 @@ class AddIncomeScreen(
     ) {
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
+        val useFloatingBottomBar = isIos
         val platformDatePicker = rememberPlatformDatePicker()
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -236,6 +240,11 @@ class AddIncomeScreen(
         }
 
         Scaffold(
+            containerColor = if (useFloatingBottomBar) {
+                Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.background
+            },
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
             },
@@ -261,6 +270,83 @@ class AddIncomeScreen(
                         label = deleteIncomeLabel,
                         enabled = !isSaving,
                         onClick = ::requestDeleteIncome
+                    )
+                }
+            },
+            bottomBar = {
+                if (useFloatingBottomBar && isInitialized) {
+                    SoftActionBar(
+                        cancelLabel = cancelLabel,
+                        confirmLabel = if (incomeId == null) saveLabel else updateLabel,
+                        confirmEnabled = !isSaving,
+                        onCancel = onClose,
+                        onConfirm = {
+                            scope.launch {
+                                val parsedAmount = parseAmountInput(amount)
+
+                                when {
+                                    parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
+                                        snackbarHostState.showSnackbar(enterValidAmountLabel)
+                                    }
+                                    else -> {
+                                        isSaving = true
+                                        val normalizedDescription = description.trim().ifBlank { null }
+                                        if (incomeId != null && recurringSeriesId != null) {
+                                            pendingRecurringUpdate = PendingRecurringIncomeUpdate(
+                                                amount = parsedAmount,
+                                                date = selectedDateMillis,
+                                                description = normalizedDescription
+                                            )
+                                            pendingRecurringAction = RecurringIncomeAction.Update
+                                            isSaving = false
+                                        } else {
+                                            runCatching {
+                                                val incomes = if (incomeId == null) {
+                                                    if (isRecurringMonthly) {
+                                                        buildRecurringMonthlyIncomes(
+                                                            amount = parsedAmount,
+                                                            firstDate = selectedDateMillis,
+                                                            description = description.trim(),
+                                                            recurringSeriesId = buildRecurringIncomeSeriesId(),
+                                                            idProvider = ::buildIncomeId
+                                                        )
+                                                    } else {
+                                                        listOf(
+                                                            PendingIncome(
+                                                                id = buildIncomeId(),
+                                                                amount = parsedAmount,
+                                                                date = selectedDateMillis,
+                                                                description = normalizedDescription,
+                                                                recurringSeriesId = null
+                                                            )
+                                                        )
+                                                    }
+                                                } else {
+                                                    listOf(
+                                                        PendingIncome(
+                                                            id = incomeId,
+                                                            amount = parsedAmount,
+                                                            date = selectedDateMillis,
+                                                            description = normalizedDescription,
+                                                            recurringSeriesId = recurringSeriesId
+                                                        )
+                                                    )
+                                                }
+                                                repository.insertIncomes(incomes = incomes)
+                                            }.onSuccess {
+                                                onClose()
+                                            }.onFailure {
+                                                snackbarHostState.showSnackbar(unableToSaveIncomeLabel)
+                                            }
+                                            isSaving = false
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .navigationBarsPadding()
                     )
                 }
             }
@@ -330,10 +416,11 @@ class AddIncomeScreen(
                         }
                     }
 
-                    SoftActionBar(
-                        cancelLabel = cancelLabel,
-                        confirmLabel = if (incomeId == null) saveLabel else updateLabel,
-                        confirmEnabled = !isSaving,
+                    if (!useFloatingBottomBar) {
+                        SoftActionBar(
+                            cancelLabel = cancelLabel,
+                            confirmLabel = if (incomeId == null) saveLabel else updateLabel,
+                            confirmEnabled = !isSaving,
                         onCancel = onClose,
                         onConfirm = {
                             scope.launch {
@@ -399,7 +486,8 @@ class AddIncomeScreen(
                                 }
                             }
                         }
-                    )
+                        )
+                    }
                 }
             }
         }

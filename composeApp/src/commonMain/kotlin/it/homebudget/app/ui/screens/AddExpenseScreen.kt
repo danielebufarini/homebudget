@@ -37,7 +37,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -141,6 +144,7 @@ class AddExpenseScreen(
     ) {
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
+        val useIosHostedFloatingChrome = isIos && (expenseId != null || readOnly)
         val platformDatePicker = rememberPlatformDatePicker()
         val platformOptionPicker = rememberPlatformOptionPicker()
         val scope = rememberCoroutineScope()
@@ -310,7 +314,119 @@ class AddExpenseScreen(
             }
         }
 
+        fun requestSaveExpense() {
+            scope.launch {
+                val parsedAmount = parseAmountInput(amount)
+                val expenseDate = selectedDateMillis
+
+                when {
+                    parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
+                        snackbarHostState.showSnackbar(enterValidAmountLabel)
+                    }
+                    selectedCategoryId.isBlank() -> {
+                        snackbarHostState.showSnackbar(selectCategoryLabel)
+                    }
+                    expenseDate == null -> {
+                        snackbarHostState.showSnackbar(selectDateLabel)
+                    }
+                    else -> {
+                        isSaving = true
+                        val normalizedDescription = description.ifBlank { null }
+                        if (expenseId != null && recurringSeriesId != null) {
+                            pendingRecurringUpdate = PendingRecurringExpenseUpdate(
+                                amount = parsedAmount,
+                                date = expenseDate,
+                                categoryId = selectedCategoryId,
+                                description = normalizedDescription,
+                                isShared = isShared
+                            )
+                            pendingRecurringAction = RecurringExpenseAction.Update
+                            isSaving = false
+                        } else {
+                            runCatching {
+                                val expenses = if (expenseId == null) {
+                                    if (isRecurringMonthly) {
+                                        buildRecurringMonthlyExpenses(
+                                            amount = parsedAmount,
+                                            firstDate = expenseDate,
+                                            categoryId = selectedCategoryId,
+                                            description = description,
+                                            isShared = isShared,
+                                            recurringSeriesId = buildRecurringSeriesId(),
+                                            idProvider = ::buildExpenseId
+                                        )
+                                    } else {
+                                        buildPendingExpenses(
+                                            amount = parsedAmount,
+                                            firstDate = expenseDate,
+                                            installments = installmentCount,
+                                            categoryId = selectedCategoryId,
+                                            description = description,
+                                            isShared = isShared,
+                                            idProvider = ::buildExpenseId
+                                        )
+                                    }
+                                } else if (isRecurringMonthly) {
+                                    buildRecurringMonthlyExpensesFromExistingExpense(
+                                        existingExpenseId = expenseId,
+                                        amount = parsedAmount,
+                                        firstDate = expenseDate,
+                                        categoryId = selectedCategoryId,
+                                        description = description,
+                                        isShared = isShared,
+                                        recurringSeriesId = buildRecurringSeriesId(),
+                                        idProvider = ::buildExpenseId
+                                    )
+                                } else {
+                                    listOf(
+                                        PendingExpense(
+                                            id = expenseId,
+                                            amount = parsedAmount,
+                                            date = expenseDate,
+                                            categoryId = selectedCategoryId,
+                                            description = normalizedDescription,
+                                            isShared = isShared,
+                                            recurringSeriesId = recurringSeriesId
+                                        )
+                                    )
+                                }
+                                repository.insertExpenses(expenses = expenses)
+                            }.onSuccess {
+                                onClose()
+                            }.onFailure {
+                                snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
+                            }
+                            isSaving = false
+                        }
+                    }
+                }
+            }
+        }
+
+        SideEffect {
+            if (useIosHostedFloatingChrome && !readOnly && expenseId != null) {
+                setActiveIosExpenseEditorSaveHandler(::requestSaveExpense)
+            }
+        }
+        DisposableEffect(useIosHostedFloatingChrome, readOnly, expenseId) {
+            onDispose {
+                if (useIosHostedFloatingChrome && !readOnly && expenseId != null) {
+                    clearActiveIosExpenseEditorSaveHandler()
+                }
+            }
+        }
+        val screenTitle = when {
+            readOnly -> expenseDetailsLabel
+            expenseId == null -> addExpenseLabel
+            else -> editExpenseLabel
+        }
+
         Scaffold(
+            containerColor = if (useIosHostedFloatingChrome) {
+                Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.background
+            },
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
             },
@@ -318,13 +434,7 @@ class AddExpenseScreen(
                 if (showNavigationChrome) {
                     TopAppBar(
                         title = {
-                            Text(
-                                when {
-                                    readOnly -> expenseDetailsLabel
-                                    expenseId == null -> addExpenseLabel
-                                    else -> editExpenseLabel
-                                }
-                            )
+                            Text(screenTitle)
                         },
                         navigationIcon = {
                             if (isIos) {
@@ -459,106 +569,19 @@ class AddExpenseScreen(
                         )
                     }
 
-                    if (readOnly) {
+                    if (readOnly && !useIosHostedFloatingChrome) {
                         SoftSecondaryButton(
                             text = closeLabel,
                             onClick = onClose,
                             modifier = Modifier.fillMaxWidth()
                         )
-                    } else {
+                    } else if (!readOnly && !useIosHostedFloatingChrome) {
                         SoftActionBar(
                             cancelLabel = cancelLabel,
                             confirmLabel = if (isSaving) savingLabel else if (expenseId == null) saveExpenseLabel else updateExpenseLabel,
                             confirmEnabled = !isSaving,
                             onCancel = onClose,
-                            onConfirm = {
-                                scope.launch {
-                                    val parsedAmount = parseAmountInput(amount)
-                                    val expenseDate = selectedDateMillis
-
-                                    when {
-                                        parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
-                                            snackbarHostState.showSnackbar(enterValidAmountLabel)
-                                        }
-                                        selectedCategoryId.isBlank() -> {
-                                            snackbarHostState.showSnackbar(selectCategoryLabel)
-                                        }
-                                        expenseDate == null -> {
-                                            snackbarHostState.showSnackbar(selectDateLabel)
-                                        }
-                                        else -> {
-                                            isSaving = true
-                                            val normalizedDescription = description.ifBlank { null }
-                                            if (expenseId != null && recurringSeriesId != null) {
-                                                pendingRecurringUpdate = PendingRecurringExpenseUpdate(
-                                                    amount = parsedAmount,
-                                                    date = expenseDate,
-                                                    categoryId = selectedCategoryId,
-                                                    description = normalizedDescription,
-                                                    isShared = isShared
-                                                )
-                                                pendingRecurringAction = RecurringExpenseAction.Update
-                                                isSaving = false
-                                            } else {
-                                                runCatching {
-                                                    val expenses = if (expenseId == null) {
-                                                        if (isRecurringMonthly) {
-                                                            buildRecurringMonthlyExpenses(
-                                                                amount = parsedAmount,
-                                                                firstDate = expenseDate,
-                                                                categoryId = selectedCategoryId,
-                                                                description = description,
-                                                                isShared = isShared,
-                                                                recurringSeriesId = buildRecurringSeriesId(),
-                                                                idProvider = ::buildExpenseId
-                                                            )
-                                                        } else {
-                                                            buildPendingExpenses(
-                                                                amount = parsedAmount,
-                                                                firstDate = expenseDate,
-                                                                installments = installmentCount,
-                                                                categoryId = selectedCategoryId,
-                                                                description = description,
-                                                                isShared = isShared,
-                                                                idProvider = ::buildExpenseId
-                                                            )
-                                                        }
-                                                    } else if (isRecurringMonthly) {
-                                                        buildRecurringMonthlyExpensesFromExistingExpense(
-                                                            existingExpenseId = expenseId,
-                                                            amount = parsedAmount,
-                                                            firstDate = expenseDate,
-                                                            categoryId = selectedCategoryId,
-                                                            description = description,
-                                                            isShared = isShared,
-                                                            recurringSeriesId = buildRecurringSeriesId(),
-                                                            idProvider = ::buildExpenseId
-                                                        )
-                                                    } else {
-                                                        listOf(
-                                                            PendingExpense(
-                                                                id = expenseId,
-                                                                amount = parsedAmount,
-                                                                date = expenseDate,
-                                                                categoryId = selectedCategoryId,
-                                                                description = normalizedDescription,
-                                                                isShared = isShared,
-                                                                recurringSeriesId = recurringSeriesId
-                                                            )
-                                                        )
-                                                    }
-                                                    repository.insertExpenses(expenses = expenses)
-                                                }.onSuccess {
-                                                    onClose()
-                                                }.onFailure {
-                                                    snackbarHostState.showSnackbar(unableToSaveExpenseLabel)
-                                                }
-                                                isSaving = false
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            onConfirm = ::requestSaveExpense
                         )
                     }
                 }

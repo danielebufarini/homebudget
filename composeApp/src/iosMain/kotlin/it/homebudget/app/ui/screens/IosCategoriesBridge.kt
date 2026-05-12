@@ -84,6 +84,31 @@ class IosCategoriesController {
         }
     }
 
+    fun insertCategoryAndReturnId(
+        name: String,
+        iconKey: String,
+        onComplete: (String?) -> Unit
+    ) {
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) {
+            onComplete(null)
+            return
+        }
+
+        scope.launch {
+            val categoryId = buildCustomCategoryId()
+            val success = runCatching {
+                repository.insertCategory(
+                    id = categoryId,
+                    name = trimmedName,
+                    icon = iconKey,
+                    isCustom = true
+                )
+            }.isSuccess
+            onComplete(if (success) categoryId else null)
+        }
+    }
+
     fun updateCategory(id: String, name: String, iconKey: String, onComplete: (Boolean) -> Unit) {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
