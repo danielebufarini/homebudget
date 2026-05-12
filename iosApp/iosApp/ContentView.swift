@@ -323,7 +323,7 @@ struct ContentView: View {
                         onCancel: { showCsvExportSheet = false },
                         onExport: exportCsv
                     )
-                    .appGlassSheetPresentation(detents: [.height(360)])
+                    .appGlassSheetPresentation(detents: [.large])
                 }
                 .fileImporter(
                     isPresented: Binding(
@@ -703,10 +703,25 @@ private struct CsvTransferSheet: View {
 }
 
 private struct CsvExportSheet: View {
+    private enum DateField {
+        case start
+        case end
+    }
+
     @Binding var startDate: Date
     @Binding var endDate: Date
     let onCancel: () -> Void
     let onExport: (Date, Date) -> Void
+    @State private var activeField: DateField = .start
+
+    private var activeDateBinding: Binding<Date> {
+        switch activeField {
+        case .start:
+            return $startDate
+        case .end:
+            return $endDate
+        }
+    }
 
     var body: some View {
         AppActionSheet(
@@ -718,33 +733,105 @@ private struct CsvExportSheet: View {
             content: {
                 VStack(spacing: 16) {
                     AppGlassSheetSection(title: appLocalized("From")) {
-                        DatePicker(
-                            "",
-                            selection: $startDate,
-                            displayedComponents: .date
-                        )
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        exportDateButton(
+                            title: appLocalized("From"),
+                            date: startDate,
+                            selected: activeField == .start
+                        ) {
+                            activeField = .start
+                        }
                     }
 
                     AppGlassSheetSection(title: appLocalized("To")) {
-                        DatePicker(
-                            "",
-                            selection: $endDate,
-                            displayedComponents: .date
+                        exportDateButton(
+                            title: appLocalized("To"),
+                            date: endDate,
+                            selected: activeField == .end
+                        ) {
+                            activeField = .end
+                        }
+                    }
+
+                    AppGlassSheetSection(
+                        title: activeField == .start ? appLocalized("From") : appLocalized("To")
+                    ) {
+                        LiquidGlassCalendar(
+                            selectedDate: activeDateBinding,
+                            displayedMonth: Binding(
+                                get: {
+                                    let date = activeDateBinding.wrappedValue
+                                    return Calendar.current.date(
+                                        from: Calendar.current.dateComponents([.year, .month], from: date)
+                                    ) ?? date
+                                },
+                                set: { newValue in
+                                    let currentDate = activeDateBinding.wrappedValue
+                                    let selectedDay = Calendar.current.component(.day, from: currentDate)
+                                    if let range = Calendar.current.range(of: .day, in: .month, for: newValue) {
+                                        let clampedDay = min(selectedDay, range.count)
+                                        if let updatedDate = Calendar.current.date(
+                                            from: DateComponents(
+                                                year: Calendar.current.component(.year, from: newValue),
+                                                month: Calendar.current.component(.month, from: newValue),
+                                                day: clampedDay
+                                            )
+                                        ) {
+                                            activeDateBinding.wrappedValue = updatedDate
+                                        }
+                                    }
+                                }
+                            )
                         )
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
         )
     }
+
+    @ViewBuilder
+    private func exportDateButton(
+        title: String,
+        date: Date,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(date.formatted(date: .abbreviated, time: .omitted))
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                }
+
+                Spacer()
+
+                Image(systemName: "calendar")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(selected ? Color.accentColor : .secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(selected ? Color.accentColor.opacity(0.14) : Color(uiColor: .secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        selected ? Color.accentColor.opacity(0.55) : Color(uiColor: .separator).opacity(0.2),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
 }
 
-private struct AppActionSheet<Content: View>: View {
+struct AppActionSheet<Content: View>: View {
     let title: String?
     let description: String?
     let note: String?
@@ -971,6 +1058,7 @@ private struct TransactionEditorRootView: View {
             )
         }
         .appGlassHostedScreenChrome()
+        .iosNativeDatePickerHost()
         .onDisappear {
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
         }
@@ -993,6 +1081,7 @@ private struct ExpenseEditorRootView: View {
             )
         }
         .appGlassHostedScreenChrome()
+        .iosNativeDatePickerHost()
         .onDisappear {
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
             deletionViewModel.disposeController()
@@ -1056,6 +1145,7 @@ private struct IncomeEditorRootView: View {
             )
         }
         .appGlassHostedScreenChrome()
+        .iosNativeDatePickerHost()
         .onDisappear {
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
             deletionViewModel.disposeController()

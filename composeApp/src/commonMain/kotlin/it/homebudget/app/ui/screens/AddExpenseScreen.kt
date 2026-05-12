@@ -680,6 +680,8 @@ class AddExpenseScreen(
                 }
             )
         }
+
+        platformDatePicker.Render()
     }
 
     private fun buildExpenseId(): String = IdGenerator.newId("expense")

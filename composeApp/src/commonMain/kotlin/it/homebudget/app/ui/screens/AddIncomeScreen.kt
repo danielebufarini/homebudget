@@ -470,6 +470,8 @@ class AddIncomeScreen(
                 }
             )
         }
+
+        platformDatePicker.Render()
     }
 }
 
