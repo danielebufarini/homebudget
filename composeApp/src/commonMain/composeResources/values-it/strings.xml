@@ -64,6 +64,7 @@
     <string name="delete_expense">Elimina spesa</string>
     <string name="delete_income">Elimina entrata</string>
     <string name="delete_item_confirmation_message">"%1$s" verrà eliminato definitivamente.</string>
+    <string name="delete_category_in_use">Questa categoria è già usata da una o più spese e non può essere eliminata.</string>
     <string name="delete_recurring_item_confirmation_message">Scegli se eliminare solo questa occorrenza di "%1$s" o l'intera serie.</string>
     <string name="delete_recurring_expense_title">Eliminare la spesa ricorrente?</string>
     <string name="delete_recurring_income_title">Eliminare l\'entrata ricorrente?</string>
@@ -101,6 +102,7 @@
     <string name="no_expenses_for_month">Nessuna spesa per questo mese</string>
     <string name="no_expenses_in_period">Nessuna spesa in questo periodo</string>
     <string name="no_income_for_month">Nessuna entrata per questo mese</string>
+    <string name="no_custom_categories_yet">Nessuna categoria personalizzata</string>
     <string name="no_shared_expenses_for_month">Nessuna spesa condivisa per questo mese</string>
     <string name="nothing_to_save">Niente da salvare</string>
     <string name="recurring_monthly">Mensile ricorrente</string>
@@ -128,6 +130,7 @@
     <string name="unable_to_delete_category">Impossibile eliminare la categoria</string>
     <string name="unable_to_delete_expense">Impossibile eliminare la spesa</string>
     <string name="unable_to_delete_income">Impossibile eliminare l\'entrata</string>
+    <string name="unable_to_save_category">Impossibile salvare la categoria</string>
     <string name="unable_to_save_expense">Impossibile salvare la spesa</string>
     <string name="unable_to_save_income">Impossibile salvare l\'entrata</string>
     <string name="unknown_category">Categoria sconosciuta</string>

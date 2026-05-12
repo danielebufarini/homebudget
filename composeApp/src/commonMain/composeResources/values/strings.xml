@@ -64,6 +64,7 @@
     <string name="delete_expense">Delete expense</string>
     <string name="delete_income">Delete income</string>
     <string name="delete_item_confirmation_message">"%1$s" will be permanently deleted.</string>
+    <string name="delete_category_in_use">This category is already used by one or more expenses and cannot be deleted.</string>
     <string name="delete_recurring_item_confirmation_message">Choose whether to delete only this instance of "%1$s" or the whole series.</string>
     <string name="delete_recurring_expense_title">Delete recurring expense?</string>
     <string name="delete_recurring_income_title">Delete recurring income?</string>
@@ -101,6 +102,7 @@
     <string name="no_expenses_for_month">No expenses for this month</string>
     <string name="no_expenses_in_period">No expenses in this period</string>
     <string name="no_income_for_month">No income for this month</string>
+    <string name="no_custom_categories_yet">No custom categories yet</string>
     <string name="no_shared_expenses_for_month">No shared expenses for this month</string>
     <string name="nothing_to_save">Nothing to save</string>
     <string name="recurring_monthly">Recurring Monthly</string>
@@ -128,6 +130,7 @@
     <string name="unable_to_delete_category">Unable to delete category</string>
     <string name="unable_to_delete_expense">Unable to delete expense</string>
     <string name="unable_to_delete_income">Unable to delete income</string>
+    <string name="unable_to_save_category">Unable to save category</string>
     <string name="unable_to_save_expense">Unable to save expense</string>
     <string name="unable_to_save_income">Unable to save income</string>
     <string name="unknown_category">Unknown category</string>

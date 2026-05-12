@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
@@ -24,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.categories
 import homebudget.composeapp.generated.resources.csv
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -42,6 +44,7 @@ internal fun AndroidNavigationRailOverlay(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
+    val categoriesLabel = stringResource(Res.string.categories)
     val csvLabel = stringResource(Res.string.csv)
 
     LaunchedEffect(drawerState.isClosed) {
@@ -63,6 +66,24 @@ internal fun AndroidNavigationRailOverlay(
                         text = "HomeBudget",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+
+                    NavigationDrawerItem(
+                        selected = selectedDestination == AndroidNavigationDestination.Categories,
+                        label = { Text(categoriesLabel) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Category,
+                                contentDescription = categoriesLabel,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onOpenCategories()
+                            }
+                        }
                     )
 
                     NavigationDrawerItem(

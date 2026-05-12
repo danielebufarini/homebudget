@@ -5,6 +5,7 @@ import it.homebudget.app.di.initKoin
 import it.homebudget.app.ui.screens.AddExpenseScreen
 import it.homebudget.app.ui.screens.AddIncomeScreen
 import it.homebudget.app.ui.screens.AddTransactionScreen
+import it.homebudget.app.ui.screens.CategoriesScreen
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthCursor
@@ -111,6 +112,21 @@ fun AddIncomeViewController(
             initialYear = initialYear,
             initialMonth = initialMonth
         ).RouteContent(
+            showNavigationChrome = false,
+            onClose = onClose
+        )
+    }
+}
+
+fun CategoriesViewController(
+    onClose: () -> Unit
+) = ComposeUIViewController(
+    configure = {
+        ensureKoinStarted()
+    }
+) {
+    AppTheme {
+        CategoriesScreen().RouteContent(
             showNavigationChrome = false,
             onClose = onClose
         )

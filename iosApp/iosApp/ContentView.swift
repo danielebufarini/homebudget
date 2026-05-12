@@ -9,6 +9,7 @@ private enum AddTransactionKind: Hashable {
 }
 
 private enum Route: Hashable {
+    case categories
     case addTransaction(initialKind: AddTransactionKind, year: Int?, month: Int?)
     case addExpense(expenseId: String?, readOnly: Bool)
     case addIncome(incomeId: String?, year: Int?, month: Int?)
@@ -276,6 +277,9 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
+                            Button(appLocalized("Categories")) {
+                                path.append(Route.categories)
+                            }
                             Button(appLocalized("CSV Import / Export")) {
                                 presentAfterMenuDismiss {
                                     showCsvTransferSheet = true
@@ -347,6 +351,19 @@ struct ContentView: View {
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
+                    case .categories:
+                        CategoriesRootView {
+                            if !path.isEmpty {
+                                path.removeLast()
+                            }
+                        }
+                        .appGlassHostedScreenChrome()
+                        .navigationTitle(appLocalized("Categories"))
+                        .navigationBarTitleDisplayMode(.inline)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            backToolbar
+                        }
                     case let .addTransaction(initialKind, year, month):
                         TransactionEditorRootView(
                             initialKind: initialKind,
@@ -1090,7 +1107,9 @@ private struct DashboardRootView: View {
     var body: some View {
         KotlinViewControllerHost {
             MainViewControllerKt.DashboardContentViewController(
-                onOpenCategories: {},
+                onOpenCategories: {
+                    path.append(Route.categories)
+                },
                 onOpenAddExpense: {
                     path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
                 },
@@ -1125,6 +1144,17 @@ private struct DashboardRootView: View {
                     )
                 }
             )
+        }
+        .appGlassHostedScreenChrome()
+    }
+}
+
+private struct CategoriesRootView: View {
+    let onClose: () -> Void
+
+    var body: some View {
+        KotlinViewControllerHost {
+            MainViewControllerKt.CategoriesViewController(onClose: onClose)
         }
         .appGlassHostedScreenChrome()
     }

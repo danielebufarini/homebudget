@@ -285,6 +285,10 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         categoryDao.deleteCategory(id)
     }
 
+    suspend fun isCategoryInUse(id: String): Boolean {
+        return expenseDao.countExpensesForCategory(id) > 0L
+    }
+
     suspend fun deleteRecurringExpenseSeries(seriesId: String) {
         expenseDao.deleteRecurringExpenseSeries(seriesId)
         HomeBudgetWidgetRefresh.requestRefresh()
