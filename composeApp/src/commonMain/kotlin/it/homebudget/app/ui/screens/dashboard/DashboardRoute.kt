@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -21,8 +20,11 @@ import androidx.compose.ui.unit.dp
 import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.ui.screens.EnsureDefaultCategoriesInserted
-import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 
 @Composable
@@ -59,18 +61,30 @@ fun DashboardRoute(
 
     EnsureDefaultCategoriesInserted(repository)
 
-    val summaryData by remember(repository, selectedMonth) {
+    val summaryFlow = remember(repository, selectedMonth) {
         repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
-    }.collectAsState(initial = emptyDashboardMonthSummary())
-
-    val summary = remember(summaryData) {
-        summaryData.toUiMonthlySummary()
+            .map { summary -> summary.toUiMonthlySummary() }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
     }
+    val summary by summaryFlow.collectAsState(initial = emptyDashboardMonthSummary().toUiMonthlySummary())
 
-    val chartState by rememberCashFlowChartState(
-        repository = repository,
-        selectedMonth = selectedMonth
-    )
+    val chartStateFlow = remember(repository, selectedMonth) {
+        repository.getDashboardCashFlow(
+            selectedYear = selectedMonth.year,
+            selectedMonth = selectedMonth.month,
+            trailingMonthCount = CASH_FLOW_CHART_MONTH_COUNT
+        )
+            .map { cashFlow ->
+                buildCashFlowChartState(
+                    cashFlow = cashFlow,
+                    selectedMonth = selectedMonth
+                )
+            }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+    }
+    val chartState by chartStateFlow.collectAsState(initial = emptyLineChartState(selectedMonth))
 
     val sixMonthSavingsAmount = remember(chartState.monthSnapshots) {
         chartState.monthSnapshots.fold(ZERO) { total, month ->
@@ -148,26 +162,5 @@ fun DashboardRoute(
                 }
             }
         }
-    }
-}
-
-@Composable
-internal fun rememberCashFlowChartState(
-    repository: ExpenseRepository,
-    selectedMonth: MonthCursor
-) = produceState(
-    initialValue = emptyLineChartState(selectedMonth),
-    repository,
-    selectedMonth
-) {
-    repository.getDashboardCashFlow(
-        selectedYear = selectedMonth.year,
-        selectedMonth = selectedMonth.month,
-        trailingMonthCount = CASH_FLOW_CHART_MONTH_COUNT
-    ).collect { cashFlow ->
-        value = buildCashFlowChartState(
-            cashFlow = cashFlow,
-            selectedMonth = selectedMonth
-        )
     }
 }

@@ -52,14 +52,15 @@ import homebudget.composeapp.generated.resources.no_income_for_month
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.monthBounds
-import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.formatResourceArgs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import kotlin.time.Instant
 
 private data class MonthlyIncomeStrings(
     val addIncome: String,
@@ -132,19 +133,18 @@ class MonthlyIncomesScreen(
         val incomesFlow = remember(repository, monthStartMillis, monthEndMillis) {
             repository.getIncomesBetween(monthStartMillis, monthEndMillis)
         }
-        val filteredIncomes by incomesFlow.collectAsState(initial = emptyList())
-        val groupedIncomes: List<Pair<kotlinx.datetime.LocalDate, List<Income>>> = remember(filteredIncomes) {
-            filteredIncomes
-                .groupBy { it.date.toLocalDate() }
-                .toList()
-                .sortedByDescending { (_, items) -> items.maxOf { it.date } }
-                .map { (date, items) -> date to items.sortedByDescending { it.date } }
+        val groupedIncomesFlow = remember(incomesFlow) {
+            incomesFlow
+                .map(::buildGroupedIncomesState)
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
         }
-        val totalAmount = remember(filteredIncomes) {
-            filteredIncomes.sumBigIntegerOf(Income::amount)
-        }
+        val groupedIncomesState by groupedIncomesFlow.collectAsState(initial = emptyGroupedIncomesState())
+        val groupedIncomes = groupedIncomesState.sections
+        val totalAmount = groupedIncomesState.totalAmount
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
-            val income = filteredIncomes.find { it.id == incomeId } ?: return@deleteAction
+            val income = groupedIncomesState.visibleIncomes.find { it.id == incomeId }
+                ?: return@deleteAction
             if (income.recurringSeriesId.isNullOrBlank()) {
                 incomeToDelete = income
             } else {
@@ -180,9 +180,9 @@ class MonthlyIncomesScreen(
                         .padding(bottom = bottomActionPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    for ((groupDate, incomesForDate) in groupedIncomes) {
-                        item(key = groupDate.toString()) {
-                            val sectionId = groupDate.toString()
+                    for (section in groupedIncomes) {
+                        item(key = section.key) {
+                            val sectionId = section.key
                             val expanded = expandedState.getOrPut(sectionId) { true }
                             val chevronRotation by animateFloatAsState(
                                 targetValue = if (expanded) 180f else 0f,
@@ -205,7 +205,7 @@ class MonthlyIncomesScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = formatExpenseDateGroupTitle(groupDate),
+                                                text = formatExpenseDateGroupTitle(section.date),
                                                 modifier = Modifier.weight(1f),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -214,7 +214,7 @@ class MonthlyIncomesScreen(
                                             )
                                             Spacer(modifier = Modifier.width(16.dp))
                                             Text(
-                                                text = formatAmount(incomesForDate.sumBigIntegerOf(Income::amount), strings.currencySymbol),
+                                                text = formatAmount(section.totalAmount, strings.currencySymbol),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                                 textAlign = TextAlign.End
@@ -230,7 +230,7 @@ class MonthlyIncomesScreen(
 
                                     if (expanded) {
                                         HorizontalDivider()
-                                        for (income in incomesForDate) {
+                                        for (income in section.incomes) {
                                             key(income.id) {
                                                 MonthlyIncomeRow(
                                                     income = income,
@@ -364,7 +364,7 @@ private fun MonthlyIncomeRow(
     ) {
         ExpenseListItemRow(
             title = income.description?.ifBlank { incomeLabel } ?: incomeLabel,
-            subtitleText = formatExpenseDateGroupTitle(income.date.toLocalDate()),
+            subtitleText = formatExpenseDateGroupTitle(epochMillisToLocalDate(income.date)),
             amountText = formatAmount(income.amount, currencySymbol),
             isRecurring = !income.recurringSeriesId.isNullOrBlank(),
             subtitleFontSizeOffsetSp = -2,
@@ -372,7 +372,3 @@ private fun MonthlyIncomeRow(
         )
     }
 }
-
-private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this)
-    .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
-    .date

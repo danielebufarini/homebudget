@@ -59,21 +59,19 @@ import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.monthBounds
-import it.homebudget.app.data.sumBigIntegerOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-
-private enum class ExpenseGroupingMode {
-    ByCategory,
-    ByDate
-}
 
 abstract class BaseGroupedExpensesScreen(
     private val year: Int,
@@ -152,6 +150,7 @@ abstract class BaseGroupedExpensesScreen(
         val unknownCategoryLabel = stringResource(Res.string.unknown_category)
         val fullMonthNames = stringArrayResource(Res.array.full_month_names)
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
+        val shortMonthNamesList = remember(shortMonthNames) { shortMonthNames.toList() }
         val resolveCategoryName = rememberCategoryNameResolver()
         val emptyStateText = emptyStateText()
         val expenseFallbackTitle = expenseFallbackTitle()
@@ -166,79 +165,44 @@ abstract class BaseGroupedExpensesScreen(
         val expensesFlow = remember(repository, monthStartMillis, monthEndMillis) {
             repository.getExpensesBetween(monthStartMillis, monthEndMillis)
         }
-        val expenses by expensesFlow.collectAsState(initial = emptyList())
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
 
         EnsureDefaultCategoriesInserted(repository)
 
-        val filteredExpenses = remember(
-            expenses,
-            categoriesById,
-            selectedMonth,
-            resolveCategoryName,
-            unknownCategoryLabel
-        ) {
-            expenses.filter { expense ->
-                val categoryName = categoriesById[expense.categoryId]
-                    ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
-                    ?: unknownCategoryLabel
-                includeExpense(expense) && includeCategory(categoryName)
-            }
-        }
-
-        val groupedExpenses = remember(
-            filteredExpenses,
+        val groupedExpensesFlow = remember(
+            expensesFlow,
             categoriesById,
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
-            shortMonthNames
+            shortMonthNamesList
         ) {
-            val resolveExpenseCategoryLabel: (Expense) -> String = { expense ->
-                categoriesById[expense.categoryId]
-                    ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
-                    ?: unknownCategoryLabel
-            }
-            val expenseComparator =
-                compareByDescending<Expense> { it.date }
-                    .thenBy(resolveExpenseCategoryLabel)
-                    .thenBy { it.description ?: "" }
-            when (groupingMode) {
-                ExpenseGroupingMode.ByCategory -> {
-                    filteredExpenses
-                        .groupBy { expense ->
-                            resolveExpenseCategoryLabel(expense)
-                        }
-                        .toList()
-                        .sortedBy { it.first }
-                        .map { (groupKey, groupExpenses) ->
-                            val sortedExpenses = groupExpenses.sortedWith(expenseComparator)
-                            groupKey to sortedExpenses
-                        }
+            expensesFlow
+                .map { expenses ->
+                    buildGroupedExpensesState(
+                        expenses = expenses,
+                        categoriesById = categoriesById,
+                        groupingMode = groupingMode,
+                        includeExpense = ::includeExpense,
+                        includeCategory = ::includeCategory,
+                        resolveCategoryName = { category ->
+                            resolveCategoryName(category.id, category.name, category.isCustom)
+                        },
+                        unknownCategoryLabel = unknownCategoryLabel,
+                        shortMonthNames = shortMonthNamesList
+                    )
                 }
-                ExpenseGroupingMode.ByDate -> {
-                    filteredExpenses
-                        .groupBy { expense -> epochMillisToLocalDate(expense.date) }
-                        .toList()
-                        .sortedByDescending { (_, groupExpenses) ->
-                            groupExpenses.maxOf { it.date }
-                        }
-                        .map { (groupDate, groupExpenses) ->
-                            val sortedExpenses = groupExpenses.sortedWith(expenseComparator)
-                            formatDateGroupTitle(groupDate, shortMonthNames) to sortedExpenses
-                        }
-                }
-            }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
         }
-        val totalAmount = remember(groupedExpenses) {
-            groupedExpenses.sumBigIntegerOf { (_, expenses) ->
-                expenses.sumBigIntegerOf(Expense::amount)
-            }
-        }
+        val groupedExpensesState by groupedExpensesFlow.collectAsState(initial = emptyGroupedExpensesState())
+        val groupedExpenses = groupedExpensesState.sections
+        val totalAmount = groupedExpensesState.totalAmount
         val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
             deleteAction@{ expenseId ->
-                val expense = filteredExpenses.find { it.id == expenseId } ?: return@deleteAction
+                val expense = groupedExpensesState.visibleExpenses.find { it.id == expenseId }
+                    ?: return@deleteAction
                 if (expense.recurringSeriesId.isNullOrBlank()) {
                     expenseToDelete = expense
                 } else {
@@ -432,7 +396,7 @@ abstract class BaseGroupedExpensesScreen(
 
     @Composable
     private fun GroupedExpensesContent(
-        groupedExpenses: List<Pair<String, List<Expense>>>,
+        groupedExpenses: List<ExpenseSection>,
         categoriesById: Map<String, Category>,
         modifier: Modifier,
         groupingMode: ExpenseGroupingMode,
@@ -484,7 +448,7 @@ abstract class BaseGroupedExpensesScreen(
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun GroupedExpensesList(
-        groupedExpenses: List<Pair<String, List<Expense>>>,
+        groupedExpenses: List<ExpenseSection>,
         categoriesById: Map<String, Category>,
         groupingMode: ExpenseGroupingMode,
         modifier: Modifier,
@@ -516,9 +480,9 @@ abstract class BaseGroupedExpensesScreen(
                 return@LazyColumn
             }
 
-            groupedExpenses.forEach { (categoryName, categoryExpenses) ->
-                item(key = categoryName) {
-                    val expanded = expandedState[categoryName] ?: groupsExpandedByDefault()
+            groupedExpenses.forEach { section ->
+                item(key = section.key) {
+                    val expanded = expandedState[section.key] ?: groupsExpandedByDefault()
                     val chevronRotation by animateFloatAsState(
                         targetValue = if (expanded) 180f else 0f,
                         label = "GroupedExpensesSectionChevronRotation"
@@ -546,13 +510,13 @@ abstract class BaseGroupedExpensesScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            expandedState[categoryName] = !expanded
+                                            expandedState[section.key] = !expanded
                                         }
                                         .padding(horizontal = 16.dp, vertical = 14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val sectionIconKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
-                                        categoryExpenses.firstOrNull()
+                                        section.expenses.firstOrNull()
                                             ?.categoryId
                                             ?.let(categoriesById::get)
                                             ?.icon
@@ -564,11 +528,11 @@ abstract class BaseGroupedExpensesScreen(
                                         iconKey = sectionIconKey,
                                         showIcon = groupingMode == ExpenseGroupingMode.ByCategory,
                                         colorKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
-                                            categoryExpenses.firstOrNull()?.categoryId
+                                            section.expenses.firstOrNull()?.categoryId
                                         } else {
                                             null
                                         },
-                                        text = categoryName,
+                                        text = section.title,
                                         modifier = Modifier.weight(1f),
                                         textStyle = headerTextStyle,
                                         textColor = headerContentColor,
@@ -580,7 +544,7 @@ abstract class BaseGroupedExpensesScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = formatAmount(categoryExpenses.sumBigIntegerOf(Expense::amount), currencySymbol),
+                                            text = formatAmount(section.totalAmount, currencySymbol),
                                             style = headerTextStyle,
                                             color = headerContentColor,
                                             textAlign = TextAlign.End
@@ -596,7 +560,7 @@ abstract class BaseGroupedExpensesScreen(
                             }
                             if (expanded) {
                                 HorizontalDivider()
-                                categoryExpenses.forEach { expense ->
+                                section.expenses.forEach { expense ->
                                     key(expense.id) {
                                         val row = groupedExpenseRowPresentation(
                                             expense = expense,

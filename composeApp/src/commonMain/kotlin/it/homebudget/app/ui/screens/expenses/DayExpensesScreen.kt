@@ -98,16 +98,13 @@ class DayExpensesScreen(
 
         EnsureDefaultCategoriesInserted(repository)
 
-        val filteredExpenses = remember(expenses) {
-            expenses.sortedByDescending(Expense::date)
-        }
-        val totalAmount = remember(filteredExpenses) {
-            filteredExpenses.sumBigIntegerOf(Expense::amount)
+        val totalAmount = remember(expenses) {
+            expenses.sumBigIntegerOf(Expense::amount)
         }
 
         val content: @Composable (PaddingValues) -> Unit = { padding ->
             DayExpensesList(
-                expenses = filteredExpenses,
+                expenses = expenses,
                 categoriesById = categoriesById,
                 modifier = Modifier
                     .fillMaxSize()

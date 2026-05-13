@@ -14,10 +14,12 @@ import it.homebudget.app.database.Income
 import it.homebudget.app.database.MonthTotalRow
 import it.homebudget.app.database.TopCategorySummaryRow
 import it.homebudget.app.widget.HomeBudgetWidgetRefresh
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -70,7 +72,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
     private val categoryDao = database.categoryDao()
     private val incomeDao = database.incomeDao()
 
-    fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories()
+    fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories().distinctUntilChanged()
 
     suspend fun insertCategory(id: String, name: String, icon: String, isCustom: Boolean) {
         categoryDao.insertCategory(
@@ -132,20 +134,20 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         categoryDao.deleteCategory("default_8")
     }
 
-    fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
+    fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses().distinctUntilChanged()
 
     fun getExpensesBetween(startMillis: Long, endMillis: Long): Flow<List<Expense>> =
-        expenseDao.getExpensesBetween(startMillis, endMillis)
+        expenseDao.getExpensesBetween(startMillis, endMillis).distinctUntilChanged()
 
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseDao.getAllExpensesSnapshot()
 
     suspend fun getExpensesSnapshotBetween(startMillis: Long, endMillis: Long): List<Expense> =
         expenseDao.getExpensesBetween(startMillis, endMillis).first()
 
-    fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes()
+    fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes().distinctUntilChanged()
 
     fun getIncomesBetween(startMillis: Long, endMillis: Long): Flow<List<Income>> =
-        incomeDao.getIncomesBetween(startMillis, endMillis)
+        incomeDao.getIncomesBetween(startMillis, endMillis).distinctUntilChanged()
 
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeDao.getAllIncomesSnapshot()
 
@@ -164,21 +166,18 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
             expenseDao.getDashboardExpenseRowsBetween(startMillis, endMillis),
             incomeDao.getIncomeAmountRowsBetween(startMillis, endMillis)
         ) { expenseRows, incomeRows ->
-            val expenseSummary = expenseRows.toExpenseMonthSummary()
+            val expenseAggregates = expenseRows.toDashboardExpenseAggregates()
             val incomeAmount = incomeRows.fold(ZERO) { acc, row ->
                 acc + row.amount.toAmountBigInteger()
             }
-            val categoryTotals = expenseRows.toCategoryTotals()
-            val topCategory = expenseRows.toTopCategorySummary()
-            val highestDay = expenseRows.toHighestDaySummary()
             buildDashboardMonthSummary(
-                expenseSummary = expenseSummary,
+                expenseSummary = expenseAggregates.summary,
                 incomeAmount = incomeAmount,
-                categoryTotals = categoryTotals,
-                topCategory = topCategory,
-                highestDay = highestDay
+                categoryTotals = expenseAggregates.categoryTotals,
+                topCategory = expenseAggregates.topCategory,
+                highestDay = expenseAggregates.highestDay
             )
-        }
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     fun getDashboardCashFlow(
@@ -217,7 +216,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                     row.toDashboardMonthTotal(timeZone)
                 }
             )
-        }.distinctUntilChanged()
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     private fun getMonthlyExpenseTotals(
@@ -243,7 +242,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 .sortedBy { row ->
                     row.date
                 }
-        }
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     private fun getMonthlyIncomeTotals(
@@ -269,7 +268,7 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
                 .sortedBy { row ->
                     row.date
                 }
-        }
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     suspend fun getExpenseById(id: String): Expense? = expenseDao.getExpenseById(id)

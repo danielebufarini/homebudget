@@ -24,6 +24,14 @@ data class ExpenseMonthSummaryRow(
 )
 
 // Computed in Kotlin.
+data class DashboardExpenseAggregates(
+    val summary: ExpenseMonthSummaryRow,
+    val categoryTotals: List<CategoryTotalRow>,
+    val topCategory: TopCategorySummaryRow?,
+    val highestDay: HighestDaySummaryRow?
+)
+
+// Computed in Kotlin.
 // date = first day of the month at start of day, in epoch millis.
 data class MonthTotalRow(
     val date: Long,
