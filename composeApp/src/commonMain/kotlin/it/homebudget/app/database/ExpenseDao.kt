@@ -8,26 +8,90 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ExpenseDao {
 
+    @Query(
+        """
+        SELECT COUNT(*)
+        FROM expense
+        WHERE date >= :fromInclusiveMillis
+          AND date < :toExclusiveMillis
+        """
+    )
+    fun getExpenseCountBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<Int>
+
     @Query("SELECT * FROM expense ORDER BY date DESC")
     fun getAllExpenses(): Flow<List<Expense>>
 
     @Query(
         """
     SELECT
-        amount,
-        isShared,
-        date,
-        categoryId
+        categoryId,
+        MAX(date) AS latestExpenseDate,
+        GROUP_CONCAT(amount, '|') AS concatenatedAmounts
     FROM expense
     WHERE date >= :fromInclusiveMillis
       AND date < :toExclusiveMillis
-    ORDER BY date ASC
+    GROUP BY categoryId
+    ORDER BY categoryId ASC
     """
     )
-    fun getDashboardExpenseRowsBetween(
+    fun getDashboardCategoryAmountGroupsBetween(
         fromInclusiveMillis: Long,
         toExclusiveMillis: Long
-    ): Flow<List<DashboardExpenseRow>>
+    ): Flow<List<DashboardCategoryAmountGroupRow>>
+
+    @Query(
+        """
+        SELECT
+            date,
+            GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+        FROM expense
+        WHERE date >= :fromInclusiveMillis
+          AND date < :toExclusiveMillis
+        GROUP BY date
+        ORDER BY date ASC
+        """
+    )
+    fun getDashboardDayAmountGroupsBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<List<DashboardDayAmountGroupRow>>
+
+    @Query(
+        """
+        SELECT GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+        FROM expense
+        WHERE date >= :fromInclusiveMillis
+          AND date < :toExclusiveMillis
+          AND isShared = 1
+        """
+    )
+    fun getSharedExpenseAmountGroupBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<DashboardConcatenatedAmountsRow>
+
+    @Query(
+        """
+        SELECT
+            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
+            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month,
+            GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+        FROM expense
+        WHERE date >= :fromInclusiveMillis
+          AND date < :toExclusiveMillis
+        GROUP BY
+            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER),
+            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER)
+        ORDER BY year ASC, month ASC
+        """
+    )
+    fun getDashboardExpenseMonthAmountGroupsBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<List<DashboardMonthAmountGroupRow>>
 
     @Query("SELECT * FROM expense ORDER BY date DESC")
     suspend fun getAllExpensesSnapshot(): List<Expense>

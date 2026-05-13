@@ -12,19 +12,36 @@ interface IncomeDao {
 
     @Query(
         """
-    SELECT
-        amount,
-        date
-    FROM income
-    WHERE date >= :fromInclusiveMillis
-      AND date < :toExclusiveMillis
-    ORDER BY date ASC
-    """
+        SELECT GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+        FROM income
+        WHERE date >= :fromInclusiveMillis
+          AND date < :toExclusiveMillis
+        """
     )
-    fun getIncomeAmountRowsBetween(
+    fun getIncomeAmountGroupBetween(
         fromInclusiveMillis: Long,
         toExclusiveMillis: Long
-    ): Flow<List<IncomeAmountRow>>
+    ): Flow<DashboardConcatenatedAmountsRow>
+
+    @Query(
+        """
+        SELECT
+            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
+            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month,
+            GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+        FROM income
+        WHERE date >= :fromInclusiveMillis
+          AND date < :toExclusiveMillis
+        GROUP BY
+            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER),
+            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER)
+        ORDER BY year ASC, month ASC
+        """
+    )
+    fun getDashboardIncomeMonthAmountGroupsBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): Flow<List<DashboardMonthAmountGroupRow>>
 
     @Query("SELECT * FROM income ORDER BY date DESC")
     suspend fun getAllIncomesSnapshot(): List<Income>

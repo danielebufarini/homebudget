@@ -3,17 +3,28 @@ package it.homebudget.app.database
 import com.ionspin.kotlin.bignum.integer.BigInteger
 
 // Raw Room projection: directly read from SQLite.
-data class DashboardExpenseRow(
-    val amount: String,
-    val isShared: Boolean,
-    val date: Long,
-    val categoryId: String
+data class DashboardCategoryAmountGroupRow(
+    val categoryId: String,
+    val latestExpenseDate: Long,
+    val concatenatedAmounts: String
 )
 
 // Raw Room projection: directly read from SQLite.
-data class IncomeAmountRow(
-    val amount: String,
-    val date: Long
+data class DashboardDayAmountGroupRow(
+    val date: Long,
+    val concatenatedAmounts: String
+)
+
+// Raw Room projection: directly read from SQLite.
+data class DashboardMonthAmountGroupRow(
+    val year: Int,
+    val month: Int,
+    val concatenatedAmounts: String
+)
+
+// Raw Room projection: directly read from SQLite.
+data class DashboardConcatenatedAmountsRow(
+    val concatenatedAmounts: String?
 )
 
 // Computed in Kotlin.

@@ -163,13 +163,19 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         val (startMillis, endMillis) = monthBounds(year, month)
 
         return combine(
-            expenseDao.getDashboardExpenseRowsBetween(startMillis, endMillis),
-            incomeDao.getIncomeAmountRowsBetween(startMillis, endMillis)
-        ) { expenseRows, incomeRows ->
-            val expenseAggregates = expenseRows.toDashboardExpenseAggregates()
-            val incomeAmount = incomeRows.fold(ZERO) { acc, row ->
-                acc + row.amount.toAmountBigInteger()
-            }
+            expenseDao.getExpenseCountBetween(startMillis, endMillis),
+            expenseDao.getDashboardCategoryAmountGroupsBetween(startMillis, endMillis),
+            expenseDao.getDashboardDayAmountGroupsBetween(startMillis, endMillis),
+            expenseDao.getSharedExpenseAmountGroupBetween(startMillis, endMillis),
+            incomeDao.getIncomeAmountGroupBetween(startMillis, endMillis)
+        ) { expenseCount, categoryAmountGroups, dayAmountGroups, sharedAmountGroup, incomeAmountGroup ->
+            val expenseAggregates = buildDashboardExpenseAggregates(
+                expenseCount = expenseCount,
+                categoryAmountGroups = categoryAmountGroups,
+                dayAmountGroups = dayAmountGroups,
+                sharedAmountGroup = sharedAmountGroup
+            )
+            val incomeAmount = incomeAmountGroup.toSummedAmount()
             buildDashboardMonthSummary(
                 expenseSummary = expenseAggregates.summary,
                 incomeAmount = incomeAmount,
@@ -223,25 +229,11 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         fromInclusiveMillis: Long,
         toExclusiveMillis: Long
     ): Flow<List<MonthTotalRow>> {
-        return expenseDao.getDashboardExpenseRowsBetween(
+        return expenseDao.getDashboardExpenseMonthAmountGroupsBetween(
             fromInclusiveMillis = fromInclusiveMillis,
             toExclusiveMillis = toExclusiveMillis
         ).map { rows ->
-            rows
-                .groupBy { row ->
-                    row.date.toMonthKey()
-                }
-                .map { (monthKey, monthRows) ->
-                    MonthTotalRow(
-                        date = monthKey.toStartOfMonthMillis(),
-                        amount = monthRows.fold(ZERO) { acc, row ->
-                            acc + row.amount.toAmountBigInteger()
-                        }
-                    )
-                }
-                .sortedBy { row ->
-                    row.date
-                }
+            rows.toMonthTotals(timeZone = TimeZone.currentSystemDefault())
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
@@ -249,25 +241,11 @@ class ExpenseRepository(private val database: HomeBudgetDatabase) {
         fromInclusiveMillis: Long,
         toExclusiveMillis: Long
     ): Flow<List<MonthTotalRow>> {
-        return incomeDao.getIncomeAmountRowsBetween(
+        return incomeDao.getDashboardIncomeMonthAmountGroupsBetween(
             fromInclusiveMillis = fromInclusiveMillis,
             toExclusiveMillis = toExclusiveMillis
         ).map { rows ->
-            rows
-                .groupBy { row ->
-                    row.date.toMonthKey()
-                }
-                .map { (monthKey, monthRows) ->
-                    MonthTotalRow(
-                        date = monthKey.toStartOfMonthMillis(),
-                        amount = monthRows.fold(ZERO) { acc, row ->
-                            acc + row.amount.toAmountBigInteger()
-                        }
-                    )
-                }
-                .sortedBy { row ->
-                    row.date
-                }
+            rows.toMonthTotals(timeZone = TimeZone.currentSystemDefault())
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
