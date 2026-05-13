@@ -27,7 +27,7 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
-                            Button(appLocalized("Categories")) {
+                            Button(appLocalized("Custom Categories")) {
                                 path.append(Route.categories)
                             }
                             Button(appLocalized("CSV Import / Export")) {
@@ -108,7 +108,7 @@ struct ContentView: View {
                             }
                         }
                         .appGlassHostedScreenChrome()
-                        .navigationTitle(appLocalized("Categories"))
+                        .navigationTitle(appLocalized("Custom Categories"))
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationBarBackButtonHidden()
                         .toolbar {

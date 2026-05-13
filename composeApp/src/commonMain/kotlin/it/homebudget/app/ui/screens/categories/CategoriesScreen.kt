@@ -172,15 +172,6 @@ class CategoriesScreen : Screen {
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item {
-                        Text(
-                            text = customCategoryLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp)
-                        )
-                    }
-
                     items(
                         items = customCategories,
                         key = { it.id }

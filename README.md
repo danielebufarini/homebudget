@@ -1,315 +1,273 @@
 # HomeBudget
 
-HomeBudget is a Kotlin Multiplatform application for personal finance tracking. The codebase targets:
+HomeBudget is a Kotlin Multiplatform personal-finance app with two production targets:
 
-- Android, with a Compose UI entry point in `composeApp`
-- iOS, with a SwiftUI host app in `iosApp` and a shared Kotlin framework embedded as `ComposeApp`
+- Android, driven mainly by shared Compose UI in `composeApp`
+- iOS, delivered as a SwiftUI app in `iosApp` that embeds the shared Kotlin framework as `ComposeApp`
 
-The project is not structured as a generic “shared everything” sample. Most business logic, persistence, localization, and a large part of the UI live in shared Kotlin code, while iOS keeps a native SwiftUI shell and selectively replaces some screens with native SwiftUI when the platform-specific UX is worth the extra surface area.
+Most business logic, persistence, resources, and a large part of the UI live in shared Kotlin. The iOS target keeps its own SwiftUI shell and uses native screens where that leads to a better platform fit.
 
-## Module Layout
+## Project Layout
 
 ### `composeApp`
 
-`composeApp` is the shared Kotlin Multiplatform module. It contains:
+`composeApp` is the shared KMP module.
 
-- `commonMain`
-  - application entry point for shared Compose UI
-  - domain and persistence code
-  - navigation screens built with Voyager
-  - theme, shared UI components, and localization helpers
+- `src/commonMain`
+  - shared application entry point
+  - repository and persistence code
+  - Compose screens and reusable UI
+  - localization helpers and Compose resources
   - Room entities, DAOs, and schema export
-  - Compose Multiplatform string resources under `composeResources`
-- `androidMain`
-  - Android entry points (`MainActivity`, `Application`)
-  - Android-specific DI bootstrap
-  - Android-only integrations such as speech recognition, WorkManager backup scheduling, Google Drive AppData sync, and startup-restore detection
-- `iosMain`
-  - `ComposeUIViewController` factories used by the SwiftUI app
-  - iOS-specific DI bootstrap
-  - iOS bridge objects used by Swift code for grouped expenses, categories, CSV import/export, backup preview/restore, and voice entry
+- `src/androidMain`
+  - Android bootstrap and platform DI
+  - Android-specific date pickers, file launchers, backup integration, and voice-input implementation
+- `src/iosMain`
+  - `ComposeUIViewController` factories used by SwiftUI
+  - iOS platform DI
+  - bridge classes used by Swift code for grouped expenses, native expense editing, CSV import/export, backup, date picking, and voice-entry support
+
+Within `commonMain`, the screen source tree is grouped by responsibility:
+
+- [`ui/screens/dashboard`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/dashboard)
+- [`ui/screens/expenses`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/expenses)
+- [`ui/screens/income`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/income)
+- [`ui/screens/transactions`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/transactions)
+- [`ui/screens/categories`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/categories)
+- [`ui/screens/platform`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/platform)
+- [`ui/screens/common`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/common)
+
+The Kotlin package name is `it.homebudget.app.ui.screens` for most of these files.
 
 ### `iosApp`
 
-`iosApp` is the native iOS application target. It is responsible for:
+`iosApp` is the native iOS application target. Its source tree is also split by role:
 
-- the SwiftUI root navigation stack
-- CSV file import/export UI
-- iCloud background backup scheduling and startup restore confirmation
-- some native list, category-management, and voice-entry flows
-- hosting shared Compose screens inside `UIViewControllerRepresentable`
+- [`App`](./iosApp/iosApp/App): SwiftUI app entry, root navigation, app-level localization helpers
+- [`UI`](./iosApp/iosApp/UI): shared SwiftUI host utilities, glass styling, CSV sheets, Liquid Glass calendar
+- [`Features`](./iosApp/iosApp/Features): feature-specific SwiftUI code
+  - [`Expenses`](./iosApp/iosApp/Features/Expenses)
+  - [`VoiceExpense`](./iosApp/iosApp/Features/VoiceExpense)
+  - [`Categories`](./iosApp/iosApp/Features/Categories)
+- [`Sync`](./iosApp/iosApp/Sync): iCloud backup and widget support
 
-The iOS app is not a thin launcher. It decides when to push a Compose-backed screen and when to stay fully native.
+Build resources such as `Info.plist`, `HomeBudget.entitlements`, `Localizable.xcstrings`, and `Assets.xcassets` stay at the target root.
 
-## Architectural Overview
+## Runtime Architecture
 
-### 1. Dependency Injection
+### Dependency injection
 
-Koin is used as the runtime composition root.
+Koin is the composition root.
 
-- Shared registrations live in [`composeApp/src/commonMain/kotlin/it/homebudget/app/di/Koin.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/di/Koin.kt)
-- Platform-specific registrations live in:
-  - [`androidMain/.../di/Koin.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/di/Koin.android.kt)
-  - [`iosMain/.../di/Koin.ios.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/di/Koin.ios.kt)
+- Shared registrations: [`composeApp/src/commonMain/kotlin/it/homebudget/app/di/Koin.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/di/Koin.kt)
+- Android registrations: [`composeApp/src/androidMain/kotlin/it/homebudget/app/di/Koin.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/di/Koin.android.kt)
+- iOS registrations: [`composeApp/src/iosMain/kotlin/it/homebudget/app/di/Koin.ios.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/di/Koin.ios.kt)
 
-The shared module registers:
+The shared graph centers on:
 
 - `DatabaseBuilderFactory`
 - `HomeBudgetDatabase`
 - `ExpenseRepository`
 
-The rest of the application resolves dependencies directly from Koin inside screens and bridge controllers. There is no separate service layer.
+Screens and bridge objects resolve these dependencies directly from Koin.
 
-### 2. Persistence
+### Persistence
 
-Persistence is built on Room KMP with SQLite.
+Persistence uses Room KMP on top of SQLite.
 
-- Shared database definition: [`HomeBudgetDatabase.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database/HomeBudgetDatabase.kt)
-- Shared entities and DAOs: [`composeApp/src/commonMain/kotlin/it/homebudget/app/database`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
-- Platform-specific builders:
-  - shared expect declaration in [`DatabaseBuilderFactory.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.kt)
-  - Android actual in [`DatabaseBuilderFactory.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.android.kt)
-  - iOS actual in [`DatabaseBuilderFactory.ios.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.ios.kt)
-- Exported Room schemas: [`composeApp/schemas`](./composeApp/schemas)
+- Database definition: [`HomeBudgetDatabase.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database/HomeBudgetDatabase.kt)
+- Entities and DAOs: [`composeApp/src/commonMain/kotlin/it/homebudget/app/database`](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
+- Database builders:
+  - expect: [`DatabaseBuilderFactory.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.kt)
+  - Android actual: [`DatabaseBuilderFactory.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.android.kt)
+  - iOS actual: [`DatabaseBuilderFactory.ios.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.ios.kt)
+- Room schemas: [`composeApp/schemas`](./composeApp/schemas)
 
-The Room database file is `homebudget-room.db` on both platforms.
+The main application boundary is [`ExpenseRepository.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt). It handles:
 
-The repository is intentionally simple. [`ExpenseRepository.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt) owns:
+- expenses, incomes, and categories
+- recurring-series update and delete rules
+- default-category seeding
+- query flows used directly by screens and iOS bridges
 
-- CRUD for expenses, incomes, and categories
-- recurring-series update/delete operations
-- database seeding for default categories
-- read models exposed as `Flow<List<...>>`
+### Shared Compose application
 
-The repository is the main application boundary. Screens and bridge objects talk to it directly rather than through view models.
+The shared entry point is [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt). It applies the shared theme and starts a Voyager navigator.
 
-### 3. UI Composition
+The dashboard is already broken into smaller files under [`ui/screens/dashboard`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/dashboard), including:
 
-There are three distinct UI layers in this codebase.
+- route and state wiring
+- scaffold and top-level actions
+- summary cards
+- category breakdown
+- cash-flow chart and chart models
 
-#### Shared Compose screens
+Most Android UI and part of the iOS UI use these shared screens directly.
 
-Most screens are implemented in shared Kotlin under `commonMain/ui/screens`, for example:
+## Android UI
 
-- dashboard
-- add/edit expense
-- add/edit income
-- grouped monthly/shared/category expense screens
+Android uses the shared Compose screens as its main UI surface.
 
-The shared application entry point is [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt). It wraps the app in the shared theme and starts a Voyager `Navigator` with `DashboardScreen`.
+Platform-specific additions still exist where they need Android APIs:
 
-The shared dashboard includes:
+- native Material date picker in [`PlatformDatePicker.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/PlatformDatePicker.android.kt)
+- file import/export launchers in `CsvImportLauncher.android.kt` and `CsvExportLauncher.android.kt`
+- backup and Drive-specific drawer UI in [`PlatformCloudBackupDrawerSection.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/PlatformCloudBackupDrawerSection.android.kt)
+- voice input implementation in the `AndroidVoiceExpense*.android.kt` files under [`androidMain/ui/screens`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens)
+- a native RecyclerView host for the categories list through [`AndroidRecyclerViewHosts.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/AndroidRecyclerViewHosts.android.kt)
 
-- the monthly summary cards
-- the `Cash Flow` chart
-- a tap-to-inspect chart popup that appears next to a tapped month marker and shows expenses, income, and the monthly difference; tapping elsewhere dismisses it
+Navigation inside the shared Android UI is handled by Voyager.
 
-#### Android-specific UI integrations
+## iOS UI
 
-Android uses the shared Compose screens as the primary UI, but a few paths remain platform-specific:
+The iOS app uses SwiftUI for the top-level shell and mixes hosted Compose screens with native SwiftUI screens.
 
-- speech recognition and Gemini-related voice input
-- cloud-backup scheduling and restore confirmation before the shared navigator starts
-- a native RecyclerView host for the categories screen
+- Root navigation lives in [`iosApp/iosApp/App/ContentView.swift`](./iosApp/iosApp/App/ContentView.swift)
+- Shared Kotlin screens are exposed through [`MainViewController.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
+- Shared screens are hosted in SwiftUI through [`HostingSupport.swift`](./iosApp/iosApp/UI/HostingSupport.swift)
 
-Those Android-only pieces live under `androidMain/ui/screens`.
+At the moment, the split looks like this:
 
-#### iOS mixed SwiftUI + Compose UI
+- Shared Compose on iOS:
+  - dashboard content
+  - add transaction
+  - add income
+  - categories management
+  - several shared expense/income screens still hosted through SwiftUI wrappers
+- Native SwiftUI on iOS:
+  - grouped monthly/day/shared/category expense lists
+  - the expense edit/detail route
+  - voice expense flow
+  - CSV import/export sheets
+  - Liquid Glass date-picker UI
 
-iOS uses a mixed architecture:
+The expense edit/detail route is now a native SwiftUI screen backed by Kotlin bridge logic:
 
-- SwiftUI owns the top-level navigation stack in [`ContentView.swift`](./iosApp/iosApp/ContentView.swift)
-- shared Compose screens are exposed through `ComposeUIViewController` factories in [`MainViewController.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
-- some flows remain native SwiftUI, notably grouped expense/income lists, categories, and voice entry
+- SwiftUI screen pieces: [`iosApp/iosApp/Features/Expenses`](./iosApp/iosApp/Features/Expenses)
+- Kotlin bridge: [`IosExpenseNativeEditorBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosExpenseNativeEditorBridge.kt)
 
-The grouped expense lists on iOS now cover:
+The categories route currently goes the other direction: SwiftUI owns navigation to that route, but the screen itself is the shared Compose `CategoriesScreen` hosted from [`CategoriesRootView`](./iosApp/iosApp/Features/Expenses/ComposeHostedScreens.swift).
 
-- monthly expenses
-- shared expenses
-- category-filtered monthly expenses
-- the dashboard `Highest Day` route, which reuses the same native list and is locked to category grouping for that single-day view
+That route is now presented to users as `Custom Categories` and only manages user-defined categories. Default categories remain part of the expense picker, but they are not edited or deleted from the management screen.
 
-The categories route is the clearest example of the "native interface, shared logic" approach:
+## Navigation
 
-- SwiftUI screen: [`CategoriesScreen.swift`](./iosApp/iosApp/CategoriesScreen.swift)
-- Kotlin bridge: [`IosCategoriesBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosCategoriesBridge.kt)
+Navigation is platform-specific.
 
-The iOS UI is native, but data loading, default-category seeding, insert/update/delete operations, and built-in category name resolution still live in shared Kotlin.
+### Android and shared Compose
 
-This split is deliberate. Shared Kotlin owns the business rules and most screen logic; SwiftUI is used where native navigation or native platform APIs are more practical.
+Voyager drives navigation inside the shared Compose app. Screens push and pop other screens through the Voyager navigator.
 
-### 4. Navigation
+### iOS
 
-Navigation is platform-dependent.
+SwiftUI owns the top-level `NavigationStack` with a local `Route` enum in [`ContentView.swift`](./iosApp/iosApp/App/ContentView.swift).
 
-#### Android / shared Compose navigation
+When the target route is implemented in shared Kotlin, SwiftUI creates a host view around the appropriate `ComposeUIViewController`.
 
-Voyager is used inside the shared Compose app. Shared screens push and pop other shared screens through the Voyager navigator.
+When the target route is native, SwiftUI talks to a Kotlin bridge or controller object for data loading and mutations.
 
-#### iOS navigation
+## Localization
 
-SwiftUI owns navigation through a `NavigationStack` and a local `Route` enum in [`ContentView.swift`](./iosApp/iosApp/ContentView.swift).
+Shared Kotlin strings use Compose Multiplatform resources:
 
-When a route needs a shared screen, SwiftUI creates a host view that wraps the corresponding `ComposeUIViewController`.
+- [`composeApp/src/commonMain/composeResources/values/strings.xml`](./composeApp/src/commonMain/composeResources/values/strings.xml)
+- [`composeApp/src/commonMain/composeResources/values-it/strings.xml`](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
 
-When a route has been promoted to native iOS UI, SwiftUI talks to a small Kotlin bridge instead of hosting a Compose controller. The categories screen currently uses this pattern.
+Native iOS strings live in:
 
-The `Highest Day` dashboard card also follows the native-route pattern on iOS: SwiftUI pushes a native grouped-expenses screen for the selected day instead of a Compose day-details screen.
+- [`iosApp/iosApp/Localizable.xcstrings`](./iosApp/iosApp/Localizable.xcstrings)
 
-### 5. Localization
+On the Kotlin side, strings are resolved with `stringResource(...)` plus helper functions from [`AppLocalization.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/localization/AppLocalization.kt).
 
-Localization is resource-based, not object-based.
+Currency is localized through resources:
 
-- Shared Kotlin strings use Compose Multiplatform resources:
-  - `composeApp/src/commonMain/composeResources/values/strings.xml`
-  - `composeApp/src/commonMain/composeResources/values-it/strings.xml`
-- iOS native strings use:
-  - [`iosApp/iosApp/Localizable.xcstrings`](./iosApp/iosApp/Localizable.xcstrings)
+- English: `$`
+- Italian: `€`
 
-The shared Kotlin side resolves strings through `stringResource(...)` and narrow helper functions in [`AppLocalization.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/localization/AppLocalization.kt).
+## Data flow and iOS bridges
 
-Currency handling is also localized:
-
-- English uses `$`
-- Italian uses `€`
-
-### 6. Data and Presentation Flow
-
-The common pattern across the app is:
+The usual shared flow is:
 
 1. resolve `ExpenseRepository` from Koin
-2. subscribe to `Flow` from Room DAO queries
-3. transform database rows into UI-specific grouped or formatted structures
-4. render directly from those structures
+2. subscribe to `Flow` from Room queries
+3. map rows into screen-specific presentation models
+4. render from those models
 
-There is no Redux-style state container and no layered MVVM hierarchy. State is local to the screen unless it has to cross the Kotlin/Swift boundary.
-
-Where data needs to cross into SwiftUI, Kotlin-side bridge classes expose stable snapshots rather than raw database flows. The grouped expenses path is the clearest example:
-
-- Kotlin bridge: [`IosGroupedExpensesBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosGroupedExpensesBridge.kt)
-- SwiftUI consumer: [`MonthlyExpensesSectionsScreen.swift`](./iosApp/iosApp/MonthlyExpensesSectionsScreen.swift)
-
-That same bridge now supports day-of-month filtering so the iOS `Highest Day` destination can reuse the native monthly expenses list implementation.
-
-The categories path uses the same pattern:
-
-- Kotlin bridge: [`IosCategoriesBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosCategoriesBridge.kt)
-- SwiftUI consumer: [`CategoriesScreen.swift`](./iosApp/iosApp/CategoriesScreen.swift)
-
-### 7. Platform Bridges
-
-The iOS target contains several bridge layers that convert shared Kotlin behavior into Swift-friendly APIs.
+The iOS side adds bridge objects where SwiftUI needs a stable snapshot or callback-oriented API instead of raw Kotlin flows.
 
 Examples:
 
-- grouped expenses snapshots
-- categories snapshots and mutations
-- CSV import/export controllers
-- backup preview/restore controllers
-- voice-entry persistence and lookup support
-- deletion flows for expenses/incomes
+- grouped expenses: [`IosGroupedExpensesBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosGroupedExpensesBridge.kt)
+- categories: [`IosCategoriesBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosCategoriesBridge.kt)
+- native expense editor: [`IosExpenseNativeEditorBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosExpenseNativeEditorBridge.kt)
+- CSV import/export: [`IosCsvImportBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosCsvImportBridge.kt), [`IosCsvExportBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosCsvExportBridge.kt)
+- backup restore/export: [`IosBackupRestoreBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosBackupRestoreBridge.kt), [`IosBackupExportBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosBackupExportBridge.kt)
+- date picking: [`IosNativeDatePickerBridge.kt`](./composeApp/src/iosMain/kotlin/it/homebudget/app/ui/screens/IosNativeDatePickerBridge.kt)
+- voice expense persistence/support: `IosVoiceExpense*.kt`
 
-These classes sit in `composeApp/src/iosMain/kotlin/.../ui/screens` and exist specifically to keep Swift code away from low-level Room or repository details.
+## Backup and data transfer
 
-### 8. Data Transfer and Backup
+### Full cloud backup
 
-The app currently exposes one explicit data-transfer path in the UI:
+Full backup is JSON-based and separate from CSV export.
 
-- `CSV Import / Export`
+Shared backup logic:
 
-Full cloud backup is no longer a manual backup action. It runs silently in the background once enabled, and restore is gated by a startup confirmation dialog when a backup is found.
+- format and file naming: [`BudgetBackup.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
+- orchestration: [`CloudSyncService.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CloudSyncService.kt)
 
-#### Full Cloud Backup
+Android:
 
-Full cloud backup is complete-database transfer, not a CSV export. The shared flow is:
+- canonical file: `files/Data/homebudget-backup.json`
+- store implementation: [`AndroidCloudBackupStore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/AndroidCloudBackupStore.android.kt)
+- WorkManager scheduling and Drive sync support live in `androidMain/data`
+- startup restore detection lives in [`AndroidStartupRestore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/AndroidStartupRestore.android.kt)
 
-1. build a canonical JSON snapshot from shared Kotlin
-2. write it atomically to platform storage
-3. let the platform cloud mechanism sync that file
-4. on first launch after reinstall or device migration, detect the file and ask the user before restoring
+iOS:
 
-The shared pieces are:
+- canonical file: `Data/homebudget-backup.json` inside the app ubiquity container
+- store implementation: [`ICloudBackupStore.swift`](./iosApp/iosApp/Sync/ICloudBackupStore.swift)
+- background scheduling: [`CloudBackupBackgroundTasks.swift`](./iosApp/iosApp/Sync/CloudBackupBackgroundTasks.swift)
+- startup restore confirmation: [`iOSApp.swift`](./iosApp/iosApp/App/iOSApp.swift)
 
-- backup format and file name in [`BudgetBackup.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
-- orchestration in [`CloudSyncService.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CloudSyncService.kt)
+On both platforms, restore requires explicit user confirmation when a backup is found and the local database is still empty.
 
-Android implementation:
+### CSV import/export
 
-- the canonical backup file is stored under `files/Data/homebudget-backup.json`
-- writes are atomic in [`AndroidCloudBackupStore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/AndroidCloudBackupStore.android.kt)
-- periodic and bootstrap sync are scheduled through WorkManager in [`CloudBackupWorkScheduler.kt`](./androidApp/src/main/kotlin/it/homebudget/app/CloudBackupWorkScheduler.kt) and [`CloudBackupWorker.kt`](./androidApp/src/main/kotlin/it/homebudget/app/CloudBackupWorker.kt)
-- Android Auto Backup includes only the JSON backup artifact and excludes redundant SQLite journals:
-  - [`androidApp/src/main/AndroidManifest.xml`](./androidApp/src/main/AndroidManifest.xml)
-  - [`androidApp/src/main/res/xml/data_extraction_rules.xml`](./androidApp/src/main/res/xml/data_extraction_rules.xml)
-  - [`androidApp/src/main/res/xml/backup_rules.xml`](./androidApp/src/main/res/xml/backup_rules.xml)
-- Google Drive AppData mirroring is handled by:
-  - [`GoogleDriveAuthorizationManager.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAuthorizationManager.android.kt)
-  - [`GoogleDriveAppDataStore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAppDataStore.android.kt)
-- the app checks authorization silently in the background and only syncs to Drive when an access token is already available
-- if Drive has not been authorized yet, Android exposes a `Full Cloud Backup` toggle directly in the navigation drawer, with the backup description and note rendered underneath in small text; toggling it on starts the explicit Google consent flow on demand:
-  - shared drawer hook in [`AndroidNavigationRail.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/AndroidNavigationRail.kt)
-  - Android drawer section in [`PlatformCloudBackupDrawerSection.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/PlatformCloudBackupDrawerSection.android.kt)
-- the optional Credential Manager returning-user path is enabled only when `google_web_client_id` is configured in [`composeApp/src/androidMain/res/values/google_identity.xml`](./composeApp/src/androidMain/res/values/google_identity.xml)
-- startup restore detection lives in [`AndroidStartupRestore.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/AndroidStartupRestore.android.kt) and the confirmation dialog is rendered by the shared Compose entry point in [`App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
+CSV import/export is meant for selected data transfer, not full restore.
 
-iOS implementation:
-
-- the canonical backup file is stored in the app's iCloud ubiquity container at `Data/homebudget-backup.json`
-- file IO is handled in [`ICloudBackupStore.swift`](./iosApp/iosApp/ICloudBackupStore.swift)
-- background backup scheduling uses BGTaskScheduler in [`CloudBackupBackgroundTasks.swift`](./iosApp/iosApp/CloudBackupBackgroundTasks.swift)
-- startup restore confirmation is handled in [`iOSApp.swift`](./iosApp/iosApp/iOSApp.swift)
-
-On both platforms, restore is no longer automatic. If the local database is still empty and a cloud backup file is present, the app asks the user for permission before importing it.
-
-Android caveats:
-
-- local JSON backup plus Android Auto Backup work without any Google OAuth setup
-- custom Drive AppData sync requires Google OAuth client configuration for the app's package name and SHA-1
-- the current repository does not implement true Android 16 Restore Credentials account-link restore, because that flow needs an app-account/backend integration in addition to Google client setup
-
-#### CSV Import / Export
-
-CSV import/export is file-based transfer for selected data ranges. It remains separate from full cloud backup.
-
-CSV imports are capped at 5 MiB per file. Larger files are rejected before parsing to avoid excessive memory usage and to keep import behavior predictable on mobile devices.
-
-- shared CSV import/export logic:
+- shared import/export logic:
   - [`CsvBudgetImport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetImport.kt)
   - [`CsvBudgetExport.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CsvBudgetExport.kt)
-- Android launchers and transfer UI:
+- Android file launchers:
   - [`CsvImportLauncher.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/CsvImportLauncher.android.kt)
   - [`CsvExportLauncher.android.kt`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens/CsvExportLauncher.android.kt)
-  - [`AndroidDataTransferUi.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/AndroidDataTransferUi.kt)
-- iOS shell flow:
-  - [`ContentView.swift`](./iosApp/iosApp/ContentView.swift)
+- iOS sheet flow:
+  - [`CsvSheets.swift`](./iosApp/iosApp/UI/CsvSheets.swift)
+  - [`ContentView.swift`](./iosApp/iosApp/App/ContentView.swift)
 
-### 9. Voice Input
+CSV imports are capped at 5 MiB before parsing.
 
-Voice input is platform-specific by design.
+## Voice input
 
-#### Android
+Voice input is platform-specific.
 
-Android voice input is split into focused files under `androidMain/ui/screens`:
+### Android
+
+Android voice entry is implemented under [`composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens`](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens) in focused files for:
 
 - models
-- speech session handling
+- speech capture
 - parsing
 - persistence
-- presentation/status formatting
-- orchestration workflows
+- status/presentation formatting
+- workflow orchestration
 
-This path uses Android speech recognition and can fall back to a local parser when Gemini is unavailable.
+### iOS
 
-#### iOS
+iOS voice entry is mostly native SwiftUI and Swift-side logic under [`iosApp/iosApp/Features/VoiceExpense`](./iosApp/iosApp/Features/VoiceExpense), with Kotlin bridge support in `iosMain/ui/screens`.
 
-iOS voice input is split between:
-
-- Swift speech capture and parsing support in `iosApp`
-- Kotlin bridge/persistence helpers in `iosMain`
-
-The iOS implementation is intentionally more native because the recording and UX flow are SwiftUI-driven.
-
-## Important Source Directories
+## Important directories
 
 - Shared app entry: [`composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt`](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
 - Shared DI: [`composeApp/src/commonMain/kotlin/it/homebudget/app/di`](./composeApp/src/commonMain/kotlin/it/homebudget/app/di)
@@ -318,18 +276,19 @@ The iOS implementation is intentionally more native because the recording and UX
 - Shared screens: [`composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens`](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens)
 - Shared resources: [`composeApp/src/commonMain/composeResources`](./composeApp/src/commonMain/composeResources)
 - Android-specific code: [`composeApp/src/androidMain/kotlin`](./composeApp/src/androidMain/kotlin)
-- iOS Kotlin bridges: [`composeApp/src/iosMain/kotlin`](./composeApp/src/iosMain/kotlin)
-- iOS SwiftUI app: [`iosApp/iosApp`](./iosApp/iosApp)
-- Native iOS categories screen: [`iosApp/iosApp/CategoriesScreen.swift`](./iosApp/iosApp/CategoriesScreen.swift)
+- iOS Kotlin code and bridges: [`composeApp/src/iosMain/kotlin`](./composeApp/src/iosMain/kotlin)
+- Native iOS app: [`iosApp/iosApp`](./iosApp/iosApp)
 
-## Build and Run
+## Build and run
 
-The current toolchain baseline in the repository is:
+Current toolchain baseline:
 
 - AGP `9.2.1`
 - Kotlin `2.3.21`
-- Android compile/target SDK `36`
-- JDK `21` pinned in [`gradle/gradle-daemon-jvm.properties`](./gradle/gradle-daemon-jvm.properties)
+- Android compile SDK `37`
+- Android target SDK `37`
+- Android min SDK `26`
+- JDK `21` in [`gradle/gradle-daemon-jvm.properties`](./gradle/gradle-daemon-jvm.properties)
 
 ### Android
 
@@ -339,13 +298,13 @@ Build the debug APK:
 ./gradlew :androidApp:assembleDebug
 ```
 
-Google Drive AppData sync also needs Android-specific Google OAuth configuration:
+Google Drive AppData sync also needs Android OAuth setup:
 
-1. Create an Android OAuth client for the app package and signing SHA-1 used by the build you install.
+1. Create an Android OAuth client for the package name and signing SHA-1 you use.
 2. If you want Credential Manager returning-user sign-in, also create a Web OAuth client.
-3. Put that Web client ID into [`composeApp/src/androidMain/res/values/google_identity.xml`](./composeApp/src/androidMain/res/values/google_identity.xml).
+3. Put the Web client ID into [`composeApp/src/androidMain/res/values/google_identity.xml`](./composeApp/src/androidMain/res/values/google_identity.xml).
 
-Without that setup, the app still keeps the canonical JSON backup locally and through Android Auto Backup, but the custom Drive consent toggle cannot complete end-to-end.
+Without that setup, local JSON backup and Android Auto Backup still work, but the custom Drive sync path cannot complete end to end.
 
 ### iOS
 
@@ -357,7 +316,7 @@ xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug 
 
 ## Notes
 
-- The app is backed by SQLite on both platforms through Room KMP.
-- The iOS target always rebuilds the Kotlin framework during Xcode builds.
-- Default categories are seeded at runtime if the category table is empty.
-- The codebase is intentionally pragmatic: shared where it reduces real cost, native where platform APIs, visual language, or host navigation make that simpler.
+- SQLite is the storage engine on both platforms through Room KMP.
+- Xcode builds always rebuild the Kotlin framework through the `ComposeApp` integration step.
+- Default categories are seeded at runtime when the category table is empty.
+- The source tree is organized more aggressively by feature now than it was originally, especially in `commonMain/ui/screens` and `iosApp/iosApp`, but the runtime model is still straightforward: shared data and rules, shared UI where practical, native UI where the platform-specific experience is worth it.

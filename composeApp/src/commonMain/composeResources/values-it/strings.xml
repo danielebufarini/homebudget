@@ -28,7 +28,7 @@
     <string name="calendar">Calendario</string>
     <string name="cancel">Annulla</string>
     <string name="cash_flow">Flusso di cassa</string>
-    <string name="categories">Categorie</string>
+    <string name="categories">Categorie personalizzate</string>
     <string name="category">Categoria</string>
     <string name="category_name">Nome categoria</string>
     <string name="cloud_backup_drive_toggle">Sincronizzazione Google Drive</string>

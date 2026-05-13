@@ -330,19 +330,19 @@
         }
       }
     },
-    "Categories" : {
+    "Custom Categories" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Categories"
+            "value" : "Custom Categories"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Categorie"
+            "value" : "Categorie personalizzate"
           }
         }
       }
