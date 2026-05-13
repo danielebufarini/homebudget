@@ -21,9 +21,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -145,6 +147,7 @@ class AddExpenseScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val useIosHostedFloatingChrome = isIos && (expenseId != null || readOnly)
+        val useAndroidFixedActionChrome = !isIos && (expenseId != null || readOnly)
         val platformDatePicker = rememberPlatformDatePicker()
         val platformOptionPicker = rememberPlatformOptionPicker()
         val scope = rememberCoroutineScope()
@@ -442,17 +445,52 @@ class AddExpenseScreen(
                                     Text(backLabel)
                                 }
                             }
+                        },
+                        actions = {
+                            if (useAndroidFixedActionChrome && !readOnly && expenseId != null) {
+                                IconButton(
+                                    onClick = ::requestDeleteExpense,
+                                    enabled = !isSaving
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = deleteExpenseLabel
+                                    )
+                                }
+                            }
                         }
                     )
                 }
             },
-            floatingActionButton = {
-                if (!isIos && !readOnly && expenseId != null) {
-                    DeleteEditItemFab(
-                        label = deleteExpenseLabel,
-                        enabled = !isSaving,
-                        onClick = ::requestDeleteExpense
-                    )
+            bottomBar = {
+                if (useAndroidFixedActionChrome && isInitialized) {
+                    if (readOnly) {
+                        SoftSecondaryButton(
+                            text = closeLabel,
+                            onClick = onClose,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .navigationBarsPadding()
+                        )
+                    } else {
+                        SoftActionBar(
+                            cancelLabel = cancelLabel,
+                            confirmLabel = if (isSaving) {
+                                savingLabel
+                            } else if (expenseId == null) {
+                                saveExpenseLabel
+                            } else {
+                                updateExpenseLabel
+                            },
+                            confirmEnabled = !isSaving,
+                            onCancel = onClose,
+                            onConfirm = ::requestSaveExpense,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .navigationBarsPadding()
+                        )
+                    }
                 }
             }
         ) { padding ->
@@ -461,7 +499,6 @@ class AddExpenseScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(16.dp)
-                    .padding(bottom = if (!isIos && !readOnly && expenseId != null) 88.dp else 0.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
@@ -569,13 +606,13 @@ class AddExpenseScreen(
                         )
                     }
 
-                    if (readOnly && !useIosHostedFloatingChrome) {
+                    if (readOnly && !useIosHostedFloatingChrome && !useAndroidFixedActionChrome) {
                         SoftSecondaryButton(
                             text = closeLabel,
                             onClick = onClose,
                             modifier = Modifier.fillMaxWidth()
                         )
-                    } else if (!readOnly && !useIosHostedFloatingChrome) {
+                    } else if (!readOnly && !useIosHostedFloatingChrome && !useAndroidFixedActionChrome) {
                         SoftActionBar(
                             cancelLabel = cancelLabel,
                             confirmLabel = if (isSaving) savingLabel else if (expenseId == null) saveExpenseLabel else updateExpenseLabel,
