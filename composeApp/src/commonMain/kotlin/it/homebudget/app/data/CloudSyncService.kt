@@ -1,22 +1,21 @@
 package it.homebudget.app.data
 
 class CloudSyncService(
-    private val repository: ExpenseRepository
+    private val backupRestoreService: BackupRestoreService
 ) {
     suspend fun isRestoreTargetEmpty(): Boolean {
-        return repository.getAllExpensesSnapshot().isEmpty() &&
-            repository.getAllIncomesSnapshot().isEmpty()
+        return backupRestoreService.isRestoreTargetEmpty()
     }
 
     suspend fun buildBackupFile(): BudgetBackupFile {
-        return exportBudgetBackup(repository)
+        return backupRestoreService.buildBackupFile()
     }
 
     suspend fun previewRestore(jsonText: String): BudgetBackupCounters {
-        return parseBudgetBackup(jsonText)
+        return backupRestoreService.previewRestore(jsonText)
     }
 
     suspend fun restoreFromBackup(jsonText: String): BudgetBackupCounters {
-        return restoreBudgetBackup(repository, jsonText)
+        return backupRestoreService.restoreFromBackup(jsonText)
     }
 }
