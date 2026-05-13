@@ -8,7 +8,8 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 @Entity(
     tableName = "income",
     indices = [
-        Index(value = ["date"])
+        Index(value = ["date"]),
+        Index(value = ["recurringSeriesId", "date"])
     ]
 )
 data class Income(

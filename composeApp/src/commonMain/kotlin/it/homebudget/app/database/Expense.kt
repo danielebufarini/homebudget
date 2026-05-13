@@ -11,7 +11,8 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
     tableName = "expense",
     indices = [
         Index(value = ["categoryId"]),
-        Index(value = ["date"])
+        Index(value = ["date"]),
+        Index(value = ["recurringSeriesId", "date"])
     ],
     foreignKeys = [
         ForeignKey(

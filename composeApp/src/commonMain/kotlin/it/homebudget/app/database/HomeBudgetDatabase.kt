@@ -1,6 +1,10 @@
 package it.homebudget.app.database
 
-import androidx.room.*
+import androidx.room.ConstructedBy
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
+import androidx.room.TypeConverters
 
 @Database(
     entities = [
@@ -8,7 +12,7 @@ import androidx.room.*
         Expense::class,
         Income::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(BigIntegerTypeConverters::class)

@@ -5,6 +5,7 @@ package it.homebudget.app.data
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import it.homebudget.app.database.HomeBudgetDatabase
+import it.homebudget.app.database.addHomeBudgetMigrations
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -14,7 +15,7 @@ actual class DatabaseBuilderFactory {
     actual fun createBuilder(): RoomDatabase.Builder<HomeBudgetDatabase> {
         return Room.databaseBuilder<HomeBudgetDatabase>(
             name = databasePath()
-        )
+        ).addHomeBudgetMigrations()
     }
 
     private fun documentDirectory(): String {
