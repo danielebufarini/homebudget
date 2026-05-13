@@ -1,8 +1,7 @@
 package it.homebudget.app.ui.screens
 
-import com.ionspin.kotlin.bignum.integer.BigInteger
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
-import it.homebudget.app.data.sumBigIntegerOf
+import it.homebudget.app.data.addAmountsExact
+import it.homebudget.app.data.sumAmountOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -17,26 +16,26 @@ internal data class ExpenseSection(
     val key: String,
     val title: String,
     val expenses: List<Expense>,
-    val totalAmount: BigInteger
+    val totalAmount: Long
 )
 
 internal data class GroupedExpensesState(
     val visibleExpenses: List<Expense>,
     val sections: List<ExpenseSection>,
-    val totalAmount: BigInteger
+    val totalAmount: Long
 )
 
 internal data class IncomeSection(
     val key: String,
     val date: LocalDate,
     val incomes: List<Income>,
-    val totalAmount: BigInteger
+    val totalAmount: Long
 )
 
 internal data class GroupedIncomesState(
     val visibleIncomes: List<Income>,
     val sections: List<IncomeSection>,
-    val totalAmount: BigInteger
+    val totalAmount: Long
 )
 
 private data class ResolvedExpense(
@@ -47,13 +46,13 @@ private data class ResolvedExpense(
 internal fun emptyGroupedExpensesState() = GroupedExpensesState(
     visibleExpenses = emptyList(),
     sections = emptyList(),
-    totalAmount = ZERO
+    totalAmount = 0L
 )
 
 internal fun emptyGroupedIncomesState() = GroupedIncomesState(
     visibleIncomes = emptyList(),
     sections = emptyList(),
-    totalAmount = ZERO
+    totalAmount = 0L
 )
 
 internal fun buildGroupedExpensesState(
@@ -67,7 +66,7 @@ internal fun buildGroupedExpensesState(
     shortMonthNames: List<String>
 ): GroupedExpensesState {
     val visibleExpenses = ArrayList<ResolvedExpense>(expenses.size)
-    var totalAmount = ZERO
+    var totalAmount = 0L
 
     expenses.forEach { expense ->
         val categoryLabel = categoriesById[expense.categoryId]
@@ -81,7 +80,7 @@ internal fun buildGroupedExpensesState(
             expense = expense,
             categoryLabel = categoryLabel
         )
-        totalAmount += expense.amount
+        totalAmount = addAmountsExact(totalAmount, expense.amount)
     }
 
     val expenseComparator =
@@ -103,7 +102,7 @@ internal fun buildGroupedExpensesState(
                         key = "category:$categoryLabel",
                         title = categoryLabel,
                         expenses = sortedExpenses,
-                        totalAmount = sortedExpenses.sumBigIntegerOf(Expense::amount)
+                        totalAmount = sortedExpenses.sumAmountOf(Expense::amount)
                     )
                 }
         }
@@ -120,7 +119,7 @@ internal fun buildGroupedExpensesState(
                         key = "date:$groupDate",
                         title = formatExpenseDateGroupTitle(groupDate, shortMonthNames),
                         expenses = sortedExpenses,
-                        totalAmount = sortedExpenses.sumBigIntegerOf(Expense::amount)
+                        totalAmount = sortedExpenses.sumAmountOf(Expense::amount)
                     )
                 }
         }
@@ -134,11 +133,11 @@ internal fun buildGroupedExpensesState(
 }
 
 internal fun buildGroupedIncomesState(incomes: List<Income>): GroupedIncomesState {
-    var totalAmount = ZERO
+    var totalAmount = 0L
     val groupedIncomes = linkedMapOf<LocalDate, MutableList<Income>>()
 
     incomes.forEach { income ->
-        totalAmount += income.amount
+        totalAmount = addAmountsExact(totalAmount, income.amount)
         groupedIncomes
             .getOrPut(epochMillisToLocalDate(income.date)) { mutableListOf() }
             .add(income)
@@ -149,7 +148,7 @@ internal fun buildGroupedIncomesState(incomes: List<Income>): GroupedIncomesStat
             key = groupDate.toString(),
             date = groupDate,
             incomes = items,
-            totalAmount = items.sumBigIntegerOf(Income::amount)
+            totalAmount = items.sumAmountOf(Income::amount)
         )
     }
 

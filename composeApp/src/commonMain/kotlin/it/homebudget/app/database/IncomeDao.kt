@@ -12,7 +12,7 @@ interface IncomeDao {
 
     @Query(
         """
-        SELECT GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+        SELECT COALESCE(SUM(amount), 0) AS totalAmount
         FROM income
         WHERE date >= :fromInclusiveMillis
           AND date < :toExclusiveMillis
@@ -21,14 +21,14 @@ interface IncomeDao {
     fun getIncomeAmountGroupBetween(
         fromInclusiveMillis: Long,
         toExclusiveMillis: Long
-    ): Flow<DashboardConcatenatedAmountsRow>
+    ): Flow<DashboardTotalAmountRow>
 
     @Query(
         """
         SELECT
             CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
             CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month,
-            GROUP_CONCAT(amount, '|') AS concatenatedAmounts
+            SUM(amount) AS totalAmount
         FROM income
         WHERE date >= :fromInclusiveMillis
           AND date < :toExclusiveMillis

@@ -1,6 +1,4 @@
 package it.homebudget.app.data
-
-import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -124,7 +122,8 @@ suspend fun restoreBudgetBackup(
         expenses = snapshot.expenses.map { expense ->
             PendingExpense(
                 id = expense.id,
-                amount = expense.amount.toBigInteger(),
+                amount = parseSerializedAmount(expense.amount)
+                    ?: error("Backup expense ${expense.id} amount is out of Long range."),
                 date = expense.date,
                 categoryId = expense.categoryId,
                 description = expense.description,
@@ -135,7 +134,8 @@ suspend fun restoreBudgetBackup(
         incomes = snapshot.incomes.map { income ->
             PendingIncome(
                 id = income.id,
-                amount = income.amount.toBigInteger(),
+                amount = parseSerializedAmount(income.amount)
+                    ?: error("Backup income ${income.id} amount is out of Long range."),
                 date = income.date,
                 description = income.description,
                 recurringSeriesId = income.recurringSeriesId

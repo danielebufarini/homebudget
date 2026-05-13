@@ -17,8 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.addAmountsExact
 import it.homebudget.app.ui.screens.EnsureDefaultCategoriesInserted
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
 import kotlinx.coroutines.Dispatchers
@@ -87,8 +87,8 @@ fun DashboardRoute(
     val chartState by chartStateFlow.collectAsState(initial = emptyLineChartState(selectedMonth))
 
     val sixMonthSavingsAmount = remember(chartState.monthSnapshots) {
-        chartState.monthSnapshots.fold(ZERO) { total, month ->
-            total + month.differenceAmount
+        chartState.monthSnapshots.fold(0L) { total, month ->
+            addAmountsExact(total, month.differenceAmount)
         }
     }
 

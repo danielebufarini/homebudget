@@ -1,12 +1,13 @@
 package it.homebudget.app
 
-import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
 import it.homebudget.app.data.buildPendingExpenses
 import it.homebudget.app.data.buildRecurringMonthlyExpenses
 import it.homebudget.app.data.buildRecurringMonthlyIncomes
 import it.homebudget.app.data.csv.buildExpensesCsvExport
 import it.homebudget.app.data.csv.buildIncomesCsvExport
+import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.data.parseSerializedAmount
 import it.homebudget.app.data.splitAmountIntoInstallments
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
@@ -21,13 +22,13 @@ class ComposeAppCommonTest {
 
     @Test
     fun splitAmountIntoInstallments_preservesTotalAndDistributesRemainder() {
-        val installments = splitAmountIntoInstallments(1000.toBigInteger(), 3)
+        val installments = splitAmountIntoInstallments(1000L, 3)
 
         assertEquals(
-            listOf(334.toBigInteger(), 333.toBigInteger(), 333.toBigInteger()),
+            listOf(334L, 333L, 333L),
             installments
         )
-        assertEquals(1000.toBigInteger(), installments.reduce { acc, value -> acc + value })
+        assertEquals(1000L, installments.reduce { acc, value -> acc + value })
     }
 
     @Test
@@ -37,7 +38,7 @@ class ComposeAppCommonTest {
         var nextId = 0
 
         val expenses = buildPendingExpenses(
-            amount = 1000.toBigInteger(),
+            amount = 1000L,
             firstDate = firstDate,
             installments = 3,
             categoryId = "food",
@@ -61,7 +62,7 @@ class ComposeAppCommonTest {
         var nextId = 0
 
         val expenses = buildRecurringMonthlyExpenses(
-            amount = 1999.toBigInteger(),
+            amount = 1999L,
             firstDate = firstDate,
             categoryId = "rent",
             description = "Rent",
@@ -73,7 +74,7 @@ class ComposeAppCommonTest {
         )
 
         assertEquals(3, expenses.size)
-        assertEquals(listOf(1999.toBigInteger(), 1999.toBigInteger(), 1999.toBigInteger()), expenses.map { it.amount })
+        assertEquals(listOf(1999L, 1999L, 1999L), expenses.map { it.amount })
         assertEquals(listOf("series-1", "series-1", "series-1"), expenses.map { it.recurringSeriesId })
         assertEquals(firstDate, expenses[0].date)
         assertEquals(LocalDate(2026, 2, 28).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[1].date)
@@ -87,7 +88,7 @@ class ComposeAppCommonTest {
         var nextId = 0
 
         val incomes = buildRecurringMonthlyIncomes(
-            amount = 3200.toBigInteger(),
+            amount = 3200L,
             firstDate = firstDate,
             description = "Salary",
             recurringSeriesId = "income-series-1",
@@ -98,7 +99,7 @@ class ComposeAppCommonTest {
 
         assertEquals(3, incomes.size)
         assertEquals(
-            listOf(3200.toBigInteger(), 3200.toBigInteger(), 3200.toBigInteger()),
+            listOf(3200L, 3200L, 3200L),
             incomes.map { it.amount }
         )
         assertEquals(
@@ -112,7 +113,17 @@ class ComposeAppCommonTest {
 
     @Test
     fun recurringMonthlyOccurrences_defaultMatchesTwentyYears() {
-        assertEquals(240, RECURRING_MONTHLY_OCCURRENCES)
+        assertEquals(36, RECURRING_MONTHLY_OCCURRENCES)
+    }
+
+    @Test
+    fun parseAmountInput_rejectsValuesOutsideLongMinorUnitRange() {
+        assertEquals(null, parseAmountInput("92233720368547759.08"))
+    }
+
+    @Test
+    fun parseSerializedAmount_rejectsOutOfRangeMinorUnitValues() {
+        assertEquals(null, parseSerializedAmount("9223372036854775808"))
     }
 
     @Test
@@ -121,7 +132,7 @@ class ComposeAppCommonTest {
             expenses = listOf(
                 expense(
                     id = "expense-in-range",
-                    amount = 1234.toBigInteger(),
+                    amount = 1234L,
                     date = LocalDate(2026, 5, 10).atStartOfDayIn(TimeZone.UTC)
                         .toEpochMilliseconds(),
                     categoryId = "default_1",
@@ -131,7 +142,7 @@ class ComposeAppCommonTest {
                 ),
                 expense(
                     id = "expense-out-of-range",
-                    amount = 500.toBigInteger(),
+                    amount = 500L,
                     date = LocalDate(2026, 6, 1).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
                     categoryId = "default_4",
                     description = null,
@@ -167,7 +178,7 @@ class ComposeAppCommonTest {
             incomes = listOf(
                 income(
                     id = "income-1",
-                    amount = 320000.toBigInteger(),
+                    amount = 320000L,
                     date = LocalDate(2026, 5, 15).atStartOfDayIn(TimeZone.UTC)
                         .toEpochMilliseconds(),
                     description = "Salary",
@@ -188,7 +199,7 @@ class ComposeAppCommonTest {
 
 private fun expense(
     id: String,
-    amount: com.ionspin.kotlin.bignum.integer.BigInteger,
+    amount: Long,
     date: Long,
     categoryId: String,
     description: String?,
@@ -206,7 +217,7 @@ private fun expense(
 
 private fun income(
     id: String,
-    amount: com.ionspin.kotlin.bignum.integer.BigInteger,
+    amount: Long,
     date: Long,
     description: String?,
     recurringSeriesId: String?

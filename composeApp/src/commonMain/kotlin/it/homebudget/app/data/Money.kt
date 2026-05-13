@@ -1,13 +1,9 @@
 package it.homebudget.app.data
 
-import com.ionspin.kotlin.bignum.integer.BigInteger
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
-import com.ionspin.kotlin.bignum.integer.toBigInteger
+private const val ZERO_AMOUNT = 0L
+private const val MINOR_UNITS_PER_MAJOR = 100L
 
-private val ZERO = ZERO
-private val ONE_HUNDRED = 100.toBigInteger()
-
-fun parseAmountInput(value: String): BigInteger? {
+fun parseAmountInput(value: String): Long? {
     val normalized = value.trim().replace(',', '.')
     if (normalized.isEmpty()) {
         return null
@@ -31,43 +27,71 @@ fun parseAmountInput(value: String): BigInteger? {
     }
 
     val decimals = decimalsRaw.padEnd(2, '0')
-    val cents = (whole + decimals).trimStart('0').ifEmpty { "0" }.toBigInteger()
-    return if (negative) -cents else cents
+    val cents = (whole + decimals).trimStart('0').ifEmpty { "0" }.toLongOrNull() ?: return null
+    return if (negative) negateAmountExact(cents) else cents
 }
 
-fun formatAmount(amount: BigInteger, currencySymbol: String): String {
+fun parseSerializedAmount(value: String): Long? {
+    return value.trim()
+        .takeIf(String::isNotEmpty)
+        ?.toLongOrNull()
+}
+
+fun formatAmount(amount: Long, currencySymbol: String): String {
     val (units, cents, sign) = amountComponents(amount)
     return "$currencySymbol $sign$units.$cents"
 }
 
-fun formatAmountInput(amount: BigInteger): String {
+fun formatAmountInput(amount: Long): String {
     val (units, cents, sign) = amountComponents(amount)
     return "$sign$units.$cents"
 }
 
-private fun amountComponents(amount: BigInteger): Triple<BigInteger, String, String> {
-    val negative = amount < ZERO
-    val absolute = if (negative) -amount else amount
-    val units = absolute / ONE_HUNDRED
-    val cents = (absolute % ONE_HUNDRED).toString().padStart(2, '0')
+private fun amountComponents(amount: Long): Triple<Long, String, String> {
+    val negative = amount < ZERO_AMOUNT
+    val absolute = if (negative) negateAmountExact(amount) else amount
+    val units = absolute / MINOR_UNITS_PER_MAJOR
+    val cents = (absolute % MINOR_UNITS_PER_MAJOR).toString().padStart(2, '0')
     val sign = if (negative) "-" else ""
     return Triple(units, cents, sign)
 }
 
-fun <T> Iterable<T>.sumBigIntegerOf(selector: (T) -> BigInteger): BigInteger =
-    fold(ZERO) { acc, value -> acc + selector(value) }
+fun <T> Iterable<T>.sumAmountOf(selector: (T) -> Long): Long =
+    fold(ZERO_AMOUNT) { acc, value -> addAmountsExact(acc, selector(value)) }
 
-fun BigInteger.toDisplayDouble(): Double = toString().toDouble() / 100.0
+fun Long.toDisplayDouble(): Double = toDouble() / MINOR_UNITS_PER_MAJOR.toDouble()
 
-fun averageAmount(total: BigInteger, count: Int): BigInteger {
-    if (count <= 0) return ZERO
+fun averageAmount(total: Long, count: Int): Long {
+    if (count <= 0) return ZERO_AMOUNT
 
-    val divisor = count.toBigInteger()
-    val halfDivisor = divisor / 2.toBigInteger()
+    val divisor = count.toLong()
+    val halfDivisor = divisor / 2L
 
-    return if (total >= ZERO) {
-        (total + halfDivisor) / divisor
+    return if (total >= ZERO_AMOUNT) {
+        addAmountsExact(total, halfDivisor) / divisor
     } else {
-        (total - halfDivisor) / divisor
+        subtractAmountsExact(total, halfDivisor) / divisor
     }
+}
+
+fun addAmountsExact(left: Long, right: Long): Long {
+    val result = left + right
+    if (((left xor result) and (right xor result)) < 0L) {
+        error("Money amount overflowed Long minor-unit storage.")
+    }
+    return result
+}
+
+fun subtractAmountsExact(left: Long, right: Long): Long {
+    if (right == Long.MIN_VALUE) {
+        error("Money amount overflowed Long minor-unit storage.")
+    }
+    return addAmountsExact(left, -right)
+}
+
+private fun negateAmountExact(value: Long): Long {
+    if (value == Long.MIN_VALUE) {
+        error("Money amount overflowed Long minor-unit storage.")
+    }
+    return -value
 }

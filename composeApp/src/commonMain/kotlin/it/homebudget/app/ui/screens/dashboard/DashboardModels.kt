@@ -3,24 +3,24 @@ package it.homebudget.app.ui.screens.dashboard
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import com.ionspin.kotlin.bignum.integer.BigInteger
+import it.homebudget.app.data.subtractAmountsExact
 import it.homebudget.app.ui.screens.MonthCursor
 
 internal data class MonthlySummary(
-    val totalAmount: BigInteger,
+    val totalAmount: Long,
     val expenseCount: Int,
-    val incomeAmount: BigInteger,
-    val sharedAmount: BigInteger,
-    val averageAmount: BigInteger,
+    val incomeAmount: Long,
+    val sharedAmount: Long,
+    val averageAmount: Long,
     val topCategoryId: String?,
     val highestDayOfMonth: Int?,
-    val highestDayAmount: BigInteger,
+    val highestDayAmount: Long,
     val categoryTotals: List<CategoryTotal>
 )
 
 internal data class CategoryTotal(
     val categoryId: String?,
-    val amount: BigInteger,
+    val amount: Long,
     val fraction: Double,
     val color: Color
 )
@@ -61,11 +61,11 @@ internal data class LineSeries(
 
 internal data class ChartMonthSnapshot(
     val month: MonthCursor,
-    val expenseAmount: BigInteger,
-    val incomeAmount: BigInteger
+    val expenseAmount: Long,
+    val incomeAmount: Long
 ) {
-    val differenceAmount: BigInteger
-        get() = incomeAmount - expenseAmount
+    val differenceAmount: Long
+        get() = subtractAmountsExact(incomeAmount, expenseAmount)
 }
 
 internal data class ChartPoint(

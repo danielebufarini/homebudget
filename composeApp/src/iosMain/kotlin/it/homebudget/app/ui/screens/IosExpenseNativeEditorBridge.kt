@@ -71,7 +71,7 @@ class IosExpenseEditorController {
         onComplete: (IosExpenseEditorOperationResult) -> Unit
     ) {
         val parsedAmount = parseAmountInput(amountInput)
-        if (parsedAmount == null || parsedAmount.signum() <= 0) {
+        if (parsedAmount == null || parsedAmount <= 0L) {
             onComplete(IosExpenseEditorOperationResult(false, "Enter a valid amount"))
             return
         }

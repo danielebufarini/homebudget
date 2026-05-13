@@ -1,7 +1,5 @@
 package it.homebudget.app.data.csv
 
-import com.ionspin.kotlin.bignum.integer.BigInteger
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.data.PendingExpense
@@ -69,7 +67,7 @@ suspend fun importBudgetItemsFromCsv(
 
     parsedRows.forEachIndexed { index, row ->
         val amount = parseAmountInput(row.amountText)
-        if (amount == null || amount <= ZERO) {
+        if (amount == null || amount <= 0L) {
             importState.skippedCount += 1
             return@forEachIndexed
         }
@@ -134,13 +132,13 @@ internal data class ParsedUnifiedCsvRow(
 internal data class CsvImportedExpenseKey(
     val date: Long,
     val categoryId: String,
-    val amount: BigInteger,
+    val amount: Long,
     val description: String
 )
 
 internal data class CsvImportedIncomeKey(
     val date: Long,
-    val amount: BigInteger,
+    val amount: Long,
     val description: String
 )
 

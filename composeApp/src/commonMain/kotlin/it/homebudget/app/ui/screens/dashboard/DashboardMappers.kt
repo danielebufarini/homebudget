@@ -4,7 +4,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.IntSize
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.DashboardCashFlow
 import it.homebudget.app.data.DashboardCategoryTotal
 import it.homebudget.app.data.DashboardMonthSummary
@@ -18,13 +17,13 @@ import kotlin.time.Clock
 
 internal fun emptyDashboardMonthSummary() = DashboardMonthSummary(
     expenseCount = 0,
-    totalAmount = ZERO,
-    incomeAmount = ZERO,
-    sharedAmount = ZERO,
-    averageAmount = ZERO,
+    totalAmount = 0L,
+    incomeAmount = 0L,
+    sharedAmount = 0L,
+    averageAmount = 0L,
     topCategoryId = null,
     highestDayOfMonth = null,
-    highestDayAmount = ZERO,
+    highestDayAmount = 0L,
     categoryTotals = emptyList()
 )
 
@@ -94,8 +93,8 @@ internal fun buildCashFlowChartState(
     val monthSnapshots = months.map { month ->
         ChartMonthSnapshot(
             month = month,
-            expenseAmount = expenseTotalsByMonth[month] ?: ZERO,
-            incomeAmount = incomeTotalsByMonth[month] ?: ZERO
+            expenseAmount = expenseTotalsByMonth[month] ?: 0L,
+            incomeAmount = incomeTotalsByMonth[month] ?: 0L
         )
     }
     val expenseValues = monthSnapshots.map { it.expenseAmount.toDisplayDouble() }

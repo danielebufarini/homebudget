@@ -31,7 +31,7 @@ import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.sumBigIntegerOf
+import it.homebudget.app.data.sumAmountOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
@@ -99,7 +99,7 @@ class DayExpensesScreen(
         EnsureDefaultCategoriesInserted(repository)
 
         val totalAmount = remember(expenses) {
-            expenses.sumBigIntegerOf(Expense::amount)
+            expenses.sumAmountOf(Expense::amount)
         }
 
         val content: @Composable (PaddingValues) -> Unit = { padding ->

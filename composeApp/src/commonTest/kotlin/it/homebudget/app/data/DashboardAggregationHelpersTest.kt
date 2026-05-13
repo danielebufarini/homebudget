@@ -1,10 +1,9 @@
 package it.homebudget.app.data
 
-import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.database.DashboardCategoryAmountGroupRow
-import it.homebudget.app.database.DashboardConcatenatedAmountsRow
 import it.homebudget.app.database.DashboardDayAmountGroupRow
 import it.homebudget.app.database.DashboardMonthAmountGroupRow
+import it.homebudget.app.database.DashboardTotalAmountRow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -12,13 +11,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DashboardAggregationHelpersTest {
-
-    @Test
-    fun concatenatedAmounts_areSummedExactly() {
-        assertEquals(0.toBigInteger(), null.toSummedAmount())
-        assertEquals(0.toBigInteger(), "".toSummedAmount())
-        assertEquals(600.toBigInteger(), "100|200|300".toSummedAmount())
-    }
 
     @Test
     fun dashboardExpenseAggregates_useBucketedRows() {
@@ -31,34 +23,34 @@ class DashboardAggregationHelpersTest {
                 DashboardCategoryAmountGroupRow(
                     categoryId = "food",
                     latestExpenseDate = secondDay,
-                    concatenatedAmounts = "200|100"
+                    totalAmount = 300L
                 ),
                 DashboardCategoryAmountGroupRow(
                     categoryId = "rent",
                     latestExpenseDate = firstDay,
-                    concatenatedAmounts = "400"
+                    totalAmount = 400L
                 )
             ),
             dayAmountGroups = listOf(
                 DashboardDayAmountGroupRow(
                     date = firstDay,
-                    concatenatedAmounts = "400"
+                    totalAmount = 400L
                 ),
                 DashboardDayAmountGroupRow(
                     date = secondDay,
-                    concatenatedAmounts = "200|100"
+                    totalAmount = 300L
                 )
             ),
-            sharedAmountGroup = DashboardConcatenatedAmountsRow("100|400"),
+            sharedAmountGroup = DashboardTotalAmountRow(500L),
             timeZone = TimeZone.UTC
         )
 
         assertEquals(3, aggregates.summary.expenseCount)
-        assertEquals(700.toBigInteger(), aggregates.summary.totalAmount)
-        assertEquals(500.toBigInteger(), aggregates.summary.sharedAmount)
+        assertEquals(700L, aggregates.summary.totalAmount)
+        assertEquals(500L, aggregates.summary.sharedAmount)
         assertEquals("rent", aggregates.topCategory?.categoryId)
         assertEquals(1, aggregates.highestDay?.dayOfMonth)
-        assertEquals(400.toBigInteger(), aggregates.highestDay?.amount)
+        assertEquals(400L, aggregates.highestDay?.amount)
     }
 
     @Test
@@ -67,16 +59,16 @@ class DashboardAggregationHelpersTest {
             DashboardMonthAmountGroupRow(
                 year = 2026,
                 month = 4,
-                concatenatedAmounts = "100|50"
+                totalAmount = 150L
             ),
             DashboardMonthAmountGroupRow(
                 year = 2026,
                 month = 5,
-                concatenatedAmounts = "300"
+                totalAmount = 300L
             )
         ).toMonthTotals(timeZone = TimeZone.UTC)
 
-        assertEquals(listOf(150.toBigInteger(), 300.toBigInteger()), totals.map { it.amount })
+        assertEquals(listOf(150L, 300L), totals.map { it.amount })
         assertEquals(
             listOf(
                 MonthKey(2026, 4).toStartOfMonthMillis(TimeZone.UTC),

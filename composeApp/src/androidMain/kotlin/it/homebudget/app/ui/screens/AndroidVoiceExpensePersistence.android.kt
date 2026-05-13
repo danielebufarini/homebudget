@@ -58,7 +58,7 @@ internal suspend fun persistAndroidVoiceExpenseDraft(
 ) {
     val amount = parseAmountInput(draft.amountInput)
         ?: error(uiStrings.voiceExpenseInvalidAmount)
-    require(amount > com.ionspin.kotlin.bignum.integer.BigInteger.ZERO) {
+    require(amount > 0L) {
         uiStrings.voiceExpenseValueAmountPositive
     }
 

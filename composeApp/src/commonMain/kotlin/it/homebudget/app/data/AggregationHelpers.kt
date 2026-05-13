@@ -1,34 +1,30 @@
 package it.homebudget.app.data
 
-import com.ionspin.kotlin.bignum.integer.BigInteger
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.database.CategoryTotalRow
 import it.homebudget.app.database.DashboardCategoryAmountGroupRow
-import it.homebudget.app.database.DashboardConcatenatedAmountsRow
 import it.homebudget.app.database.DashboardDayAmountGroupRow
 import it.homebudget.app.database.DashboardExpenseAggregates
 import it.homebudget.app.database.DashboardMonthAmountGroupRow
+import it.homebudget.app.database.DashboardTotalAmountRow
 import it.homebudget.app.database.ExpenseMonthSummaryRow
 import it.homebudget.app.database.HighestDaySummaryRow
 import it.homebudget.app.database.MonthTotalRow
 import it.homebudget.app.database.TopCategorySummaryRow
 import kotlinx.datetime.TimeZone
 
-private const val AMOUNT_GROUP_SEPARATOR = "|"
-
 fun buildDashboardExpenseAggregates(
     expenseCount: Int,
     categoryAmountGroups: List<DashboardCategoryAmountGroupRow>,
     dayAmountGroups: List<DashboardDayAmountGroupRow>,
-    sharedAmountGroup: DashboardConcatenatedAmountsRow,
+    sharedAmountGroup: DashboardTotalAmountRow,
     timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): DashboardExpenseAggregates {
     val categoryTotals = categoryAmountGroups.toCategoryTotals()
-    val totalAmount = categoryTotals.fold(ZERO) { acc, row -> acc + row.amount }
+    val totalAmount = categoryTotals.fold(0L) { acc, row -> addAmountsExact(acc, row.amount) }
     val summary = ExpenseMonthSummaryRow(
         expenseCount = expenseCount,
         totalAmount = totalAmount,
-        sharedAmount = sharedAmountGroup.toSummedAmount()
+        sharedAmount = sharedAmountGroup.totalAmount
     )
 
     return DashboardExpenseAggregates(
@@ -43,7 +39,7 @@ fun List<DashboardCategoryAmountGroupRow>.toCategoryTotals(): List<CategoryTotal
     return map { row ->
         CategoryTotalRow(
             categoryId = row.categoryId,
-            amount = row.concatenatedAmounts.toSummedAmount()
+            amount = row.totalAmount
         )
     }.sortedByDescending { row -> row.amount }
 }
@@ -52,7 +48,7 @@ fun List<DashboardCategoryAmountGroupRow>.toTopCategorySummary(): TopCategorySum
     return map { row ->
         TopCategoryCandidate(
             categoryId = row.categoryId,
-            amount = row.concatenatedAmounts.toSummedAmount(),
+            amount = row.totalAmount,
             latestExpenseDate = row.latestExpenseDate
         )
     }
@@ -75,7 +71,7 @@ fun List<DashboardDayAmountGroupRow>.toHighestDaySummary(
     return map { row ->
         HighestDaySummaryRow(
             dayOfMonth = row.date.toDayOfMonth(timeZone),
-            amount = row.concatenatedAmounts.toSummedAmount()
+            amount = row.totalAmount
         )
     }.maxByOrNull { row -> row.amount }
 }
@@ -86,33 +82,13 @@ fun List<DashboardMonthAmountGroupRow>.toMonthTotals(
     return map { row ->
         MonthTotalRow(
             date = MonthKey(row.year, row.month).toStartOfMonthMillis(timeZone),
-            amount = row.concatenatedAmounts.toSummedAmount()
+            amount = row.totalAmount
         )
     }
 }
 
-fun DashboardConcatenatedAmountsRow.toSummedAmount(): BigInteger {
-    return concatenatedAmounts.toSummedAmount()
-}
-
-fun String?.toSummedAmount(): BigInteger {
-    if (this.isNullOrEmpty()) return ZERO
-
-    var total = ZERO
-    var startIndex = 0
-
-    while (startIndex < length) {
-        val separatorIndex = indexOf(AMOUNT_GROUP_SEPARATOR, startIndex)
-        val endIndex = if (separatorIndex >= 0) separatorIndex else length
-        total += substring(startIndex, endIndex).toAmountBigInteger()
-        startIndex = endIndex + 1
-    }
-
-    return total
-}
-
 private data class TopCategoryCandidate(
     val categoryId: String,
-    val amount: BigInteger,
+    val amount: Long,
     val latestExpenseDate: Long
 )

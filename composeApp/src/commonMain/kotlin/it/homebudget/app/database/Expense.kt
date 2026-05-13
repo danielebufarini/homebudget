@@ -5,7 +5,6 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.ionspin.kotlin.bignum.integer.BigInteger
 
 @Entity(
     tableName = "expense",
@@ -26,7 +25,7 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 data class Expense(
     @PrimaryKey
     val id: String,
-    val amount: BigInteger,
+    val amount: Long,
     val date: Long,
     val categoryId: String,
     val description: String?,

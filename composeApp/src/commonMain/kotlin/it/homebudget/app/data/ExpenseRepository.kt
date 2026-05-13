@@ -1,6 +1,4 @@
 package it.homebudget.app.data
-
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -17,23 +15,23 @@ data class RestoredCategory(
 data class DashboardMonthTotal(
     val year: Int,
     val month: Int,
-    val amount: BigInteger
+    val amount: Long
 )
 
 data class DashboardCategoryTotal(
     val categoryId: String,
-    val amount: BigInteger
+    val amount: Long
 )
 
 data class DashboardMonthSummary(
     val expenseCount: Int,
-    val totalAmount: BigInteger,
-    val incomeAmount: BigInteger,
-    val sharedAmount: BigInteger,
-    val averageAmount: BigInteger,
+    val totalAmount: Long,
+    val incomeAmount: Long,
+    val sharedAmount: Long,
+    val averageAmount: Long,
     val topCategoryId: String?,
     val highestDayOfMonth: Int?,
-    val highestDayAmount: BigInteger,
+    val highestDayAmount: Long,
     val categoryTotals: List<DashboardCategoryTotal>
 )
 
@@ -132,7 +130,7 @@ class ExpenseRepository(
 
     suspend fun insertIncome(
         id: String,
-        amount: BigInteger,
+        amount: Long,
         date: Long,
         description: String?,
         recurringSeriesId: String? = null
@@ -153,7 +151,7 @@ class ExpenseRepository(
     suspend fun updateRecurringIncomeSeries(
         anchorIncomeId: String,
         seriesId: String,
-        amount: BigInteger,
+        amount: Long,
         date: Long,
         description: String?
     ) {
@@ -173,7 +171,7 @@ class ExpenseRepository(
     suspend fun updateRecurringExpenseSeries(
         anchorExpenseId: String,
         seriesId: String,
-        amount: BigInteger,
+        amount: Long,
         date: Long,
         categoryId: String,
         description: String?,

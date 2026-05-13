@@ -1,6 +1,5 @@
 package it.homebudget.app.ui.screens
 
-import com.ionspin.kotlin.bignum.integer.toBigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -49,7 +48,7 @@ class TransactionListTransformersTest {
 
         assertEquals(listOf("Food", "Rent"), state.sections.map(ExpenseSection::title))
         assertEquals(listOf("2", "3"), state.sections.first().expenses.map(Expense::id))
-        assertEquals(1700.toBigInteger(), state.totalAmount)
+        assertEquals(1700L, state.totalAmount)
     }
 
     @Test
@@ -88,8 +87,8 @@ class TransactionListTransformersTest {
 
         assertEquals(listOf("2026-05-15", "2026-05-01"), state.sections.map(IncomeSection::key))
         assertEquals(listOf("2", "1"), state.sections.first().incomes.map(Income::id))
-        assertEquals(4500.toBigInteger(), state.sections.first().totalAmount)
-        assertEquals(5300.toBigInteger(), state.totalAmount)
+        assertEquals(4500L, state.sections.first().totalAmount)
+        assertEquals(5300L, state.totalAmount)
     }
 }
 
@@ -100,7 +99,7 @@ private fun expense(
     categoryId: String
 ) = Expense(
     id = id,
-    amount = amount.toBigInteger(),
+    amount = amount.toLong(),
     date = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
     categoryId = categoryId,
     description = null,
@@ -114,7 +113,7 @@ private fun income(
     date: LocalDate
 ) = Income(
     id = id,
-    amount = amount.toBigInteger(),
+    amount = amount.toLong(),
     date = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
     description = null,
     recurringSeriesId = null

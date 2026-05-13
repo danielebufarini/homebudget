@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
@@ -37,7 +36,7 @@ internal fun ExpenseSummary(
     strings: DashboardStrings,
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
-    sixMonthSavingsAmount: BigInteger,
+    sixMonthSavingsAmount: Long,
     categoriesById: Map<String, Category>,
     onExpensesClick: () -> Unit,
     onIncomeClick: () -> Unit,

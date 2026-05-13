@@ -32,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add_income
 import homebudget.composeapp.generated.resources.amount
@@ -74,7 +73,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 private data class PendingRecurringIncomeUpdate(
-    val amount: BigInteger,
+    val amount: Long,
     val date: Long,
     val description: String?
 )
@@ -248,7 +247,7 @@ class AddIncomeScreen(
                 val parsedAmount = parseAmountInput(amount)
 
                 when {
-                    parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
+                    parsedAmount == null || parsedAmount <= 0L -> {
                         snackbarHostState.showSnackbar(enterValidAmountLabel)
                     }
                     else -> {

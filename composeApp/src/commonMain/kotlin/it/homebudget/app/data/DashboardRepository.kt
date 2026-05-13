@@ -1,6 +1,5 @@
 package it.homebudget.app.data
 
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.database.CategoryTotalRow
 import it.homebudget.app.database.ExpenseMonthSummaryRow
 import it.homebudget.app.database.HighestDaySummaryRow
@@ -43,7 +42,7 @@ class DashboardRepository(
                 dayAmountGroups = dayAmountGroups,
                 sharedAmountGroup = sharedAmountGroup
             )
-            val incomeAmount = incomeAmountGroup.toSummedAmount()
+            val incomeAmount = incomeAmountGroup.totalAmount
             buildDashboardMonthSummary(
                 expenseSummary = expenseAggregates.summary,
                 incomeAmount = incomeAmount,
@@ -117,7 +116,7 @@ class DashboardRepository(
 
 private fun buildDashboardMonthSummary(
     expenseSummary: ExpenseMonthSummaryRow,
-    incomeAmount: com.ionspin.kotlin.bignum.integer.BigInteger,
+    incomeAmount: Long,
     categoryTotals: List<CategoryTotalRow>,
     topCategory: TopCategorySummaryRow?,
     highestDay: HighestDaySummaryRow?
@@ -131,7 +130,7 @@ private fun buildDashboardMonthSummary(
         averageAmount = averageAmount(totalAmount, expenseSummary.expenseCount),
         topCategoryId = topCategory?.categoryId,
         highestDayOfMonth = highestDay?.dayOfMonth,
-        highestDayAmount = highestDay?.amount ?: ZERO,
+        highestDayAmount = highestDay?.amount ?: 0L,
         categoryTotals = categoryTotals.map { row ->
             DashboardCategoryTotal(
                 categoryId = row.categoryId,

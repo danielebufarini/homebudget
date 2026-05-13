@@ -1,6 +1,4 @@
 package it.homebudget.app.data.csv.import
-
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.csv.CsvImportedExpenseKey
 import it.homebudget.app.data.csv.ParsedUnifiedCsvRow
@@ -13,7 +11,7 @@ internal object ExpenseCsvRowImportHandler : CsvRowImportHandler {
     override suspend fun importRow(
         row: ParsedUnifiedCsvRow,
         rowIndex: Int,
-        amount: BigInteger,
+        amount: Long,
         itemDate: Long,
         state: CsvImportState
     ): Boolean {

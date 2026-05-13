@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add
 import homebudget.composeapp.generated.resources.add_category
@@ -113,7 +112,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 private data class PendingRecurringExpenseUpdate(
-    val amount: BigInteger,
+    val amount: Long,
     val date: Long,
     val categoryId: String,
     val description: String?,
@@ -323,7 +322,7 @@ class AddExpenseScreen(
                 val expenseDate = selectedDateMillis
 
                 when {
-                    parsedAmount == null || parsedAmount <= BigInteger.ZERO -> {
+                    parsedAmount == null || parsedAmount <= 0L -> {
                         snackbarHostState.showSnackbar(enterValidAmountLabel)
                     }
                     selectedCategoryId.isBlank() -> {

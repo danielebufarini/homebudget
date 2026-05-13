@@ -4,7 +4,6 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
-import androidx.room.TypeConverters
 
 @Database(
     entities = [
@@ -12,10 +11,9 @@ import androidx.room.TypeConverters
         Expense::class,
         Income::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
-@TypeConverters(BigIntegerTypeConverters::class)
 @ConstructedBy(HomeBudgetDatabaseConstructor::class)
 abstract class HomeBudgetDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao

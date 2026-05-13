@@ -1,6 +1,4 @@
 package it.homebudget.app.data
-
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Income
 import kotlinx.coroutines.flow.Flow
@@ -28,7 +26,7 @@ class IncomeRepository(
 
     suspend fun insertIncome(
         id: String,
-        amount: BigInteger,
+        amount: Long,
         date: Long,
         description: String?,
         recurringSeriesId: String? = null

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import it.homebudget.app.ui.screens.MonthCursor
@@ -19,7 +18,7 @@ internal fun DashboardBody(
     showMonthHeaderCard: Boolean,
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
-    sixMonthSavingsAmount: BigInteger,
+    sixMonthSavingsAmount: Long,
     chartState: LineChartState,
     categoriesById: Map<String, Category>,
     onPreviousMonth: () -> Unit,

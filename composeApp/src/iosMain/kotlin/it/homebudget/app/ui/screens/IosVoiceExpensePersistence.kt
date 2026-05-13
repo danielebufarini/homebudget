@@ -69,7 +69,7 @@ internal suspend fun updateIosVoiceExpense(
 private suspend fun runIosVoiceExpenseSave(
     amountInput: String,
     categoryId: String,
-    block: suspend (com.ionspin.kotlin.bignum.integer.BigInteger) -> Unit
+    block: suspend (Long) -> Unit
 ): Pair<Boolean, String?> {
     val (parsedAmount, error) = validateIosVoiceExpenseInput(
         amountInput = amountInput,

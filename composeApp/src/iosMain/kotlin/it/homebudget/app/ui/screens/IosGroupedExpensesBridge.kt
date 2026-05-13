@@ -1,6 +1,4 @@
 package it.homebudget.app.ui.screens
-
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.category
 import homebudget.composeapp.generated.resources.currency_symbol
@@ -17,7 +15,7 @@ import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.monthBounds
-import it.homebudget.app.data.sumBigIntegerOf
+import it.homebudget.app.data.sumAmountOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -99,7 +97,7 @@ internal data class GroupedExpensesCacheKey(
 
 private data class PreparedIosExpense(
     val id: String,
-    val amount: BigInteger,
+    val amount: Long,
     val amountText: String,
     val categoryId: String?,
     val categoryName: String,
@@ -417,7 +415,7 @@ private fun buildSnapshotsCache(
     }
 
     val totalAmountText = formatAmount(
-        filteredExpenses.sumBigIntegerOf(PreparedIosExpense::amount),
+        filteredExpenses.sumAmountOf(PreparedIosExpense::amount),
         localization.currencySymbol
     )
     val emptyStateText = emptyStateText(key.screenType, key.categoryName, localization)
@@ -467,7 +465,7 @@ private fun buildMonthlyIncomesSnapshot(
                 id = formatExpenseDateGroupTitle(date, localization.shortMonthNames),
                 title = formatExpenseDateGroupTitle(date, localization.shortMonthNames),
                 totalAmountText = formatAmount(
-                    sortedItems.sumBigIntegerOf(Income::amount),
+                    sortedItems.sumAmountOf(Income::amount),
                     localization.currencySymbol
                 ),
                 rows = sortedItems.map { income ->
@@ -484,7 +482,7 @@ private fun buildMonthlyIncomesSnapshot(
 
     return IosMonthlyIncomesSnapshot(
         totalAmountText = formatAmount(
-            filteredIncomes.sumBigIntegerOf(Income::amount),
+            filteredIncomes.sumAmountOf(Income::amount),
             localization.currencySymbol
         ),
         emptyStateText = localization.noIncomeForMonth,
@@ -519,7 +517,7 @@ private fun buildSections(
             categoryColorKey = if (groupingMode == "date") null else sortedExpenses.firstOrNull()?.categoryId,
             categoryIconKey = if (groupingMode == "date") null else sortedExpenses.firstOrNull()?.categoryIconKey,
             totalAmountText = formatAmount(
-                sortedExpenses.sumBigIntegerOf(PreparedIosExpense::amount),
+                sortedExpenses.sumAmountOf(PreparedIosExpense::amount),
                 localization.currencySymbol
             ),
             rows = sortedExpenses.map { expense ->

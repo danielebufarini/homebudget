@@ -3,7 +3,6 @@ package it.homebudget.app.database
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.ionspin.kotlin.bignum.integer.BigInteger
 
 @Entity(
     tableName = "income",
@@ -15,7 +14,7 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 data class Income(
     @PrimaryKey
     val id: String,
-    val amount: BigInteger,
+    val amount: Long,
     val date: Long,
     val description: String?,
     val recurringSeriesId: String? = null

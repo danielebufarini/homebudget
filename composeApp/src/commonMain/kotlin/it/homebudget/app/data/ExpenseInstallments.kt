@@ -1,8 +1,4 @@
 package it.homebudget.app.data
-
-import com.ionspin.kotlin.bignum.integer.BigInteger
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ONE
-import com.ionspin.kotlin.bignum.integer.toBigInteger
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -12,7 +8,7 @@ import kotlin.time.Instant
 
 data class PendingExpense(
     val id: String,
-    val amount: BigInteger,
+    val amount: Long,
     val date: Long,
     val categoryId: String,
     val description: String?,
@@ -22,7 +18,7 @@ data class PendingExpense(
 
 data class PendingIncome(
     val id: String,
-    val amount: BigInteger,
+    val amount: Long,
     val date: Long,
     val description: String?,
     val recurringSeriesId: String? = null
@@ -41,7 +37,7 @@ data class ExistingRecurringIncomeItem(
 const val RECURRING_MONTHLY_OCCURRENCES = 36
 
 fun buildPendingExpenses(
-    amount: BigInteger,
+    amount: Long,
     firstDate: Long,
     installments: Int,
     categoryId: String,
@@ -68,7 +64,7 @@ fun buildPendingExpenses(
 }
 
 fun buildRecurringMonthlyExpenses(
-    amount: BigInteger,
+    amount: Long,
     firstDate: Long,
     categoryId: String,
     description: String?,
@@ -95,7 +91,7 @@ fun buildRecurringMonthlyExpenses(
 
 fun buildRecurringMonthlyExpensesFromExistingExpense(
     existingExpenseId: String,
-    amount: BigInteger,
+    amount: Long,
     firstDate: Long,
     categoryId: String,
     description: String?,
@@ -125,7 +121,7 @@ fun buildRecurringMonthlyExpensesFromExistingExpense(
 }
 
 fun buildRecurringMonthlyIncomes(
-    amount: BigInteger,
+    amount: Long,
     firstDate: Long,
     description: String?,
     recurringSeriesId: String,
@@ -150,7 +146,7 @@ fun buildUpdatedRecurringExpenseSeries(
     existingItems: List<ExistingRecurringExpenseItem>,
     anchorItemId: String,
     anchorDate: Long,
-    amount: BigInteger,
+    amount: Long,
     categoryId: String,
     description: String?,
     isShared: Boolean,
@@ -181,7 +177,7 @@ fun buildUpdatedRecurringIncomeSeries(
     existingItems: List<ExistingRecurringIncomeItem>,
     anchorItemId: String,
     anchorDate: Long,
-    amount: BigInteger,
+    amount: Long,
     description: String?,
     recurringSeriesId: String,
     timeZone: TimeZone = TimeZone.currentSystemDefault()
@@ -204,15 +200,15 @@ fun buildUpdatedRecurringIncomeSeries(
     }
 }
 
-fun splitAmountIntoInstallments(amount: BigInteger, installments: Int): List<BigInteger> {
+fun splitAmountIntoInstallments(amount: Long, installments: Int): List<Long> {
     require(installments > 0) { "installments must be greater than 0" }
 
-    val count = installments.toBigInteger()
+    val count = installments.toLong()
     val baseAmount = amount / count
-    val remainder = (amount % count).intValue()
+    val remainder = (amount % count).toInt()
 
     return List(installments) { index ->
-        if (index < remainder) baseAmount + ONE else baseAmount
+        if (index < remainder) addAmountsExact(baseAmount, 1L) else baseAmount
     }
 }
 

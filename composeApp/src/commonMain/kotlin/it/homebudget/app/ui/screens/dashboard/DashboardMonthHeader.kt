@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.MonthNavigationTitle
@@ -16,7 +15,7 @@ import it.homebudget.app.ui.screens.PlatformCard
 @Composable
 internal fun DashboardMonthHeaderCard(
     selectedMonth: MonthCursor,
-    totalAmount: BigInteger,
+    totalAmount: Long,
     currencySymbol: String,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
@@ -40,7 +39,7 @@ internal fun DashboardMonthHeaderCard(
 @Composable
 internal fun DashboardMonthHeader(
     selectedMonth: MonthCursor,
-    totalAmount: BigInteger,
+    totalAmount: Long,
     currencySymbol: String,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit

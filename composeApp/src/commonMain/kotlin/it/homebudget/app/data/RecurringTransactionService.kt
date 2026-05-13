@@ -1,7 +1,5 @@
 package it.homebudget.app.data
 
-import com.ionspin.kotlin.bignum.integer.BigInteger
-
 class RecurringTransactionService(
     private val expenseEntryRepository: ExpenseEntryRepository,
     private val incomeRepository: IncomeRepository
@@ -9,7 +7,7 @@ class RecurringTransactionService(
     suspend fun updateRecurringIncomeSeries(
         anchorIncomeId: String,
         seriesId: String,
-        amount: BigInteger,
+        amount: Long,
         date: Long,
         description: String?
     ) {
@@ -36,7 +34,7 @@ class RecurringTransactionService(
     suspend fun updateRecurringExpenseSeries(
         anchorExpenseId: String,
         seriesId: String,
-        amount: BigInteger,
+        amount: Long,
         date: Long,
         categoryId: String,
         description: String?,

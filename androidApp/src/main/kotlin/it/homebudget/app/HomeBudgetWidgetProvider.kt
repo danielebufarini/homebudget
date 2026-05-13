@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
-import com.ionspin.kotlin.bignum.integer.BigInteger.Companion.ZERO
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.widget.HOME_BUDGET_WIDGET_REFRESH_ACTION
@@ -212,8 +211,8 @@ private object HomeBudgetWidgetUpdater {
             HomeBudgetWidgetSummary(
                 monthTitle = monthTitle,
                 monthNameText = monthName,
-                expensesAmountText = formatAmount(ZERO, currencySymbol),
-                incomeAmountText = formatAmount(ZERO, currencySymbol)
+                expensesAmountText = formatAmount(0L, currencySymbol),
+                incomeAmountText = formatAmount(0L, currencySymbol)
             )
         }
     }

@@ -1,6 +1,4 @@
 package it.homebudget.app.ui.screens
-
-import com.ionspin.kotlin.bignum.integer.BigInteger
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.voice_expense_category_required
 import homebudget.composeapp.generated.resources.voice_expense_invalid_amount
@@ -59,11 +57,11 @@ internal suspend fun loadIosVoiceExpenseSnapshot(
 internal suspend fun validateIosVoiceExpenseInput(
     amountInput: String,
     categoryId: String
-): Pair<BigInteger?, String?> {
+): Pair<Long?, String?> {
     val parsedAmount = parseAmountInput(amountInput)
         ?: return null to getString(Res.string.voice_expense_invalid_amount)
     val error = when {
-        parsedAmount <= BigInteger.ZERO -> getString(Res.string.voice_expense_value_amount_positive)
+        parsedAmount <= 0L -> getString(Res.string.voice_expense_value_amount_positive)
         categoryId.isBlank() -> getString(Res.string.voice_expense_category_required)
         else -> null
     }
