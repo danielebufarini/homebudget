@@ -61,6 +61,6 @@ class DataReplacementService(
                 }
             )
         }
-        widgetRefreshCoordinator.requestRefresh()
+        widgetRefreshCoordinator.refreshNow()
     }
 }
