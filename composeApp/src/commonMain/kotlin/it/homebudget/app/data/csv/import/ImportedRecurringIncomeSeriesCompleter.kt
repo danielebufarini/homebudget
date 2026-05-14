@@ -24,6 +24,7 @@ internal class ImportedRecurringIncomeSeriesCompleter :
             amount = latestImportedOccurrence.amount,
             firstDate = latestImportedOccurrence.date,
             description = latestImportedOccurrence.description,
+            categoryId = latestImportedOccurrence.categoryId,
             recurringSeriesId = recurringSeriesId,
             idProvider = ::buildImportedIncomeId,
             occurrences = occurrences

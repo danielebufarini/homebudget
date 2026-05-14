@@ -7,6 +7,7 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.localization.loadCategoryNameResolver
@@ -23,6 +24,8 @@ internal suspend fun loadIosVoiceExpenseSnapshot(
 
     val categorySnapshot = repository.getAllCategoriesSnapshot()
     val categories = categorySnapshot
+        .asSequence()
+        .filter { it.categoryType == CATEGORY_TYPE_EXPENSE && it.isArchived != 1L }
         .sortedBy { resolveCategoryName(it.id, it.name, it.isCustom).lowercase() }
         .map { category ->
             IosVoiceExpenseCategory(
@@ -30,6 +33,7 @@ internal suspend fun loadIosVoiceExpenseSnapshot(
                 name = resolveCategoryName(category.id, category.name, category.isCustom)
             )
         }
+        .toList()
 
     val categoriesById = categorySnapshot.associateBy(Category::id)
     val recentExpenses = repository.getAllExpensesSnapshot()

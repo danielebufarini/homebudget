@@ -9,7 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 private const val BACKUP_FORMAT = "homebudget_backup"
-private const val BACKUP_VERSION = 1
+private const val BACKUP_VERSION = 2
 const val BACKUP_FILE_NAME = "homebudget-backup.json"
 const val CLOUD_BACKUP_DIRECTORY_NAME = "Data"
 
@@ -46,7 +46,10 @@ private data class BudgetBackupCategory(
     val id: String,
     val name: String,
     val icon: String,
-    val isCustom: Boolean
+    val color: String,
+    val categoryType: String,
+    val isCustom: Boolean,
+    val isArchived: Boolean
 )
 
 @Serializable
@@ -65,6 +68,7 @@ private data class BudgetBackupIncome(
     val id: String,
     val amount: String,
     val date: Long,
+    val categoryId: String? = null,
     val description: String? = null,
     val recurringSeriesId: String? = null
 )
@@ -116,7 +120,10 @@ suspend fun restoreBudgetBackup(
                 id = category.id,
                 name = category.name,
                 icon = category.icon,
-                isCustom = category.isCustom
+                color = category.color,
+                categoryType = category.categoryType,
+                isCustom = category.isCustom,
+                isArchived = category.isArchived
             )
         },
         expenses = snapshot.expenses.map { expense ->
@@ -137,6 +144,7 @@ suspend fun restoreBudgetBackup(
                 amount = parseSerializedAmount(income.amount)
                     ?: error("Backup income ${income.id} amount is out of Long range."),
                 date = income.date,
+                categoryId = income.categoryId,
                 description = income.description,
                 recurringSeriesId = income.recurringSeriesId
             )
@@ -167,6 +175,11 @@ private fun decodeBudgetBackupSnapshot(jsonText: String): BudgetBackupSnapshot {
             "Expense ${expense.id} references unknown category ${expense.categoryId}."
         }
     }
+    snapshot.incomes.forEach { income ->
+        require(income.categoryId == null || income.categoryId in categoryIds) {
+            "Income ${income.id} references unknown category ${income.categoryId}."
+        }
+    }
 
     return snapshot
 }
@@ -187,7 +200,10 @@ private fun Category.toBackupModel() = BudgetBackupCategory(
     id = id,
     name = name,
     icon = icon,
-    isCustom = isCustom == 1L
+    color = color,
+    categoryType = categoryType,
+    isCustom = isCustom == 1L,
+    isArchived = isArchived == 1L
 )
 
 private fun Expense.toBackupModel() = BudgetBackupExpense(
@@ -204,6 +220,7 @@ private fun Income.toBackupModel() = BudgetBackupIncome(
     id = id,
     amount = amount.toString(),
     date = date,
+    categoryId = categoryId,
     description = description,
     recurringSeriesId = recurringSeriesId
 )

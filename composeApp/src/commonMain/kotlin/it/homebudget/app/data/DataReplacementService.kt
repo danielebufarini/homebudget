@@ -30,7 +30,10 @@ class DataReplacementService(
                         id = category.id,
                         name = category.name,
                         icon = category.icon,
-                        isCustom = if (category.isCustom) 1L else 0L
+                        color = category.color,
+                        categoryType = category.categoryType,
+                        isCustom = if (category.isCustom) 1L else 0L,
+                        isArchived = if (category.isArchived) 1L else 0L
                     )
                 }
             )
@@ -56,7 +59,8 @@ class DataReplacementService(
                         amount = income.amount,
                         date = income.date,
                         description = income.description,
-                        recurringSeriesId = income.recurringSeriesId
+                        recurringSeriesId = income.recurringSeriesId,
+                        categoryId = income.categoryId
                     )
                 }
             )

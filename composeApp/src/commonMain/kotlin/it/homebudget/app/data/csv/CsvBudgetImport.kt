@@ -10,6 +10,7 @@ import it.homebudget.app.data.csv.import.ImportedRecurringExpenseSeriesCompleter
 import it.homebudget.app.data.csv.import.ImportedRecurringIncomeSeriesCompleter
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.Category
+import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.loadCategoryNameResolver
@@ -138,6 +139,7 @@ internal data class CsvImportedExpenseKey(
 
 internal data class CsvImportedIncomeKey(
     val date: Long,
+    val categoryId: String?,
     val amount: Long,
     val description: String
 )
@@ -147,8 +149,13 @@ internal fun registerCategoryNames(
     map: MutableMap<String, Category>,
     resolveCategoryName: (String, String, Long) -> String
 ) {
-    map[normalizeCategoryToken(category.name)] = category
-    map[normalizeCategoryToken(resolveCategoryName(category.id, category.name, category.isCustom))] = category
+    map[categoryLookupKey(category.name, category.categoryType)] = category
+    map[
+        categoryLookupKey(
+            resolveCategoryName(category.id, category.name, category.isCustom),
+            category.categoryType
+        )
+    ] = category
 }
 
 private fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
@@ -233,21 +240,27 @@ private fun parseCsvDate(value: String): LocalDate? {
 
 internal fun resolveImportCategory(
     rawCategoryName: String,
-    categoriesByNormalizedName: Map<String, Category>
+    categoriesByNormalizedName: Map<String, Category>,
+    categoryType: String
 ): Category {
-    val normalizedName = normalizeCategoryToken(rawCategoryName)
-    categoriesByNormalizedName[normalizedName]?.let { return it }
+    categoriesByNormalizedName[categoryLookupKey(rawCategoryName, categoryType)]
+        ?.let { return it }
 
     return Category(
         id = buildImportedCategoryId(),
         name = rawCategoryName.trim(),
         icon = "category",
+        color = DEFAULT_CATEGORY_COLOR,
+        categoryType = categoryType,
         isCustom = 1L
     )
 }
 
 private fun normalizeCategoryToken(value: String): String =
     value.trim().lowercase().replace(nonAlphanumericRegex, " ").trim()
+
+private fun categoryLookupKey(value: String, categoryType: String): String =
+    "${categoryType.trim().lowercase()}::${normalizeCategoryToken(value)}"
 
 internal fun normalizeDescription(value: String?): String = value?.trim()?.lowercase().orEmpty()
 
@@ -280,12 +293,14 @@ internal fun PendingExpense.asImportKey() = CsvImportedExpenseKey(
 
 internal fun Income.asImportKey() = CsvImportedIncomeKey(
     date = date,
+    categoryId = categoryId,
     amount = amount,
     description = normalizeDescription(description)
 )
 
 internal fun PendingIncome.asImportKey() = CsvImportedIncomeKey(
     date = date,
+    categoryId = categoryId,
     amount = amount,
     description = normalizeDescription(description)
 )

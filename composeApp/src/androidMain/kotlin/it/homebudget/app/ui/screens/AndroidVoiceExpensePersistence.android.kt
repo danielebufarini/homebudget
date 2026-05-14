@@ -5,6 +5,7 @@ import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import java.util.Locale
@@ -19,6 +20,8 @@ internal suspend fun loadAndroidVoiceExpenseSnapshot(
 
     val categorySnapshot = repository.getAllCategoriesSnapshot()
     val categories = categorySnapshot
+        .asSequence()
+        .filter { it.categoryType == CATEGORY_TYPE_EXPENSE && it.isArchived != 1L }
         .sortedBy { resolveCategoryName(it).lowercase(Locale.getDefault()) }
         .map { category ->
             AndroidVoiceExpenseCategory(
@@ -26,6 +29,7 @@ internal suspend fun loadAndroidVoiceExpenseSnapshot(
                 name = resolveCategoryName(category)
             )
         }
+        .toList()
 
     val categoriesById = categorySnapshot.associateBy(Category::id)
 

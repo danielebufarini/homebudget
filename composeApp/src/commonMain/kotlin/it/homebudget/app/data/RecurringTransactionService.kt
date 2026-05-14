@@ -9,7 +9,8 @@ class RecurringTransactionService(
         seriesId: String,
         amount: Long,
         date: Long,
-        description: String?
+        description: String?,
+        categoryId: String?
     ) {
         val seriesItems = incomeRepository.getRecurringIncomesBySeries(seriesId)
             .map { income ->
@@ -26,6 +27,7 @@ class RecurringTransactionService(
                 anchorDate = date,
                 amount = amount,
                 description = description,
+                categoryId = categoryId,
                 recurringSeriesId = seriesId
             )
         )

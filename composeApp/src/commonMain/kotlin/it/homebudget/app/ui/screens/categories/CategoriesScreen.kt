@@ -242,7 +242,9 @@ class CategoriesScreen : Screen {
                                 repository.updateCategory(
                                     id = editingCategory.id,
                                     name = name,
-                                    icon = iconKey
+                                    icon = iconKey,
+                                    color = editingCategory.color,
+                                    categoryType = editingCategory.categoryType
                                 )
                             }
                         }.onSuccess {
@@ -263,11 +265,6 @@ class CategoriesScreen : Screen {
                 onDelete = {
                     categoryPendingDelete = null
                     scope.launch {
-                        if (repository.isCategoryInUse(category.id)) {
-                            snackbarHostState.showSnackbar(deleteCategoryInUseLabel)
-                            return@launch
-                        }
-
                         runCatching {
                             repository.deleteCategory(category.id)
                         }.onFailure {

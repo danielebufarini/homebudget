@@ -330,6 +330,38 @@
         }
       }
     },
+    "Choose whether to delete only this instance or the whole series." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose whether to delete only this instance or the whole series."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli se eliminare solo questa occorrenza o l'intera serie."
+          }
+        }
+      }
+    },
+    "Choose whether to update only this instance or the whole series." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose whether to update only this instance or the whole series."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli se aggiornare solo questa occorrenza o l'intera serie."
+          }
+        }
+      }
+    },
     "Custom Categories" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -343,6 +375,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Categorie personalizzate"
+          }
+        }
+      }
+    },
+    "Default Categories" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default Categories"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Categorie predefinite"
           }
         }
       }
@@ -1316,6 +1364,22 @@
         }
       }
     },
+    "Options" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Options"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opzioni"
+          }
+        }
+      }
+    },
     "No usable microphone input is available." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1369,6 +1433,22 @@
     },
     "R" : {
 
+    },
+    "Recurring Monthly" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recurring Monthly"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mensile ricorrente"
+          }
+        }
+      }
     },
     "Ready to Save" : {
       "extractionState" : "stale",
@@ -1523,6 +1603,22 @@
         }
       }
     },
+    "Select Category" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Category"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seleziona categoria"
+          }
+        }
+      }
+    },
     "Save or restore a complete copy of your app data in the cloud." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1570,6 +1666,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Condivisa"
+          }
+        }
+      }
+    },
+    "Shared Expense" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared Expense"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spesa condivisa"
           }
         }
       }
@@ -1808,6 +1920,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Solo questa occorrenza"
+          }
+        }
+      }
+    },
+    "This expense belongs to a recurring monthly series." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This expense belongs to a recurring monthly series."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa spesa fa parte di una serie mensile ricorrente."
+          }
+        }
+      }
+    },
+    "Creates the same expense every month on this day for the next %lld years." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates the same expense every month on this day for the next %1$lld years."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea la stessa spesa ogni mese in questo giorno per i prossimi %1$lld anni."
           }
         }
       }

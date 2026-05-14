@@ -55,8 +55,10 @@
     <string name="csv_transfer_description">Move selected data using CSV files stored on this phone.</string>
     <string name="csv_transfer_note">Not suitable for full app restore.</string>
     <string name="custom_category">Custom categories</string>
+    <string name="custom_label">Custom</string>
     <string name="dashboard">Dashboard</string>
     <string name="date">Date</string>
+    <string name="details">Details</string>
     <string name="default_category">Default categories</string>
     <string name="delete">Delete</string>
     <string name="difference">Difference</string>
@@ -97,6 +99,7 @@
     <string name="from">From</string>
     <string name="to">To</string>
     <string name="monthly_summary">Monthly Summary</string>
+    <string name="new_category">New category</string>
     <string name="new_expense">New expense</string>
     <string name="no_expenses_for_day">No expenses for this day</string>
     <string name="no_expenses_for_month">No expenses for this month</string>
@@ -105,6 +108,7 @@
     <string name="no_custom_categories_yet">No custom categories yet</string>
     <string name="no_shared_expenses_for_month">No shared expenses for this month</string>
     <string name="nothing_to_save">Nothing to save</string>
+    <string name="options">Options</string>
     <string name="recurring_monthly">Recurring Monthly</string>
     <string name="refresh">Refresh</string>
     <string name="restore">Restore</string>

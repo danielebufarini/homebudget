@@ -4,12 +4,12 @@ import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import it.homebudget.app.ui.screens.AddTransactionScreen
-import it.homebudget.app.ui.screens.CategoriesScreen
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
+import it.homebudget.app.ui.screens.categories.BentoCategoriesScreen
 
 class DashboardScreen(
     private val openVoiceExpenseRequest: Int = 0
@@ -22,7 +22,7 @@ class DashboardScreen(
             showNavigationChrome = true,
             openVoiceExpenseRequest = openVoiceExpenseRequest,
             showFab = false,
-            onOpenCategories = { navigator?.push(CategoriesScreen()) },
+            onOpenCategories = { navigator?.push(BentoCategoriesScreen) },
             onOpenAddExpense = { navigator?.push(AddTransactionScreen()) },
             onOpenDayExpenses = { year, month, day ->
                 navigator?.push(DayExpensesScreen(year = year, month = month, day = day))

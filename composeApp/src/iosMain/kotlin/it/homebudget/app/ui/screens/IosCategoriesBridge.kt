@@ -1,6 +1,7 @@
 package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.coroutines.Job
@@ -38,9 +39,12 @@ class IosCategoriesController {
             repository.insertDefaultCategoriesIfEmpty()
             repository.getAllCategories().collect { categories ->
                 val resolveCategoryName = loadCategoryNameResolver()
+                val selectableCategories = categories.filter { category ->
+                    category.categoryType == CATEGORY_TYPE_EXPENSE && category.isArchived != 1L
+                }
                 onUpdate(
                     IosCategoriesSnapshot(
-                        categories = categories.map { category ->
+                        categories = selectableCategories.map { category ->
                             IosCategoryItem(
                                 id = category.id,
                                 name = resolveCategoryName(category.id, category.name, category.isCustom),

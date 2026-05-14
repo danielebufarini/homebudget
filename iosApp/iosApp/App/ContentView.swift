@@ -108,12 +108,7 @@ struct ContentView: View {
                             }
                         }
                         .appGlassHostedScreenChrome()
-                        .navigationTitle(appLocalized("Custom Categories"))
-                        .navigationBarTitleDisplayMode(.inline)
-                        .navigationBarBackButtonHidden()
-                        .toolbar {
-                            backToolbar
-                        }
+                        .toolbar(.hidden, for: .navigationBar)
                     case let .addTransaction(initialKind, year, month):
                         TransactionEditorRootView(
                             initialKind: initialKind,

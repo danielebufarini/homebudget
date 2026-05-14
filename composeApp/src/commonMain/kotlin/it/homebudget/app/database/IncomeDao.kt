@@ -77,6 +77,9 @@ interface IncomeDao {
     @Query("DELETE FROM income")
     suspend fun deleteAllIncomes()
 
+    @Query("SELECT count(*) FROM income WHERE categoryId = :categoryId")
+    suspend fun countIncomesForCategory(categoryId: String): Long
+
     @Query("DELETE FROM income WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringIncomeSeries(seriesId: String)
 }

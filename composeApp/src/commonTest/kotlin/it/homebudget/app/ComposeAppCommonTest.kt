@@ -3,6 +3,7 @@ package it.homebudget.app
 import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
 import it.homebudget.app.data.buildPendingExpenses
 import it.homebudget.app.data.buildRecurringMonthlyExpenses
+import it.homebudget.app.data.buildRecurringMonthlyExpensesFromExistingExpense
 import it.homebudget.app.data.buildRecurringMonthlyIncomes
 import it.homebudget.app.data.csv.buildExpensesCsvExport
 import it.homebudget.app.data.csv.buildIncomesCsvExport
@@ -79,6 +80,32 @@ class ComposeAppCommonTest {
         assertEquals(firstDate, expenses[0].date)
         assertEquals(LocalDate(2026, 2, 28).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[1].date)
         assertEquals(LocalDate(2026, 3, 31).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[2].date)
+    }
+
+    @Test
+    fun buildRecurringMonthlyExpensesFromExistingExpense_keepsEditedExpenseAsFirstOccurrence() {
+        val timeZone = TimeZone.UTC
+        val firstDate = LocalDate(2026, 1, 16).atStartOfDayIn(timeZone).toEpochMilliseconds()
+        var nextId = 0
+
+        val expenses = buildRecurringMonthlyExpensesFromExistingExpense(
+            existingExpenseId = "expense-42",
+            amount = 2500L,
+            firstDate = firstDate,
+            categoryId = "car",
+            description = "Car wash",
+            isShared = false,
+            recurringSeriesId = "series-42",
+            idProvider = { "recurring-${nextId++}" },
+            occurrences = 3,
+            timeZone = timeZone
+        )
+
+        assertEquals(listOf("expense-42", "recurring-1", "recurring-2"), expenses.map { it.id })
+        assertEquals(listOf("series-42", "series-42", "series-42"), expenses.map { it.recurringSeriesId })
+        assertEquals(firstDate, expenses[0].date)
+        assertEquals(LocalDate(2026, 2, 16).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[1].date)
+        assertEquals(LocalDate(2026, 3, 16).atStartOfDayIn(timeZone).toEpochMilliseconds(), expenses[2].date)
     }
 
     @Test

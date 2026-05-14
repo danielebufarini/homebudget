@@ -21,7 +21,8 @@ data class PendingIncome(
     val amount: Long,
     val date: Long,
     val description: String?,
-    val recurringSeriesId: String? = null
+    val recurringSeriesId: String? = null,
+    val categoryId: String? = null
 )
 
 data class ExistingRecurringExpenseItem(
@@ -124,6 +125,7 @@ fun buildRecurringMonthlyIncomes(
     amount: Long,
     firstDate: Long,
     description: String?,
+    categoryId: String?,
     recurringSeriesId: String,
     idProvider: () -> String,
     occurrences: Int = RECURRING_MONTHLY_OCCURRENCES,
@@ -137,7 +139,8 @@ fun buildRecurringMonthlyIncomes(
             amount = amount,
             date = monthlyOccurrenceDate(firstDate, index, timeZone),
             description = description.ifBlankToNull(),
-            recurringSeriesId = recurringSeriesId
+            recurringSeriesId = recurringSeriesId,
+            categoryId = categoryId
         )
     }
 }
@@ -179,6 +182,7 @@ fun buildUpdatedRecurringIncomeSeries(
     anchorDate: Long,
     amount: Long,
     description: String?,
+    categoryId: String?,
     recurringSeriesId: String,
     timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): List<PendingIncome> {
@@ -195,7 +199,8 @@ fun buildUpdatedRecurringIncomeSeries(
                 timeZone = timeZone
             ),
             description = description.ifBlankToNull(),
-            recurringSeriesId = recurringSeriesId
+            recurringSeriesId = recurringSeriesId,
+            categoryId = categoryId
         )
     }
 }

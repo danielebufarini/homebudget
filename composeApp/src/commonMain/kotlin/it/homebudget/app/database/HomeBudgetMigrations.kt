@@ -27,7 +27,7 @@ internal val MIGRATION_2_3 = object : Migration(2, 3) {
 }
 
 internal fun RoomDatabase.Builder<HomeBudgetDatabase>.addHomeBudgetMigrations():
-    RoomDatabase.Builder<HomeBudgetDatabase> = addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+    RoomDatabase.Builder<HomeBudgetDatabase> = this.fallbackToDestructiveMigration(dropAllTables = true)
 
 private fun migrateExpenseTable(connection: SQLiteConnection) {
     connection.execSQL(

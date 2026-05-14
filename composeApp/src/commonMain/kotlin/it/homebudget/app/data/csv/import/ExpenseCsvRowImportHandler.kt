@@ -6,6 +6,7 @@ import it.homebudget.app.data.csv.buildImportedExpenseId
 import it.homebudget.app.data.csv.normalizeDescription
 import it.homebudget.app.data.csv.registerCategoryNames
 import it.homebudget.app.data.csv.resolveImportCategory
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 
 internal object ExpenseCsvRowImportHandler : CsvRowImportHandler {
     override suspend fun importRow(
@@ -22,7 +23,8 @@ internal object ExpenseCsvRowImportHandler : CsvRowImportHandler {
 
         val category = resolveImportCategory(
             rawCategoryName = rawCategoryName,
-            categoriesByNormalizedName = state.categoriesByNormalizedName
+            categoriesByNormalizedName = state.categoriesByNormalizedName,
+            categoryType = CATEGORY_TYPE_EXPENSE
         )
 
         if (state.categoriesById[category.id] == null) {
@@ -30,7 +32,10 @@ internal object ExpenseCsvRowImportHandler : CsvRowImportHandler {
                 id = category.id,
                 name = category.name,
                 icon = category.icon,
-                isCustom = category.isCustom == 1L
+                isCustom = category.isCustom == 1L,
+                color = category.color,
+                categoryType = category.categoryType,
+                isArchived = category.isArchived == 1L
             )
             state.categoriesById[category.id] = category
             registerCategoryNames(

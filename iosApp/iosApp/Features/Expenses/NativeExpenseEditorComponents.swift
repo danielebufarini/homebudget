@@ -184,7 +184,7 @@ struct NativeRecurringSaveConfirmationDialog: View {
     var body: some View {
         AppGlassDialogCard(
             title: appLocalized("Update Expense"),
-            message: "Choose whether to update only this instance or the whole series."
+            message: appLocalized("Choose whether to update only this instance or the whole series.")
         ) {
             AppGlassDialogButton(
                 title: appLocalized("This instance only"),

@@ -103,6 +103,10 @@ final class NativeExpenseEditorViewModel: ObservableObject {
         recurringSeriesId?.isEmpty == false
     }
 
+    var recurringMonthlyYears: Int {
+        Int(ExpenseInstallmentsKt.RECURRING_MONTHLY_OCCURRENCES / 12)
+    }
+
     func save(
         updateWholeSeries: Bool,
         onComplete: @escaping (String?) -> Void
@@ -173,12 +177,12 @@ final class NativeExpenseEditorViewModel: ObservableObject {
 }
 
 let nativeExpenseEditorIconSections: [NativeExpenseEditorIconSection] = [
-    NativeExpenseEditorIconSection(id: "home", title: "Home & Bills", iconKeys: ["home", "receipt", "build"]),
-    NativeExpenseEditorIconSection(id: "food", title: "Food & Dining", iconKeys: ["shopping_cart", "restaurant", "local_cafe", "cake"]),
-    NativeExpenseEditorIconSection(id: "travel", title: "Transport & Travel", iconKeys: ["directions_car", "directions_bus", "train", "local_taxi", "flight", "hotel", "beach_access"]),
-    NativeExpenseEditorIconSection(id: "health", title: "Health & Wellness", iconKeys: ["local_hospital", "healing", "fitness_center", "spa"]),
-    NativeExpenseEditorIconSection(id: "people", title: "People & Work", iconKeys: ["person", "work", "school"]),
-    NativeExpenseEditorIconSection(id: "general", title: "General & Hobbies", iconKeys: ["pets", "category"])
+    NativeExpenseEditorIconSection(id: "home", title: appLocalized("Home & Bills"), iconKeys: ["home", "receipt", "build"]),
+    NativeExpenseEditorIconSection(id: "food", title: appLocalized("Food & Dining"), iconKeys: ["shopping_cart", "restaurant", "local_cafe", "cake"]),
+    NativeExpenseEditorIconSection(id: "travel", title: appLocalized("Transport & Travel"), iconKeys: ["directions_car", "directions_bus", "train", "local_taxi", "flight", "hotel", "beach_access"]),
+    NativeExpenseEditorIconSection(id: "health", title: appLocalized("Health & Wellness"), iconKeys: ["local_hospital", "healing", "fitness_center", "spa"]),
+    NativeExpenseEditorIconSection(id: "people", title: appLocalized("People & Work"), iconKeys: ["person", "work", "school"]),
+    NativeExpenseEditorIconSection(id: "general", title: appLocalized("General & Hobbies"), iconKeys: ["pets", "category"])
 ]
 
 func nativeExpenseEditorDateString(_ date: Date) -> String {

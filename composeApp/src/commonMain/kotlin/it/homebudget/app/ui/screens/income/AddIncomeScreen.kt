@@ -22,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,22 +34,28 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.add
+import homebudget.composeapp.generated.resources.add_category
 import homebudget.composeapp.generated.resources.add_income
 import homebudget.composeapp.generated.resources.amount
 import homebudget.composeapp.generated.resources.back
 import homebudget.composeapp.generated.resources.cancel
+import homebudget.composeapp.generated.resources.category
 import homebudget.composeapp.generated.resources.date
 import homebudget.composeapp.generated.resources.delete_income
 import homebudget.composeapp.generated.resources.delete_recurring_income_title
 import homebudget.composeapp.generated.resources.description
+import homebudget.composeapp.generated.resources.details
 import homebudget.composeapp.generated.resources.edit_income
 import homebudget.composeapp.generated.resources.enter_valid_amount
+import homebudget.composeapp.generated.resources.options
 import homebudget.composeapp.generated.resources.recurring_income_action_delete
 import homebudget.composeapp.generated.resources.recurring_income_action_update
 import homebudget.composeapp.generated.resources.recurring_income_info
 import homebudget.composeapp.generated.resources.recurring_income_series_info
 import homebudget.composeapp.generated.resources.recurring_monthly
 import homebudget.composeapp.generated.resources.save
+import homebudget.composeapp.generated.resources.select_category
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unable_to_delete_income
 import homebudget.composeapp.generated.resources.unable_to_save_income
@@ -61,6 +68,8 @@ import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
 import it.homebudget.app.data.buildRecurringMonthlyIncomes
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.database.CATEGORY_TYPE_INCOME
+import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -75,7 +84,8 @@ import kotlin.time.Instant
 private data class PendingRecurringIncomeUpdate(
     val amount: Long,
     val date: Long,
-    val description: String?
+    val description: String?,
+    val categoryId: String?
 )
 
 private enum class RecurringIncomeAction {
@@ -110,12 +120,17 @@ class AddIncomeScreen(
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
         val addIncomeLabel = stringResource(Res.string.add_income)
+        val addCategoryLabel = stringResource(Res.string.add_category)
+        val addLabel = stringResource(Res.string.add)
         val amountLabel = stringResource(Res.string.amount)
         val backLabel = stringResource(Res.string.back)
         val cancelLabel = stringResource(Res.string.cancel)
+        val categoryLabel = stringResource(Res.string.category)
         val dateLabel = stringResource(Res.string.date)
+        val detailsLabel = stringResource(Res.string.details)
         val deleteIncomeLabel = stringResource(Res.string.delete_income)
         val deleteRecurringIncomeTitle = stringResource(Res.string.delete_recurring_income_title)
+        val optionsLabel = stringResource(Res.string.options)
         val descriptionLabel = stringResource(Res.string.description)
         val editIncomeLabel = stringResource(Res.string.edit_income)
         val enterValidAmountLabel = stringResource(Res.string.enter_valid_amount)
@@ -128,10 +143,12 @@ class AddIncomeScreen(
         val recurringIncomeSeriesInfo = stringResource(Res.string.recurring_income_series_info)
         val recurringMonthlyLabel = stringResource(Res.string.recurring_monthly)
         val saveLabel = stringResource(Res.string.save)
+        val selectCategoryLabel = stringResource(Res.string.select_category)
         val unableToDeleteIncomeLabel = stringResource(Res.string.unable_to_delete_income)
         val unableToSaveIncomeLabel = stringResource(Res.string.unable_to_save_income)
         val updateLabel = stringResource(Res.string.update)
         val updateRecurringIncomeTitle = stringResource(Res.string.update_recurring_income_title)
+        val resolveCategoryName = rememberCategoryNameResolver()
         val defaultDateMillis = remember(incomeId, initialYear, initialMonth) {
             if (incomeId != null) {
                 null
@@ -145,6 +162,7 @@ class AddIncomeScreen(
 
         var amount by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
+        var selectedCategoryId by remember { mutableStateOf<String?>(null) }
         var selectedDateMillis by remember(incomeId, defaultDateMillis) {
             mutableStateOf(defaultDateMillis ?: Clock.System.now().toEpochMilliseconds())
         }
@@ -152,8 +170,22 @@ class AddIncomeScreen(
         var recurringSeriesId by remember { mutableStateOf<String?>(null) }
         var isSaving by remember { mutableStateOf(false) }
         var isInitialized by remember(incomeId) { mutableStateOf(incomeId == null) }
+        var showAddCategorySheet by remember { mutableStateOf(false) }
+        var showCategoryPickerSheet by remember { mutableStateOf(false) }
         var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringIncomeUpdate?>(null) }
         var pendingRecurringAction by remember { mutableStateOf<RecurringIncomeAction?>(null) }
+        val categories by repository.getAllCategories().collectAsState(initial = emptyList())
+        val selectableCategories = remember(categories, selectedCategoryId) {
+            categories.filter { category ->
+                category.categoryType == CATEGORY_TYPE_INCOME &&
+                    (category.isArchived != 1L || category.id == selectedCategoryId)
+            }
+        }
+        val selectedCategory = categories.find { it.id == selectedCategoryId }
+        val selectedCategoryName = selectedCategory?.let {
+            resolveCategoryName(it.id, it.name, it.isCustom)
+        }
+        val selectedCategoryIconKey = selectedCategory?.icon
 
         LaunchedEffect(incomeId) {
             if (incomeId == null || isInitialized) {
@@ -163,6 +195,7 @@ class AddIncomeScreen(
             val income = repository.getIncomeById(incomeId) ?: return@LaunchedEffect
             amount = formatAmountInput(income.amount)
             description = income.description.orEmpty()
+            selectedCategoryId = income.categoryId
             selectedDateMillis = income.date
             recurringSeriesId = income.recurringSeriesId
             isInitialized = true
@@ -191,7 +224,8 @@ class AddIncomeScreen(
                         seriesId = seriesId,
                         amount = payload.amount,
                         date = payload.date,
-                        description = payload.description
+                        description = payload.description,
+                        categoryId = payload.categoryId
                     )
                 } else {
                     repository.insertIncomes(
@@ -201,6 +235,7 @@ class AddIncomeScreen(
                                 amount = payload.amount,
                                 date = payload.date,
                                 description = payload.description,
+                                categoryId = payload.categoryId,
                                 recurringSeriesId = recurringSeriesId
                             )
                         )
@@ -253,11 +288,13 @@ class AddIncomeScreen(
                     else -> {
                         isSaving = true
                         val normalizedDescription = description.trim().ifBlank { null }
+                        val normalizedCategoryId = selectedCategoryId?.takeIf { it.isNotBlank() }
                         if (incomeId != null && recurringSeriesId != null) {
                             pendingRecurringUpdate = PendingRecurringIncomeUpdate(
                                 amount = parsedAmount,
                                 date = selectedDateMillis,
-                                description = normalizedDescription
+                                description = normalizedDescription,
+                                categoryId = normalizedCategoryId
                             )
                             pendingRecurringAction = RecurringIncomeAction.Update
                             isSaving = false
@@ -269,6 +306,7 @@ class AddIncomeScreen(
                                             amount = parsedAmount,
                                             firstDate = selectedDateMillis,
                                             description = description.trim(),
+                                            categoryId = normalizedCategoryId,
                                             recurringSeriesId = buildRecurringIncomeSeriesId(),
                                             idProvider = ::buildIncomeId
                                         )
@@ -279,6 +317,7 @@ class AddIncomeScreen(
                                                 amount = parsedAmount,
                                                 date = selectedDateMillis,
                                                 description = normalizedDescription,
+                                                categoryId = normalizedCategoryId,
                                                 recurringSeriesId = null
                                             )
                                         )
@@ -290,6 +329,7 @@ class AddIncomeScreen(
                                             amount = parsedAmount,
                                             date = selectedDateMillis,
                                             description = normalizedDescription,
+                                            categoryId = normalizedCategoryId,
                                             recurringSeriesId = recurringSeriesId
                                         )
                                     )
@@ -378,7 +418,16 @@ class AddIncomeScreen(
                         kind = TransactionEditorKind.Income
                     )
 
-                    SoftSectionCard(title = "Details") {
+                    SoftSectionCard(title = detailsLabel) {
+                        SoftCategoryPickerRow(
+                            label = categoryLabel,
+                            categoryName = selectedCategoryName,
+                            categoryIconKey = selectedCategoryIconKey,
+                            categoryColorKey = selectedCategoryId,
+                            placeholder = selectCategoryLabel,
+                            onClick = { showCategoryPickerSheet = true }
+                        )
+
                         SoftPickerRow(
                             label = dateLabel,
                             value = selectedDateMillis.formatDateLabel(),
@@ -401,7 +450,7 @@ class AddIncomeScreen(
                         )
                     }
 
-                    SoftSectionCard(title = "Options") {
+                    SoftSectionCard(title = optionsLabel) {
                         if (incomeId == null) {
                             SoftToggleRow(
                                 label = recurringMonthlyLabel,
@@ -425,6 +474,54 @@ class AddIncomeScreen(
                     }
                 }
             }
+        }
+
+        if (showAddCategorySheet) {
+            AddCategorySheet(
+                onDismiss = { showAddCategorySheet = false },
+                title = addCategoryLabel,
+                confirmLabel = addLabel,
+                initialName = "",
+                initialIconKey = DEFAULT_CATEGORY_ICON_KEY,
+                onConfirm = { name, iconKey ->
+                    scope.launch {
+                        runCatching {
+                            val categoryId = buildCustomCategoryId()
+                            repository.insertCategory(
+                                id = categoryId,
+                                name = name,
+                                icon = iconKey,
+                                isCustom = true,
+                                categoryType = CATEGORY_TYPE_INCOME
+                            )
+                            selectedCategoryId = categoryId
+                        }.onSuccess {
+                            showAddCategorySheet = false
+                        }.onFailure {
+                            snackbarHostState.showSnackbar(unableToSaveIncomeLabel)
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showCategoryPickerSheet) {
+            CategoryPickerSheet(
+                categories = selectableCategories,
+                selectedCategoryId = selectedCategoryId.orEmpty(),
+                resolveCategoryName = { category ->
+                    resolveCategoryName(category.id, category.name, category.isCustom)
+                },
+                onDismiss = { showCategoryPickerSheet = false },
+                onAddCategory = {
+                    showCategoryPickerSheet = false
+                    showAddCategorySheet = true
+                },
+                onCategorySelected = { categoryId ->
+                    selectedCategoryId = categoryId
+                    showCategoryPickerSheet = false
+                }
+            )
         }
 
         if (pendingRecurringAction != null) {

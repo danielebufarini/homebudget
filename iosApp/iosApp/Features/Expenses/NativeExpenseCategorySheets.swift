@@ -3,7 +3,6 @@ import SwiftUI
 struct NativeExpenseCategoryPickerSheet: View {
     let categories: [NativeExpenseCategory]
     let selectedCategoryId: String
-    let onDismiss: () -> Void
     let onAddCategory: () -> Void
     let onSelectCategory: (String) -> Void
 
@@ -17,7 +16,7 @@ struct NativeExpenseCategoryPickerSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Select Category")
+            Text(appLocalized("Select Category"))
                 .font(.largeTitle.weight(.bold))
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
@@ -25,7 +24,7 @@ struct NativeExpenseCategoryPickerSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     NativeExpenseCategoryGridSection(
-                        title: "Custom Category",
+                        title: appLocalized("Custom Categories"),
                         categories: customCategories,
                         selectedCategoryId: selectedCategoryId,
                         showAddTile: true,
@@ -34,7 +33,7 @@ struct NativeExpenseCategoryPickerSheet: View {
                     )
 
                     NativeExpenseCategoryGridSection(
-                        title: "Default Category",
+                        title: appLocalized("Default Categories"),
                         categories: defaultCategories,
                         selectedCategoryId: selectedCategoryId,
                         showAddTile: false,
@@ -45,11 +44,6 @@ struct NativeExpenseCategoryPickerSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
-
-            Button(appLocalized("Close"), action: onDismiss)
-                .buttonStyle(.glass)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
         }
         .appGlassSheetChrome()
     }

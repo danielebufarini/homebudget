@@ -76,6 +76,7 @@ import homebudget.composeapp.generated.resources.edit_expense
 import homebudget.composeapp.generated.resources.enter_valid_amount
 import homebudget.composeapp.generated.resources.expense_details
 import homebudget.composeapp.generated.resources.installments
+import homebudget.composeapp.generated.resources.options
 import homebudget.composeapp.generated.resources.recurring_expense_action_delete
 import homebudget.composeapp.generated.resources.recurring_expense_action_update
 import homebudget.composeapp.generated.resources.recurring_expense_info
@@ -101,6 +102,7 @@ import it.homebudget.app.data.buildRecurringMonthlyExpenses
 import it.homebudget.app.data.buildRecurringMonthlyExpensesFromExistingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.launch
@@ -204,7 +206,14 @@ class AddExpenseScreen(
         var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
 
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
+        val selectableCategories = remember(categories, selectedCategoryId) {
+            categories.filter { category ->
+                category.categoryType == CATEGORY_TYPE_EXPENSE &&
+                    (category.isArchived != 1L || category.id == selectedCategoryId)
+            }
+        }
         val selectedCategory = categories.find { it.id == selectedCategoryId }
+        val optionsLabel = stringResource(Res.string.options)
         val installmentOptions = remember { (1..12).toList() }
         val installmentLabels = remember(installmentOptions, singlePaymentLabel, installmentsLabel) {
             installmentOptions.associateWith { count ->
@@ -547,7 +556,7 @@ class AddExpenseScreen(
                         )
                     }
 
-                    SoftSectionCard(title = "Options") {
+                    SoftSectionCard(title = optionsLabel) {
                         if (expenseId == null && !isRecurringMonthly) {
                             SoftPickerRow(
                                 label = installmentsLabel,
@@ -641,7 +650,8 @@ class AddExpenseScreen(
                                 id = categoryId,
                                 name = name,
                                 icon = iconKey,
-                                isCustom = true
+                                isCustom = true,
+                                categoryType = CATEGORY_TYPE_EXPENSE
                             )
                             selectedCategoryId = categoryId
                         }.onSuccess {
@@ -656,7 +666,7 @@ class AddExpenseScreen(
 
         if (showCategoryPickerSheet) {
             CategoryPickerSheet(
-                categories = categories,
+                categories = selectableCategories,
                 selectedCategoryId = selectedCategoryId,
                 resolveCategoryName = { category ->
                     resolveCategoryName(category.id, category.name, category.isCustom)
@@ -849,7 +859,7 @@ private fun CategorySplitButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryPickerSheet(
+internal fun CategoryPickerSheet(
     categories: List<Category>,
     selectedCategoryId: String,
     resolveCategoryName: (Category) -> String,

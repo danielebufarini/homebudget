@@ -28,7 +28,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.custom_label
+import homebudget.composeapp.generated.resources.delete
 import it.homebudget.app.database.Category
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal actual fun AndroidCategoriesRecyclerView(
@@ -143,6 +147,7 @@ private fun CategoryListItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val customLabel = stringResource(Res.string.custom_label)
     val clickableModifier = if (onClick != null) {
         modifier.clickable(onClick = onClick)
     } else {
@@ -172,7 +177,7 @@ private fun CategoryListItem(
 
             if (category.isCustom == 1L) {
                 Text(
-                    text = "Custom",
+                    text = customLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -183,6 +188,7 @@ private fun CategoryListItem(
 
 @Composable
 private fun DeleteCategoryBackground() {
+    val deleteLabel = stringResource(Res.string.delete)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -194,7 +200,7 @@ private fun DeleteCategoryBackground() {
         contentAlignment = Alignment.CenterEnd
     ) {
         Text(
-            text = "Delete",
+            text = deleteLabel,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onErrorContainer
         )

@@ -32,6 +32,13 @@ struct NativeExpenseEditorScreen: View {
         readOnly ? appLocalized("Close") : appLocalized("Update Expense")
     }
 
+    private var recurringExpenseInfoText: String {
+        appLocalized(
+            "Creates the same expense every month on this day for the next %lld years.",
+            viewModel.recurringMonthlyYears
+        )
+    }
+
     var body: some View {
         ZStack {
             ScrollView {
@@ -41,7 +48,7 @@ struct NativeExpenseEditorScreen: View {
                             .frame(maxWidth: .infinity, minHeight: 220)
                     } else if viewModel.didFailToLoad {
                         AppGlassListCard {
-                            Text("Expense not found")
+                            Text(appLocalized("Expense not found."))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -54,7 +61,7 @@ struct NativeExpenseEditorScreen: View {
                         AppGlassSheetSection(title: appLocalized("Expense Details"), spacing: 14) {
                             NativeExpensePickerRow(
                                 label: appLocalized("Category"),
-                                value: viewModel.selectedCategory?.name ?? "Select Category",
+                                value: viewModel.selectedCategory?.name ?? appLocalized("Select Category"),
                                 iconKey: viewModel.selectedCategory?.iconKey ?? "category",
                                 colorKey: viewModel.selectedCategoryId,
                                 enabled: !readOnly,
@@ -75,23 +82,30 @@ struct NativeExpenseEditorScreen: View {
                             )
                         }
 
-                        AppGlassSheetSection(title: "Options", spacing: 14) {
+                        AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {
                             if viewModel.hasRecurringSeries {
                                 NativeExpenseInfoCard(
                                     systemImageName: "arrow.triangle.2.circlepath",
-                                    text: "This expense belongs to a recurring monthly series."
+                                    text: appLocalized("This expense belongs to a recurring monthly series.")
                                 )
                             } else {
                                 NativeExpenseToggleRow(
-                                    label: "Recurring Monthly",
+                                    label: appLocalized("Recurring Monthly"),
                                     systemImageName: "arrow.triangle.2.circlepath",
                                     isOn: $viewModel.isRecurringMonthly,
                                     enabled: !readOnly
                                 )
+
+                                if viewModel.isRecurringMonthly {
+                                    NativeExpenseInfoCard(
+                                        systemImageName: "arrow.triangle.2.circlepath",
+                                        text: recurringExpenseInfoText
+                                    )
+                                }
                             }
 
                             NativeExpenseToggleRow(
-                                label: "Shared Expense",
+                                label: appLocalized("Shared Expense"),
                                 systemImageName: "person.2.fill",
                                 isOn: $viewModel.isShared,
                                 enabled: !readOnly
@@ -161,7 +175,6 @@ struct NativeExpenseEditorScreen: View {
             NativeExpenseCategoryPickerSheet(
                 categories: viewModel.categories,
                 selectedCategoryId: viewModel.selectedCategoryId,
-                onDismiss: { showCategoryPicker = false },
                 onAddCategory: {
                     showCategoryPicker = false
                     DispatchQueue.main.async {
@@ -181,7 +194,7 @@ struct NativeExpenseEditorScreen: View {
                 onConfirm: { name, iconKey in
                     viewModel.insertCategory(name: name, iconKey: iconKey) { categoryId in
                         if categoryId == nil {
-                            bannerPresenter.show("Unable to save category", style: .error)
+                            bannerPresenter.show(appLocalized("Unable to save category"), style: .error)
                         }
                         showAddCategorySheet = false
                     }
@@ -196,7 +209,7 @@ struct NativeExpenseEditorScreen: View {
             if showRecurringDeleteDialog {
                 AppGlassDialogOverlay {
                     AppGlassRecurringDeleteConfirmationDialog(
-                        message: "Choose whether to delete only this instance or the whole series.",
+                        message: appLocalized("Choose whether to delete only this instance or the whole series."),
                         onDeleteInstance: {
                             showRecurringDeleteDialog = false
                             deleteExpense(deleteWholeSeries: false)

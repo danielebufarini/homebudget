@@ -55,8 +55,10 @@
     <string name="csv_transfer_description">Sposta dati selezionati usando file CSV salvati su questo telefono.</string>
     <string name="csv_transfer_note">Non adatto a un ripristino completo dell'app.</string>
     <string name="custom_category">Categorie personalizzate</string>
+    <string name="custom_label">Personalizzata</string>
     <string name="dashboard">Riepilogo</string>
     <string name="date">Data</string>
+    <string name="details">Dettagli</string>
     <string name="default_category">Categorie predefinite</string>
     <string name="delete">Elimina</string>
     <string name="difference">Differenza</string>
@@ -97,6 +99,7 @@
     <string name="from">Da</string>
     <string name="to">A</string>
     <string name="monthly_summary">Riepilogo mensile</string>
+    <string name="new_category">Nuova categoria</string>
     <string name="new_expense">Nuova spesa</string>
     <string name="no_expenses_for_day">Nessuna spesa per questo giorno</string>
     <string name="no_expenses_for_month">Nessuna spesa per questo mese</string>
@@ -105,6 +108,7 @@
     <string name="no_custom_categories_yet">Nessuna categoria personalizzata</string>
     <string name="no_shared_expenses_for_month">Nessuna spesa condivisa per questo mese</string>
     <string name="nothing_to_save">Niente da salvare</string>
+    <string name="options">Opzioni</string>
     <string name="recurring_monthly">Mensile ricorrente</string>
     <string name="refresh">Aggiorna</string>
     <string name="restore">Ripristina</string>

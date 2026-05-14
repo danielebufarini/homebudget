@@ -5,7 +5,6 @@ import it.homebudget.app.di.initKoin
 import it.homebudget.app.ui.screens.AddExpenseScreen
 import it.homebudget.app.ui.screens.AddIncomeScreen
 import it.homebudget.app.ui.screens.AddTransactionScreen
-import it.homebudget.app.ui.screens.CategoriesScreen
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthCursor
@@ -13,6 +12,7 @@ import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
 import it.homebudget.app.ui.screens.TransactionEditorKind
+import it.homebudget.app.ui.screens.categories.BentoCategoriesRoute
 import it.homebudget.app.ui.screens.dashboard.DashboardRoute
 import it.homebudget.app.ui.screens.startIosGroupedExpensesStore
 import it.homebudget.app.ui.theme.AppTheme
@@ -126,10 +126,7 @@ fun CategoriesViewController(
     }
 ) {
     AppTheme {
-        CategoriesScreen().RouteContent(
-            showNavigationChrome = false,
-            onClose = onClose
-        )
+        BentoCategoriesRoute(onBack = onClose)
     }
 }
 

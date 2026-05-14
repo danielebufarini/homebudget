@@ -29,6 +29,7 @@ class IncomeRepository(
         amount: Long,
         date: Long,
         description: String?,
+        categoryId: String? = null,
         recurringSeriesId: String? = null
     ) {
         insertIncomes(
@@ -38,7 +39,8 @@ class IncomeRepository(
                     amount = amount,
                     date = date,
                     description = description,
-                    recurringSeriesId = recurringSeriesId
+                    recurringSeriesId = recurringSeriesId,
+                    categoryId = categoryId
                 )
             )
         )
@@ -55,7 +57,8 @@ class IncomeRepository(
                         amount = income.amount,
                         date = income.date,
                         description = income.description,
-                        recurringSeriesId = income.recurringSeriesId
+                        recurringSeriesId = income.recurringSeriesId,
+                        categoryId = income.categoryId
                     )
                 }
             )

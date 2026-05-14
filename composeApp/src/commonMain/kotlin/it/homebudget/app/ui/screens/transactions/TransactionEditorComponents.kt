@@ -70,6 +70,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.expense
+import homebudget.composeapp.generated.resources.income
+import homebudget.composeapp.generated.resources.new_category
+import org.jetbrains.compose.resources.stringResource
 
 enum class TransactionEditorKind {
     Expense,
@@ -180,6 +185,8 @@ internal fun TransactionAmountHeader(
     supportingText: String? = null,
     currencySymbol: String = "€"
 ) {
+    val expenseLabel = stringResource(Res.string.expense)
+    val incomeLabel = stringResource(Res.string.income)
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val accentColor = when (kind) {
@@ -196,7 +203,7 @@ internal fun TransactionAmountHeader(
         label = "amountIndicatorColor"
     )
     val sign = if (kind == TransactionEditorKind.Expense) "−" else "+"
-    val title = if (kind == TransactionEditorKind.Expense) "Expense" else "Income"
+    val title = if (kind == TransactionEditorKind.Expense) expenseLabel else incomeLabel
 
     val amountTextStyle = MaterialTheme.typography.headlineMedium.copy(
         fontWeight = FontWeight.SemiBold,
@@ -734,6 +741,7 @@ internal fun CategoryPreviewCard(
     iconKey: String,
     modifier: Modifier = Modifier
 ) {
+    val newCategoryLabel = stringResource(Res.string.new_category)
     SoftDepthCard(
         modifier = modifier,
         contentPadding = PaddingValues(20.dp)
@@ -757,7 +765,7 @@ internal fun CategoryPreviewCard(
                 }
             }
             Text(
-                text = name.ifBlank { "New category" },
+                text = name.ifBlank { newCategoryLabel },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,

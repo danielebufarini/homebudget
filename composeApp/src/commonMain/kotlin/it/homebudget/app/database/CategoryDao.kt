@@ -13,6 +13,9 @@ interface CategoryDao {
     @Query("SELECT * FROM category")
     suspend fun getAllCategoriesSnapshot(): List<Category>
 
+    @Query("SELECT * FROM category WHERE id = :id")
+    suspend fun getCategoryById(id: String): Category?
+
     @Upsert
     suspend fun insertCategory(category: Category)
 
@@ -22,11 +25,20 @@ interface CategoryDao {
     @Query(
         """
         UPDATE category
-        SET name = :name, icon = :icon
+        SET name = :name, icon = :icon, color = :color, categoryType = :categoryType
         WHERE id = :id
         """
     )
-    suspend fun updateCategory(id: String, name: String, icon: String)
+    suspend fun updateCategory(
+        id: String,
+        name: String,
+        icon: String,
+        color: String,
+        categoryType: String
+    )
+
+    @Query("UPDATE category SET isArchived = :isArchived WHERE id = :id")
+    suspend fun setCategoryArchived(id: String, isArchived: Long)
 
     @Query("DELETE FROM category WHERE id = :id")
     suspend fun deleteCategory(id: String)

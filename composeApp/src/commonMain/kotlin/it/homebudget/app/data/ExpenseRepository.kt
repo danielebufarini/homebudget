@@ -1,5 +1,7 @@
 package it.homebudget.app.data
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
+import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import kotlinx.coroutines.flow.Flow
@@ -9,7 +11,10 @@ data class RestoredCategory(
     val id: String,
     val name: String,
     val icon: String,
-    val isCustom: Boolean
+    val color: String = DEFAULT_CATEGORY_COLOR,
+    val categoryType: String = CATEGORY_TYPE_EXPENSE,
+    val isCustom: Boolean,
+    val isArchived: Boolean = false
 )
 
 data class DashboardMonthTotal(
@@ -50,12 +55,42 @@ class ExpenseRepository(
 ) {
     fun getAllCategories(): Flow<List<Category>> = categoryRepository.getAllCategories()
 
-    suspend fun insertCategory(id: String, name: String, icon: String, isCustom: Boolean) {
-        categoryRepository.insertCategory(id = id, name = name, icon = icon, isCustom = isCustom)
+    suspend fun insertCategory(
+        id: String,
+        name: String,
+        icon: String,
+        isCustom: Boolean,
+        color: String = DEFAULT_CATEGORY_COLOR,
+        categoryType: String = CATEGORY_TYPE_EXPENSE,
+        isArchived: Boolean = false
+    ) {
+        categoryRepository.insertCategory(
+            id = id,
+            name = name,
+            icon = icon,
+            isCustom = isCustom,
+            color = color,
+            categoryType = categoryType,
+            isArchived = isArchived
+        )
     }
 
-    suspend fun updateCategory(id: String, name: String, icon: String) {
-        categoryRepository.updateCategory(id = id, name = name, icon = icon)
+    suspend fun updateCategory(
+        id: String,
+        name: String,
+        icon: String,
+        color: String? = null,
+        categoryType: String? = null
+    ) {
+        val existingCategory = categoryRepository.getCategoryById(id)
+            ?: error("Category $id not found")
+        categoryRepository.updateCategory(
+            id = id,
+            name = name,
+            icon = icon,
+            color = color ?: existingCategory.color,
+            categoryType = categoryType ?: existingCategory.categoryType
+        )
     }
 
     suspend fun insertDefaultCategoriesIfEmpty() {
@@ -133,6 +168,7 @@ class ExpenseRepository(
         amount: Long,
         date: Long,
         description: String?,
+        categoryId: String? = null,
         recurringSeriesId: String? = null
     ) {
         incomeRepository.insertIncome(
@@ -140,6 +176,7 @@ class ExpenseRepository(
             amount = amount,
             date = date,
             description = description,
+            categoryId = categoryId,
             recurringSeriesId = recurringSeriesId
         )
     }
@@ -153,14 +190,16 @@ class ExpenseRepository(
         seriesId: String,
         amount: Long,
         date: Long,
-        description: String?
+        description: String?,
+        categoryId: String? = null
     ) {
         recurringTransactionService.updateRecurringIncomeSeries(
             anchorIncomeId = anchorIncomeId,
             seriesId = seriesId,
             amount = amount,
             date = date,
-            description = description
+            description = description,
+            categoryId = categoryId
         )
     }
 

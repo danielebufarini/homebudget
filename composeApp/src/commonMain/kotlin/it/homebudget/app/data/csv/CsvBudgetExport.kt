@@ -108,9 +108,12 @@ internal fun buildExpensesCsvExport(
 
 internal fun buildIncomesCsvExport(
     incomes: List<Income>,
+    categories: List<Category>,
     startDate: LocalDate,
-    endDate: LocalDate
+    endDate: LocalDate,
+    localizeCategoryName: (Category) -> String
 ): CsvExportFile {
+    val categoriesById = categories.associateBy(Category::id)
     val rows = incomes
         .asSequence()
         .filterByDateRange(startDate, endDate) { it.date }
@@ -119,7 +122,10 @@ internal fun buildIncomesCsvExport(
             listOf(
                 "income",
                 income.date.toCsvDate(),
-                "",
+                income.categoryId
+                    ?.let(categoriesById::get)
+                    ?.let(localizeCategoryName)
+                    .orEmpty(),
                 formatAmountInput(income.amount),
                 income.description.orEmpty(),
                 false.toCsvFlag(),
@@ -186,7 +192,10 @@ internal fun buildFullDatabaseCsvExport(
                 values = listOf(
                     "income",
                     income.date.toCsvDate(),
-                    "",
+                    income.categoryId
+                        ?.let(categoriesById::get)
+                        ?.let(localizeCategoryName)
+                        .orEmpty(),
                     formatAmountInput(income.amount),
                     income.description.orEmpty(),
                     false.toCsvFlag(),
