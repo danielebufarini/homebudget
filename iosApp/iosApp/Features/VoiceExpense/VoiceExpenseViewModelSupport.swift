@@ -8,7 +8,14 @@ func voiceExpenseCommitButtonTitle(for draft: VoiceExpenseDraft?) -> String {
 }
 
 func voiceExpenseCommitBusyLabel(for intent: VoiceExpenseInterpretation.Intent) -> String {
-    intent == .create ? appLocalized("Saving expense...") : appLocalized("Updating expense...")
+    switch intent {
+    case .create:
+        return appLocalized("Saving expense...")
+    case .update:
+        return appLocalized("Updating expense...")
+    case .needClarification, .ignore:
+        return appLocalized("Preparing expense...")
+    }
 }
 
 func voiceExpenseCommitFailureMessage(_ message: String?) -> String {
@@ -66,7 +73,7 @@ func buildVoiceExpenseDraft(
             categoriesById: categoriesById,
             expensesById: expensesById
         )
-    case .needClarification:
+    case .needClarification, .ignore:
         return nil
     }
 }

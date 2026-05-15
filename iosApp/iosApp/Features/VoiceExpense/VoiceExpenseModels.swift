@@ -58,6 +58,7 @@ struct VoiceExpenseInterpretation {
         case create
         case update
         case needClarification
+        case ignore
     }
 
     @Guide(description: "Whether the user wants to create a new expense, update an existing expense, or the command needs clarification.")

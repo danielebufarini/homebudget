@@ -45,6 +45,9 @@ extension IosVoiceExpenseController {
                 )
             case .needClarification:
                 continuation.resume(returning: (false, appLocalized("The spoken command still needs clarification.")))
+
+            case .ignore:
+                continuation.resume(returning: (false, appLocalized("No usable expense command was found.")))
             }
         }
     }

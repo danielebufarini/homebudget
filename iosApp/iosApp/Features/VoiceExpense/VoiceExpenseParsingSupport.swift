@@ -144,10 +144,17 @@ func unresolvedVoiceExpenseDraftMessage(
     switch interpretation.intent {
     case .needClarification:
         return interpretation.summary
+
+    case .ignore:
+        return interpretation.summary.isEmpty
+            ? appLocalized("I could not find a usable expense command.")
+            : interpretation.summary
+
     case .create, .update:
         if normalizeAmountInput(interpretation.amount) == nil {
             return appLocalized("I could not understand the amount well enough to prepare the expense.")
         }
+
         if resolveVoiceExpenseCategory(
             categoryId: interpretation.categoryId,
             categoryName: interpretation.categoryName,
@@ -157,6 +164,7 @@ func unresolvedVoiceExpenseDraftMessage(
         ) == nil {
             return appLocalized("I could not match the spoken category to one of your categories.")
         }
+
         return appLocalized("I understood the request, but I could not prepare a saveable expense draft.")
     }
 }
