@@ -439,10 +439,51 @@ struct CategoriesRootView: View {
             KotlinViewControllerHost(constrainToSafeArea: false) {
                 MainViewControllerKt.CategoriesViewController(onClose: onClose)
             }
+            .ignoresSafeArea()
         }
-        .ignoresSafeArea()
+        .overlay(alignment: .top) {
+            CategoriesGlassHeader(
+                title: appLocalized("Categories"),
+                onBack: onClose,
+                onAdd: {
+                    IosCategoriesManagementBridgeKt.performIosCategoriesManagementAdd()
+                }
+            )
+            .padding(.horizontal, CategoriesChromeLayout.horizontalPadding)
+            .padding(.top, CategoriesChromeLayout.topPadding)
+        }
+        .ignoresSafeArea(edges: .bottom)
         .toolbarBackground(.hidden, for: .navigationBar)
         .scrollEdgeEffectStyle(.soft, for: .top)
+    }
+}
+
+private enum CategoriesChromeLayout {
+    static let horizontalPadding: CGFloat = 16
+    static let topPadding: CGFloat = 12
+}
+
+private struct CategoriesGlassHeader: View {
+    let title: String
+    let onBack: () -> Void
+    let onAdd: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: onBack) {
+                AppGlassToolbarIcon(systemName: "chevron.left")
+            }
+            .buttonStyle(.glass)
+
+            AppGlassToolbarTitle(text: title)
+                .frame(maxWidth: .infinity)
+
+            Button(action: onAdd) {
+                AppGlassToolbarIcon(systemName: "plus")
+            }
+            .buttonStyle(.glass)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

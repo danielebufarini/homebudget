@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,8 +46,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -116,6 +113,8 @@ internal fun CategoriesManagementContent(
     onDelete: (CategoryUiModel) -> Unit,
 ) {
     val palette = rememberCategoriesPalette()
+    val isIos = rememberIsIosPlatform()
+    val showsEmbeddedTitleHeader = onBack != null
     val addCategoryContentDescription = stringResource(Res.string.categories_add_content_description)
     val sortAscendingLabel = stringResource(Res.string.categories_sort_ascending)
     val sortDescendingLabel = stringResource(Res.string.categories_sort_descending)
@@ -150,6 +149,18 @@ internal fun CategoriesManagementContent(
     }
     val safeTopPadding = safeAreaPadding.calculateTopPadding()
     val safeBottomPadding = safeAreaPadding.calculateBottomPadding()
+    val externalTitleHeaderOffset = if (!showsEmbeddedTitleHeader && isIos) {
+        safeTopPadding + 72.dp
+    } else {
+        0.dp
+    }
+    val listTopPadding = floatingHeaderHeight + externalTitleHeaderOffset +
+        if (showsEmbeddedTitleHeader) safeTopPadding + 18.dp else 18.dp
+    val headerTopPadding = when {
+        showsEmbeddedTitleHeader -> safeTopPadding + 10.dp
+        externalTitleHeaderOffset > 0.dp -> externalTitleHeaderOffset
+        else -> 10.dp
+    }
 
     Box(
         modifier = Modifier
@@ -162,8 +173,8 @@ internal fun CategoriesManagementContent(
             contentPadding = PaddingValues(
                 start = 20.dp,
                 end = 20.dp,
-                top = floatingHeaderHeight + safeTopPadding + 18.dp,
-                bottom = safeBottomPadding + 128.dp,
+                top = listTopPadding,
+                bottom = safeBottomPadding + 32.dp,
             ),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -198,32 +209,17 @@ internal fun CategoriesManagementContent(
             sortDescendingLabel = sortDescendingLabel,
             onQueryChange = onQueryChange,
             onSortToggle = onSortToggle,
+            showTitleHeader = showsEmbeddedTitleHeader,
             onBack = onBack,
+            onAdd = onAdd,
+            addCategoryContentDescription = addCategoryContentDescription,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(start = 20.dp, end = 20.dp, top = safeTopPadding + 10.dp)
+                .padding(start = 20.dp, end = 20.dp, top = headerTopPadding)
                 .onGloballyPositioned { coordinates ->
                     floatingHeaderHeightPx = coordinates.size.height
                 },
         )
-
-        FloatingActionButton(
-            onClick = onAdd,
-            containerColor = AccentPurple,
-            contentColor = Color.White,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 12.dp),
-            shape = CircleShape,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = safeBottomPadding + 20.dp)
-                .size(72.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Add,
-                contentDescription = addCategoryContentDescription,
-                modifier = Modifier.size(34.dp),
-            )
-        }
     }
 }
 
@@ -235,7 +231,39 @@ internal fun FloatingCategoriesHeader(
     sortDescendingLabel: String,
     onQueryChange: (String) -> Unit,
     onSortToggle: () -> Unit,
+    showTitleHeader: Boolean,
     onBack: (() -> Unit)?,
+    onAdd: () -> Unit,
+    addCategoryContentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (showTitleHeader) {
+            CategoryTitleHeader(
+                onBack = onBack,
+                onAdd = onAdd,
+                addCategoryContentDescription = addCategoryContentDescription,
+            )
+        }
+        CategorySearchBar(
+            query = query,
+            sortAscending = sortAscending,
+            sortAscendingLabel = sortAscendingLabel,
+            sortDescendingLabel = sortDescendingLabel,
+            onQueryChange = onQueryChange,
+            onSortToggle = onSortToggle,
+        )
+    }
+}
+
+@Composable
+private fun CategoryTitleHeader(
+    onBack: (() -> Unit)?,
+    onAdd: () -> Unit,
+    addCategoryContentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     val palette = rememberCategoriesPalette()
@@ -262,15 +290,15 @@ internal fun FloatingCategoriesHeader(
         tonalElevation = 14.dp,
         shadowElevation = if (isIos) 18.dp else 12.dp,
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
+            Box(
+                modifier = Modifier.width(44.dp),
+                contentAlignment = Alignment.CenterStart,
             ) {
                 if (onBack != null) {
                     Surface(
@@ -289,29 +317,37 @@ internal fun FloatingCategoriesHeader(
                             )
                         }
                     }
-
-                    Spacer(Modifier.width(14.dp))
                 }
-
-                Text(
-                    text = categoriesTitle,
-                    color = palette.textPrimary,
-                    fontSize = if (isIos) 27.sp else 30.sp,
-                    lineHeight = if (isIos) 30.sp else 33.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f),
-                )
             }
 
-            CategorySearchBar(
-                query = query,
-                sortAscending = sortAscending,
-                sortAscendingLabel = sortAscendingLabel,
-                sortDescendingLabel = sortDescendingLabel,
-                onQueryChange = onQueryChange,
-                onSortToggle = onSortToggle,
+            Text(
+                text = categoriesTitle,
+                color = palette.textPrimary,
+                fontSize = if (isIos) 27.sp else 30.sp,
+                lineHeight = if (isIos) 30.sp else 33.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 10.dp),
             )
+
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = palette.iconSurface,
+                tonalElevation = 6.dp,
+                shadowElevation = 2.dp,
+                onClick = onAdd,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = addCategoryContentDescription,
+                        tint = palette.textPrimary,
+                    )
+                }
+            }
         }
     }
 }

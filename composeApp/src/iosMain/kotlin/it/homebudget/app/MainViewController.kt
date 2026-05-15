@@ -126,7 +126,7 @@ fun CategoriesViewController(
     }
 ) {
     AppTheme {
-        CategoriesManagementRoute(onBack = onClose)
+        CategoriesManagementRoute(onBack = null)
     }
 }
 

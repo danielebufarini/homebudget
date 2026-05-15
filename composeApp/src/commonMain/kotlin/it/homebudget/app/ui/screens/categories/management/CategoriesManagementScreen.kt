@@ -1,7 +1,9 @@
 package it.homebudget.app.ui.screens.categories.management
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,6 +14,8 @@ import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.ui.screens.clearActiveIosCategoriesManagementAddHandler
+import it.homebudget.app.ui.screens.setActiveIosCategoriesManagementAddHandler
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -67,6 +71,21 @@ fun CategoriesManagementRoute(
         onEdit = { category -> editorTarget = category },
         onDelete = { category -> deleteTarget = category },
     )
+
+    SideEffect {
+        if (onBack == null) {
+            setActiveIosCategoriesManagementAddHandler {
+                editorTarget = CategoryUiModel.newEmpty()
+            }
+        }
+    }
+    DisposableEffect(onBack) {
+        onDispose {
+            if (onBack == null) {
+                clearActiveIosCategoriesManagementAddHandler()
+            }
+        }
+    }
 
     editorTarget?.let { target ->
         CategoryEditorSheet(
