@@ -66,9 +66,7 @@ import homebudget.composeapp.generated.resources.back
 import homebudget.composeapp.generated.resources.cancel
 import homebudget.composeapp.generated.resources.category
 import homebudget.composeapp.generated.resources.close
-import homebudget.composeapp.generated.resources.custom_category
 import homebudget.composeapp.generated.resources.date
-import homebudget.composeapp.generated.resources.default_category
 import homebudget.composeapp.generated.resources.delete_expense
 import homebudget.composeapp.generated.resources.delete_recurring_expense_title
 import homebudget.composeapp.generated.resources.description
@@ -225,11 +223,11 @@ class AddExpenseScreen(
             }
         }
         val selectedCategoryName = selectedCategory?.let {
-            resolveCategoryName(it.id, it.name, it.isCustom)
+            resolveCategoryName(it.id, it.name)
         }
         val selectedCategoryIconKey = selectedCategory?.icon
 
-        EnsureDefaultCategoriesInserted(repository)
+        EnsureStarterCategoriesSeeded(repository)
 
         LaunchedEffect(expenseId, categories) {
             if (expenseId == null || isInitialized) {
@@ -645,12 +643,11 @@ class AddExpenseScreen(
                 onConfirm = { name, iconKey ->
                     scope.launch {
                         runCatching {
-                            val categoryId = buildCustomCategoryId()
+                            val categoryId = buildCategoryId()
                             repository.insertCategory(
                                 id = categoryId,
                                 name = name,
                                 icon = iconKey,
-                                isCustom = true,
                                 categoryType = CATEGORY_TYPE_EXPENSE
                             )
                             selectedCategoryId = categoryId
@@ -669,7 +666,7 @@ class AddExpenseScreen(
                 categories = selectableCategories,
                 selectedCategoryId = selectedCategoryId,
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 },
                 onDismiss = { showCategoryPickerSheet = false },
                 onAddCategory = {
@@ -869,11 +866,7 @@ internal fun CategoryPickerSheet(
 ) {
     val selectCategoryLabel = stringResource(Res.string.select_category)
     val addCategoryLabel = stringResource(Res.string.add_category)
-    val customCategoryLabel = stringResource(Res.string.custom_category)
-    val defaultCategoryLabel = stringResource(Res.string.default_category)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val defaultCategories = remember(categories) { categories.filter { it.isCustom != 1L } }
-    val customCategories = remember(categories) { categories.filter { it.isCustom == 1L } }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -895,22 +888,11 @@ internal fun CategoryPickerSheet(
             )
 
             CategoryGridSection(
-                title = customCategoryLabel,
-                categories = customCategories,
+                title = selectCategoryLabel,
+                categories = categories,
                 selectedCategoryId = selectedCategoryId,
                 resolveCategoryName = resolveCategoryName,
                 showAddTile = true,
-                addCategoryLabel = addCategoryLabel,
-                onAddCategory = onAddCategory,
-                onCategorySelected = { category -> onCategorySelected(category.id) }
-            )
-
-            CategoryGridSection(
-                title = defaultCategoryLabel,
-                categories = defaultCategories,
-                selectedCategoryId = selectedCategoryId,
-                resolveCategoryName = resolveCategoryName,
-                showAddTile = false,
                 addCategoryLabel = addCategoryLabel,
                 onAddCategory = onAddCategory,
                 onCategorySelected = { category -> onCategorySelected(category.id) }

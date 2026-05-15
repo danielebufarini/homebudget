@@ -183,7 +183,7 @@ class AddIncomeScreen(
         }
         val selectedCategory = categories.find { it.id == selectedCategoryId }
         val selectedCategoryName = selectedCategory?.let {
-            resolveCategoryName(it.id, it.name, it.isCustom)
+            resolveCategoryName(it.id, it.name)
         }
         val selectedCategoryIconKey = selectedCategory?.icon
 
@@ -486,12 +486,11 @@ class AddIncomeScreen(
                 onConfirm = { name, iconKey ->
                     scope.launch {
                         runCatching {
-                            val categoryId = buildCustomCategoryId()
+                            val categoryId = buildCategoryId()
                             repository.insertCategory(
                                 id = categoryId,
                                 name = name,
                                 icon = iconKey,
-                                isCustom = true,
                                 categoryType = CATEGORY_TYPE_INCOME
                             )
                             selectedCategoryId = categoryId
@@ -510,7 +509,7 @@ class AddIncomeScreen(
                 categories = selectableCategories,
                 selectedCategoryId = selectedCategoryId.orEmpty(),
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 },
                 onDismiss = { showCategoryPickerSheet = false },
                 onAddCategory = {

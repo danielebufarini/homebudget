@@ -91,7 +91,7 @@ internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, mo
                 transcript = spokenText,
                 repository = repository,
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 },
                 generativeModel = generativeModel,
                 availability = availability,

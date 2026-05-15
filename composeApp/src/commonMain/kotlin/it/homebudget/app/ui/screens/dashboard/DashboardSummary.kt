@@ -50,7 +50,7 @@ internal fun ExpenseSummary(
     val topCategory = summary.topCategoryId?.let(categoriesById::get)
     val topCategoryIconKey = topCategory?.icon
     val topCategoryValue = topCategory
-        ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+        ?.let { resolveCategoryName(it.id, it.name) }
         ?: "-"
     val highestDayValue = remember(selectedMonth, summary.highestDayOfMonth, strings.weekdayNames) {
         summary.highestDayOfMonth?.let { selectedMonth.toDayLabel(it, strings.weekdayNames) } ?: "-"

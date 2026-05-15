@@ -16,7 +16,7 @@ internal suspend fun loadAndroidVoiceExpenseSnapshot(
     repository: ExpenseRepository,
     resolveCategoryName: (Category) -> String
 ): AndroidVoiceExpenseSnapshot {
-    repository.insertDefaultCategoriesIfEmpty()
+    repository.seedStarterCategoriesIfEmpty()
 
     val categorySnapshot = repository.getAllCategoriesSnapshot()
     val categories = categorySnapshot

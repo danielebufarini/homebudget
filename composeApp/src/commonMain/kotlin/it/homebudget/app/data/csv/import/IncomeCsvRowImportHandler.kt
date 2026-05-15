@@ -29,10 +29,10 @@ internal object IncomeCsvRowImportHandler : CsvRowImportHandler {
                         id = category.id,
                         name = category.name,
                         icon = category.icon,
-                        isCustom = category.isCustom == 1L,
                         color = category.color,
                         categoryType = category.categoryType,
-                        isArchived = category.isArchived == 1L
+                        isArchived = category.isArchived == 1L,
+                        sortOrder = category.sortOrder
                     )
                     state.categoriesById[category.id] = category
                     registerCategoryNames(

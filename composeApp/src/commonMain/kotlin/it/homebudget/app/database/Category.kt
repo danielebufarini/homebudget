@@ -19,7 +19,7 @@ data class Category(
     @ColumnInfo(defaultValue = "'$CATEGORY_TYPE_EXPENSE'")
     val categoryType: String = CATEGORY_TYPE_EXPENSE,
     @ColumnInfo(defaultValue = "0")
-    val isCustom: Long = 0L,
+    val isArchived: Long = 0L,
     @ColumnInfo(defaultValue = "0")
-    val isArchived: Long = 0L
+    val sortOrder: Long = 0L
 )

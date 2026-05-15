@@ -1,13 +1,25 @@
 package it.homebudget.app.data
 
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.category_default_0
+import homebudget.composeapp.generated.resources.category_default_1
+import homebudget.composeapp.generated.resources.category_default_2
+import homebudget.composeapp.generated.resources.category_default_3
+import homebudget.composeapp.generated.resources.category_default_4
+import homebudget.composeapp.generated.resources.category_default_5
+import homebudget.composeapp.generated.resources.category_default_6
+import homebudget.composeapp.generated.resources.category_default_7
 import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
+import it.homebudget.app.database.CATEGORY_TYPE_INCOME
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.HomeBudgetDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import org.jetbrains.compose.resources.getString
 
-private data class DefaultCategorySeed(
+private data class StarterCategorySeed(
+    val id: String,
     val name: String,
     val icon: String,
     val color: String
@@ -31,11 +43,12 @@ class CategoryRepository(
         id: String,
         name: String,
         icon: String,
-        isCustom: Boolean,
         color: String = DEFAULT_CATEGORY_COLOR,
         categoryType: String = CATEGORY_TYPE_EXPENSE,
-        isArchived: Boolean = false
+        isArchived: Boolean = false,
+        sortOrder: Long? = null
     ) {
+        val resolvedSortOrder = sortOrder ?: nextSortOrder()
         categoryDao.insertCategory(
             Category(
                 id = id,
@@ -43,8 +56,8 @@ class CategoryRepository(
                 icon = icon,
                 color = color,
                 categoryType = categoryType,
-                isCustom = if (isCustom) 1L else 0L,
-                isArchived = if (isArchived) 1L else 0L
+                isArchived = if (isArchived) 1L else 0L,
+                sortOrder = resolvedSortOrder
             )
         )
     }
@@ -65,65 +78,146 @@ class CategoryRepository(
         )
     }
 
+    suspend fun setCategoryArchived(id: String, isArchived: Boolean) {
+        categoryDao.setCategoryArchived(
+            id = id,
+            isArchived = if (isArchived) 1L else 0L
+        )
+    }
+
+    suspend fun updateCategorySortOrder(id: String, sortOrder: Long) {
+        categoryDao.updateCategorySortOrder(id = id, sortOrder = sortOrder)
+    }
+
     suspend fun deleteCategory(id: String) {
-        val category = categoryDao.getCategoryById(id) ?: return
-        if (category.isCustom == 1L) {
-            categoryDao.setCategoryArchived(id = id, isArchived = 1L)
-        } else {
-            categoryDao.deleteCategory(id)
-        }
-    }
-
-    suspend fun isCategoryInUse(id: String): Boolean {
-        return expenseDao.countExpensesForCategory(id) > 0L || incomeDao.countIncomesForCategory(id) > 0L
-    }
-
-    suspend fun insertDefaultCategoriesIfEmpty() {
         transactionRunner.runInTransaction {
-            if (categoryDao.countCategories() == 0L) {
-                val defaults = listOf(
-                    DefaultCategorySeed("Household", "home", "#2FA66A"),
-                    DefaultCategorySeed("Food", "shopping_cart", "#E46C42"),
-                    DefaultCategorySeed("Restaurant", "restaurant", "#D63871"),
-                    DefaultCategorySeed("Car", "directions_car", "#2388D9"),
-                    DefaultCategorySeed("Travel", "flight", "#5B6EE1"),
-                    DefaultCategorySeed("Healthcare", "local_hospital", "#009688"),
-                    DefaultCategorySeed("Personal", "person", "#6F45E9"),
-                    DefaultCategorySeed("Other", "category", "#8D6E63")
-                )
-                categoryDao.insertCategories(
-                    defaults.mapIndexed { index, category ->
-                        Category(
-                            id = "default_$index",
-                            name = category.name,
-                            icon = category.icon,
-                            color = category.color,
-                            categoryType = CATEGORY_TYPE_EXPENSE,
-                            isCustom = 0L
-                        )
-                    }
-                )
+            val category = categoryDao.getCategoryById(id) ?: return@runInTransaction
+            if (isCategoryInUseInternal(category.id)) {
+                categoryDao.setCategoryArchived(id = id, isArchived = 1L)
             } else {
-                normalizeDefaultCategories()
+                categoryDao.deleteCategory(id)
             }
         }
     }
 
-    private suspend fun normalizeDefaultCategories() {
-        categoryDao.insertCategory(
-            Category(
-                id = "default_7",
-                name = "Other",
+    suspend fun isCategoryInUse(id: String): Boolean {
+        return isCategoryInUseInternal(id)
+    }
+
+    suspend fun reassignCategoryTransactions(sourceCategoryId: String, targetCategoryId: String) {
+        require(sourceCategoryId != targetCategoryId) { "Source and target categories must differ." }
+
+        transactionRunner.runInTransaction {
+            val sourceCategory = categoryDao.getCategoryById(sourceCategoryId)
+                ?: error("Category $sourceCategoryId not found.")
+            val targetCategory = categoryDao.getCategoryById(targetCategoryId)
+                ?: error("Category $targetCategoryId not found.")
+
+            val expenseUsageCount = expenseDao.countExpensesForCategory(sourceCategory.id)
+            val incomeUsageCount = incomeDao.countIncomesForCategory(sourceCategory.id)
+
+            if (expenseUsageCount > 0L) {
+                require(targetCategory.categoryType == CATEGORY_TYPE_EXPENSE) {
+                    "Expense transactions can only be reassigned to an expense category."
+                }
+                expenseDao.moveExpensesToCategory(
+                    oldCategoryId = sourceCategory.id,
+                    newCategoryId = targetCategory.id
+                )
+            }
+
+            if (incomeUsageCount > 0L) {
+                require(targetCategory.categoryType == CATEGORY_TYPE_INCOME) {
+                    "Income transactions can only be reassigned to a compatible category."
+                }
+                incomeDao.moveIncomesToCategory(
+                    oldCategoryId = sourceCategory.id,
+                    newCategoryId = targetCategory.id
+                )
+            }
+
+            if (!isCategoryInUseInternal(sourceCategory.id)) {
+                categoryDao.deleteCategory(sourceCategory.id)
+            }
+        }
+    }
+
+    suspend fun seedStarterCategoriesIfEmpty() {
+        val starterCategories = loadStarterCategories()
+        transactionRunner.runInTransaction {
+            if (categoryDao.countCategories() == 0L) {
+                categoryDao.insertCategories(
+                    starterCategories.mapIndexed { index, category ->
+                        Category(
+                            id = category.id,
+                            name = category.name,
+                            icon = category.icon,
+                            color = category.color,
+                            categoryType = CATEGORY_TYPE_EXPENSE,
+                            sortOrder = index.toLong()
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    private suspend fun nextSortOrder(): Long = (categoryDao.getMaxSortOrder() ?: -1L) + 1L
+
+    private suspend fun isCategoryInUseInternal(id: String): Boolean {
+        return expenseDao.countExpensesForCategory(id) > 0L || incomeDao.countIncomesForCategory(id) > 0L
+    }
+
+    private suspend fun loadStarterCategories(): List<StarterCategorySeed> {
+        return listOf(
+            StarterCategorySeed(
+                id = "starter_expense_household",
+                name = getString(Res.string.category_default_0),
+                icon = "home",
+                color = "#2FA66A"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_food",
+                name = getString(Res.string.category_default_1),
+                icon = "shopping_cart",
+                color = "#E46C42"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_restaurant",
+                name = getString(Res.string.category_default_2),
+                icon = "restaurant",
+                color = "#D63871"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_car",
+                name = getString(Res.string.category_default_3),
+                icon = "directions_car",
+                color = "#2388D9"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_travel",
+                name = getString(Res.string.category_default_4),
+                icon = "flight",
+                color = "#5B6EE1"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_healthcare",
+                name = getString(Res.string.category_default_5),
+                icon = "local_hospital",
+                color = "#009688"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_personal",
+                name = getString(Res.string.category_default_6),
+                icon = "person",
+                color = "#6F45E9"
+            ),
+            StarterCategorySeed(
+                id = "starter_expense_other",
+                name = getString(Res.string.category_default_7),
                 icon = "category",
-                color = "#8D6E63",
-                categoryType = CATEGORY_TYPE_EXPENSE,
-                isCustom = 0L
+                color = "#8D6E63"
             )
         )
-        expenseDao.moveExpensesToCategory(
-            oldCategoryId = "default_8",
-            newCategoryId = "default_7"
-        )
-        categoryDao.deleteCategory("default_8")
     }
 }

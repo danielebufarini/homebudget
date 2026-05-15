@@ -13,8 +13,8 @@ data class RestoredCategory(
     val icon: String,
     val color: String = DEFAULT_CATEGORY_COLOR,
     val categoryType: String = CATEGORY_TYPE_EXPENSE,
-    val isCustom: Boolean,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val sortOrder: Long = 0L
 )
 
 data class DashboardMonthTotal(
@@ -59,19 +59,19 @@ class ExpenseRepository(
         id: String,
         name: String,
         icon: String,
-        isCustom: Boolean,
         color: String = DEFAULT_CATEGORY_COLOR,
         categoryType: String = CATEGORY_TYPE_EXPENSE,
-        isArchived: Boolean = false
+        isArchived: Boolean = false,
+        sortOrder: Long? = null
     ) {
         categoryRepository.insertCategory(
             id = id,
             name = name,
             icon = icon,
-            isCustom = isCustom,
             color = color,
             categoryType = categoryType,
-            isArchived = isArchived
+            isArchived = isArchived,
+            sortOrder = sortOrder
         )
     }
 
@@ -93,8 +93,8 @@ class ExpenseRepository(
         )
     }
 
-    suspend fun insertDefaultCategoriesIfEmpty() {
-        categoryRepository.insertDefaultCategoriesIfEmpty()
+    suspend fun seedStarterCategoriesIfEmpty() {
+        categoryRepository.seedStarterCategoriesIfEmpty()
     }
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseEntryRepository.getAllExpenses()
@@ -149,6 +149,21 @@ class ExpenseRepository(
 
     suspend fun isCategoryInUse(id: String): Boolean {
         return categoryRepository.isCategoryInUse(id)
+    }
+
+    suspend fun setCategoryArchived(id: String, isArchived: Boolean) {
+        categoryRepository.setCategoryArchived(id = id, isArchived = isArchived)
+    }
+
+    suspend fun updateCategorySortOrder(id: String, sortOrder: Long) {
+        categoryRepository.updateCategorySortOrder(id = id, sortOrder = sortOrder)
+    }
+
+    suspend fun reassignCategoryTransactions(sourceCategoryId: String, targetCategoryId: String) {
+        categoryRepository.reassignCategoryTransactions(
+            sourceCategoryId = sourceCategoryId,
+            targetCategoryId = targetCategoryId
+        )
     }
 
     suspend fun deleteRecurringExpenseSeries(seriesId: String) {

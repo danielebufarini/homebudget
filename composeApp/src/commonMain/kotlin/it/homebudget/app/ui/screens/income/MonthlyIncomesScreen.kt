@@ -99,9 +99,10 @@ class MonthlyIncomesScreen(
             onBack = { navigator?.pop() },
             onAddIncome = { selectedYear, selectedMonth ->
                 navigator?.push(
-                    AddIncomeScreen(
-                        initialYear = selectedYear,
-                        initialMonth = selectedMonth
+                    AddTransactionScreen(
+                        initialKind = TransactionEditorKind.Income,
+                        initialIncomeYear = selectedYear,
+                        initialIncomeMonth = selectedMonth
                     )
                 )
             },

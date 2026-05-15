@@ -6,10 +6,10 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.IdGenerator
 
 @Composable
-internal fun EnsureDefaultCategoriesInserted(repository: ExpenseRepository) {
+internal fun EnsureStarterCategoriesSeeded(repository: ExpenseRepository) {
     LaunchedEffect(repository) {
-        repository.insertDefaultCategoriesIfEmpty()
+        repository.seedStarterCategoriesIfEmpty()
     }
 }
 
-internal fun buildCustomCategoryId(): String = IdGenerator.newId("custom-category")
+internal fun buildCategoryId(): String = IdGenerator.newId("category")

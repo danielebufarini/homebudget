@@ -11,7 +11,7 @@ import androidx.room.RoomDatabaseConstructor
         Expense::class,
         Income::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @ConstructedBy(HomeBudgetDatabaseConstructor::class)

@@ -13,8 +13,7 @@ import org.koin.mp.KoinPlatformTools
 class IosCategoryItem(
     val id: String,
     val name: String,
-    val iconKey: String,
-    val isCustom: Boolean
+    val iconKey: String
 )
 
 class IosCategoriesSnapshot(
@@ -36,7 +35,7 @@ class IosCategoriesController {
         }
 
         updatesJob = scope.launch {
-            repository.insertDefaultCategoriesIfEmpty()
+            repository.seedStarterCategoriesIfEmpty()
             repository.getAllCategories().collect { categories ->
                 val resolveCategoryName = loadCategoryNameResolver()
                 val selectableCategories = categories.filter { category ->
@@ -47,9 +46,8 @@ class IosCategoriesController {
                         categories = selectableCategories.map { category ->
                             IosCategoryItem(
                                 id = category.id,
-                                name = resolveCategoryName(category.id, category.name, category.isCustom),
-                                iconKey = category.icon,
-                                isCustom = category.isCustom == 1L
+                                name = resolveCategoryName(category.id, category.name),
+                                iconKey = category.icon
                             )
                         }
                     )
@@ -78,10 +76,9 @@ class IosCategoriesController {
         scope.launch {
             val success = runCatching {
                 repository.insertCategory(
-                    id = buildCustomCategoryId(),
+                    id = buildCategoryId(),
                     name = trimmedName,
-                    icon = iconKey,
-                    isCustom = true
+                    icon = iconKey
                 )
             }.isSuccess
             onComplete(success)
@@ -100,13 +97,12 @@ class IosCategoriesController {
         }
 
         scope.launch {
-            val categoryId = buildCustomCategoryId()
+            val categoryId = buildCategoryId()
             val success = runCatching {
                 repository.insertCategory(
                     id = categoryId,
                     name = trimmedName,
-                    icon = iconKey,
-                    isCustom = true
+                    icon = iconKey
                 )
             }.isSuccess
             onComplete(if (success) categoryId else null)

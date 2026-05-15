@@ -19,18 +19,18 @@ import org.jetbrains.compose.resources.getString
 internal suspend fun loadIosVoiceExpenseSnapshot(
     repository: ExpenseRepository
 ): IosVoiceExpenseSnapshot {
-    repository.insertDefaultCategoriesIfEmpty()
+    repository.seedStarterCategoriesIfEmpty()
     val resolveCategoryName = loadCategoryNameResolver()
 
     val categorySnapshot = repository.getAllCategoriesSnapshot()
     val categories = categorySnapshot
         .asSequence()
         .filter { it.categoryType == CATEGORY_TYPE_EXPENSE && it.isArchived != 1L }
-        .sortedBy { resolveCategoryName(it.id, it.name, it.isCustom).lowercase() }
+        .sortedBy { resolveCategoryName(it.id, it.name).lowercase() }
         .map { category ->
             IosVoiceExpenseCategory(
                 id = category.id,
-                name = resolveCategoryName(category.id, category.name, category.isCustom)
+                name = resolveCategoryName(category.id, category.name)
             )
         }
         .toList()
@@ -45,7 +45,7 @@ internal suspend fun loadIosVoiceExpenseSnapshot(
                 id = expense.id,
                 amountInput = formatAmountInput(expense.amount),
                 categoryId = expense.categoryId,
-                categoryName = resolveCategoryName(category.id, category.name, category.isCustom),
+                categoryName = resolveCategoryName(category.id, category.name),
                 description = expense.description,
                 date = expense.date,
                 isShared = expense.isShared == 1L

@@ -9,7 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 private const val BACKUP_FORMAT = "homebudget_backup"
-private const val BACKUP_VERSION = 2
+private const val BACKUP_VERSION = 3
 const val BACKUP_FILE_NAME = "homebudget-backup.json"
 const val CLOUD_BACKUP_DIRECTORY_NAME = "Data"
 
@@ -48,8 +48,8 @@ private data class BudgetBackupCategory(
     val icon: String,
     val color: String,
     val categoryType: String,
-    val isCustom: Boolean,
-    val isArchived: Boolean
+    val isArchived: Boolean,
+    val sortOrder: Long
 )
 
 @Serializable
@@ -122,8 +122,8 @@ suspend fun restoreBudgetBackup(
                 icon = category.icon,
                 color = category.color,
                 categoryType = category.categoryType,
-                isCustom = category.isCustom,
-                isArchived = category.isArchived
+                isArchived = category.isArchived,
+                sortOrder = category.sortOrder
             )
         },
         expenses = snapshot.expenses.map { expense ->
@@ -202,8 +202,8 @@ private fun Category.toBackupModel() = BudgetBackupCategory(
     icon = icon,
     color = color,
     categoryType = categoryType,
-    isCustom = isCustom == 1L,
-    isArchived = isArchived == 1L
+    isArchived = isArchived == 1L,
+    sortOrder = sortOrder
 )
 
 private fun Expense.toBackupModel() = BudgetBackupExpense(

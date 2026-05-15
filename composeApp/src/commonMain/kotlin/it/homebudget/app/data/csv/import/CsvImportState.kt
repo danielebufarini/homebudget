@@ -9,7 +9,7 @@ import it.homebudget.app.database.Category
 
 internal class CsvImportState(
     val repository: ExpenseRepository,
-    val resolveCategoryName: (String, String, Long) -> String,
+    val resolveCategoryName: (String, String) -> String,
     val categoriesById: MutableMap<String, Category>,
     val categoriesByNormalizedName: MutableMap<String, Category>,
     val existingExpenseKeys: MutableSet<CsvImportedExpenseKey>,

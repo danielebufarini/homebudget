@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.addAmountsExact
-import it.homebudget.app.ui.screens.EnsureDefaultCategoriesInserted
+import it.homebudget.app.ui.screens.EnsureStarterCategoriesSeeded
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -59,7 +59,7 @@ fun DashboardRoute(
         mutableStateOf(currentMonth)
     }
 
-    EnsureDefaultCategoriesInserted(repository)
+    EnsureStarterCategoriesSeeded(repository)
 
     val summaryFlow = remember(repository, selectedMonth) {
         repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)

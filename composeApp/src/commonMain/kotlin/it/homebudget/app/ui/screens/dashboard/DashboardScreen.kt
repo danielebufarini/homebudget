@@ -9,7 +9,7 @@ import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
-import it.homebudget.app.ui.screens.categories.BentoCategoriesScreen
+import it.homebudget.app.ui.screens.categories.management.CategoriesManagementScreen
 
 class DashboardScreen(
     private val openVoiceExpenseRequest: Int = 0
@@ -22,7 +22,7 @@ class DashboardScreen(
             showNavigationChrome = true,
             openVoiceExpenseRequest = openVoiceExpenseRequest,
             showFab = false,
-            onOpenCategories = { navigator?.push(BentoCategoriesScreen) },
+            onOpenCategories = { navigator?.push(CategoriesManagementScreen) },
             onOpenAddExpense = { navigator?.push(AddTransactionScreen()) },
             onOpenDayExpenses = { year, month, day ->
                 navigator?.push(DayExpensesScreen(year = year, month = month, day = day))

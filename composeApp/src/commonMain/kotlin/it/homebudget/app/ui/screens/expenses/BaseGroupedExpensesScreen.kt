@@ -121,7 +121,13 @@ abstract class BaseGroupedExpensesScreen(
         RouteContent(
             showNavigationChrome = true,
             onBack = { navigator?.pop() },
-            onAddExpense = { navigator?.push(AddExpenseScreen()) },
+            onAddExpense = {
+                navigator?.push(
+                    AddTransactionScreen(
+                        initialKind = TransactionEditorKind.Expense
+                    )
+                )
+            },
             onOpenExpense = { expenseId ->
                 navigator?.push(AddExpenseScreen(expenseId))
             }
@@ -168,7 +174,7 @@ abstract class BaseGroupedExpensesScreen(
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
 
-        EnsureDefaultCategoriesInserted(repository)
+        EnsureStarterCategoriesSeeded(repository)
 
         val groupedExpensesFlow = remember(
             expensesFlow,
@@ -187,7 +193,7 @@ abstract class BaseGroupedExpensesScreen(
                         includeExpense = ::includeExpense,
                         includeCategory = ::includeCategory,
                         resolveCategoryName = { category ->
-                            resolveCategoryName(category.id, category.name, category.isCustom)
+                            resolveCategoryName(category.id, category.name)
                         },
                         unknownCategoryLabel = unknownCategoryLabel,
                         shortMonthNames = shortMonthNamesList
@@ -292,7 +298,7 @@ abstract class BaseGroupedExpensesScreen(
                         currencySymbol = currencySymbol,
                         unknownCategoryLabel = unknownCategoryLabel,
                         resolveCategoryName = { category ->
-                            resolveCategoryName(category.id, category.name, category.isCustom)
+                            resolveCategoryName(category.id, category.name)
                         },
                         byCategoryLabel = byCategoryLabel,
                         byDateLabel = byDateLabel,
@@ -329,7 +335,7 @@ abstract class BaseGroupedExpensesScreen(
                 currencySymbol = currencySymbol,
                 unknownCategoryLabel = unknownCategoryLabel,
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 },
                 byCategoryLabel = byCategoryLabel,
                 byDateLabel = byDateLabel
@@ -344,7 +350,7 @@ abstract class BaseGroupedExpensesScreen(
                 expenseFallbackTitle = expenseFallbackTitle,
                 unknownCategoryLabel = unknownCategoryLabel,
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 }
             ).title
             DeleteConfirmationDialog(
@@ -369,7 +375,7 @@ abstract class BaseGroupedExpensesScreen(
                 expenseFallbackTitle = expenseFallbackTitle,
                 unknownCategoryLabel = unknownCategoryLabel,
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 }
             ).title
             RecurringSeriesActionDialog(

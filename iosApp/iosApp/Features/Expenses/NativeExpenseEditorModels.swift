@@ -5,7 +5,6 @@ struct NativeExpenseCategory: Identifiable, Hashable {
     let id: String
     let name: String
     let iconKey: String
-    let isCustom: Bool
 }
 
 struct NativeExpenseEditorIconSection: Identifiable {
@@ -59,8 +58,7 @@ final class NativeExpenseEditorViewModel: ObservableObject {
                     NativeExpenseCategory(
                         id: item.id,
                         name: item.name,
-                        iconKey: item.iconKey,
-                        isCustom: item.isCustom
+                        iconKey: item.iconKey
                     )
                 }
             }

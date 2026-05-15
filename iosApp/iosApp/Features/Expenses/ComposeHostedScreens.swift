@@ -433,10 +433,16 @@ struct CategoriesRootView: View {
     let onClose: () -> Void
 
     var body: some View {
-        KotlinViewControllerHost {
-            MainViewControllerKt.CategoriesViewController(onClose: onClose)
+        ZStack {
+            AppGlassBackdrop()
+
+            KotlinViewControllerHost(constrainToSafeArea: false) {
+                MainViewControllerKt.CategoriesViewController(onClose: onClose)
+            }
         }
-        .appGlassHostedScreenChrome()
+        .ignoresSafeArea()
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .scrollEdgeEffectStyle(.soft, for: .top)
     }
 }
 

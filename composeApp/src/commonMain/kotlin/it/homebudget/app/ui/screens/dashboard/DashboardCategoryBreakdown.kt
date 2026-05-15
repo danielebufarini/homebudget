@@ -53,7 +53,7 @@ internal fun CategoryBreakdownPage(
             ) { _, categoryTotal ->
                 val category = categoryTotal.categoryId?.let(categoriesById::get)
                 val categoryName = category
-                    ?.let { resolveCategoryName(it.id, it.name, it.isCustom) }
+                    ?.let { resolveCategoryName(it.id, it.name) }
                     ?: strings.unknownCategory
                 val categoryIconKey = category?.icon
 

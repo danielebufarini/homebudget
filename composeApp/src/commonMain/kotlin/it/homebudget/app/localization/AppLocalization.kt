@@ -3,14 +3,6 @@ package it.homebudget.app.localization
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import homebudget.composeapp.generated.resources.Res
-import homebudget.composeapp.generated.resources.category_default_0
-import homebudget.composeapp.generated.resources.category_default_1
-import homebudget.composeapp.generated.resources.category_default_2
-import homebudget.composeapp.generated.resources.category_default_3
-import homebudget.composeapp.generated.resources.category_default_4
-import homebudget.composeapp.generated.resources.category_default_5
-import homebudget.composeapp.generated.resources.category_default_6
-import homebudget.composeapp.generated.resources.category_default_7
 import homebudget.composeapp.generated.resources.csv_export_failed
 import homebudget.composeapp.generated.resources.csv_import_failed
 import homebudget.composeapp.generated.resources.csv_import_no_rows
@@ -19,24 +11,22 @@ import homebudget.composeapp.generated.resources.csv_import_success_with_skipped
 import homebudget.composeapp.generated.resources.unable_to_save_expense
 import it.homebudget.app.database.Category
 import org.jetbrains.compose.resources.getString
-import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun rememberCategoryNameResolver(): (String, String, Long) -> String {
-    val defaultCategoryNamesById = rememberDefaultCategoryNamesById()
-    return remember(defaultCategoryNamesById) {
-        buildCategoryNameResolver(defaultCategoryNamesById)
+fun rememberCategoryNameResolver(): (String, String) -> String {
+    return remember {
+        buildCategoryNameResolver()
     }
 }
 
 @Composable
 fun localizedCategoryName(category: Category): String {
     val resolveCategoryName = rememberCategoryNameResolver()
-    return resolveCategoryName(category.id, category.name, category.isCustom)
+    return resolveCategoryName(category.id, category.name)
 }
 
-suspend fun loadCategoryNameResolver(): (String, String, Long) -> String {
-    return buildCategoryNameResolver(loadDefaultCategoryNamesById())
+suspend fun loadCategoryNameResolver(): (String, String) -> String {
+    return buildCategoryNameResolver()
 }
 
 suspend fun csvImportNoRowsMessage(): String = getString(Res.string.csv_import_no_rows)
@@ -64,47 +54,4 @@ internal fun String.formatResourceArgs(vararg args: Any): String {
     return formatted
 }
 
-@Composable
-private fun rememberDefaultCategoryNamesById(): Map<String, String> {
-    val defaultCategoryNames = listOf(
-        stringResource(Res.string.category_default_0),
-        stringResource(Res.string.category_default_1),
-        stringResource(Res.string.category_default_2),
-        stringResource(Res.string.category_default_3),
-        stringResource(Res.string.category_default_4),
-        stringResource(Res.string.category_default_5),
-        stringResource(Res.string.category_default_6),
-        stringResource(Res.string.category_default_7)
-    )
-
-    return remember(defaultCategoryNames) {
-        defaultCategoryNames.mapIndexed { index, name ->
-            "default_$index" to name
-        }.toMap()
-    }
-}
-
-private suspend fun loadDefaultCategoryNamesById(): Map<String, String> {
-    return listOf(
-        getString(Res.string.category_default_0),
-        getString(Res.string.category_default_1),
-        getString(Res.string.category_default_2),
-        getString(Res.string.category_default_3),
-        getString(Res.string.category_default_4),
-        getString(Res.string.category_default_5),
-        getString(Res.string.category_default_6),
-        getString(Res.string.category_default_7)
-    ).mapIndexed { index, name ->
-        "default_$index" to name
-    }.toMap()
-}
-
-private fun buildCategoryNameResolver(
-    defaultCategoryNamesById: Map<String, String>
-): (String, String, Long) -> String = { id, storedName, isCustom ->
-    if (isCustom == 1L) {
-        storedName
-    } else {
-        defaultCategoryNamesById[id] ?: storedName
-    }
-}
+private fun buildCategoryNameResolver(): (String, String) -> String = { _, storedName -> storedName }

@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoryDao {
-    @Query("SELECT * FROM category")
+    @Query("SELECT * FROM category ORDER BY sortOrder ASC, name COLLATE NOCASE ASC")
     fun getAllCategories(): Flow<List<Category>>
 
-    @Query("SELECT * FROM category")
+    @Query("SELECT * FROM category ORDER BY sortOrder ASC, name COLLATE NOCASE ASC")
     suspend fun getAllCategoriesSnapshot(): List<Category>
 
     @Query("SELECT * FROM category WHERE id = :id")
@@ -40,6 +40,9 @@ interface CategoryDao {
     @Query("UPDATE category SET isArchived = :isArchived WHERE id = :id")
     suspend fun setCategoryArchived(id: String, isArchived: Long)
 
+    @Query("UPDATE category SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateCategorySortOrder(id: String, sortOrder: Long)
+
     @Query("DELETE FROM category WHERE id = :id")
     suspend fun deleteCategory(id: String)
 
@@ -48,4 +51,7 @@ interface CategoryDao {
 
     @Query("SELECT count(*) FROM category")
     suspend fun countCategories(): Long
+
+    @Query("SELECT MAX(sortOrder) FROM category")
+    suspend fun getMaxSortOrder(): Long?
 }

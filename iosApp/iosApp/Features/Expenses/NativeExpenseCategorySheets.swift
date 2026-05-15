@@ -6,14 +6,6 @@ struct NativeExpenseCategoryPickerSheet: View {
     let onAddCategory: () -> Void
     let onSelectCategory: (String) -> Void
 
-    private var customCategories: [NativeExpenseCategory] {
-        categories.filter(\.isCustom)
-    }
-
-    private var defaultCategories: [NativeExpenseCategory] {
-        categories.filter { !$0.isCustom }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(appLocalized("Select Category"))
@@ -24,19 +16,10 @@ struct NativeExpenseCategoryPickerSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     NativeExpenseCategoryGridSection(
-                        title: appLocalized("Custom Categories"),
-                        categories: customCategories,
+                        title: appLocalized("Categories"),
+                        categories: categories,
                         selectedCategoryId: selectedCategoryId,
                         showAddTile: true,
-                        onAddCategory: onAddCategory,
-                        onSelectCategory: onSelectCategory
-                    )
-
-                    NativeExpenseCategoryGridSection(
-                        title: appLocalized("Default Categories"),
-                        categories: defaultCategories,
-                        selectedCategoryId: selectedCategoryId,
-                        showAddTile: false,
                         onAddCategory: onAddCategory,
                         onSelectCategory: onSelectCategory
                     )

@@ -37,7 +37,7 @@ suspend fun importBudgetItemsFromCsv(
         "CSV import file is too large."
     }
 
-    repository.insertDefaultCategoriesIfEmpty()
+    repository.seedStarterCategoriesIfEmpty()
     val resolveCategoryName = loadCategoryNameResolver()
 
     val parsedRows = withContext(Dispatchers.Default) {
@@ -147,12 +147,12 @@ internal data class CsvImportedIncomeKey(
 internal fun registerCategoryNames(
     category: Category,
     map: MutableMap<String, Category>,
-    resolveCategoryName: (String, String, Long) -> String
+    resolveCategoryName: (String, String) -> String
 ) {
     map[categoryLookupKey(category.name, category.categoryType)] = category
     map[
         categoryLookupKey(
-            resolveCategoryName(category.id, category.name, category.isCustom),
+            resolveCategoryName(category.id, category.name),
             category.categoryType
         )
     ] = category
@@ -252,7 +252,7 @@ internal fun resolveImportCategory(
         icon = "category",
         color = DEFAULT_CATEGORY_COLOR,
         categoryType = categoryType,
-        isCustom = 1L
+        sortOrder = 0L
     )
 }
 

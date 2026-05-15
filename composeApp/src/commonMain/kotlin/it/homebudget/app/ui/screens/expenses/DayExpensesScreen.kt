@@ -96,7 +96,7 @@ class DayExpensesScreen(
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
         val categoriesById = remember(categories) { categories.associateBy { it.id } }
 
-        EnsureDefaultCategoriesInserted(repository)
+        EnsureStarterCategoriesSeeded(repository)
 
         val totalAmount = remember(expenses) {
             expenses.sumAmountOf(Expense::amount)
@@ -116,7 +116,7 @@ class DayExpensesScreen(
                 unknownCategoryLabel = unknownCategoryLabel,
                 onOpenExpense = onOpenExpense,
                 resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 }
             )
         }

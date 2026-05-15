@@ -40,7 +40,7 @@ class IosExpenseEditorController {
         onResult: (IosExpenseEditorSnapshot?) -> Unit
     ) {
         scope.launch {
-            repository.insertDefaultCategoriesIfEmpty()
+            repository.seedStarterCategoriesIfEmpty()
             val expense = repository.getExpenseById(id)
             onResult(
                 expense?.let {

@@ -59,7 +59,7 @@ internal fun DashboardBody(
             onTopCategoryClick = {
                 summary.topCategoryId
                     ?.let { categoriesById[it] }
-                    ?.let { onOpenCategoryExpenses(resolveCategoryName(it.id, it.name, it.isCustom)) }
+                    ?.let { onOpenCategoryExpenses(resolveCategoryName(it.id, it.name)) }
             }
         )
 

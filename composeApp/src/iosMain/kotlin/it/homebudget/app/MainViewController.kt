@@ -12,7 +12,7 @@ import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
 import it.homebudget.app.ui.screens.TransactionEditorKind
-import it.homebudget.app.ui.screens.categories.BentoCategoriesRoute
+import it.homebudget.app.ui.screens.categories.management.CategoriesManagementRoute
 import it.homebudget.app.ui.screens.dashboard.DashboardRoute
 import it.homebudget.app.ui.screens.startIosGroupedExpensesStore
 import it.homebudget.app.ui.theme.AppTheme
@@ -126,7 +126,7 @@ fun CategoriesViewController(
     }
 ) {
     AppTheme {
-        BentoCategoriesRoute(onBack = onClose)
+        CategoriesManagementRoute(onBack = onClose)
     }
 }
 

@@ -27,7 +27,7 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
-                            Button(appLocalized("Custom Categories")) {
+                            Button(appLocalized("Categories")) {
                                 path.append(Route.categories)
                             }
                             Button(appLocalized("CSV Import / Export")) {

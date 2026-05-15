@@ -32,8 +32,8 @@ class DataReplacementService(
                         icon = category.icon,
                         color = category.color,
                         categoryType = category.categoryType,
-                        isCustom = if (category.isCustom) 1L else 0L,
-                        isArchived = if (category.isArchived) 1L else 0L
+                        isArchived = if (category.isArchived) 1L else 0L,
+                        sortOrder = category.sortOrder
                     )
                 }
             )

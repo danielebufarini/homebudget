@@ -42,12 +42,11 @@ import homebudget.composeapp.generated.resources.add
 import homebudget.composeapp.generated.resources.add_category
 import homebudget.composeapp.generated.resources.back
 import homebudget.composeapp.generated.resources.categories
-import homebudget.composeapp.generated.resources.custom_category
+import homebudget.composeapp.generated.resources.categories_empty_all
+import homebudget.composeapp.generated.resources.categories_subtitle
 import homebudget.composeapp.generated.resources.delete
-import homebudget.composeapp.generated.resources.delete_category_in_use
 import homebudget.composeapp.generated.resources.delete_item_confirmation_message
 import homebudget.composeapp.generated.resources.edit_category
-import homebudget.composeapp.generated.resources.no_custom_categories_yet
 import homebudget.composeapp.generated.resources.unable_to_delete_category
 import homebudget.composeapp.generated.resources.unable_to_save_category
 import homebudget.composeapp.generated.resources.update
@@ -83,11 +82,10 @@ class CategoriesScreen : Screen {
         val addLabel = stringResource(Res.string.add)
         val backLabel = stringResource(Res.string.back)
         val categoriesLabel = stringResource(Res.string.categories)
-        val customCategoryLabel = stringResource(Res.string.custom_category)
-        val deleteCategoryInUseLabel = stringResource(Res.string.delete_category_in_use)
+        val emptyCategoriesLabel = stringResource(Res.string.categories_empty_all)
+        val categoriesSubtitle = stringResource(Res.string.categories_subtitle)
         val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
         val editCategoryLabel = stringResource(Res.string.edit_category)
-        val noCustomCategoriesLabel = stringResource(Res.string.no_custom_categories_yet)
         val unableToDeleteCategoryLabel = stringResource(Res.string.unable_to_delete_category)
         val unableToSaveCategoryLabel = stringResource(Res.string.unable_to_save_category)
         val updateCategoryLabel = stringResource(Res.string.update)
@@ -98,15 +96,15 @@ class CategoriesScreen : Screen {
         var categoryPendingDelete by remember { mutableStateOf<Category?>(null) }
 
         val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-        val customCategories = remember(categories, resolveCategoryName) {
+        val visibleCategories = remember(categories, resolveCategoryName) {
             categories
-                .filter { it.isCustom == 1L }
+                .filter { it.isArchived != 1L }
                 .sortedBy { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom).lowercase()
+                    resolveCategoryName(category.id, category.name).lowercase()
                 }
         }
 
-        EnsureDefaultCategoriesInserted(repository)
+        EnsureStarterCategoriesSeeded(repository)
 
         Scaffold(
             snackbarHost = {
@@ -140,7 +138,7 @@ class CategoriesScreen : Screen {
                 }
             }
         ) { padding ->
-            if (customCategories.isEmpty()) {
+            if (visibleCategories.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -153,12 +151,12 @@ class CategoriesScreen : Screen {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = customCategoryLabel,
+                            text = emptyCategoriesLabel,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = noCustomCategoriesLabel,
+                            text = categoriesSubtitle,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -173,7 +171,7 @@ class CategoriesScreen : Screen {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(
-                        items = customCategories,
+                        items = visibleCategories,
                         key = { it.id }
                     ) { category ->
                         val dismissState = rememberSwipeToDeleteBoxState(
@@ -198,7 +196,7 @@ class CategoriesScreen : Screen {
                         ) {
                             CategoryRow(
                                 category = category,
-                                categoryName = resolveCategoryName(category.id, category.name, category.isCustom),
+                                categoryName = resolveCategoryName(category.id, category.name),
                                 onClick = { categoryBeingEdited = category }
                             )
                         }
@@ -225,7 +223,7 @@ class CategoriesScreen : Screen {
                 title = if (editingCategory == null) addCategoryLabel else editCategoryLabel,
                 confirmLabel = if (editingCategory == null) addLabel else updateCategoryLabel,
                 initialName = editingCategory?.let { category ->
-                    resolveCategoryName(category.id, category.name, category.isCustom)
+                    resolveCategoryName(category.id, category.name)
                 }.orEmpty(),
                 initialIconKey = editingCategory?.icon ?: DEFAULT_CATEGORY_ICON_KEY,
                 onConfirm = { name, iconKey ->
@@ -233,10 +231,9 @@ class CategoriesScreen : Screen {
                         runCatching {
                             if (editingCategory == null) {
                                 repository.insertCategory(
-                                    id = buildCustomCategoryId(),
+                                    id = buildCategoryId(),
                                     name = name,
-                                    icon = iconKey,
-                                    isCustom = true
+                                    icon = iconKey
                                 )
                             } else {
                                 repository.updateCategory(
@@ -259,7 +256,7 @@ class CategoriesScreen : Screen {
         }
 
         categoryPendingDelete?.let { category ->
-            val categoryName = resolveCategoryName(category.id, category.name, category.isCustom)
+            val categoryName = resolveCategoryName(category.id, category.name)
             DeleteConfirmationDialog(
                 message = deleteItemConfirmationMessageTemplate.formatResourceArgs(categoryName),
                 onDelete = {

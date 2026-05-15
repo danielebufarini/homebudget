@@ -80,6 +80,9 @@ interface IncomeDao {
     @Query("SELECT count(*) FROM income WHERE categoryId = :categoryId")
     suspend fun countIncomesForCategory(categoryId: String): Long
 
+    @Query("UPDATE income SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId")
+    suspend fun moveIncomesToCategory(oldCategoryId: String, newCategoryId: String)
+
     @Query("DELETE FROM income WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringIncomeSeries(seriesId: String)
 }

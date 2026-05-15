@@ -29,7 +29,6 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import homebudget.composeapp.generated.resources.Res
-import homebudget.composeapp.generated.resources.custom_label
 import homebudget.composeapp.generated.resources.delete
 import it.homebudget.app.database.Category
 import org.jetbrains.compose.resources.stringResource
@@ -104,35 +103,28 @@ private class CategoriesRecyclerAdapter(
     override fun onBindViewHolder(holder: ComposeViewHolder, position: Int) {
         val category = categories[position]
         holder.composeView.setContent {
-            if (category.isCustom == 1L) {
-                val dismissState = rememberSwipeToDeleteBoxState(
-                    itemId = category.id,
-                    onDeleteItem = onDeleteCategory
-                )
+            val dismissState = rememberSwipeToDeleteBoxState(
+                itemId = category.id,
+                onDeleteItem = onDeleteCategory
+            )
 
-                Box(modifier = Modifier.padding(bottom = 12.dp)) {
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        enableDismissFromStartToEnd = false,
-                        backgroundContent = {
-                            if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) {
-                                Spacer(modifier = Modifier.fillMaxSize())
-                            } else {
-                                DeleteCategoryBackground()
-                            }
+            Box(modifier = Modifier.padding(bottom = 12.dp)) {
+                SwipeToDismissBox(
+                    state = dismissState,
+                    enableDismissFromStartToEnd = false,
+                    backgroundContent = {
+                        if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) {
+                            Spacer(modifier = Modifier.fillMaxSize())
+                        } else {
+                            DeleteCategoryBackground()
                         }
-                    ) {
-                        CategoryListItem(
-                            category = category,
-                            onClick = { onEditCategory(category) }
-                        )
                     }
+                ) {
+                    CategoryListItem(
+                        category = category,
+                        onClick = { onEditCategory(category) }
+                    )
                 }
-            } else {
-                CategoryListItem(
-                    category = category,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
             }
         }
     }
@@ -147,7 +139,6 @@ private fun CategoryListItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
-    val customLabel = stringResource(Res.string.custom_label)
     val clickableModifier = if (onClick != null) {
         modifier.clickable(onClick = onClick)
     } else {
@@ -174,14 +165,6 @@ private fun CategoryListItem(
                 modifier = Modifier.weight(1f),
                 textStyle = MaterialTheme.typography.bodyLarge
             )
-
-            if (category.isCustom == 1L) {
-                Text(
-                    text = customLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
         }
     }
 }

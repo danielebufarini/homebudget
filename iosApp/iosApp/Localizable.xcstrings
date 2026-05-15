@@ -362,35 +362,19 @@
         }
       }
     },
-    "Custom Categories" : {
+    "Categories" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Custom Categories"
+            "value" : "Categories"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Categorie personalizzate"
-          }
-        }
-      }
-    },
-    "Default Categories" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default Categories"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Categorie predefinite"
+            "value" : "Categorie"
           }
         }
       }

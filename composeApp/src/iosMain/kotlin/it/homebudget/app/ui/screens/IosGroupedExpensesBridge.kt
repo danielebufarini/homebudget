@@ -125,7 +125,7 @@ private data class IosGroupedLocalization(
     val unknownCategory: String,
     val noExpensesForCategoryThisMonthTemplate: String,
     val shortMonthNames: List<String>,
-    val resolveCategoryName: (String, String, Long) -> String
+    val resolveCategoryName: (String, String) -> String
 )
 
 internal data class IosGroupedSnapshotsCache(
@@ -158,7 +158,7 @@ internal class IosGroupedExpensesStore(
         }
 
         updatesJob = scope.launch {
-            repository.insertDefaultCategoriesIfEmpty()
+            repository.seedStarterCategoriesIfEmpty()
             combine(repository.getAllExpenses(), repository.getAllCategories()) { expenses, categories ->
                 expenses to categories
             }.collect { (expenses, categories) ->
@@ -548,7 +548,7 @@ private fun prepareExpense(
         amountText = formatAmount(expense.amount, localization.currencySymbol),
         categoryId = expense.categoryId,
         categoryName = categoriesById[expense.categoryId]
-            ?.let { localization.resolveCategoryName(it.id, it.name, it.isCustom) }
+            ?.let { localization.resolveCategoryName(it.id, it.name) }
             ?: localization.unknownCategory,
         categoryIconKey = categoriesById[expense.categoryId]
             ?.icon

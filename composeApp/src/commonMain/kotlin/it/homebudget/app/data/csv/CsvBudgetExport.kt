@@ -52,7 +52,7 @@ suspend fun exportBudgetItemsToCsv(
             startDate = startDate,
             endDate = endDate,
             localizeCategoryName = { category ->
-                resolveCategoryName(category.id, category.name, category.isCustom)
+                resolveCategoryName(category.id, category.name)
             },
             unknownCategory = getString(Res.string.unknown_category)
         )
