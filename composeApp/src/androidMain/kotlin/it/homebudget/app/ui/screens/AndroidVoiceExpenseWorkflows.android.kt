@@ -63,21 +63,22 @@ internal suspend fun buildAndroidVoiceExpenseDraft(
             generativeModel = generativeModel,
             availability = availability
         )
-        resolveAndroidVoiceExpenseDraft(
+        val draft = resolveAndroidVoiceExpenseDraft(
             interpretation = interpretation,
             snapshot = snapshot,
             transcript = transcript
         )
+        AndroidVoiceExpenseDraftBuildResult(
+            draft = draft,
+            statusMessage = when {
+                draft == null -> interpretation.summary ?: uiStrings.voiceExpenseStatusUnusable
+                draft.action == AndroidVoiceExpenseActionKind.Update -> uiStrings.voiceExpenseStatusReadyToUpdate
+                else -> uiStrings.voiceExpenseStatusReadyToSave
+            }
+        )
     }.fold(
-        onSuccess = { draft ->
-            AndroidVoiceExpenseDraftBuildResult(
-                draft = draft,
-                statusMessage = when {
-                    draft == null -> uiStrings.voiceExpenseStatusUnusable
-                    draft.action == AndroidVoiceExpenseActionKind.Update -> uiStrings.voiceExpenseStatusReadyToUpdate
-                    else -> uiStrings.voiceExpenseStatusReadyToSave
-                }
-            )
+        onSuccess = { result ->
+            result
         },
         onFailure = { error ->
             AndroidVoiceExpenseDraftBuildResult(

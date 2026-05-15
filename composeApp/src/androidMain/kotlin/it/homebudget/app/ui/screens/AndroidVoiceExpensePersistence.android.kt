@@ -101,6 +101,7 @@ internal suspend fun persistAndroidVoiceExpenseDraft(
             )
         }
 
+        AndroidVoiceExpenseActionKind.NeedClarification,
         AndroidVoiceExpenseActionKind.Ignore -> {
             error(uiStrings.nothingToSave)
         }

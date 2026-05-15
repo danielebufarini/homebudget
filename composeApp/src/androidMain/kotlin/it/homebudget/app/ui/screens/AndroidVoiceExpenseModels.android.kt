@@ -27,6 +27,7 @@ internal data class AndroidVoiceExpenseSnapshot(
 internal enum class AndroidVoiceExpenseActionKind {
     Create,
     Update,
+    NeedClarification,
     Ignore
 }
 
@@ -34,10 +35,12 @@ internal data class AndroidVoiceExpenseInterpretation(
     val action: AndroidVoiceExpenseActionKind,
     val targetExpenseId: String?,
     val amountInput: String?,
+    val categoryId: String?,
     val categoryName: String?,
     val description: String?,
     val date: LocalDate?,
-    val isShared: Boolean
+    val isShared: Boolean?,
+    val summary: String?
 )
 
 internal data class AndroidVoiceExpenseDraft(

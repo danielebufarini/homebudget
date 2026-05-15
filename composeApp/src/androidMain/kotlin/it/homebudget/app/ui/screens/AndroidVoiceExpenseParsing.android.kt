@@ -11,7 +11,7 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import org.json.JSONObject
 import java.text.Normalizer
-import java.util.*
+import java.util.Locale
 import kotlin.time.Instant
 
 // Transcript interpretation and category/date matching for Android voice expense input.
@@ -45,49 +45,55 @@ internal suspend fun interpretAndroidVoiceExpense(
             action = AndroidVoiceExpenseActionKind.Ignore,
             targetExpenseId = null,
             amountInput = null,
+            categoryId = null,
             categoryName = null,
             description = null,
             date = null,
-            isShared = false
+            isShared = null,
+            summary = null
         )
     }
 
     val jsonPayload = extractAndroidVoiceExpenseJson(rawResponse)
-    val action = when (jsonPayload.optString("action", "ignore").trim().lowercase(Locale.US)) {
+    val action = when (
+        (jsonPayload.optNullableString("action") ?: jsonPayload.optNullableString("intent") ?: "ignore")
+            .trim()
+            .lowercase(Locale.US)
+    ) {
         "create" -> AndroidVoiceExpenseActionKind.Create
         "update" -> AndroidVoiceExpenseActionKind.Update
+        "needclarification", "need_clarification", "need-clarification" -> AndroidVoiceExpenseActionKind.NeedClarification
         else -> AndroidVoiceExpenseActionKind.Ignore
     }
 
-    val date = jsonPayload.optString("date")
-        .trim()
-        .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
-        ?.let(LocalDate::parse)
+    val date = jsonPayload.optNullableString("date")
+        ?.let { value -> runCatching { LocalDate.parse(value) }.getOrNull() }
 
     return AndroidVoiceExpenseInterpretation(
         action = action,
-        targetExpenseId = jsonPayload.optString("targetExpenseId")
-            .trim()
-            .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) },
-        amountInput = jsonPayload.optString("amount")
-            .trim()
-            .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) },
-        categoryName = jsonPayload.optString("categoryName")
-            .trim()
-            .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) },
-        description = jsonPayload.optString("description")
-            .trim()
-            .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) },
+        targetExpenseId = jsonPayload.optNullableString("targetExpenseId")
+            ?: jsonPayload.optNullableString("expenseId"),
+        amountInput = jsonPayload.optNullableString("amount"),
+        categoryId = jsonPayload.optNullableString("categoryId"),
+        categoryName = jsonPayload.optNullableString("categoryName"),
+        description = jsonPayload.optNullableString("description"),
         date = date,
-        isShared = jsonPayload.optBoolean("shared", false)
+        isShared = jsonPayload.optNullableBoolean("shared")
+            ?: jsonPayload.optNullableBoolean("isShared"),
+        summary = jsonPayload.optNullableString("summary")
     )
 }
 
 internal fun matchAndroidVoiceExpenseCategory(
+    requestedCategoryId: String? = null,
     requestedCategoryName: String?,
     categories: List<AndroidVoiceExpenseCategory>,
     transcript: String? = null
 ): AndroidVoiceExpenseCategory? {
+    if (!requestedCategoryId.isNullOrBlank()) {
+        categories.firstOrNull { it.id == requestedCategoryId }?.let { return it }
+    }
+
     if (!requestedCategoryName.isNullOrBlank()) {
         return categories.firstOrNull { it.name.equals(requestedCategoryName, ignoreCase = true) }
             ?: categories.firstOrNull {
@@ -126,56 +132,90 @@ internal fun resolveAndroidVoiceExpenseDraft(
     snapshot: AndroidVoiceExpenseSnapshot,
     transcript: String
 ): AndroidVoiceExpenseDraft? {
-    if (interpretation.action == AndroidVoiceExpenseActionKind.Ignore) {
-        return null
+    return when (interpretation.action) {
+        AndroidVoiceExpenseActionKind.Create -> resolveAndroidVoiceExpenseCreateDraft(
+            interpretation = interpretation,
+            snapshot = snapshot,
+            transcript = transcript
+        )
+
+        AndroidVoiceExpenseActionKind.Update -> resolveAndroidVoiceExpenseUpdateDraft(
+            interpretation = interpretation,
+            snapshot = snapshot
+        )
+
+        AndroidVoiceExpenseActionKind.NeedClarification,
+        AndroidVoiceExpenseActionKind.Ignore -> null
     }
+}
 
-    val amountInput = interpretation.amountInput
-        ?.replace(',', '.')
-        ?.takeIf { parseAmountInput(it) != null }
-        ?: return null
-
+private fun resolveAndroidVoiceExpenseCreateDraft(
+    interpretation: AndroidVoiceExpenseInterpretation,
+    snapshot: AndroidVoiceExpenseSnapshot,
+    transcript: String
+): AndroidVoiceExpenseDraft? {
+    val amountInput = normalizeAndroidVoiceExpenseAmount(interpretation.amountInput) ?: return null
     val category = matchAndroidVoiceExpenseCategory(
+        requestedCategoryId = interpretation.categoryId,
         requestedCategoryName = interpretation.categoryName,
         categories = snapshot.categories,
         transcript = transcript
     ) ?: return null
 
-    val date = (interpretation.date ?: currentSystemLocalDate())
-        .atStartOfDayIn(TimeZone.currentSystemDefault())
-        .toEpochMilliseconds()
+    val date = (interpretation.date ?: currentSystemLocalDate()).toAndroidVoiceExpenseEpochMillis()
 
-    return when (interpretation.action) {
-        AndroidVoiceExpenseActionKind.Create -> {
-            AndroidVoiceExpenseDraft(
-                action = AndroidVoiceExpenseActionKind.Create,
-                expenseId = null,
-                amountInput = amountInput,
-                categoryId = category.id,
-                categoryName = category.name,
-                description = interpretation.description,
-                date = date,
-                isShared = interpretation.isShared
-            )
-        }
+    return AndroidVoiceExpenseDraft(
+        action = AndroidVoiceExpenseActionKind.Create,
+        expenseId = null,
+        amountInput = amountInput,
+        categoryId = category.id,
+        categoryName = category.name,
+        description = interpretation.description,
+        date = date,
+        isShared = interpretation.isShared ?: false
+    )
+}
 
-        AndroidVoiceExpenseActionKind.Update -> {
-            val expenseId = interpretation.targetExpenseId ?: return null
-            val existingExpense = snapshot.recentExpenses.firstOrNull { it.id == expenseId } ?: return null
-            AndroidVoiceExpenseDraft(
-                action = AndroidVoiceExpenseActionKind.Update,
-                expenseId = existingExpense.id,
-                amountInput = amountInput,
-                categoryId = category.id,
-                categoryName = category.name,
-                description = interpretation.description,
-                date = date,
-                isShared = interpretation.isShared
-            )
-        }
+private fun resolveAndroidVoiceExpenseUpdateDraft(
+    interpretation: AndroidVoiceExpenseInterpretation,
+    snapshot: AndroidVoiceExpenseSnapshot
+): AndroidVoiceExpenseDraft? {
+    val expenseId = interpretation.targetExpenseId ?: return null
+    val existingExpense = snapshot.recentExpenses.firstOrNull { it.id == expenseId } ?: return null
+    val amountInput = normalizeAndroidVoiceExpenseAmount(interpretation.amountInput)
+        ?: existingExpense.amountInput
+    val category = matchAndroidVoiceExpenseCategory(
+        requestedCategoryId = interpretation.categoryId,
+        requestedCategoryName = interpretation.categoryName,
+        categories = snapshot.categories,
+        transcript = null
+    )
+        ?: snapshot.categories.firstOrNull { it.id == existingExpense.categoryId }
+        ?: AndroidVoiceExpenseCategory(
+            id = existingExpense.categoryId,
+            name = existingExpense.categoryName
+        )
 
-        AndroidVoiceExpenseActionKind.Ignore -> null
-    }
+    return AndroidVoiceExpenseDraft(
+        action = AndroidVoiceExpenseActionKind.Update,
+        expenseId = existingExpense.id,
+        amountInput = amountInput,
+        categoryId = category.id,
+        categoryName = category.name,
+        description = interpretation.description ?: existingExpense.description,
+        date = interpretation.date?.toAndroidVoiceExpenseEpochMillis() ?: existingExpense.date,
+        isShared = interpretation.isShared ?: existingExpense.isShared
+    )
+}
+
+private fun normalizeAndroidVoiceExpenseAmount(amountInput: String?): String? {
+    return amountInput
+        ?.replace(',', '.')
+        ?.takeIf { parseAmountInput(it) != null }
+}
+
+private fun LocalDate.toAndroidVoiceExpenseEpochMillis(): Long {
+    return atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
 }
 
 private fun buildAndroidVoiceExpensePrompt(
@@ -183,45 +223,33 @@ private fun buildAndroidVoiceExpensePrompt(
     categories: List<AndroidVoiceExpenseCategory>,
     expenses: List<AndroidVoiceExpenseCandidate>
 ): String {
+    val locale = Locale.getDefault()
     val today = currentSystemLocalDate().toString()
+    val languageCode = locale.toLanguageTag().takeIf { it.isNotBlank() } ?: locale.language
+    val languageName = locale.getDisplayLanguage(locale).takeIf { it.isNotBlank() } ?: languageCode
     val categoryList = categories.joinToString(separator = "\n") { category ->
-        "- ${category.name}"
-    }
+        "- id=${category.id}, name=${category.name}"
+    }.ifBlank { "- none" }
     val expenseList = expenses.joinToString(separator = "\n") { expense ->
-        "- id=${expense.id} | amount=${expense.amountInput} | category=${expense.categoryName} | description=${expense.description.orEmpty()} | date=${formatAndroidVoiceExpenseDate(expense.date)} | shared=${expense.isShared}"
+        val description = expense.description?.takeIf { it.isNotBlank() } ?: "none"
+        val shared = if (expense.isShared) "yes" else "no"
+        "- id=${expense.id}, amount=${expense.amountInput}, date=${formatAndroidVoiceExpenseDate(expense.date)}, categoryId=${expense.categoryId}, categoryName=${expense.categoryName}, shared=$shared, description=$description"
+    }.ifBlank { "- none" }
+
+    return buildString {
+        appendLine(buildVoiceExpensePromptInstructions(buildAndroidVoiceExpenseOutputContract()))
+        appendLine()
+        append(
+            buildVoiceExpensePromptContext(
+                currentDate = today,
+                currentLanguageName = languageName,
+                currentLanguageCode = languageCode,
+                transcript = transcript,
+                categoriesText = categoryList,
+                expensesText = expenseList
+            )
+        )
     }
-
-    val prompt =
-        """
-        You extract a household expense action from a spoken command.
-        The input may be in Italian or English.
-
-        Today's date: $today
-
-        Valid categories:
-        $categoryList
-
-        Recent expenses that may be updated:
-        $expenseList
-
-        Rules:
-        - Return JSON only. Do not wrap it in markdown.
-        - Use action=create when the user is adding a new expense.
-        - Use action=update only when the user clearly means one of the listed recent expenses. When you do that, copy its id exactly into targetExpenseId.
-        - Use action=ignore when the transcript is not a usable expense command.
-        - amount must be a string using a dot decimal separator and exactly two decimals, for example 12.50.
-        - categoryName must exactly match one of the valid categories above.
-        - date must be in YYYY-MM-DD format. If the user does not specify a date, use today's date.
-        - shared must be true only when the user clearly says the expense is shared or split.
-        - description should be short and useful. Omit it when none is needed.
-
-        Return this schema:
-        {"action":"create|update|ignore","targetExpenseId":"string or null","amount":"12.50 or null","categoryName":"exact category or null","description":"string or null","date":"YYYY-MM-DD or null","shared":true}
-
-        Transcript:
-        $transcript
-        """.trimIndent()
-    return prompt
 }
 
 private fun extractAndroidVoiceExpenseJson(rawResponse: String): JSONObject {
@@ -238,6 +266,30 @@ private fun extractAndroidVoiceExpenseJson(rawResponse: String): JSONObject {
         cleaned
     }
     return JSONObject(jsonText)
+}
+
+private fun JSONObject.optNullableString(name: String): String? {
+    if (!has(name) || isNull(name)) {
+        return null
+    }
+    return optString(name)
+        .trim()
+        .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+}
+
+private fun JSONObject.optNullableBoolean(name: String): Boolean? {
+    if (!has(name) || isNull(name)) {
+        return null
+    }
+    return when (val value = opt(name)) {
+        is Boolean -> value
+        is String -> when (value.trim().lowercase(Locale.US)) {
+            "true" -> true
+            "false" -> false
+            else -> null
+        }
+        else -> null
+    }
 }
 
 internal fun formatAndroidVoiceExpenseDate(dateMillis: Long): String {
@@ -269,24 +321,27 @@ private fun parseSimpleAndroidVoiceExpenseIntent(
     snapshot: AndroidVoiceExpenseSnapshot
 ): AndroidVoiceExpenseInterpretation {
     val amountInput = parseSimpleAndroidVoiceExpenseAmount(transcript)
-    val categoryName = matchAndroidVoiceExpenseCategory(
+    val category = matchAndroidVoiceExpenseCategory(
+        requestedCategoryId = null,
         requestedCategoryName = null,
         categories = snapshot.categories,
         transcript = transcript
-    )?.name
+    )
 
     return AndroidVoiceExpenseInterpretation(
-        action = if (amountInput != null && categoryName != null) {
+        action = if (amountInput != null && category != null) {
             AndroidVoiceExpenseActionKind.Create
         } else {
             AndroidVoiceExpenseActionKind.Ignore
         },
         targetExpenseId = null,
         amountInput = amountInput,
-        categoryName = categoryName,
+        categoryId = category?.id,
+        categoryName = category?.name,
         description = null,
         date = parseRelativeAndroidVoiceExpenseDate(transcript),
-        isShared = parseAndroidVoiceSharedFlag(transcript)
+        isShared = parseAndroidVoiceSharedFlag(transcript),
+        summary = null
     )
 }
 

@@ -61,30 +61,30 @@ struct VoiceExpenseInterpretation {
         case ignore
     }
 
-    @Guide(description: "Whether the user wants to create a new expense, update an existing expense, or the command needs clarification.")
+    @Guide(description: "Whether the user wants to create a new expense, update an existing expense, needs clarification, or did not provide a usable expense command.")
     var intent: Intent
 
-    @Guide(description: "Existing expense id to update. Use null for new expenses or when clarification is needed.")
+    @Guide(description: "Existing expense id to update. Use nil for new expenses, clarification, or ignored commands.")
     var expenseId: String?
 
-    @Guide(description: "Expense amount in euros with two decimal digits, for example 12.50. Use null only when clarification is needed or the amount is unchanged in an update.")
+    @Guide(description: "Expense amount in euros with two decimal digits, for example 12.50. Use nil when clarification is needed, the command is ignored, or the amount is unchanged in an update.")
     var amount: String?
 
-    @Guide(description: "Category id from the provided categories. Use null only when clarification is needed or the category is unchanged in an update.")
+    @Guide(description: "Category id from the provided categories. Use nil when clarification is needed, the command is ignored, or the category is unchanged in an update.")
     var categoryId: String?
 
-    @Guide(description: "Category name that exactly matches one of the provided categories whenever possible. Use null only when clarification is needed or the category is unchanged in an update.")
+    @Guide(description: "Category name that exactly matches one of the provided categories whenever possible. Use nil when clarification is needed, the command is ignored, or the category is unchanged in an update.")
     var categoryName: String?
 
-    @Guide(description: "Short expense description. Use null when omitted.")
+    @Guide(description: "Short expense description. Use nil when omitted, unchanged, or not applicable.")
     var description: String?
 
-    @Guide(description: "Date in yyyy-MM-dd format. Resolve relative dates like yesterday, today, and tomorrow to a concrete date. For new expenses with no spoken date, use today's date.")
+    @Guide(description: "Date in yyyy-MM-dd format. Resolve relative dates like yesterday, today, and tomorrow to a concrete date. For new expenses with no spoken date, use today's date. For updates with no spoken date, use nil.")
     var date: String?
 
-    @Guide(description: "Whether the expense is shared. Use null when not mentioned for updates.")
+    @Guide(description: "Whether the expense is shared. For create, use false when not mentioned. For update, use nil when not mentioned.")
     var isShared: Bool?
 
-    @Guide(description: "Short user-facing summary of the parsed action or of the clarification needed.")
+    @Guide(description: "Short user-facing summary of the parsed action, clarification, or ignored command.")
     var summary: String
 }
