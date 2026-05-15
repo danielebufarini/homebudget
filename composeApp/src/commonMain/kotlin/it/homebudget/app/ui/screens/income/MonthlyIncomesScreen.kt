@@ -1,6 +1,7 @@
 package it.homebudget.app.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,10 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -152,93 +156,94 @@ class MonthlyIncomesScreen(
                 recurringIncomeToDelete = income
             }
         }
-        val bottomActionPadding = 0.dp
-
         val content: @Composable (PaddingValues) -> Unit = { padding ->
-            if (groupedIncomes.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp)
-                        .padding(bottom = bottomActionPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    PlatformCard {
-                        Text(
-                            text = strings.noIncomeForMonth,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            } else {
-                val expandedState = remember { mutableStateMapOf<String, Boolean>() }
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp)
-                        .padding(bottom = bottomActionPadding),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (section in groupedIncomes) {
-                        item(key = section.key) {
-                            val sectionId = section.key
-                            val expanded = expandedState.getOrPut(sectionId) { true }
-                            val chevronRotation by animateFloatAsState(
-                                targetValue = if (expanded) 180f else 0f,
-                                label = "MonthlyIncomeSectionChevronRotation"
-                            )
-                            PlatformCard(contentPadding = PaddingValues(0.dp)) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    expandedState[sectionId] = !expanded
-                                                }
-                                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = formatExpenseDateGroupTitle(section.date),
-                                                modifier = Modifier.weight(1f),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Spacer(modifier = Modifier.width(16.dp))
-                                            Text(
-                                                text = formatAmount(section.totalAmount, strings.currencySymbol),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                textAlign = TextAlign.End
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            ExpandableSectionChevron(
-                                                rotation = chevronRotation,
-                                                containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f),
-                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
+            val listContentPadding = edgeToEdgeListContentPadding(scaffoldPadding = padding)
 
-                                    if (expanded) {
-                                        HorizontalDivider()
-                                        for (income in section.incomes) {
-                                            key(income.id) {
-                                                MonthlyIncomeRow(
-                                                    income = income,
-                                                    onOpenIncome = onOpenIncome,
-                                                    onDeleteIncome = deleteIncomeAction
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                if (groupedIncomes.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(listContentPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlatformCard {
+                            Text(
+                                text = strings.noIncomeForMonth,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                } else {
+                    val expandedState = remember { mutableStateMapOf<String, Boolean>() }
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = listContentPadding,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        for (section in groupedIncomes) {
+                            item(key = section.key) {
+                                val sectionId = section.key
+                                val expanded = expandedState.getOrPut(sectionId) { true }
+                                val chevronRotation by animateFloatAsState(
+                                    targetValue = if (expanded) 180f else 0f,
+                                    label = "MonthlyIncomeSectionChevronRotation"
+                                )
+                                PlatformCard(contentPadding = PaddingValues(0.dp)) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        expandedState[sectionId] = !expanded
+                                                    }
+                                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = formatExpenseDateGroupTitle(section.date),
+                                                    modifier = Modifier.weight(1f),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
-                                                HorizontalDivider()
+                                                Spacer(modifier = Modifier.width(16.dp))
+                                                Text(
+                                                    text = formatAmount(section.totalAmount, strings.currencySymbol),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    textAlign = TextAlign.End
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                ExpandableSectionChevron(
+                                                    rotation = chevronRotation,
+                                                    containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f),
+                                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+
+                                        if (expanded) {
+                                            HorizontalDivider()
+                                            for (income in section.incomes) {
+                                                key(income.id) {
+                                                    MonthlyIncomeRow(
+                                                        income = income,
+                                                        onOpenIncome = onOpenIncome,
+                                                        onDeleteIncome = deleteIncomeAction
+                                                    )
+                                                    HorizontalDivider()
+                                                }
                                             }
                                         }
                                     }
@@ -252,6 +257,9 @@ class MonthlyIncomesScreen(
 
         if (showNavigationChrome) {
             Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                contentWindowInsets = WindowInsets.systemBars,
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {

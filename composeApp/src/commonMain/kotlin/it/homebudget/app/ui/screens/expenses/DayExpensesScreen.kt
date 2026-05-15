@@ -1,11 +1,13 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -108,8 +110,8 @@ class DayExpensesScreen(
                 categoriesById = categoriesById,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
+                    .background(MaterialTheme.colorScheme.background),
+                contentPadding = edgeToEdgeListContentPadding(scaffoldPadding = padding),
                 emptyStateText = emptyStateText,
                 expenseFallbackTitle = expenseFallbackTitle,
                 currencySymbol = currencySymbol,
@@ -123,6 +125,9 @@ class DayExpensesScreen(
 
         if (showNavigationChrome) {
             Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                contentWindowInsets = WindowInsets.systemBars,
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
@@ -161,6 +166,7 @@ private fun DayExpensesList(
     expenses: List<Expense>,
     categoriesById: Map<String, Category>,
     modifier: Modifier,
+    contentPadding: PaddingValues,
     emptyStateText: String,
     expenseFallbackTitle: String,
     currencySymbol: String,
@@ -170,6 +176,7 @@ private fun DayExpensesList(
 ) {
     LazyColumn(
         modifier = modifier,
+        contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (expenses.isEmpty()) {

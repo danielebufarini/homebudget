@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -163,11 +164,28 @@ class CategoriesScreen : Screen {
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
+                val listViewportModifier = if (isIos) {
+                    Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                } else {
+                    Modifier.fillMaxSize()
+                }
+                val listContentPadding = if (isIos) {
+                    PaddingValues(bottom = 88.dp)
+                } else {
+                    PaddingValues(
+                        start = 16.dp,
+                        top = padding.calculateTopPadding() + 16.dp,
+                        end = 16.dp,
+                        bottom = padding.calculateBottomPadding() + 88.dp
+                    )
+                }
+
+                LazyColumn(
+                    modifier = listViewportModifier,
+                    contentPadding = listContentPadding,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(
@@ -200,14 +218,6 @@ class CategoriesScreen : Screen {
                                 onClick = { categoryBeingEdited = category }
                             )
                         }
-                    }
-
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 88.dp)
-                        )
                     }
                 }
             }

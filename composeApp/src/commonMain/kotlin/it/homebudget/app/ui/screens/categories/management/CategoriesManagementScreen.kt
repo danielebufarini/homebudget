@@ -1,5 +1,14 @@
 package it.homebudget.app.ui.screens.categories.management
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -11,12 +20,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.categories
+import homebudget.composeapp.generated.resources.categories_add_content_description
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.ui.screens.EdgeToEdgeTopBarOverlay
 import it.homebudget.app.ui.screens.clearActiveIosCategoriesManagementAddHandler
+import it.homebudget.app.ui.screens.rememberIsIosPlatform
 import it.homebudget.app.ui.screens.setActiveIosCategoriesManagementAddHandler
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 object CategoriesManagementScreen : Screen {
@@ -28,6 +44,7 @@ object CategoriesManagementScreen : Screen {
 }
 
 @Suppress("UNUSED_VALUE")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesManagementRoute(
     repository: ExpenseRepository = koinInject(),
@@ -57,26 +74,74 @@ fun CategoriesManagementRoute(
     var moveTarget by remember { mutableStateOf<CategoryUiModel?>(null) }
 
     val scope = rememberCoroutineScope()
+    val isIos = rememberIsIosPlatform()
+    val categoriesLabel = stringResource(Res.string.categories)
+    val addCategoryContentDescription = stringResource(Res.string.categories_add_content_description)
+    val addCategory = { editorTarget = CategoryUiModel.newEmpty() }
 
-    CategoriesManagementContent(
-        categories = categoryCards,
-        query = query,
-        selectedFilter = CategoryFilter.valueOf(filter),
-        sortAscending = sortAscending,
-        onQueryChange = { query = it },
-        onSortToggle = { sortAscending = !sortAscending },
-        onFilterChange = { filter = it.name },
-        onBack = onBack,
-        onAdd = { editorTarget = CategoryUiModel.newEmpty() },
-        onEdit = { category -> editorTarget = category },
-        onDelete = { category -> deleteTarget = category },
-    )
+    if (!isIos && onBack != null) {
+        EdgeToEdgeTopBarOverlay(
+            topBar = { modifier ->
+                CenterAlignedTopAppBar(
+                    modifier = modifier,
+                    title = { Text(categoriesLabel) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent,
+                    ),
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = null,
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = addCategory) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = addCategoryContentDescription,
+                            )
+                        }
+                    },
+                )
+            },
+        ) { padding ->
+            CategoriesManagementContent(
+                categories = categoryCards,
+                query = query,
+                selectedFilter = CategoryFilter.valueOf(filter),
+                sortAscending = sortAscending,
+                onQueryChange = { query = it },
+                onSortToggle = { sortAscending = !sortAscending },
+                onFilterChange = { filter = it.name },
+                onBack = null,
+                onAdd = addCategory,
+                onEdit = { category -> editorTarget = category },
+                onDelete = { category -> deleteTarget = category },
+                externalHeaderOffset = padding.calculateTopPadding(),
+            )
+        }
+    } else {
+        CategoriesManagementContent(
+            categories = categoryCards,
+            query = query,
+            selectedFilter = CategoryFilter.valueOf(filter),
+            sortAscending = sortAscending,
+            onQueryChange = { query = it },
+            onSortToggle = { sortAscending = !sortAscending },
+            onFilterChange = { filter = it.name },
+            onBack = onBack,
+            onAdd = addCategory,
+            onEdit = { category -> editorTarget = category },
+            onDelete = { category -> deleteTarget = category },
+        )
+    }
 
     SideEffect {
         if (onBack == null) {
-            setActiveIosCategoriesManagementAddHandler {
-                editorTarget = CategoryUiModel.newEmpty()
-            }
+            setActiveIosCategoriesManagementAddHandler { addCategory() }
         }
     }
     DisposableEffect(onBack) {

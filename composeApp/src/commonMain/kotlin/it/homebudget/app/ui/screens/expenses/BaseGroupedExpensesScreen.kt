@@ -2,6 +2,7 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,9 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -220,6 +223,9 @@ abstract class BaseGroupedExpensesScreen(
         }
         if (showNavigationChrome) {
             Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                contentWindowInsets = WindowInsets.systemBars,
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
@@ -281,14 +287,22 @@ abstract class BaseGroupedExpensesScreen(
                 }
             ) { padding ->
                 val showFloatingBottomControls = !isIos
-                Box(modifier = Modifier.fillMaxSize()) {
+                val bottomControlClearance = if (showFloatingBottomControls) 88.dp else 0.dp
+                val listContentPadding = edgeToEdgeListContentPadding(
+                    scaffoldPadding = padding,
+                    bottom = 16.dp + bottomControlClearance
+                )
+                val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
                     GroupedExpensesContent(
                         groupedExpenses = groupedExpenses,
                         categoriesById = categoriesById,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxSize(),
                         groupingMode = groupingMode,
                         onGroupingModeChange = { groupingMode = it },
                         onOpenExpense = onOpenExpense,
@@ -303,7 +317,8 @@ abstract class BaseGroupedExpensesScreen(
                         byCategoryLabel = byCategoryLabel,
                         byDateLabel = byDateLabel,
                         showGroupingControls = !showFloatingBottomControls,
-                        listBottomContentPadding = if (showFloatingBottomControls) 88.dp else 0.dp
+                        listContentPadding = listContentPadding,
+                        bottomControlsBottomPadding = bottomControlsPadding
                     )
 
                     if (showFloatingBottomControls) {
@@ -314,7 +329,7 @@ abstract class BaseGroupedExpensesScreen(
                             byDateLabel = byDateLabel,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
-                                .padding(bottom = 16.dp)
+                                .padding(bottom = bottomControlsPadding)
                         )
                     }
                 }
@@ -325,7 +340,7 @@ abstract class BaseGroupedExpensesScreen(
                 categoriesById = categoriesById,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .background(MaterialTheme.colorScheme.background),
                 groupingMode = groupingMode,
                 onGroupingModeChange = { groupingMode = it },
                 onOpenExpense = onOpenExpense,
@@ -338,7 +353,8 @@ abstract class BaseGroupedExpensesScreen(
                     resolveCategoryName(category.id, category.name)
                 },
                 byCategoryLabel = byCategoryLabel,
-                byDateLabel = byDateLabel
+                byDateLabel = byDateLabel,
+                listContentPadding = PaddingValues(16.dp)
             )
         }
 
@@ -417,7 +433,8 @@ abstract class BaseGroupedExpensesScreen(
         byCategoryLabel: String,
         byDateLabel: String,
         showGroupingControls: Boolean = true,
-        listBottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp
+        listContentPadding: PaddingValues = PaddingValues(0.dp),
+        bottomControlsBottomPadding: androidx.compose.ui.unit.Dp = 16.dp
     ) {
         Box(modifier = modifier) {
             val listModifier = Modifier.fillMaxSize()
@@ -434,7 +451,7 @@ abstract class BaseGroupedExpensesScreen(
                 currencySymbol = currencySymbol,
                 unknownCategoryLabel = unknownCategoryLabel,
                 resolveCategoryName = resolveCategoryName,
-                bottomContentPadding = listBottomContentPadding
+                contentPadding = listContentPadding
             )
 
             if (showGroupingControls) {
@@ -445,7 +462,7 @@ abstract class BaseGroupedExpensesScreen(
                     byDateLabel = byDateLabel,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = bottomControlsBottomPadding)
                 )
             }
         }
@@ -465,13 +482,13 @@ abstract class BaseGroupedExpensesScreen(
         currencySymbol: String,
         unknownCategoryLabel: String,
         resolveCategoryName: (Category) -> String,
-        bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp
+        contentPadding: PaddingValues = PaddingValues(0.dp)
     ) {
         val expandedState = remember { mutableStateMapOf<String, Boolean>() }
 
         LazyColumn(
             modifier = modifier,
-            contentPadding = PaddingValues(bottom = bottomContentPadding),
+            contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (groupedExpenses.isEmpty()) {
