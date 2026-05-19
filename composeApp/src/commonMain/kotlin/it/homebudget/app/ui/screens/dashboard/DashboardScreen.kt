@@ -6,9 +6,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import it.homebudget.app.ui.screens.AddTransactionScreen
 import it.homebudget.app.ui.screens.CategoryExpensesScreen
 import it.homebudget.app.ui.screens.DayExpensesScreen
-import it.homebudget.app.ui.screens.MonthlyExpensesScreen
-import it.homebudget.app.ui.screens.MonthlyIncomesScreen
+import it.homebudget.app.ui.screens.MonthlyTransactionsScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
+import it.homebudget.app.ui.screens.TransactionEditorKind
 import it.homebudget.app.ui.screens.categories.management.CategoriesManagementScreen
 
 class DashboardScreen(
@@ -28,10 +28,22 @@ class DashboardScreen(
                 navigator?.push(DayExpensesScreen(year = year, month = month, day = day))
             },
             onOpenMonthlyIncomes = { year, month ->
-                navigator?.push(MonthlyIncomesScreen(year = year, month = month))
+                navigator?.push(
+                    MonthlyTransactionsScreen(
+                        year = year,
+                        month = month,
+                        initialKind = TransactionEditorKind.Income,
+                    )
+                )
             },
             onOpenMonthlyExpenses = { year, month ->
-                navigator?.push(MonthlyExpensesScreen(year = year, month = month))
+                navigator?.push(
+                    MonthlyTransactionsScreen(
+                        year = year,
+                        month = month,
+                        initialKind = TransactionEditorKind.Expense,
+                    )
+                )
             },
             onOpenSharedExpenses = { year, month ->
                 navigator?.push(SharedExpensesScreen(year = year, month = month))

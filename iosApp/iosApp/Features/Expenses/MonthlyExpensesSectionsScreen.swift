@@ -78,6 +78,58 @@ private struct MonthCursor: Hashable {
     }
 }
 
+private enum MonthSwipeNavigationGesture {
+    static let minimumDistance: CGFloat = 32
+    static let triggerDistance: CGFloat = 120
+    static let axisDominance: CGFloat = 1.35
+}
+
+private struct MonthSwipeNavigationModifier: ViewModifier {
+    let onPreviousMonth: (() -> Void)?
+    let onNextMonth: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        content.simultaneousGesture(
+            DragGesture(
+                minimumDistance: MonthSwipeNavigationGesture.minimumDistance,
+                coordinateSpace: .local
+            )
+            .onEnded { value in
+                let horizontalDistance = abs(value.translation.width)
+                let verticalDistance = abs(value.translation.height)
+
+                guard
+                    horizontalDistance >= MonthSwipeNavigationGesture.triggerDistance,
+                    horizontalDistance > verticalDistance * MonthSwipeNavigationGesture.axisDominance
+                else {
+                    return
+                }
+
+                if value.translation.width < 0 {
+                    onNextMonth?()
+                } else {
+                    onPreviousMonth?()
+                }
+            }
+        )
+    }
+}
+
+private extension View {
+    func monthSwipeNavigationGesture(
+        onPreviousMonth: (() -> Void)?,
+        onNextMonth: (() -> Void)?
+    ) -> some View {
+        modifier(
+            MonthSwipeNavigationModifier(
+                onPreviousMonth: onPreviousMonth,
+                onNextMonth: onNextMonth
+            )
+        )
+    }
+}
+
+
 private struct GroupedExpenseRowModel: Identifiable {
     let id: String
     let title: String
@@ -113,11 +165,19 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
     @Published var expandedSectionIDs = Set<String>()
 
     private let observer: IosGroupedExpensesObserver
+    private let expandsSectionsInitially: Bool
     private var hasLoadedInitialExpansionState = false
     private var knownSectionIDs = Set<String>()
     private var isObserving = false
 
-    init(year: Int, month: Int, kind: GroupedExpensesKind, groupingMode: ExpenseGroupingMode) {
+    init(
+        year: Int,
+        month: Int,
+        kind: GroupedExpensesKind,
+        groupingMode: ExpenseGroupingMode,
+        expandsSectionsInitially: Bool = true
+    ) {
+        self.expandsSectionsInitially = expandsSectionsInitially
         observer = IosGroupedExpensesObserver(
             year: Int32(year),
             month: Int32(month),
@@ -198,9 +258,11 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
         if hasLoadedInitialExpansionState {
             let newSectionIDs = incomingIDs.subtracting(knownSectionIDs)
             expandedSectionIDs.formIntersection(incomingIDs)
-            expandedSectionIDs.formUnion(newSectionIDs)
+            if expandsSectionsInitially {
+                expandedSectionIDs.formUnion(newSectionIDs)
+            }
         } else {
-            expandedSectionIDs = incomingIDs
+            expandedSectionIDs = expandsSectionsInitially ? incomingIDs : []
             hasLoadedInitialExpansionState = true
         }
         knownSectionIDs = incomingIDs
@@ -220,10 +282,15 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
     private var knownSectionIDs = Set<String>()
     private var isObserving = false
 
-    init(year: Int, month: Int) {
+    init(
+        year: Int,
+        month: Int,
+        groupingMode: ExpenseGroupingMode = .byDate
+    ) {
         observer = IosMonthlyIncomesObserver(
             year: Int32(year),
-            month: Int32(month)
+            month: Int32(month),
+            initialGroupingMode: groupingMode.bridgeValue
         )
     }
 
@@ -393,6 +460,217 @@ private struct ExpenseGroupingGlassButton: View {
     }
 }
 
+private enum MonthlyTransactionsHeaderLayout {
+    static let selectorTopSpacing: CGFloat = 14
+    static let selectorHeight: CGFloat = 54
+    static let bottomSpacing: CGFloat = 20
+    static var reservedTopInset: CGFloat {
+        MonthNavigationHeaderLayout.topPadding +
+            MonthNavigationHeaderLayout.minHeight +
+            selectorTopSpacing +
+            selectorHeight +
+            bottomSpacing
+    }
+}
+
+struct MonthlyTransactionsRootView: View {
+    let initialKind: AddTransactionKind
+    @Binding var path: NavigationPath
+    let onStartVoiceExpense: () -> Void
+
+    @State private var selectedMonth: MonthCursor
+    @State private var selectedKind: AddTransactionKind
+    @State private var groupingMode: ExpenseGroupingMode = .byCategory
+
+    init(
+        year: Int,
+        month: Int,
+        initialKind: AddTransactionKind,
+        path: Binding<NavigationPath>,
+        onStartVoiceExpense: @escaping () -> Void
+    ) {
+        self.initialKind = initialKind
+        _path = path
+        self.onStartVoiceExpense = onStartVoiceExpense
+        _selectedMonth = State(initialValue: MonthCursor(year: year, month: month))
+        _selectedKind = State(initialValue: initialKind)
+    }
+
+    var body: some View {
+        MonthlyTransactionsSectionsScreen(
+            selectedMonth: $selectedMonth,
+            selectedKind: $selectedKind,
+            groupingMode: $groupingMode,
+            onOpenExpense: { expenseId in
+                path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
+            },
+            onOpenIncome: { incomeId in
+                path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
+            }
+        )
+        .appGlassHostedScreenChrome()
+        .navigationTitle(selectedKind == .income ? appLocalized("Income") : appLocalized("Expenses"))
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    if !path.isEmpty {
+                        path.removeLast()
+                    }
+                } label: {
+                    AppGlassBackButton()
+                }
+                .buttonStyle(.glass)
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                AppGlassBottomQuickActionsBar(
+                    addAccessibilityLabel: selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
+                    voiceAccessibilityLabel: appLocalized("Voice Expense"),
+                    onAdd: addTransaction,
+                    onVoice: onStartVoiceExpense
+                )
+            }
+        }
+    }
+
+    private func addTransaction() {
+        switch selectedKind {
+        case .expense:
+            path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
+        case .income:
+            path.append(
+                Route.addTransaction(
+                    initialKind: .income,
+                    year: selectedMonth.year,
+                    month: selectedMonth.month
+                )
+            )
+        }
+    }
+}
+
+private struct MonthlyTransactionsSectionsScreen: View {
+    @Binding var selectedMonth: MonthCursor
+    @Binding var selectedKind: AddTransactionKind
+    @Binding var groupingMode: ExpenseGroupingMode
+    let onOpenExpense: (String) -> Void
+    let onOpenIncome: (String) -> Void
+
+    var body: some View {
+        Group {
+            switch selectedKind {
+            case .expense:
+                GroupedExpensesSectionsList(
+                    kind: .monthly,
+                    year: selectedMonth.year,
+                    month: selectedMonth.month,
+                    selectedMonth: selectedMonth,
+                    groupingMode: $groupingMode,
+                    onAddExpense: nil,
+                    onPreviousMonth: { selectedMonth = selectedMonth.previous() },
+                    onNextMonth: { selectedMonth = selectedMonth.next() },
+                    onOpenExpense: onOpenExpense,
+                    headerAmountDescriptor: appLocalized("Expenses"),
+                    topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
+                    headerAccessory: transactionKindSelector,
+                    expandsSectionsInitially: false
+                )
+            case .income:
+                MonthlyIncomesSectionsContent(
+                    selectedMonth: selectedMonth,
+                    onPreviousMonth: { selectedMonth = selectedMonth.previous() },
+                    onNextMonth: { selectedMonth = selectedMonth.next() },
+                    onOpenIncome: onOpenIncome,
+                    headerAmountDescriptor: appLocalized("Income"),
+                    topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
+                    headerAccessory: transactionKindSelector,
+                    groupingMode: groupingMode
+                )
+            }
+        }
+        .id("\(selectedKind)-\(selectedMonth.id)")
+    }
+
+    private func transactionKindSelector() -> AnyView {
+        AnyView(
+            MonthlyTransactionKindGlassControl(selection: $selectedKind)
+                .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
+        )
+    }
+}
+
+private struct MonthlyTransactionKindGlassControl: View {
+    @Binding var selection: AddTransactionKind
+
+    var body: some View {
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 12) {
+                MonthlyTransactionKindGlassButton(
+                    title: appLocalized("Expenses"),
+                    systemImage: "cart.fill",
+                    isSelected: selection == .expense
+                ) {
+                    selection = .expense
+                }
+
+                MonthlyTransactionKindGlassButton(
+                    title: appLocalized("Income"),
+                    systemImage: "banknote.fill",
+                    isSelected: selection == .income
+                ) {
+                    selection = .income
+                }
+            }
+        }
+        .frame(height: MonthlyTransactionsHeaderLayout.selectorHeight)
+    }
+}
+
+private struct MonthlyTransactionKindGlassButton: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Group {
+            if isSelected {
+                Button(action: action) {
+                    label
+                }
+                .buttonStyle(.glassProminent)
+            } else {
+                Button(action: action) {
+                    label
+                }
+                .buttonStyle(.glass)
+            }
+        }
+        .font(.subheadline.weight(.semibold))
+    }
+
+    private var label: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+            Text(title)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
+        .contentShape(Rectangle())
+    }
+}
+
+private func monthlyHeaderAmountText(descriptor: String?, amountText: String) -> String {
+    guard let descriptor, !descriptor.isEmpty else {
+        return amountText
+    }
+
+    return "\(descriptor) • \(amountText)"
+}
+
 struct MonthlyIncomesSectionsScreen: View {
     let onOpenIncome: (String) -> Void
     @State private var selectedMonth: MonthCursor
@@ -422,6 +700,9 @@ private struct MonthlyIncomesSectionsContent: View {
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
     let onOpenIncome: (String) -> Void
+    let headerAmountDescriptor: String?
+    let topReservedInset: CGFloat?
+    let headerAccessory: (() -> AnyView)?
 
     @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
     @State private var pendingIncomeDeleteID: String?
@@ -429,7 +710,10 @@ private struct MonthlyIncomesSectionsContent: View {
     private var monthHeader: some View {
         DashboardStyleMonthNavigationHeader(
             selectedMonth: selectedMonth,
-            amountText: viewModel.totalAmountText,
+            amountText: monthlyHeaderAmountText(
+                descriptor: headerAmountDescriptor,
+                amountText: viewModel.totalAmountText
+            ),
             onPreviousMonth: onPreviousMonth,
             onNextMonth: onNextMonth
         )
@@ -441,16 +725,24 @@ private struct MonthlyIncomesSectionsContent: View {
         selectedMonth: MonthCursor,
         onPreviousMonth: @escaping () -> Void,
         onNextMonth: @escaping () -> Void,
-        onOpenIncome: @escaping (String) -> Void
+        onOpenIncome: @escaping (String) -> Void,
+        headerAmountDescriptor: String? = nil,
+        topReservedInset: CGFloat? = nil,
+        headerAccessory: (() -> AnyView)? = nil,
+        groupingMode: ExpenseGroupingMode = .byDate
     ) {
         self.selectedMonth = selectedMonth
         self.onPreviousMonth = onPreviousMonth
         self.onNextMonth = onNextMonth
         self.onOpenIncome = onOpenIncome
+        self.headerAmountDescriptor = headerAmountDescriptor
+        self.topReservedInset = topReservedInset
+        self.headerAccessory = headerAccessory
         _viewModel = StateObject(
             wrappedValue: MonthlyIncomesSectionsViewModel(
                 year: selectedMonth.year,
-                month: selectedMonth.month
+                month: selectedMonth.month,
+                groupingMode: groupingMode
             )
         )
     }
@@ -519,13 +811,17 @@ private struct MonthlyIncomesSectionsContent: View {
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear.frame(height: MonthNavigationHeaderLayout.reservedTopInset)
+                Color.clear.frame(height: topReservedInset ?? MonthNavigationHeaderLayout.reservedTopInset)
             }
 
-            monthHeader
+            headerStack
                 .zIndex(1)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
+        .monthSwipeNavigationGesture(
+            onPreviousMonth: onPreviousMonth,
+            onNextMonth: onNextMonth
+        )
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.start()
@@ -538,6 +834,15 @@ private struct MonthlyIncomesSectionsContent: View {
                 AppGlassDialogOverlay {
                     incomeDeleteDialog(for: pendingIncomeDeleteRow)
                 }
+            }
+        }
+    }
+
+    private var headerStack: some View {
+        VStack(spacing: MonthlyTransactionsHeaderLayout.selectorTopSpacing) {
+            monthHeader
+            if let headerAccessory {
+                headerAccessory()
             }
         }
     }
@@ -608,6 +913,10 @@ private struct GroupedExpensesSectionsList: View {
     let onPreviousMonth: (() -> Void)?
     let onNextMonth: (() -> Void)?
     let onOpenExpense: (String) -> Void
+    let headerAmountDescriptor: String?
+    let topReservedInset: CGFloat?
+    let headerAccessory: (() -> AnyView)?
+    let expandsSectionsInitially: Bool
 
     @Binding private var groupingMode: ExpenseGroupingMode
     @StateObject private var viewModel: GroupedExpensesSectionsViewModel
@@ -618,7 +927,10 @@ private struct GroupedExpensesSectionsList: View {
         if let onPreviousMonth, let onNextMonth {
             DashboardStyleMonthNavigationHeader(
                 selectedMonth: selectedMonth,
-                amountText: viewModel.totalAmountText,
+                amountText: monthlyHeaderAmountText(
+                    descriptor: headerAmountDescriptor,
+                    amountText: viewModel.totalAmountText
+                ),
                 onPreviousMonth: onPreviousMonth,
                 onNextMonth: onNextMonth
             )
@@ -636,7 +948,11 @@ private struct GroupedExpensesSectionsList: View {
         onAddExpense: (() -> Void)?,
         onPreviousMonth: (() -> Void)?,
         onNextMonth: (() -> Void)?,
-        onOpenExpense: @escaping (String) -> Void
+        onOpenExpense: @escaping (String) -> Void,
+        headerAmountDescriptor: String? = nil,
+        topReservedInset: CGFloat? = nil,
+        headerAccessory: (() -> AnyView)? = nil,
+        expandsSectionsInitially: Bool = true
     ) {
         self.kind = kind
         self.year = year
@@ -646,13 +962,18 @@ private struct GroupedExpensesSectionsList: View {
         self.onPreviousMonth = onPreviousMonth
         self.onNextMonth = onNextMonth
         self.onOpenExpense = onOpenExpense
+        self.headerAmountDescriptor = headerAmountDescriptor
+        self.topReservedInset = topReservedInset
+        self.headerAccessory = headerAccessory
+        self.expandsSectionsInitially = expandsSectionsInitially
         _groupingMode = groupingMode
         _viewModel = StateObject(
             wrappedValue: GroupedExpensesSectionsViewModel(
                 year: year,
                 month: month,
                 kind: kind,
-                groupingMode: groupingMode.wrappedValue
+                groupingMode: groupingMode.wrappedValue,
+                expandsSectionsInitially: expandsSectionsInitially
             )
         )
     }
@@ -697,14 +1018,18 @@ private struct GroupedExpensesSectionsList: View {
             .scrollContentBackground(.hidden)
             .safeAreaInset(edge: .top, spacing: 0) {
                 if onPreviousMonth != nil, onNextMonth != nil {
-                    Color.clear.frame(height: MonthNavigationHeaderLayout.reservedTopInset)
+                    Color.clear.frame(height: topReservedInset ?? MonthNavigationHeaderLayout.reservedTopInset)
                 }
             }
 
-            monthHeader
+            headerStack
                 .zIndex(1)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
+        .monthSwipeNavigationGesture(
+            onPreviousMonth: onPreviousMonth,
+            onNextMonth: onNextMonth
+        )
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.updateGroupingMode(groupingMode)
@@ -734,6 +1059,15 @@ private struct GroupedExpensesSectionsList: View {
                 AppGlassDialogOverlay {
                     expenseDeleteDialog(for: pendingExpenseDeleteRow)
                 }
+            }
+        }
+    }
+
+    private var headerStack: some View {
+        VStack(spacing: MonthlyTransactionsHeaderLayout.selectorTopSpacing) {
+            monthHeader
+            if let headerAccessory {
+                headerAccessory()
             }
         }
     }

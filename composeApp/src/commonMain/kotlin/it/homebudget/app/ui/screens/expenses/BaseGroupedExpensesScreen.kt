@@ -164,7 +164,7 @@ abstract class BaseGroupedExpensesScreen(
         val emptyStateText = emptyStateText()
         val expenseFallbackTitle = expenseFallbackTitle()
         val navigationDescriptor = monthNavigationDescriptor()
-        var selectedMonth by remember { mutableStateOf(MonthCursor(year, month)) }
+        var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
         var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
@@ -298,6 +298,11 @@ abstract class BaseGroupedExpensesScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
+                        .monthSwipeNavigation(
+                            enabled = showMonthNavigationControls(),
+                            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                            onNextMonth = { selectedMonth = selectedMonth.next() }
+                        )
                 ) {
                     GroupedExpensesContent(
                         groupedExpenses = groupedExpenses,

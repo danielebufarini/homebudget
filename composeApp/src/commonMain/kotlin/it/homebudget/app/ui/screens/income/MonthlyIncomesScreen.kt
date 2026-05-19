@@ -53,16 +53,21 @@ import homebudget.composeapp.generated.resources.delete_item_confirmation_messag
 import homebudget.composeapp.generated.resources.delete_recurring_item_confirmation_message
 import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.no_income_for_month
+import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.monthBounds
+import it.homebudget.app.database.Category
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.formatResourceArgs
+import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -129,7 +134,12 @@ class MonthlyIncomesScreen(
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
         val strings = rememberMonthlyIncomeStrings()
+        val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+        val shortMonthNames = stringArrayResource(Res.array.short_month_names)
+        val shortMonthNamesList = remember(shortMonthNames) { shortMonthNames.toList() }
+        val resolveCategoryName = rememberCategoryNameResolver()
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
+        var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByDate) }
         var incomeToDelete by remember { mutableStateOf<Income?>(null) }
         var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
@@ -138,9 +148,29 @@ class MonthlyIncomesScreen(
         val incomesFlow = remember(repository, monthStartMillis, monthEndMillis) {
             repository.getIncomesBetween(monthStartMillis, monthEndMillis)
         }
-        val groupedIncomesFlow = remember(incomesFlow) {
+        val categories by repository.getAllCategories().collectAsState(initial = emptyList())
+        val categoriesById = remember(categories) { categories.associateBy { it.id } }
+        val groupedIncomesFlow = remember(
+            incomesFlow,
+            categoriesById,
+            groupingMode,
+            resolveCategoryName,
+            unknownCategoryLabel,
+            shortMonthNamesList
+        ) {
             incomesFlow
-                .map(::buildGroupedIncomesState)
+                .map { incomes ->
+                    buildGroupedIncomesState(
+                        incomes = incomes,
+                        categoriesById = categoriesById,
+                        groupingMode = groupingMode,
+                        resolveCategoryName = { category: Category ->
+                            resolveCategoryName(category.id, category.name)
+                        },
+                        unknownCategoryLabel = unknownCategoryLabel,
+                        shortMonthNames = shortMonthNamesList
+                    )
+                }
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
@@ -163,6 +193,11 @@ class MonthlyIncomesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
+                    .monthSwipeNavigation(
+                        enabled = showNavigationChrome,
+                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                        onNextMonth = { selectedMonth = selectedMonth.next() }
+                    )
             ) {
                 if (groupedIncomes.isEmpty()) {
                     Box(
@@ -210,7 +245,7 @@ class MonthlyIncomesScreen(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text(
-                                                    text = formatExpenseDateGroupTitle(section.date),
+                                                    text = section.title,
                                                     modifier = Modifier.weight(1f),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = MaterialTheme.colorScheme.onPrimaryContainer,

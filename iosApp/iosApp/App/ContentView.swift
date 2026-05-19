@@ -183,42 +183,21 @@ struct ContentView: View {
                         .navigationTitle("\(day) \(monthName(month))")
                         .navigationBarTitleDisplayMode(.inline)
                     case let .monthlyIncomes(year, month):
-                        MonthlyIncomesRootView(
+                        MonthlyTransactionsRootView(
                             year: Int(year),
                             month: Int(month),
-                            path: $path
+                            initialKind: .income,
+                            path: $path,
+                            onStartVoiceExpense: startVoiceExpense
                         )
-                        .appGlassHostedScreenChrome()
-                        .navigationTitle(appLocalized("Income"))
-                        .navigationBarTitleDisplayMode(.inline)
-                        .navigationBarBackButtonHidden()
-                        .toolbar {
-                            backToolbar
-                            topQuickActionsToolbar(
-                                initialKind: .income,
-                                year: Int(year),
-                                month: Int(month)
-                            )
-                        }
                     case let .monthlyExpenses(year, month):
-                        GroupedExpensesSectionsScreen(
-                            kind: .monthly,
+                        MonthlyTransactionsRootView(
                             year: Int(year),
                             month: Int(month),
-                            onAddExpense: {
-                                path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
-                            }
-                        ) { expenseId in
-                            path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
-                        }
-                        .appGlassHostedScreenChrome()
-                        .navigationTitle(appLocalized("Expenses"))
-                        .navigationBarTitleDisplayMode(.inline)
-                        .navigationBarBackButtonHidden()
-                        .toolbar {
-                            backToolbar
-                            topQuickActionsToolbar(initialKind: .expense, year: nil, month: nil)
-                        }
+                            initialKind: .expense,
+                            path: $path,
+                            onStartVoiceExpense: startVoiceExpense
+                        )
                     case let .sharedExpenses(year, month):
                         GroupedExpensesSectionsScreen(
                             kind: .shared,
@@ -327,6 +306,11 @@ struct ContentView: View {
         )
     }
 
+    private func startVoiceExpense() {
+        voiceExpenseAutoStartRequest += 1
+        showVoiceExpenseSheet = true
+    }
+
     private func handleIncomingURL(_ url: URL) {
         guard url.scheme == "homebudget" else {
             return
@@ -336,8 +320,7 @@ struct ContentView: View {
         case "add-expense":
             path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
         case "voice-expense":
-            voiceExpenseAutoStartRequest += 1
-            showVoiceExpenseSheet = true
+            startVoiceExpense()
         default:
             break
         }
