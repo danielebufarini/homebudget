@@ -2,23 +2,25 @@
 
 HomeBudget is a Kotlin Multiplatform personal finance app for Android and iOS.
 
-- Android runs as a native app in `androidApp` and uses the shared Compose UI from `composeApp`.
-- iOS runs as a native SwiftUI app in `iosApp` and embeds the shared Kotlin framework as `ComposeApp`.
+- `composeApp` contains the shared domain layer, persistence, resources, and most UI.
+- `androidApp` is the Android host app.
+- `iosApp` is the SwiftUI iOS app shell plus widgets and iCloud integration.
 
-Most domain logic, persistence, resources, and a large part of the UI live in shared Kotlin. Native code is used where the platform APIs or interaction model justify it.
+The shared iOS framework is built as `ComposeApp.framework` and embedded by the Xcode project.
 
-## Features
+## Feature set
 
 - expense and income tracking
-- recurring transactions
-- category management, including archive and reassignment flows
-- monthly and grouped transaction views
-- CSV import and export
-- full JSON backup and restore
-- Android Google Drive backup
-- iOS iCloud backup
+- recurring expenses and recurring incomes
+- category management with archive, reassignment, color, and per-type support
+- monthly transaction views with expense/income switching and grouping
+- grouped views by category or by date
+- CSV import/export
+- JSON backup/restore
+- Google Drive AppData backup on Android
+- iCloud backup on iOS
 - voice-assisted expense entry
-- Android home screen widgets
+- Android and iOS home screen widgets
 - English and Italian localization
 
 ## Stack
@@ -32,15 +34,16 @@ Most domain logic, persistence, resources, and a large part of the UI live in sh
 - kotlinx.serialization
 - kotlinx.datetime
 
-Current toolchain baseline:
+Current baseline:
 
 - JDK 21
 - Kotlin 2.3.21
+- Compose Multiplatform 1.10.3
 - AGP 9.2.1
 - Android min SDK 26
 - Android target/compile SDK 37
 
-Versions are defined in [gradle/libs.versions.toml](./gradle/libs.versions.toml). The Gradle daemon toolchain is pinned in [gradle/gradle-daemon-jvm.properties](./gradle/gradle-daemon-jvm.properties).
+Versions are defined in [gradle/libs.versions.toml](./gradle/libs.versions.toml).
 
 ## Project layout
 
@@ -51,20 +54,20 @@ Shared KMP module.
 - `src/commonMain`
   - app entry point
   - shared Compose screens
-  - repository and service layer
+  - repositories and services
   - Room entities and DAOs
-  - shared resources and localization
+  - Compose resources and shared localization
 - `src/androidMain`
-  - Android-specific DI
+  - Android DI
   - Drive backup integration
-  - voice-entry implementation
-  - platform file and date-picker integrations
+  - Android voice-entry implementation
+  - Android-specific platform bridges
 - `src/iosMain`
   - `ComposeUIViewController` factories
-  - iOS-specific DI
-  - bridge classes used by SwiftUI
+  - iOS DI
+  - bridge classes used by SwiftUI hosts
 
-Key directories:
+Relevant directories:
 
 - [composeApp/src/commonMain/kotlin/it/homebudget/app/data](./composeApp/src/commonMain/kotlin/it/homebudget/app/data)
 - [composeApp/src/commonMain/kotlin/it/homebudget/app/database](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
@@ -77,24 +80,41 @@ Key directories:
 Android application module.
 
 - launcher activity
+- manifest and resources
 - widget providers
-- WorkManager scheduling
-- Android manifest and resources
+- WorkManager integration
 
 ### `iosApp`
 
 Native iOS application.
 
 - SwiftUI app shell and navigation
-- native iOS screens and utilities
-- iCloud backup integration
-- widget support
+- hosted Compose screens
+- native SwiftUI screens where platform-native UX is preferable
+- iCloud sync helpers
+- widget extension
 
-Key directory:
+Relevant directories:
 
 - [iosApp/iosApp](./iosApp/iosApp)
+- [iosApp/HomeBudgetWidget](./iosApp/HomeBudgetWidget)
 
 ## Architecture
+
+### Persistence
+
+Persistence is built on Room KMP over bundled SQLite.
+
+- database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/database/HomeBudgetDatabase.kt)
+- entities and DAOs: [composeApp/src/commonMain/kotlin/it/homebudget/app/database](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
+- database builders:
+  - [DatabaseBuilderFactory.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.kt)
+  - [DatabaseBuilderFactory.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.android.kt)
+  - [DatabaseBuilderFactory.ios.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.ios.kt)
+
+The main application boundary is [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt), with category-specific operations in [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CategoryRepository.kt).
+
+Categories are typed (`expense` / `income`), can be archived, and are seeded when the category table is empty.
 
 ### Dependency injection
 
@@ -104,37 +124,22 @@ Koin is the composition root.
 - Android graph: [composeApp/src/androidMain/kotlin/it/homebudget/app/di](./composeApp/src/androidMain/kotlin/it/homebudget/app/di)
 - iOS graph: [composeApp/src/iosMain/kotlin/it/homebudget/app/di](./composeApp/src/iosMain/kotlin/it/homebudget/app/di)
 
-### Persistence
-
-Persistence uses Room KMP on top of SQLite.
-
-- database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/database/HomeBudgetDatabase.kt)
-- entities and DAOs: [composeApp/src/commonMain/kotlin/it/homebudget/app/database](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
-- database builders:
-  - [DatabaseBuilderFactory.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.kt)
-  - [DatabaseBuilderFactory.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.android.kt)
-  - [DatabaseBuilderFactory.ios.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.ios.kt)
-
-The main application boundary is [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt), backed by [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CategoryRepository.kt) and the other shared repositories and services in the same package.
-
-Starter categories are seeded at runtime when the category table is empty.
-
 ### UI split
 
-Android uses the shared Compose screens as its main UI surface.
+Android runs primarily on shared Compose screens.
 
 iOS uses a mixed model:
 
-- SwiftUI owns the app shell and top-level navigation
-- shared Kotlin screens are hosted through `ComposeUIViewController`
-- native SwiftUI is used for routes that depend on iOS-specific interaction or platform APIs
+- SwiftUI owns the root shell and top-level navigation
+- Compose screens are hosted through `ComposeUIViewController`
+- native SwiftUI remains in place for iOS-specific flows and presentation
 
 Entry points:
 
 - shared app: [composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
-- Android activity: [androidApp/src/main/kotlin/it/homebudget/app/MainActivity.kt](./androidApp/src/main/kotlin/it/homebudget/app/MainActivity.kt)
+- Android host: [androidApp/src/main/kotlin/it/homebudget/app/MainActivity.kt](./androidApp/src/main/kotlin/it/homebudget/app/MainActivity.kt)
 - iOS root view: [iosApp/iosApp/App/ContentView.swift](./iosApp/iosApp/App/ContentView.swift)
-- iOS shared screen hosting: [composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
+- iOS shared screen host: [composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
 
 ### Navigation
 
@@ -143,46 +148,47 @@ Entry points:
 
 ## Localization
 
-Shared Kotlin strings live in:
+Shared strings:
 
 - [composeApp/src/commonMain/composeResources/values/strings.xml](./composeApp/src/commonMain/composeResources/values/strings.xml)
 - [composeApp/src/commonMain/composeResources/values-it/strings.xml](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
 
-Native iOS strings live in:
+Native iOS strings:
 
 - [iosApp/iosApp/Localizable.xcstrings](./iosApp/iosApp/Localizable.xcstrings)
 
-## Backup and data transfer
+## Backup and transfer
 
-### Full backup
+### JSON backup
 
 Full backup is JSON-based.
 
-- shared format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
-- backup orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CloudSyncService.kt)
+- format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
+- orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CloudSyncService.kt)
 
 Android stores the canonical backup locally and can mirror it to Google Drive AppData.
 
-- store: [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/AndroidCloudBackupStore.android.kt)
-- Drive auth: [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAuthorizationManager.android.kt)
+- [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/AndroidCloudBackupStore.android.kt)
+- [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAuthorizationManager.android.kt)
 
 iOS stores the canonical backup in the app ubiquity container.
 
-- store: [ICloudBackupStore.swift](./iosApp/iosApp/Sync/ICloudBackupStore.swift)
+- [ICloudBackupStore.swift](./iosApp/iosApp/Sync/ICloudBackupStore.swift)
 
 ### CSV
 
 CSV import/export is separate from full backup.
 
-- export: [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/csv/CsvBudgetExport.kt)
-- import: [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/csv/CsvBudgetImport.kt)
+- [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/csv/CsvBudgetExport.kt)
+- [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/csv/CsvBudgetImport.kt)
 
-## Voice input
+## Voice entry
 
 Voice entry is platform-specific.
 
 - Android implementation lives under [composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens)
-- iOS implementation lives in [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense) with Kotlin bridge support in `iosMain`
+- iOS implementation lives under [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
+- shared prompt and contract helpers live in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/VoiceExpensePrompt.kt)
 
 ## Build
 
@@ -194,7 +200,7 @@ Build the debug APK:
 ./gradlew :androidApp:assembleDebug
 ```
 
-Compile only:
+Compile shared Android code only:
 
 ```sh
 ./gradlew :composeApp:compileAndroidMain
@@ -204,10 +210,16 @@ Compile only:
 
 Open [iosApp/iosApp.xcodeproj](./iosApp/iosApp.xcodeproj) in Xcode and run the `iosApp` scheme.
 
-Compile the shared iOS Kotlin target from Gradle:
+Compile the shared iOS target from Gradle:
 
 ```sh
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64
+```
+
+Build the iOS app from the command line:
+
+```sh
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build
 ```
 
 ## Setup notes
@@ -216,20 +228,21 @@ Compile the shared iOS Kotlin target from Gradle:
 
 Drive backup requires Android OAuth configuration.
 
-1. Create an Android OAuth client for the package name and signing certificate you use.
+1. Create an Android OAuth client for the package name and signing certificate in use.
 2. If Credential Manager sign-in is enabled, create a Web OAuth client as well.
 3. Put the Web client ID in [composeApp/src/androidMain/res/values/google_identity.xml](./composeApp/src/androidMain/res/values/google_identity.xml).
 
-Without this setup, local backup still works and Android Auto Backup remains unaffected.
+Without this setup, local backup still works.
 
 ### iOS
 
-The iOS target depends on the Xcode project configuration already present in `iosApp`, including iCloud-related entitlements.
+The iOS target depends on the Xcode project configuration already present in `iosApp`, including iCloud and widget entitlements.
 
 ## Verification
 
-The shared codebase is routinely checked with:
+Common verification commands:
 
 ```sh
 ./gradlew :composeApp:compileAndroidMain :composeApp:compileKotlinIosSimulatorArm64
+./gradlew :androidApp:assembleDebug
 ```
