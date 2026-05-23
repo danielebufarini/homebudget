@@ -45,6 +45,11 @@ data class DashboardCashFlow(
     val incomeTotalsByMonth: List<DashboardMonthTotal>
 )
 
+data class WidgetMonthSummary(
+    val expenseAmount: Long,
+    val incomeAmount: Long
+)
+
 class ExpenseRepository(
     private val categoryRepository: CategoryRepository,
     private val expenseEntryRepository: ExpenseEntryRepository,
@@ -133,6 +138,10 @@ class ExpenseRepository(
             selectedMonth = selectedMonth,
             trailingMonthCount = trailingMonthCount
         )
+    }
+
+    suspend fun getWidgetMonthSummary(year: Int, month: Int): WidgetMonthSummary {
+        return dashboardRepository.getWidgetMonthSummary(year = year, month = month)
     }
 
     suspend fun getExpenseById(id: String): Expense? = expenseEntryRepository.getExpenseById(id)

@@ -33,12 +33,15 @@ import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.income
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.data.monthBounds
-import it.homebudget.app.data.sumAmountOf
-import it.homebudget.app.database.Expense
-import it.homebudget.app.database.Income
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+
+private data class MonthlyTransactionTotals(
+    val expenseAmount: Long = 0L,
+    val incomeAmount: Long = 0L,
+)
 
 class MonthlyTransactionsScreen(
     private val year: Int,
@@ -94,18 +97,19 @@ class MonthlyTransactionsScreen(
 
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
-        val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
-            monthBounds(selectedMonth.year, selectedMonth.month)
-        }
-        val expenses by remember(repository, monthStartMillis, monthEndMillis) {
-            repository.getExpensesBetween(monthStartMillis, monthEndMillis)
-        }.collectAsState(initial = emptyList())
-        val incomes by remember(repository, monthStartMillis, monthEndMillis) {
-            repository.getIncomesBetween(monthStartMillis, monthEndMillis)
-        }.collectAsState(initial = emptyList())
+        val totals by remember(repository, selectedMonth) {
+            repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
+                .map { summary ->
+                    MonthlyTransactionTotals(
+                        expenseAmount = summary.totalAmount,
+                        incomeAmount = summary.incomeAmount,
+                    )
+                }
+                .distinctUntilChanged()
+        }.collectAsState(initial = MonthlyTransactionTotals())
         val totalAmount = when (selectedKind) {
-            TransactionEditorKind.Expense -> expenses.sumAmountOf(Expense::amount)
-            TransactionEditorKind.Income -> incomes.sumAmountOf(Income::amount)
+            TransactionEditorKind.Expense -> totals.expenseAmount
+            TransactionEditorKind.Income -> totals.incomeAmount
         }
         val descriptor = when (selectedKind) {
             TransactionEditorKind.Expense -> expensesLabel

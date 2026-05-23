@@ -12,7 +12,6 @@ import android.widget.RemoteViews
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.widget.HOME_BUDGET_WIDGET_REFRESH_ACTION
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 import java.time.LocalDate
@@ -44,14 +43,12 @@ open class HomeBudgetWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { appWidgetId ->
-            HomeBudgetWidgetUpdater.updateWidget(
-                context = context,
-                appWidgetManager = appWidgetManager,
-                appWidgetId = appWidgetId,
-                layoutMode = widgetLayoutMode
-            )
-        }
+        HomeBudgetWidgetUpdater.updateWidgets(
+            context = context,
+            appWidgetManager = appWidgetManager,
+            appWidgetIds = appWidgetIds,
+            layoutMode = widgetLayoutMode
+        )
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -95,15 +92,31 @@ private object HomeBudgetWidgetUpdater {
     private const val WIDE_WIDGET_MAX_MIN_HEIGHT_DP = 90
 
     fun updateAllWidgets(context: Context) {
-        updateWidgetsForProvider(
-            context = context,
-            providerClass = HomeBudgetWidgetProvider::class.java,
-            layoutMode = HomeBudgetWidgetLayoutMode.Auto
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val defaultWidgetIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, HomeBudgetWidgetProvider::class.java)
         )
-        updateWidgetsForProvider(
+        val wideWidgetIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, HomeBudgetWideWidgetProvider::class.java)
+        )
+        if (defaultWidgetIds.isEmpty() && wideWidgetIds.isEmpty()) {
+            return
+        }
+
+        val summary = loadCurrentMonthWidgetSummary(context)
+        updateWidgets(
             context = context,
-            providerClass = HomeBudgetWideWidgetProvider::class.java,
-            layoutMode = HomeBudgetWidgetLayoutMode.Wide
+            appWidgetManager = appWidgetManager,
+            appWidgetIds = defaultWidgetIds,
+            layoutMode = HomeBudgetWidgetLayoutMode.Auto,
+            summary = summary
+        )
+        updateWidgets(
+            context = context,
+            appWidgetManager = appWidgetManager,
+            appWidgetIds = wideWidgetIds,
+            layoutMode = HomeBudgetWidgetLayoutMode.Wide,
+            summary = summary
         )
     }
 
@@ -114,12 +127,33 @@ private object HomeBudgetWidgetUpdater {
     ) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, providerClass))
-        widgetIds.forEach { appWidgetId ->
+        updateWidgets(
+            context = context,
+            appWidgetManager = appWidgetManager,
+            appWidgetIds = widgetIds,
+            layoutMode = layoutMode
+        )
+    }
+
+    fun updateWidgets(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+        layoutMode: HomeBudgetWidgetLayoutMode,
+        summary: HomeBudgetWidgetSummary? = null
+    ) {
+        if (appWidgetIds.isEmpty()) {
+            return
+        }
+
+        val resolvedSummary = summary ?: loadCurrentMonthWidgetSummary(context)
+        appWidgetIds.forEach { appWidgetId ->
             updateWidget(
                 context = context,
                 appWidgetManager = appWidgetManager,
                 appWidgetId = appWidgetId,
-                layoutMode = layoutMode
+                layoutMode = layoutMode,
+                summary = resolvedSummary
             )
         }
     }
@@ -128,7 +162,8 @@ private object HomeBudgetWidgetUpdater {
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int,
-        layoutMode: HomeBudgetWidgetLayoutMode
+        layoutMode: HomeBudgetWidgetLayoutMode,
+        summary: HomeBudgetWidgetSummary = loadCurrentMonthWidgetSummary(context)
     ) {
         val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
         val resolvedLayout = resolveWidgetLayout(options, layoutMode)
@@ -137,8 +172,6 @@ private object HomeBudgetWidgetUpdater {
             HomeBudgetWidgetResolvedLayout.Medium -> R.layout.home_budget_widget_medium
             HomeBudgetWidgetResolvedLayout.Wide -> R.layout.home_budget_widget_wide
         }
-        val summary = loadCurrentMonthWidgetSummary(context)
-
         val views = RemoteViews(context.packageName, layoutResId).apply {
             setTextViewText(
                 R.id.widget_month_title,
@@ -196,15 +229,15 @@ private object HomeBudgetWidgetUpdater {
         return runCatching {
             val repository = GlobalContext.get().get<ExpenseRepository>()
             val monthSummary = runBlocking {
-                repository.getDashboardMonthSummary(
+                repository.getWidgetMonthSummary(
                     year = today.year,
                     month = today.monthValue
-                ).first()
+                )
             }
             HomeBudgetWidgetSummary(
                 monthTitle = monthTitle,
                 monthNameText = monthName,
-                expensesAmountText = formatAmount(monthSummary.totalAmount, currencySymbol),
+                expensesAmountText = formatAmount(monthSummary.expenseAmount, currencySymbol),
                 incomeAmountText = formatAmount(monthSummary.incomeAmount, currencySymbol)
             )
         }.getOrElse {

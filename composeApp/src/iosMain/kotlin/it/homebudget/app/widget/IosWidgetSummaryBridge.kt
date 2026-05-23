@@ -8,7 +8,6 @@ import it.homebudget.app.data.formatAmount
 import it.homebudget.app.di.initKoin
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -39,10 +38,10 @@ class IosWidgetSummaryController {
             val result = runCatching {
                 val now = Clock.System.now()
                 val localDate = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
-                val summary = repository.getDashboardMonthSummary(
+                val summary = repository.getWidgetMonthSummary(
                     year = localDate.year,
                     month = localDate.month.number
-                ).first()
+                )
                 val monthNames = getStringArray(Res.array.full_month_names)
                 val monthName = monthNames.getOrElse(localDate.month.number - 1) {
                     localDate.month.name.lowercase().replaceFirstChar { it.titlecase() }
@@ -51,7 +50,7 @@ class IosWidgetSummaryController {
 
                 IosWidgetSummary(
                     monthTitle = "$monthName ${localDate.year}",
-                    expenseAmountText = formatAmount(summary.totalAmount, currencySymbol),
+                    expenseAmountText = formatAmount(summary.expenseAmount, currencySymbol),
                     incomeAmountText = formatAmount(summary.incomeAmount, currencySymbol),
                     updatedAtMillis = now.toEpochMilliseconds()
                 )

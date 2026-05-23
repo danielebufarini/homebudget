@@ -68,9 +68,9 @@ import it.homebudget.app.getPlatform
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -174,40 +174,42 @@ abstract class BaseGroupedExpensesScreen(
         val expensesFlow = remember(repository, monthStartMillis, monthEndMillis) {
             repository.getExpensesBetween(monthStartMillis, monthEndMillis)
         }
-        val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-        val categoriesById = remember(categories) { categories.associateBy { it.id } }
+        val categoriesFlow = remember(repository) {
+            repository.getAllCategories()
+        }
 
         EnsureStarterCategoriesSeeded(repository)
 
         val groupedExpensesFlow = remember(
             expensesFlow,
-            categoriesById,
+            categoriesFlow,
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
             shortMonthNamesList
         ) {
-            expensesFlow
-                .map { expenses ->
-                    buildGroupedExpensesState(
-                        expenses = expenses,
-                        categoriesById = categoriesById,
-                        groupingMode = groupingMode,
-                        includeExpense = ::includeExpense,
-                        includeCategory = ::includeCategory,
-                        resolveCategoryName = { category ->
-                            resolveCategoryName(category.id, category.name)
-                        },
-                        unknownCategoryLabel = unknownCategoryLabel,
-                        shortMonthNames = shortMonthNamesList
-                    )
-                }
+            combine(expensesFlow, categoriesFlow) { expenses, categories ->
+                val categoriesById = categories.associateBy { it.id }
+                buildGroupedExpensesState(
+                    expenses = expenses,
+                    categoriesById = categoriesById,
+                    groupingMode = groupingMode,
+                    includeExpense = ::includeExpense,
+                    includeCategory = ::includeCategory,
+                    resolveCategoryName = { category ->
+                        resolveCategoryName(category.id, category.name)
+                    },
+                    unknownCategoryLabel = unknownCategoryLabel,
+                    shortMonthNames = shortMonthNamesList
+                )
+            }
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
         val groupedExpensesState by groupedExpensesFlow.collectAsState(initial = emptyGroupedExpensesState())
         val groupedExpenses = groupedExpensesState.sections
         val totalAmount = groupedExpensesState.totalAmount
+        val categoriesById = groupedExpensesState.categoriesById
         val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
             deleteAction@{ expenseId ->
                 val expense = groupedExpensesState.visibleExpenses.find { it.id == expenseId }

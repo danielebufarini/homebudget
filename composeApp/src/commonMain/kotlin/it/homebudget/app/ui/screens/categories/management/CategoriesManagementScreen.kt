@@ -31,6 +31,10 @@ import it.homebudget.app.ui.screens.EdgeToEdgeTopBarOverlay
 import it.homebudget.app.ui.screens.clearActiveIosCategoriesManagementAddHandler
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
 import it.homebudget.app.ui.screens.setActiveIosCategoriesManagementAddHandler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -54,17 +58,22 @@ fun CategoriesManagementRoute(
         repository.seedStarterCategoriesIfEmpty()
     }
 
-    val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-    val expenses by repository.getAllExpenses().collectAsState(initial = emptyList())
-    val incomes by repository.getAllIncomes().collectAsState(initial = emptyList())
-
-    val categoryCards = remember(categories, expenses, incomes) {
-        buildCategoryUiModels(
-            categories = categories,
-            expenses = expenses,
-            incomes = incomes,
-        )
+    val categoryCardsFlow = remember(repository) {
+        combine(
+            repository.getAllCategories(),
+            repository.getAllExpenses(),
+            repository.getAllIncomes(),
+        ) { categories, expenses, incomes ->
+            buildCategoryUiModels(
+                categories = categories,
+                expenses = expenses,
+                incomes = incomes,
+            )
+        }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
     }
+    val categoryCards by categoryCardsFlow.collectAsState(initial = emptyList())
 
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CategoryFilter.All.name) }

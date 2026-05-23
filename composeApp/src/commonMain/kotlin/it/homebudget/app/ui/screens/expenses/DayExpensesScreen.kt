@@ -38,6 +38,10 @@ import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
 import it.homebudget.app.localization.rememberCategoryNameResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -46,6 +50,12 @@ import kotlinx.datetime.plus
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+
+private data class DayExpensesState(
+    val expenses: List<Expense> = emptyList(),
+    val categoriesById: Map<String, Category> = emptyMap(),
+    val totalAmount: Long = 0L,
+)
 
 class DayExpensesScreen(
     private val year: Int,
@@ -91,23 +101,28 @@ class DayExpensesScreen(
             targetDate.atStartOfDayIn(timeZone).toEpochMilliseconds() to
                 targetDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone).toEpochMilliseconds()
         }
-        val expensesFlow = remember(repository, dayStartMillis, dayEndMillis) {
-            repository.getExpensesBetween(dayStartMillis, dayEndMillis)
+        val dayExpensesStateFlow = remember(repository, dayStartMillis, dayEndMillis) {
+            combine(
+                repository.getExpensesBetween(dayStartMillis, dayEndMillis),
+                repository.getAllCategories()
+            ) { expenses, categories ->
+                DayExpensesState(
+                    expenses = expenses,
+                    categoriesById = categories.associateBy { it.id },
+                    totalAmount = expenses.sumAmountOf(Expense::amount)
+                )
+            }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
         }
-        val expenses by expensesFlow.collectAsState(initial = emptyList())
-        val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-        val categoriesById = remember(categories) { categories.associateBy { it.id } }
+        val dayExpensesState by dayExpensesStateFlow.collectAsState(initial = DayExpensesState())
 
         EnsureStarterCategoriesSeeded(repository)
 
-        val totalAmount = remember(expenses) {
-            expenses.sumAmountOf(Expense::amount)
-        }
-
         val content: @Composable (PaddingValues) -> Unit = { padding ->
             DayExpensesList(
-                expenses = expenses,
-                categoriesById = categoriesById,
+                expenses = dayExpensesState.expenses,
+                categoriesById = dayExpensesState.categoriesById,
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
@@ -137,7 +152,7 @@ class DayExpensesScreen(
                             ) {
                                 Text(title)
                                 Text(
-                                    text = formatAmount(totalAmount, currencySymbol),
+                                    text = formatAmount(dayExpensesState.totalAmount, currencySymbol),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

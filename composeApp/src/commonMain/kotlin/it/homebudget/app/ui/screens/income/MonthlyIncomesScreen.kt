@@ -63,9 +63,9 @@ import it.homebudget.app.database.Income
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -148,29 +148,30 @@ class MonthlyIncomesScreen(
         val incomesFlow = remember(repository, monthStartMillis, monthEndMillis) {
             repository.getIncomesBetween(monthStartMillis, monthEndMillis)
         }
-        val categories by repository.getAllCategories().collectAsState(initial = emptyList())
-        val categoriesById = remember(categories) { categories.associateBy { it.id } }
+        val categoriesFlow = remember(repository) {
+            repository.getAllCategories()
+        }
         val groupedIncomesFlow = remember(
             incomesFlow,
-            categoriesById,
+            categoriesFlow,
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
             shortMonthNamesList
         ) {
-            incomesFlow
-                .map { incomes ->
-                    buildGroupedIncomesState(
-                        incomes = incomes,
-                        categoriesById = categoriesById,
-                        groupingMode = groupingMode,
-                        resolveCategoryName = { category: Category ->
-                            resolveCategoryName(category.id, category.name)
-                        },
-                        unknownCategoryLabel = unknownCategoryLabel,
-                        shortMonthNames = shortMonthNamesList
-                    )
-                }
+            combine(incomesFlow, categoriesFlow) { incomes, categories ->
+                val categoriesById = categories.associateBy { it.id }
+                buildGroupedIncomesState(
+                    incomes = incomes,
+                    categoriesById = categoriesById,
+                    groupingMode = groupingMode,
+                    resolveCategoryName = { category: Category ->
+                        resolveCategoryName(category.id, category.name)
+                    },
+                    unknownCategoryLabel = unknownCategoryLabel,
+                    shortMonthNames = shortMonthNamesList
+                )
+            }
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }

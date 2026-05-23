@@ -25,6 +25,12 @@ data class DashboardTotalAmountRow(
     val totalAmount: Long
 )
 
+// Raw Room projection: compact widget-only monthly totals.
+data class WidgetMonthSummaryRow(
+    val expenseAmount: Long,
+    val incomeAmount: Long
+)
+
 // Computed in Kotlin.
 data class ExpenseMonthSummaryRow(
     val expenseCount: Int,

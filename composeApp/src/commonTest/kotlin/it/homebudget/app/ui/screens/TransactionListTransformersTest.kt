@@ -35,8 +35,8 @@ class TransactionListTransformersTest {
                 expense(id = "3", amount = 200, date = LocalDate(2026, 5, 10), categoryId = "food")
             ),
             categoriesById = mapOf(
-                "food" to Category("food", "Food", "restaurant", 1L),
-                "rent" to Category("rent", "Rent", "home", 1L)
+                "food" to Category(id = "food", name = "Food", icon = "restaurant", isArchived = 1L),
+                "rent" to Category(id = "rent", name = "Rent", icon = "home", isArchived = 1L)
             ),
             groupingMode = ExpenseGroupingMode.ByCategory,
             includeExpense = { true },
@@ -60,8 +60,8 @@ class TransactionListTransformersTest {
                 expense(id = "3", amount = 200, date = LocalDate(2026, 5, 12), categoryId = "food")
             ),
             categoriesById = mapOf(
-                "food" to Category("food", "Food", "restaurant", 1L),
-                "rent" to Category("rent", "Rent", "home", 1L)
+                "food" to Category(id = "food", name = "Food", icon = "restaurant", isArchived = 1L),
+                "rent" to Category(id = "rent", name = "Rent", icon = "home", isArchived = 1L)
             ),
             groupingMode = ExpenseGroupingMode.ByDate,
             includeExpense = { true },
@@ -78,14 +78,19 @@ class TransactionListTransformersTest {
     @Test
     fun buildGroupedIncomesState_groupsByDateAndKeepsTotals() {
         val state = buildGroupedIncomesState(
-            listOf(
+            incomes = listOf(
                 income(id = "2", amount = 2000, date = LocalDate(2026, 5, 15)),
                 income(id = "1", amount = 2500, date = LocalDate(2026, 5, 15)),
                 income(id = "3", amount = 800, date = LocalDate(2026, 5, 1))
-            )
+            ),
+            categoriesById = emptyMap(),
+            groupingMode = ExpenseGroupingMode.ByDate,
+            resolveCategoryName = { it.name },
+            unknownCategoryLabel = "Unknown",
+            shortMonthNames = shortMonthNames
         )
 
-        assertEquals(listOf("2026-05-15", "2026-05-01"), state.sections.map(IncomeSection::key))
+        assertEquals(listOf("date:2026-05-15", "date:2026-05-01"), state.sections.map(IncomeSection::key))
         assertEquals(listOf("2", "1"), state.sections.first().incomes.map(Income::id))
         assertEquals(4500L, state.sections.first().totalAmount)
         assertEquals(5300L, state.totalAmount)

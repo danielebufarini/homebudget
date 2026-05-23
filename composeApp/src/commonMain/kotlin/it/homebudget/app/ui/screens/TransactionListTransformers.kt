@@ -21,7 +21,8 @@ internal data class ExpenseSection(
 internal data class GroupedExpensesState(
     val visibleExpenses: List<Expense>,
     val sections: List<ExpenseSection>,
-    val totalAmount: Long
+    val totalAmount: Long,
+    val categoriesById: Map<String, Category>
 )
 
 internal data class IncomeSection(
@@ -50,7 +51,8 @@ private data class ResolvedIncome(
 internal fun emptyGroupedExpensesState() = GroupedExpensesState(
     visibleExpenses = emptyList(),
     sections = emptyList(),
-    totalAmount = 0L
+    totalAmount = 0L,
+    categoriesById = emptyMap()
 )
 
 internal fun emptyGroupedIncomesState() = GroupedIncomesState(
@@ -132,7 +134,8 @@ internal fun buildGroupedExpensesState(
     return GroupedExpensesState(
         visibleExpenses = visibleExpenses.map(ResolvedExpense::expense),
         sections = sections,
-        totalAmount = totalAmount
+        totalAmount = totalAmount,
+        categoriesById = categoriesById
     )
 }
 

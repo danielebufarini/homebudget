@@ -93,6 +93,28 @@ interface ExpenseDao {
         toExclusiveMillis: Long
     ): Flow<List<DashboardMonthAmountGroupRow>>
 
+    @Query(
+        """
+        SELECT
+            (
+                SELECT COALESCE(SUM(amount), 0)
+                FROM expense
+                WHERE date >= :fromInclusiveMillis
+                  AND date < :toExclusiveMillis
+            ) AS expenseAmount,
+            (
+                SELECT COALESCE(SUM(amount), 0)
+                FROM income
+                WHERE date >= :fromInclusiveMillis
+                  AND date < :toExclusiveMillis
+            ) AS incomeAmount
+        """
+    )
+    suspend fun getWidgetMonthSummaryBetween(
+        fromInclusiveMillis: Long,
+        toExclusiveMillis: Long
+    ): WidgetMonthSummaryRow
+
     @Query("SELECT * FROM expense ORDER BY date DESC")
     suspend fun getAllExpensesSnapshot(): List<Expense>
 

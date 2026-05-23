@@ -89,6 +89,18 @@ class DashboardRepository(
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
+    suspend fun getWidgetMonthSummary(
+        year: Int,
+        month: Int
+    ): WidgetMonthSummary {
+        val (startMillis, endMillis) = monthBounds(year, month)
+        val row = expenseDao.getWidgetMonthSummaryBetween(startMillis, endMillis)
+        return WidgetMonthSummary(
+            expenseAmount = row.expenseAmount,
+            incomeAmount = row.incomeAmount
+        )
+    }
+
     private fun getMonthlyExpenseTotals(
         fromInclusiveMillis: Long,
         toExclusiveMillis: Long

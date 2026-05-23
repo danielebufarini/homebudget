@@ -118,6 +118,7 @@ class ComposeAppCommonTest {
             amount = 3200L,
             firstDate = firstDate,
             description = "Salary",
+            categoryId = null,
             recurringSeriesId = "income-series-1",
             idProvider = { "income-${nextId++}" },
             occurrences = 3,
@@ -178,7 +179,7 @@ class ComposeAppCommonTest {
                 )
             ),
             categories = listOf(
-                Category("default_1", "Cibo", "restaurant", 0L)
+                Category(id = "default_1", name = "Cibo", icon = "restaurant", isArchived = 0L)
             ),
             startDate = LocalDate(2026, 5, 1),
             endDate = LocalDate(2026, 5, 31),
@@ -212,8 +213,10 @@ class ComposeAppCommonTest {
                     recurringSeriesId = "income-series"
                 )
             ),
+            categories = emptyList(),
             startDate = LocalDate(2026, 5, 1),
-            endDate = LocalDate(2026, 5, 31)
+            endDate = LocalDate(2026, 5, 31),
+            localizeCategoryName = { it.name }
         )
 
         assertEquals(

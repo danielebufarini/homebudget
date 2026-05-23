@@ -24,6 +24,7 @@ val sharedModule = module {
         val builderFactory = get<DatabaseBuilderFactory>()
         builderFactory.createBuilder()
             .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(databaseQueryCoroutineContext)
             .build()
     }
     single { DatabaseTransactionRunner(get()) }
