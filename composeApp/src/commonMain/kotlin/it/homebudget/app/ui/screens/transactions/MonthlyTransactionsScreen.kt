@@ -31,9 +31,16 @@ import homebudget.composeapp.generated.resources.currency_symbol
 import homebudget.composeapp.generated.resources.expense
 import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.income
+import homebudget.composeapp.generated.resources.search_results
+import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
+import it.homebudget.app.data.sumAmountOf
+import it.homebudget.app.localization.rememberCategoryNameResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -47,6 +54,7 @@ class MonthlyTransactionsScreen(
     private val year: Int,
     private val month: Int,
     private val initialKind: TransactionEditorKind = TransactionEditorKind.Expense,
+    private val initialSearchQuery: String = "",
 ) : Screen {
     @Composable
     override fun Content() {
@@ -94,18 +102,65 @@ class MonthlyTransactionsScreen(
         val expenseLabel = stringResource(Res.string.expense)
         val expensesLabel = stringResource(Res.string.expenses)
         val incomeLabel = stringResource(Res.string.income)
+        val searchResultsLabel = stringResource(Res.string.search_results)
+        val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+        val resolveCategoryName = rememberCategoryNameResolver()
+        val searchQuery = remember(initialSearchQuery) { initialSearchQuery.trim() }
+        val searchMode = searchQuery.isNotBlank()
 
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
-        val totals by remember(repository, selectedMonth) {
-            repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
-                .map { summary ->
+        val totals by if (searchMode) {
+            remember(
+                repository,
+                searchQuery,
+                resolveCategoryName,
+                unknownCategoryLabel,
+                currencySymbol
+            ) {
+                combine(
+                    repository.getAllExpenses(),
+                    repository.getAllIncomes(),
+                    repository.getAllCategories()
+                ) { expenses, incomes, categories ->
+                    val categoriesById = categories.associateBy { it.id }
+                    val searchTokens = transactionSearchTokens(searchQuery)
+                    val expenseAmount = expenses
+                        .filter { expense ->
+                            val categoryLabel = categoriesById[expense.categoryId]
+                                ?.let { resolveCategoryName(it.id, it.name) }
+                                ?: unknownCategoryLabel
+                            expense.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)
+                        }
+                        .sumAmountOf { it.amount }
+                    val incomeAmount = incomes
+                        .filter { income ->
+                            val categoryLabel = income.categoryId
+                                ?.let(categoriesById::get)
+                                ?.let { resolveCategoryName(it.id, it.name) }
+                                ?: unknownCategoryLabel
+                            income.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)
+                        }
+                        .sumAmountOf { it.amount }
                     MonthlyTransactionTotals(
-                        expenseAmount = summary.totalAmount,
-                        incomeAmount = summary.incomeAmount,
+                        expenseAmount = expenseAmount,
+                        incomeAmount = incomeAmount,
                     )
                 }
-                .distinctUntilChanged()
+                    .distinctUntilChanged()
+                    .flowOn(Dispatchers.Default)
+            }
+        } else {
+            remember(repository, selectedMonth) {
+                repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
+                    .map { summary ->
+                        MonthlyTransactionTotals(
+                            expenseAmount = summary.totalAmount,
+                            incomeAmount = summary.incomeAmount,
+                        )
+                    }
+                    .distinctUntilChanged()
+            }
         }.collectAsState(initial = MonthlyTransactionTotals())
         val totalAmount = when (selectedKind) {
             TransactionEditorKind.Expense -> totals.expenseAmount
@@ -128,12 +183,23 @@ class MonthlyTransactionsScreen(
                 if (showNavigationChrome) {
                     CenterAlignedTopAppBar(
                         title = {
-                            MonthNavigationTitle(
-                                selectedMonth = selectedMonth,
-                                subtitle = "$descriptor • ${formatAmount(totalAmount, currencySymbol)}",
-                                onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                                onNextMonth = { selectedMonth = selectedMonth.next() },
-                            )
+                            if (searchMode) {
+                                Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                    Text(searchResultsLabel)
+                                    Text(
+                                        text = "\"$searchQuery\" • $descriptor • ${formatAmount(totalAmount, currencySymbol)}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            } else {
+                                MonthNavigationTitle(
+                                    selectedMonth = selectedMonth,
+                                    subtitle = "$descriptor • ${formatAmount(totalAmount, currencySymbol)}",
+                                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                                    onNextMonth = { selectedMonth = selectedMonth.next() },
+                                )
+                            }
                         },
                         navigationIcon = {
                             if (isIos) {
@@ -183,6 +249,7 @@ class MonthlyTransactionsScreen(
                         .fillMaxWidth()
                         .weight(1f)
                         .monthSwipeNavigation(
+                            enabled = !searchMode,
                             onPreviousMonth = { selectedMonth = selectedMonth.previous() },
                             onNextMonth = { selectedMonth = selectedMonth.next() }
                         ),
@@ -191,6 +258,7 @@ class MonthlyTransactionsScreen(
                         TransactionEditorKind.Expense -> MonthlyExpensesScreen(
                             year = selectedMonth.year,
                             month = selectedMonth.month,
+                            searchQuery = searchQuery,
                         ).RouteContent(
                             showNavigationChrome = false,
                             onBack = onBack,
@@ -201,6 +269,7 @@ class MonthlyTransactionsScreen(
                         TransactionEditorKind.Income -> MonthlyIncomesScreen(
                             year = selectedMonth.year,
                             month = selectedMonth.month,
+                            searchQuery = searchQuery,
                         ).RouteContent(
                             initialMonth = selectedMonth,
                             showNavigationChrome = false,

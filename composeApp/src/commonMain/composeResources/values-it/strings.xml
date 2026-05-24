@@ -97,6 +97,7 @@
     <string name="csv_transfer_description">Sposta dati selezionati usando file CSV salvati su questo telefono.</string>
     <string name="csv_transfer_note">Non adatto a un ripristino completo dell'app.</string>
     <string name="dashboard">Riepilogo</string>
+    <string name="dashboard_search_placeholder">Cerca transazioni...</string>
     <string name="date">Data</string>
     <string name="details">Dettagli</string>
     <string name="delete">Elimina</string>
@@ -126,6 +127,9 @@
     <string name="export_csv_description">Scegli l'intervallo di date dei dati che vuoi esportare.</string>
     <string name="highest_day">Giorno record</string>
     <string name="savings">Risparmio</string>
+    <string name="search_results">Risultati ricerca</string>
+    <string name="search_transactions">Cerca transazioni</string>
+    <string name="no_search_results">Nessun movimento trovato</string>
     <string name="import_action">Importa</string>
     <string name="import_csv">Importa CSV</string>
     <string name="income">Entrate</string>

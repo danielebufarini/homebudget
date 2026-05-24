@@ -56,6 +56,15 @@ class DashboardScreen(
                         categoryName = categoryName
                     )
                 )
+            },
+            onOpenTransactionSearch = { year, month, query ->
+                navigator?.push(
+                    MonthlyTransactionsScreen(
+                        year = year,
+                        month = month,
+                        initialSearchQuery = query,
+                    )
+                )
             }
         )
     }

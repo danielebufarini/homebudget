@@ -97,7 +97,8 @@ private fun rememberMonthlyIncomeStrings(): MonthlyIncomeStrings =
 
 class MonthlyIncomesScreen(
     private val year: Int,
-    private val month: Int
+    private val month: Int,
+    private val searchQuery: String = ""
 ) : Screen {
     @Composable
     override fun Content() {
@@ -145,8 +146,13 @@ class MonthlyIncomesScreen(
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
-        val incomesFlow = remember(repository, monthStartMillis, monthEndMillis) {
-            repository.getIncomesBetween(monthStartMillis, monthEndMillis)
+        val searchMode = searchQuery.isNotBlank()
+        val incomesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
+            if (searchMode) {
+                repository.getAllIncomes()
+            } else {
+                repository.getIncomesBetween(monthStartMillis, monthEndMillis)
+            }
         }
         val categoriesFlow = remember(repository) {
             repository.getAllCategories()
@@ -157,7 +163,9 @@ class MonthlyIncomesScreen(
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
-            shortMonthNamesList
+            shortMonthNamesList,
+            searchQuery,
+            strings.currencySymbol
         ) {
             combine(incomesFlow, categoriesFlow) { incomes, categories ->
                 val categoriesById = categories.associateBy { it.id }
@@ -169,7 +177,9 @@ class MonthlyIncomesScreen(
                         resolveCategoryName(category.id, category.name)
                     },
                     unknownCategoryLabel = unknownCategoryLabel,
-                    shortMonthNames = shortMonthNamesList
+                    shortMonthNames = shortMonthNamesList,
+                    searchQuery = searchQuery,
+                    currencySymbol = strings.currencySymbol
                 )
             }
                 .distinctUntilChanged()

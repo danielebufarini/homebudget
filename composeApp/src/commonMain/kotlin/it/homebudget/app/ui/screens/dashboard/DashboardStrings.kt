@@ -6,6 +6,7 @@ import homebudget.composeapp.generated.resources.add_expense
 import homebudget.composeapp.generated.resources.cash_flow
 import homebudget.composeapp.generated.resources.currency_symbol
 import homebudget.composeapp.generated.resources.dashboard
+import homebudget.composeapp.generated.resources.dashboard_search_placeholder
 import homebudget.composeapp.generated.resources.difference
 import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.expenses_by_category
@@ -16,6 +17,7 @@ import homebudget.composeapp.generated.resources.monthly_summary
 import homebudget.composeapp.generated.resources.no_expenses_for_month
 import homebudget.composeapp.generated.resources.no_expenses_in_period
 import homebudget.composeapp.generated.resources.savings
+import homebudget.composeapp.generated.resources.search_transactions
 import homebudget.composeapp.generated.resources.shared
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.top_category
@@ -25,6 +27,8 @@ import org.jetbrains.compose.resources.stringResource
 
 internal data class DashboardStrings(
     val dashboard: String,
+    val dashboardSearchPlaceholder: String,
+    val searchTransactions: String,
     val addExpense: String,
     val expenses: String,
     val shared: String,
@@ -51,6 +55,8 @@ internal fun rememberDashboardStrings(): DashboardStrings {
 
     return DashboardStrings(
         dashboard = stringResource(Res.string.dashboard),
+        dashboardSearchPlaceholder = stringResource(Res.string.dashboard_search_placeholder),
+        searchTransactions = stringResource(Res.string.search_transactions),
         addExpense = stringResource(Res.string.add_expense),
         expenses = stringResource(Res.string.expenses),
         shared = stringResource(Res.string.shared),

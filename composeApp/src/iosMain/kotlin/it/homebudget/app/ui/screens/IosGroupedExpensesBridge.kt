@@ -8,6 +8,7 @@ import homebudget.composeapp.generated.resources.no_expenses_for_category_this_m
 import homebudget.composeapp.generated.resources.no_expenses_for_day
 import homebudget.composeapp.generated.resources.no_expenses_for_month
 import homebudget.composeapp.generated.resources.no_income_for_month
+import homebudget.composeapp.generated.resources.no_search_results
 import homebudget.composeapp.generated.resources.no_shared_expenses_for_month
 import homebudget.composeapp.generated.resources.shared_expense
 import homebudget.composeapp.generated.resources.short_month_names
@@ -91,6 +92,11 @@ class IosMonthlyIncomesSnapshot(
     val sections: List<IosIncomeSection>
 )
 
+class IosTransactionSearchSnapshot(
+    val expenseSnapshot: IosGroupedExpensesSnapshot,
+    val incomeSnapshot: IosMonthlyIncomesSnapshot
+)
+
 internal data class GroupedExpensesCacheKey(
     val year: Int,
     val month: Int,
@@ -142,6 +148,7 @@ private data class IosGroupedLocalization(
     val noExpensesForMonth: String,
     val noSharedExpensesForMonth: String,
     val noIncomeForMonth: String,
+    val noSearchResults: String,
     val unknownCategory: String,
     val noExpensesForCategoryThisMonthTemplate: String,
     val shortMonthNames: List<String>,
@@ -435,6 +442,104 @@ class IosMonthlyIncomesObserver(
     }
 }
 
+class IosTransactionSearchObserver(
+    private val query: String,
+    initialGroupingMode: String
+) {
+    private val scope = MainScope()
+    private val groupingMode = MutableStateFlow(initialGroupingMode)
+    private var updatesJob: Job? = null
+    private var onUpdate: ((IosTransactionSearchSnapshot) -> Unit)? = null
+
+    fun start(onUpdate: (IosTransactionSearchSnapshot) -> Unit) {
+        if (updatesJob != null) {
+            return
+        }
+
+        this.onUpdate = onUpdate
+        updatesJob = scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.seedStarterCategoriesIfEmpty()
+
+            combine(
+                repository.getAllExpenses(),
+                repository.getAllIncomes(),
+                repository.getAllCategories(),
+                groupingMode
+            ) { expenses, incomes, categories, currentGroupingMode ->
+                TransactionSearchInput(expenses, incomes, categories, currentGroupingMode)
+            }.collect { input ->
+                val localization = loadIosGroupedLocalization()
+                val snapshot = withContext(Dispatchers.Default) {
+                    buildTransactionSearchSnapshot(
+                        query = query,
+                        expenses = input.expenses,
+                        incomes = input.incomes,
+                        categories = input.categories,
+                        groupingMode = input.groupingMode,
+                        localization = localization
+                    )
+                }
+                onUpdate(snapshot)
+            }
+        }
+    }
+
+    fun setGroupingMode(groupingMode: String) {
+        if (this.groupingMode.value == groupingMode) {
+            return
+        }
+
+        this.groupingMode.value = groupingMode
+    }
+
+    fun deleteExpense(id: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteExpense(id)
+        }
+    }
+
+    fun deleteIncome(id: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteIncome(id)
+        }
+    }
+
+    fun deleteRecurringExpenseSeries(seriesId: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteRecurringExpenseSeries(seriesId)
+        }
+    }
+
+    fun deleteRecurringIncomeSeries(seriesId: String) {
+        scope.launch {
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            repository.deleteRecurringIncomeSeries(seriesId)
+        }
+    }
+
+    fun stop() {
+        updatesJob?.cancel()
+        updatesJob = null
+        onUpdate = null
+    }
+
+    fun dispose() {
+        stop()
+        scope.cancel()
+    }
+}
+
+private data class TransactionSearchInput(
+    val expenses: List<Expense>,
+    val incomes: List<Income>,
+    val categories: List<Category>,
+    val groupingMode: String
+)
+
 internal fun startIosGroupedExpensesStore() {
     ensureKoinStartedIfNeeded()
     KoinPlatformTools.defaultContext().get().get<IosGroupedExpensesStore>().start()
@@ -558,6 +663,142 @@ private fun buildMonthlyIncomesSnapshot(
             localization.currencySymbol
         ),
         emptyStateText = localization.noIncomeForMonth,
+        sections = sections
+    )
+}
+
+private fun buildTransactionSearchSnapshot(
+    query: String,
+    expenses: List<Expense>,
+    incomes: List<Income>,
+    categories: List<Category>,
+    groupingMode: String,
+    localization: IosGroupedLocalization
+): IosTransactionSearchSnapshot {
+    val categoriesById = categories.associateBy { it.id }
+    val searchTokens = transactionSearchTokens(query)
+    val preparedExpenses = expenses
+        .asSequence()
+        .filter { expense ->
+            val categoryLabel = categoriesById[expense.categoryId]
+                ?.let { localization.resolveCategoryName(it.id, it.name) }
+                ?: localization.unknownCategory
+            expense.matchesTransactionSearch(searchTokens, categoryLabel, localization.currencySymbol)
+        }
+        .map { expense ->
+            prepareExpense(
+                expense = expense,
+                categoriesById = categoriesById,
+                localization = localization
+            )
+        }
+        .toList()
+    val preparedIncomes = incomes
+        .asSequence()
+        .filter { income ->
+            val categoryLabel = income.categoryId
+                ?.let(categoriesById::get)
+                ?.let { localization.resolveCategoryName(it.id, it.name) }
+                ?: localization.unknownCategory
+            income.matchesTransactionSearch(searchTokens, categoryLabel, localization.currencySymbol)
+        }
+        .map { income ->
+            prepareIncome(
+                income = income,
+                categoriesById = categoriesById,
+                localization = localization
+            )
+        }
+        .toList()
+
+    return IosTransactionSearchSnapshot(
+        expenseSnapshot = IosGroupedExpensesSnapshot(
+            totalAmountText = formatAmount(
+                preparedExpenses.sumAmountOf(PreparedIosExpense::amount),
+                localization.currencySymbol
+            ),
+            emptyStateText = localization.noSearchResults,
+            sections = buildSections(
+                groupedExpenses = groupedPreparedExpenses(preparedExpenses, groupingMode),
+                groupingMode = groupingMode,
+                screenType = "monthly",
+                localization = localization
+            )
+        ),
+        incomeSnapshot = buildPreparedIncomesSnapshot(
+            preparedIncomes = preparedIncomes,
+            groupingMode = groupingMode,
+            emptyStateText = localization.noSearchResults,
+            localization = localization
+        )
+    )
+}
+
+private fun groupedPreparedExpenses(
+    preparedExpenses: List<PreparedIosExpense>,
+    groupingMode: String
+): Map<String, List<PreparedIosExpense>> = when (groupingMode) {
+    "date" -> preparedExpenses.groupBy { it.dateGroupTitleText }
+    else -> preparedExpenses.groupBy { it.categoryName }
+}
+
+private fun buildPreparedIncomesSnapshot(
+    preparedIncomes: List<PreparedIosIncome>,
+    groupingMode: String,
+    emptyStateText: String,
+    localization: IosGroupedLocalization
+): IosMonthlyIncomesSnapshot {
+    val groupedIncomes = when (groupingMode) {
+        "date" -> preparedIncomes.groupBy { it.dateGroupTitleText }
+        else -> preparedIncomes.groupBy { it.categoryName }
+    }
+
+    val sections = groupedIncomes
+        .toList()
+        .sortedWith(
+            when (groupingMode) {
+                "date" -> compareByDescending<Pair<String, List<PreparedIosIncome>>> {
+                    it.second.maxOfOrNull(PreparedIosIncome::dateMillis) ?: Long.MIN_VALUE
+                }
+                else -> compareBy<Pair<String, List<PreparedIosIncome>>> { it.first }
+            }
+        )
+        .map { (groupName, groupIncomes) ->
+            val sortedIncomes = groupIncomes.sortedWith(
+                compareByDescending<PreparedIosIncome> { it.dateMillis }
+                    .thenBy { it.categoryName }
+                    .thenBy { it.description.orEmpty() }
+            )
+            IosIncomeSection(
+                id = "${groupingMode}:$groupName",
+                title = groupName,
+                categoryColorKey = if (groupingMode == "date") null else sortedIncomes.firstOrNull()?.categoryId,
+                categoryIconKey = if (groupingMode == "date") null else sortedIncomes.firstOrNull()?.categoryIconKey,
+                totalAmountText = formatAmount(
+                    sortedIncomes.sumAmountOf(PreparedIosIncome::amount),
+                    localization.currencySymbol
+                ),
+                rows = sortedIncomes.map { income ->
+                    val incomeName = income.description?.ifBlank { localization.income } ?: localization.income
+                    IosIncomeRow(
+                        id = income.id,
+                        title = if (groupingMode == "date") income.categoryName else incomeName,
+                        subtitleText = if (groupingMode == "date") incomeName else income.dateText,
+                        amountText = income.amountText,
+                        categoryColorKey = income.categoryId,
+                        categoryIconKey = income.categoryIconKey,
+                        recurringSeriesId = income.recurringSeriesId
+                    )
+                }
+            )
+        }
+
+    return IosMonthlyIncomesSnapshot(
+        totalAmountText = formatAmount(
+            preparedIncomes.sumAmountOf(PreparedIosIncome::amount),
+            localization.currencySymbol
+        ),
+        emptyStateText = emptyStateText,
         sections = sections
     )
 }
@@ -729,6 +970,7 @@ private suspend fun loadIosGroupedLocalization(): IosGroupedLocalization {
         noExpensesForMonth = getString(Res.string.no_expenses_for_month),
         noSharedExpensesForMonth = getString(Res.string.no_shared_expenses_for_month),
         noIncomeForMonth = getString(Res.string.no_income_for_month),
+        noSearchResults = getString(Res.string.no_search_results),
         unknownCategory = getString(Res.string.unknown_category),
         noExpensesForCategoryThisMonthTemplate = getString(Res.string.no_expenses_for_category_this_month),
         shortMonthNames = getStringArray(Res.array.short_month_names),

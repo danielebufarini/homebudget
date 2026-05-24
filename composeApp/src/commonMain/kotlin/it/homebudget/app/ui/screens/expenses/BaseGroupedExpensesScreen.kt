@@ -78,7 +78,8 @@ import org.koin.compose.koinInject
 
 abstract class BaseGroupedExpensesScreen(
     private val year: Int,
-    private val month: Int
+    private val month: Int,
+    private val searchQuery: String = ""
 ) : Screen {
 
     @Composable
@@ -171,8 +172,13 @@ abstract class BaseGroupedExpensesScreen(
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
-        val expensesFlow = remember(repository, monthStartMillis, monthEndMillis) {
-            repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+        val searchMode = searchQuery.isNotBlank()
+        val expensesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
+            if (searchMode) {
+                repository.getAllExpenses()
+            } else {
+                repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+            }
         }
         val categoriesFlow = remember(repository) {
             repository.getAllCategories()
@@ -186,7 +192,9 @@ abstract class BaseGroupedExpensesScreen(
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
-            shortMonthNamesList
+            shortMonthNamesList,
+            searchQuery,
+            currencySymbol
         ) {
             combine(expensesFlow, categoriesFlow) { expenses, categories ->
                 val categoriesById = categories.associateBy { it.id }
@@ -200,7 +208,9 @@ abstract class BaseGroupedExpensesScreen(
                         resolveCategoryName(category.id, category.name)
                     },
                     unknownCategoryLabel = unknownCategoryLabel,
-                    shortMonthNames = shortMonthNamesList
+                    shortMonthNames = shortMonthNamesList,
+                    searchQuery = searchQuery,
+                    currencySymbol = currencySymbol
                 )
             }
                 .distinctUntilChanged()

@@ -1,6 +1,8 @@
 package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.addAmountsExact
+import it.homebudget.app.data.formatAmount
+import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.sumAmountOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
@@ -69,8 +71,11 @@ internal fun buildGroupedExpensesState(
     includeCategory: (String) -> Boolean,
     resolveCategoryName: (Category) -> String,
     unknownCategoryLabel: String,
-    shortMonthNames: List<String>
+    shortMonthNames: List<String>,
+    searchQuery: String = "",
+    currencySymbol: String = ""
 ): GroupedExpensesState {
+    val searchTokens = transactionSearchTokens(searchQuery)
     val visibleExpenses = ArrayList<ResolvedExpense>(expenses.size)
     var totalAmount = 0L
 
@@ -78,7 +83,11 @@ internal fun buildGroupedExpensesState(
         val categoryLabel = categoriesById[expense.categoryId]
             ?.let(resolveCategoryName)
             ?: unknownCategoryLabel
-        if (!includeExpense(expense) || !includeCategory(categoryLabel)) {
+        if (
+            !includeExpense(expense) ||
+            !includeCategory(categoryLabel) ||
+            !expense.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)
+        ) {
             return@forEach
         }
 
@@ -145,8 +154,11 @@ internal fun buildGroupedIncomesState(
     groupingMode: ExpenseGroupingMode,
     resolveCategoryName: (Category) -> String,
     unknownCategoryLabel: String,
-    shortMonthNames: List<String>
+    shortMonthNames: List<String>,
+    searchQuery: String = "",
+    currencySymbol: String = ""
 ): GroupedIncomesState {
+    val searchTokens = transactionSearchTokens(searchQuery)
     val visibleIncomes = ArrayList<ResolvedIncome>(incomes.size)
     var totalAmount = 0L
 
@@ -155,6 +167,9 @@ internal fun buildGroupedIncomesState(
             ?.let(categoriesById::get)
             ?.let(resolveCategoryName)
             ?: unknownCategoryLabel
+        if (!income.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)) {
+            return@forEach
+        }
 
         visibleIncomes += ResolvedIncome(
             income = income,
@@ -211,3 +226,48 @@ internal fun buildGroupedIncomesState(
         totalAmount = totalAmount
     )
 }
+
+internal fun transactionSearchTokens(query: String): List<String> =
+    query.trim()
+        .lowercase()
+        .split(Regex("\\s+"))
+        .filter(String::isNotBlank)
+
+internal fun Expense.matchesTransactionSearch(
+    searchTokens: List<String>,
+    categoryLabel: String,
+    currencySymbol: String
+): Boolean {
+    if (searchTokens.isEmpty()) return true
+
+    val fields = listOfNotNull(
+        description?.trim(),
+        categoryLabel,
+        formatExpenseDate(date),
+        formatAmountInput(amount),
+        currencySymbol.takeIf(String::isNotBlank)?.let { formatAmount(amount, it) }
+    )
+    return fields.matchAllSearchTokens(searchTokens)
+}
+
+internal fun Income.matchesTransactionSearch(
+    searchTokens: List<String>,
+    categoryLabel: String,
+    currencySymbol: String
+): Boolean {
+    if (searchTokens.isEmpty()) return true
+
+    val fields = listOfNotNull(
+        description?.trim(),
+        categoryLabel,
+        formatExpenseDate(date),
+        formatAmountInput(amount),
+        currencySymbol.takeIf(String::isNotBlank)?.let { formatAmount(amount, it) }
+    )
+    return fields.matchAllSearchTokens(searchTokens)
+}
+
+private fun List<String>.matchAllSearchTokens(searchTokens: List<String>): Boolean =
+    searchTokens.all { token ->
+        any { field -> field.lowercase().contains(token) }
+    }

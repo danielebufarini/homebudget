@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,13 +33,15 @@ fun DashboardRoute(
     showNavigationChrome: Boolean,
     openVoiceExpenseRequest: Int = 0,
     showFab: Boolean,
+    showTransactionSearch: Boolean = true,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
     onOpenDayExpenses: (Int, Int, Int) -> Unit,
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
-    onOpenCategoryExpenses: (Int, Int, String) -> Unit
+    onOpenCategoryExpenses: (Int, Int, String) -> Unit,
+    onOpenTransactionSearch: (Int, Int, String) -> Unit = { _, _, _ -> }
 ) {
     val repository: ExpenseRepository = koinInject()
     val strings = rememberDashboardStrings()
@@ -57,6 +60,15 @@ fun DashboardRoute(
 
     var selectedMonth by remember {
         mutableStateOf(currentMonth)
+    }
+    var searchQuery by rememberSaveable {
+        mutableStateOf("")
+    }
+    val submitSearch = {
+        val trimmedQuery = searchQuery.trim()
+        if (trimmedQuery.isNotEmpty()) {
+            onOpenTransactionSearch(selectedMonth.year, selectedMonth.month, trimmedQuery)
+        }
     }
 
     EnsureStarterCategoriesSeeded(repository)
@@ -102,8 +114,12 @@ fun DashboardRoute(
             sixMonthSavingsAmount = sixMonthSavingsAmount,
             chartState = chartState,
             categoriesById = categoriesById,
+            showTransactionSearch = showTransactionSearch,
+            searchQuery = searchQuery,
             onPreviousMonth = { selectedMonth = selectedMonth.previous() },
             onNextMonth = { selectedMonth = selectedMonth.next() },
+            onSearchQueryChange = { searchQuery = it },
+            onSearchSubmit = submitSearch,
             onOpenMonthlyIncomes = {
                 onOpenMonthlyIncomes(selectedMonth.year, selectedMonth.month)
             },
