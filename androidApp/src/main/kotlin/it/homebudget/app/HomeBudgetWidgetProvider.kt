@@ -81,13 +81,10 @@ private enum class HomeBudgetWidgetLayoutMode {
 
 private enum class HomeBudgetWidgetResolvedLayout {
     Small,
-    Medium,
     Wide
 }
 
 private object HomeBudgetWidgetUpdater {
-    private const val SMALL_WIDGET_MAX_WIDTH_DP = 120
-    private const val SMALL_WIDGET_MAX_HEIGHT_DP = 120
     private const val WIDE_WIDGET_MIN_WIDTH_DP = 300
     private const val WIDE_WIDGET_MAX_MIN_HEIGHT_DP = 90
 
@@ -169,18 +166,15 @@ private object HomeBudgetWidgetUpdater {
         val resolvedLayout = resolveWidgetLayout(options, layoutMode)
         val layoutResId = when (resolvedLayout) {
             HomeBudgetWidgetResolvedLayout.Small -> R.layout.home_budget_widget
-            HomeBudgetWidgetResolvedLayout.Medium -> R.layout.home_budget_widget_medium
             HomeBudgetWidgetResolvedLayout.Wide -> R.layout.home_budget_widget_wide
         }
         val views = RemoteViews(context.packageName, layoutResId).apply {
             setTextViewText(
                 R.id.widget_month_title,
-                if (resolvedLayout == HomeBudgetWidgetResolvedLayout.Small ||
-                    resolvedLayout == HomeBudgetWidgetResolvedLayout.Medium
-                ) {
-                    summary.monthNameText
-                } else {
+                if (resolvedLayout == HomeBudgetWidgetResolvedLayout.Wide) {
                     summary.monthTitle
+                } else {
+                    summary.monthNameText
                 }
             )
             setTextViewText(R.id.widget_expenses_amount, summary.expensesAmountText)
@@ -204,18 +198,13 @@ private object HomeBudgetWidgetUpdater {
         }
 
         val maxWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)
-        val maxHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
         val minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
         val isWideAndShort = maxWidthDp >= WIDE_WIDGET_MIN_WIDTH_DP &&
             minHeightDp in 1..WIDE_WIDGET_MAX_MIN_HEIGHT_DP
 
         return when {
             isWideAndShort -> HomeBudgetWidgetResolvedLayout.Wide
-            maxWidthDp in 1 until SMALL_WIDGET_MAX_WIDTH_DP &&
-                maxHeightDp in 1 until SMALL_WIDGET_MAX_HEIGHT_DP -> {
-                HomeBudgetWidgetResolvedLayout.Small
-            }
-            else -> HomeBudgetWidgetResolvedLayout.Medium
+            else -> HomeBudgetWidgetResolvedLayout.Small
         }
     }
 

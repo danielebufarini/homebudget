@@ -59,16 +59,15 @@ struct HomeBudgetWidgetEntryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 
-            amountRow(label: localized("Expenses", italian: "Spese"), value: entry.expenseAmount, emphasize: true)
-
+            amountRow(label: widgetLocalized("Expenses"), value: entry.expenseAmount, emphasize: true)
             if family == .systemMedium {
-                amountRow(label: localized("Income", italian: "Entrate"), value: entry.incomeAmount, emphasize: false)
+                amountRow(label: widgetLocalized("Income"), value: entry.incomeAmount, emphasize: false)
             }
 
             Spacer(minLength: 0)
 
             Link(destination: voiceExpenseURL) {
-                Label(localized("Add Expense", italian: "Aggiungi spesa"), systemImage: "mic.fill")
+                Label(widgetLocalized("Add Expense"), systemImage: "mic.fill")
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -101,8 +100,8 @@ struct HomeBudgetWidget: Widget {
         StaticConfiguration(kind: kind, provider: HomeBudgetWidgetProvider()) { entry in
             HomeBudgetWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("HomeBudget")
-        .description(localized("Current month budget summary", italian: "Riepilogo budget del mese corrente"))
+        .configurationDisplayName(widgetLocalized("HomeBudget"))
+        .description(widgetLocalized("Current month budget summary"))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -115,10 +114,14 @@ private func currentMonthTitle() -> String {
 }
 
 private func formattedZeroAmount() -> String {
-    let symbol = Locale.current.language.languageCode?.identifier == "it" ? "€" : "$"
-    return "\(symbol) 0.00"
+    let formatter = NumberFormatter()
+    formatter.locale = .current
+    formatter.numberStyle = .currency
+    formatter.minimumFractionDigits = 2
+    formatter.maximumFractionDigits = 2
+    return formatter.string(from: 0) ?? "\(Locale.current.currencySymbol ?? "$")0.00"
 }
 
-private func localized(_ english: String, italian: String) -> String {
-    Locale.current.language.languageCode?.identifier == "it" ? italian : english
+private func widgetLocalized(_ key: String) -> String {
+    NSLocalizedString(key, comment: "")
 }
