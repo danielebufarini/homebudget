@@ -1,0 +1,164 @@
+@preconcurrency import ComposeApp
+import SwiftUI
+
+@MainActor
+final class GroupedExpensesSectionsViewModel: ObservableObject {
+    @Published var totalAmountText = appAmountLabel("0.00")
+    @Published var emptyStateText = appLocalized("No expenses for this month")
+    @Published var sections: [GroupedExpenseSectionModel] = []
+    @Published var expandedSectionIDs = Set<String>()
+
+    private let observer: IosGroupedExpensesObserver
+    private var expansionState: GroupedSectionExpansionState
+    private var isObserving = false
+
+    init(
+        year: Int,
+        month: Int,
+        kind: GroupedExpensesKind,
+        groupingMode: ExpenseGroupingMode,
+        expandsSectionsInitially: Bool = true
+    ) {
+        observer = IosGroupedExpensesObserver(
+            year: Int32(year),
+            month: Int32(month),
+            screenType: kind.screenType,
+            categoryName: kind.categoryName,
+            dayOfMonth: kind.dayOfMonth,
+            initialGroupingMode: groupingMode.bridgeValue
+        )
+        expansionState = GroupedSectionExpansionState(
+            strategy: NewSectionsExpansionStrategy(expandsInitially: expandsSectionsInitially)
+        )
+    }
+
+    deinit {
+        observer.dispose()
+    }
+
+    func start() {
+        guard !isObserving else {
+            return
+        }
+
+        isObserving = true
+        observer.start { [weak self] snapshot in
+            guard let self else {
+                return
+            }
+
+            Task { @MainActor in
+                self.apply(snapshot: snapshot)
+            }
+        }
+    }
+
+    func stop() {
+        guard isObserving else {
+            return
+        }
+
+        observer.stop()
+        isObserving = false
+    }
+
+    func deleteExpense(_ expenseID: String) {
+        observer.deleteExpense(id: expenseID)
+    }
+
+    func deleteRecurringExpenseSeries(_ seriesID: String) {
+        observer.deleteRecurringExpenseSeries(seriesId: seriesID)
+    }
+
+    func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
+        observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+    }
+
+    private func apply(snapshot: IosGroupedExpensesSnapshot) {
+        totalAmountText = snapshot.totalAmountText
+        emptyStateText = snapshot.emptyStateText
+        sections = snapshot.sections.map(GroupedExpenseSectionModel.init)
+        expandedSectionIDs = expansionState.nextExpandedSectionIDs(
+            current: expandedSectionIDs,
+            sections: sections
+        )
+    }
+}
+
+@MainActor
+final class MonthlyIncomesSectionsViewModel: ObservableObject {
+    @Published var totalAmountText = appAmountLabel("0.00")
+    @Published var emptyStateText = appLocalized("No income for this month")
+    @Published var sections: [GroupedExpenseSectionModel] = []
+    @Published var hasLoadedSnapshot = false
+    @Published var expandedSectionIDs = Set<String>()
+
+    private let observer: IosMonthlyIncomesObserver
+    private var expansionState = GroupedSectionExpansionState(
+        strategy: NewSectionsExpansionStrategy(expandsInitially: true)
+    )
+    private var isObserving = false
+
+    init(
+        year: Int,
+        month: Int,
+        groupingMode: ExpenseGroupingMode = .byDate
+    ) {
+        observer = IosMonthlyIncomesObserver(
+            year: Int32(year),
+            month: Int32(month),
+            initialGroupingMode: groupingMode.bridgeValue
+        )
+    }
+
+    deinit {
+        observer.dispose()
+    }
+
+    func start() {
+        guard !isObserving else {
+            return
+        }
+
+        isObserving = true
+        observer.start { [weak self] snapshot in
+            guard let self else {
+                return
+            }
+
+            Task { @MainActor in
+                self.apply(snapshot: snapshot)
+            }
+        }
+    }
+
+    func stop() {
+        guard isObserving else {
+            return
+        }
+
+        observer.stop()
+        isObserving = false
+    }
+
+    func deleteIncome(_ incomeID: String) {
+        observer.deleteIncome(id: incomeID)
+    }
+
+    func deleteRecurringIncomeSeries(_ seriesID: String) {
+        observer.deleteRecurringIncomeSeries(seriesId: seriesID)
+    }
+
+    private func apply(snapshot: IosMonthlyIncomesSnapshot) {
+        totalAmountText = snapshot.totalAmountText
+        emptyStateText = snapshot.emptyStateText
+        sections = snapshot.sections.map {
+            GroupedExpenseSectionModel($0, showsCategoryMetadata: false)
+        }
+        hasLoadedSnapshot = true
+        expandedSectionIDs = expansionState.nextExpandedSectionIDs(
+            current: expandedSectionIDs,
+            sections: sections
+        )
+    }
+}
