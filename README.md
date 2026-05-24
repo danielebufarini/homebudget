@@ -99,6 +99,14 @@ Relevant directories:
 - [iosApp/iosApp](./iosApp/iosApp)
 - [iosApp/HomeBudgetWidget](./iosApp/HomeBudgetWidget)
 
+Important iOS feature areas:
+
+- [iosApp/iosApp/App](./iosApp/iosApp/App): app entry point, navigation, localization helpers, and shared shell concerns.
+- [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native SwiftUI transaction, grouped expense, income, and search screens.
+- [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense): native voice expense flow.
+- [iosApp/iosApp/Sync](./iosApp/iosApp/Sync): iCloud backup and widget summary stores.
+- [iosApp/iosApp/UI](./iosApp/iosApp/UI): shared SwiftUI glass surfaces, hosting helpers, and reusable controls.
+
 ## Architecture
 
 ### Persistence
@@ -141,10 +149,32 @@ Entry points:
 - iOS root view: [iosApp/iosApp/App/ContentView.swift](./iosApp/iosApp/App/ContentView.swift)
 - iOS shared screen host: [composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
 
+Native iOS expense screens are split by responsibility:
+
+- [MonthlyExpensesSectionsScreen.swift](./iosApp/iosApp/Features/Expenses/MonthlyExpensesSectionsScreen.swift): orchestration for grouped expense routes and monthly expense/income switching.
+- [GroupedExpensesSectionsList.swift](./iosApp/iosApp/Features/Expenses/GroupedExpensesSectionsList.swift): reusable grouped expense list rendering.
+- [MonthlyIncomesSectionsScreen.swift](./iosApp/iosApp/Features/Expenses/MonthlyIncomesSectionsScreen.swift): monthly income list rendering.
+- [MonthlyExpenseSectionViewModels.swift](./iosApp/iosApp/Features/Expenses/MonthlyExpenseSectionViewModels.swift): observer-backed SwiftUI view models for grouped expenses and incomes.
+- [MonthNavigationSupport.swift](./iosApp/iosApp/Features/Expenses/MonthNavigationSupport.swift): month cursor, swipe navigation, and month header support.
+- [MonthlyExpenseControls.swift](./iosApp/iosApp/Features/Expenses/MonthlyExpenseControls.swift): expense/income and grouping glass controls.
+- [GroupedExpenseRows.swift](./iosApp/iosApp/Features/Expenses/GroupedExpenseRows.swift): grouped section headers, rows, category icons, and recurring badges.
+- [TransactionSearchSectionsScreen.swift](./iosApp/iosApp/Features/Expenses/TransactionSearchSectionsScreen.swift): native full-text search results for expenses and income.
+
+The iOS Xcode project uses file-system synchronized groups, so new Swift files under `iosApp/iosApp` are picked up by the app target without manual `project.pbxproj` edits.
+
 ### Navigation
 
 - shared Compose navigation uses Voyager
 - iOS top-level navigation uses SwiftUI `NavigationStack`
+
+### Design patterns
+
+The codebase uses classic GoF patterns where they reduce coupling without obscuring platform idioms:
+
+- Strategy: [GroupedSectionExpansionStrategy.swift](./iosApp/iosApp/Features/Expenses/GroupedSectionExpansionStrategy.swift) encapsulates section expansion behavior shared by expense and income lists.
+- Factory: `CategoryIconSymbolFactory` in [GroupedExpenseRows.swift](./iosApp/iosApp/Features/Expenses/GroupedExpenseRows.swift) centralizes the mapping from persisted category icon keys to SF Symbols.
+- Bridge: iOS-specific Kotlin bridge classes under [composeApp/src/iosMain](./composeApp/src/iosMain) expose shared data snapshots to native SwiftUI screens.
+- Repository: shared data access is concentrated in [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt) and [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CategoryRepository.kt).
 
 ## Localization
 

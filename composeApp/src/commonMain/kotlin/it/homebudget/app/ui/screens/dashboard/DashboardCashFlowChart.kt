@@ -70,6 +70,14 @@ internal fun LineChartPage(
     val chartGeometry = remember(state, chartSize, topInsetPx) {
         state.buildChartGeometry(chartSize = chartSize, topInsetPx = topInsetPx)
     }
+    val shouldShowZeroAxisLabel = remember(chartGeometry) {
+        val geometry = chartGeometry ?: return@remember false
+        val zeroY = geometry.zeroLineY ?: return@remember false
+
+        geometry.horizontalGridYs.none { gridY ->
+            kotlin.math.abs(gridY - zeroY) < 0.5f
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -138,7 +146,8 @@ internal fun LineChartPage(
                             }
                         }
 
-                        chartGeometry?.zeroLineY?.let { zeroY ->
+                        if (shouldShowZeroAxisLabel) {
+                            val zeroY = chartGeometry?.zeroLineY ?: return@Box
                             val maxOffsetY = (chartSize.height - zeroAxisLabelHalfHeightPx * 2)
                                 .coerceAtLeast(0f)
                             Text(
