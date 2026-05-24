@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,7 @@ internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, mo
     var isSaving by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var isListening by remember { mutableStateOf(false) }
+    var lastHandledOpenVoiceExpenseRequest by rememberSaveable { mutableStateOf(0) }
 
     fun resetDialogState() {
         transcript = ""
@@ -158,7 +160,11 @@ internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, mo
     }
 
     LaunchedEffect(openVoiceExpenseRequest) {
-        if (openVoiceExpenseRequest > 0) {
+        if (
+            openVoiceExpenseRequest > 0 &&
+            openVoiceExpenseRequest > lastHandledOpenVoiceExpenseRequest
+        ) {
+            lastHandledOpenVoiceExpenseRequest = openVoiceExpenseRequest
             openVoiceExpenseDialogAndStartListening()
         }
     }

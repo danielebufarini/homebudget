@@ -175,7 +175,9 @@ private object HomeBudgetWidgetUpdater {
         val views = RemoteViews(context.packageName, layoutResId).apply {
             setTextViewText(
                 R.id.widget_month_title,
-                if (resolvedLayout == HomeBudgetWidgetResolvedLayout.Wide) {
+                if (resolvedLayout == HomeBudgetWidgetResolvedLayout.Small ||
+                    resolvedLayout == HomeBudgetWidgetResolvedLayout.Medium
+                ) {
                     summary.monthNameText
                 } else {
                     summary.monthTitle
