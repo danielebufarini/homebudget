@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
@@ -275,6 +276,7 @@ internal fun SoftTextField(
     readOnly: Boolean = false,
     enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = true,
     isError: Boolean = false,
     supportingText: String? = null
@@ -311,6 +313,7 @@ internal fun SoftTextField(
         },
         isError = isError,
         keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
         colors = TextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,

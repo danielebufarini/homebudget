@@ -1,6 +1,25 @@
 import SwiftUI
 import UIKit
 
+@MainActor
+func appDismissKeyboard() {
+    for scene in UIApplication.shared.connectedScenes {
+        guard let windowScene = scene as? UIWindowScene else {
+            continue
+        }
+        for window in windowScene.windows where window.isKeyWindow {
+            window.endEditing(true)
+        }
+    }
+
+    UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder),
+        to: nil,
+        from: nil,
+        for: nil
+    )
+}
+
 struct KotlinViewControllerHost: UIViewControllerRepresentable {
     let constrainToSafeArea: Bool
     let makeViewController: () -> UIViewController
@@ -229,10 +248,138 @@ private final class InteractivePopGestureCoordinator: NSObject, UIGestureRecogni
     }
 }
 
+private struct KeyboardDismissOnTapInstaller: UIViewControllerRepresentable {
+    func makeCoordinator() -> KeyboardDismissOnTapCoordinator {
+        KeyboardDismissOnTapCoordinator()
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let viewController = KeyboardDismissInstallingViewController()
+        viewController.coordinator = context.coordinator
+        return viewController
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        if let viewController = uiViewController as? KeyboardDismissInstallingViewController {
+            viewController.coordinator = context.coordinator
+        }
+        context.coordinator.requestInstall(from: uiViewController)
+    }
+}
+
+private final class KeyboardDismissInstallingViewController: UIViewController {
+    weak var coordinator: KeyboardDismissOnTapCoordinator?
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        coordinator?.requestInstall(from: self)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        coordinator?.requestInstall(from: self)
+    }
+
+    override func didMove(toParent parent: UIViewController?) {
+        super.didMove(toParent: parent)
+        coordinator?.requestInstall(from: self)
+    }
+}
+
+private final class KeyboardDismissOnTapCoordinator: NSObject, UIGestureRecognizerDelegate {
+    private weak var installedWindow: UIWindow?
+    private weak var gestureRecognizer: UITapGestureRecognizer?
+
+    func requestInstall(from viewController: UIViewController) {
+        install(from: viewController)
+
+        [0.05, 0.15, 0.35].forEach { delay in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak viewController] in
+                guard let self, let viewController else {
+                    return
+                }
+                self.install(from: viewController)
+            }
+        }
+    }
+
+    private func install(from viewController: UIViewController) {
+        guard let window = viewController.view.window ?? keyWindow else {
+            return
+        }
+
+        if installedWindow === window, gestureRecognizer != nil {
+            return
+        }
+
+        if let previousGesture = gestureRecognizer {
+            installedWindow?.removeGestureRecognizer(previousGesture)
+        }
+
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        gesture.cancelsTouchesInView = false
+        gesture.delegate = self
+        window.addGestureRecognizer(gesture)
+
+        installedWindow = window
+        gestureRecognizer = gesture
+    }
+
+    private var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }
+    }
+
+    @objc private func dismissKeyboard() {
+        appDismissKeyboard()
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldReceive touch: UITouch
+    ) -> Bool {
+        guard let touchedView = touch.view else {
+            return true
+        }
+
+        return !touchedView.isDescendantOfTextInput
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+}
+
+private extension UIView {
+    var isDescendantOfTextInput: Bool {
+        var view: UIView? = self
+        while let current = view {
+            if current is UITextField || current is UITextView || current is UISearchTextField {
+                return true
+            }
+            view = current.superview
+        }
+        return false
+    }
+}
+
 extension View {
     func restoresInteractivePopGesture() -> some View {
         background(
             InteractivePopGestureRestorer()
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+        )
+    }
+
+    func dismissesKeyboardOnTap() -> some View {
+        background(
+            KeyboardDismissOnTapInstaller()
                 .frame(width: 0, height: 0)
                 .allowsHitTesting(false)
         )

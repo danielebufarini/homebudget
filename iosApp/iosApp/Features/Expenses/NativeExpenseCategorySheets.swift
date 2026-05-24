@@ -157,19 +157,43 @@ struct NativeAddCategorySheet: View {
 
     @State private var name = ""
     @State private var selectedIconKey = "category"
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(appLocalized("Add Category"))
-                .font(.largeTitle.weight(.bold))
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
+            HStack(alignment: .firstTextBaseline) {
+                Text(appLocalized("Add Category"))
+                    .font(.largeTitle.weight(.bold))
+
+                Spacer()
+
+                Button(appLocalized("Done")) {
+                    dismissNameKeyboard()
+                }
+                .buttonStyle(.glass)
+                .font(.headline.weight(.semibold))
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     AppGlassSheetSection(spacing: 14, verticalPadding: 16) {
                         TextField(appLocalized("Category Name"), text: $name)
                             .textInputAutocapitalization(.words)
+                            .focused($isNameFocused)
+                            .submitLabel(.done)
+                            .onSubmit {
+                                dismissNameKeyboard()
+                            }
+                            .toolbar {
+                                ToolbarItemGroup(placement: .keyboard) {
+                                    Spacer()
+                                    Button(appLocalized("Done")) {
+                                        dismissNameKeyboard()
+                                    }
+                                }
+                            }
                     }
 
                     ForEach(nativeExpenseEditorIconSections) { section in
@@ -185,7 +209,10 @@ struct NativeAddCategorySheet: View {
                                             NativeExpenseCategoryIconChoice(
                                                 iconKey: iconKey,
                                                 isSelected: selectedIconKey == iconKey,
-                                                action: { selectedIconKey = iconKey }
+                                                action: {
+                                                    selectedIconKey = iconKey
+                                                    dismissNameKeyboard()
+                                                }
                                             )
                                         }
 
@@ -205,12 +232,17 @@ struct NativeAddCategorySheet: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
+            .scrollDismissesKeyboard(.interactively)
 
             AppGlassSheetActionBar {
-                Button(appLocalized("Cancel"), action: onCancel)
+                Button(appLocalized("Cancel")) {
+                    dismissNameKeyboard()
+                    onCancel()
+                }
                     .buttonStyle(.glass)
 
                 Button(appLocalized("Add")) {
+                    dismissNameKeyboard()
                     onConfirm(name.trimmingCharacters(in: .whitespacesAndNewlines), selectedIconKey)
                 }
                 .buttonStyle(.glassProminent)
@@ -219,6 +251,12 @@ struct NativeAddCategorySheet: View {
             .padding(.bottom, 8)
         }
         .appGlassSheetChrome()
+        .dismissesKeyboardOnTap()
+    }
+
+    private func dismissNameKeyboard() {
+        isNameFocused = false
+        appDismissKeyboard()
     }
 }
 

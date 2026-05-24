@@ -235,6 +235,7 @@ struct ContentView: View {
                 }
         }
         .appGlassHostedScreenChrome()
+        .dismissesKeyboardOnTap()
         .restoresInteractivePopGesture()
         .onDisappear {
             csvImportController.dispose()

@@ -102,6 +102,7 @@
     <string name="details">Details</string>
     <string name="delete">Delete</string>
     <string name="difference">Difference</string>
+    <string name="done">Done</string>
     <string name="delete_category">Delete category</string>
     <string name="delete_expense">Delete expense</string>
     <string name="delete_income">Delete income</string>

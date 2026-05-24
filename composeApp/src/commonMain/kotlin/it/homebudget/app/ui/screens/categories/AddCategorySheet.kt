@@ -1,14 +1,19 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
@@ -16,18 +21,29 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.cancel
 import homebudget.composeapp.generated.resources.category_name
+import homebudget.composeapp.generated.resources.done
+import homebudget.composeapp.generated.resources.icon
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,20 +58,52 @@ internal fun AddCategorySheet(
 ) {
     val cancelLabel = stringResource(Res.string.cancel)
     val categoryNameLabel = stringResource(Res.string.category_name)
+    val doneLabel = stringResource(Res.string.done)
+    val iconLabel = stringResource(Res.string.icon)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var categoryName by remember(initialName) { mutableStateOf(initialName) }
     var selectedIconKey by remember(initialIconKey) {
         mutableStateOf(normalizeCategoryIconKey(initialIconKey))
     }
+    var textFieldGeneration by remember { mutableIntStateOf(0) }
+    var keyboardDismissGeneration by remember { mutableIntStateOf(0) }
     val trimmedCategoryName = categoryName.trim()
+    fun dismissKeyboard() {
+        textFieldGeneration += 1
+        keyboardDismissGeneration += 1
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        dismissPlatformKeyboard()
+    }
 
     LaunchedEffect(initialName, initialIconKey) {
         categoryName = initialName
         selectedIconKey = normalizeCategoryIconKey(initialIconKey)
     }
 
+    LaunchedEffect(keyboardDismissGeneration) {
+        if (keyboardDismissGeneration == 0) {
+            return@LaunchedEffect
+        }
+
+        delay(30)
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        dismissPlatformKeyboard()
+
+        delay(120)
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        dismissPlatformKeyboard()
+    }
+
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            dismissKeyboard()
+            onDismiss()
+        },
         sheetState = sheetState
     ) {
         BoxWithConstraints(
@@ -81,28 +129,49 @@ internal fun AddCategorySheet(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        TextButton(onClick = ::dismissKeyboard) {
+                            Text(doneLabel)
+                        }
+                    }
 
                     CategoryPreviewCard(
                         name = trimmedCategoryName,
-                        iconKey = selectedIconKey
+                        iconKey = selectedIconKey,
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures { dismissKeyboard() }
+                        }
                     )
 
-                    SoftTextField(
-                        value = categoryName,
-                        onValueChange = { categoryName = it },
-                        label = categoryNameLabel,
-                        leadingIcon = Icons.Filled.Category,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    key(textFieldGeneration) {
+                        SoftTextField(
+                            value = categoryName,
+                            onValueChange = { categoryName = it },
+                            label = categoryNameLabel,
+                            leadingIcon = Icons.Filled.Category,
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(
+                                onDone = { dismissKeyboard() }
+                            )
+                        )
+                    }
 
-                    SoftSectionCard(title = "Icon") {
+                    SoftSectionCard(title = iconLabel) {
                         CategoryIconPicker(
                             selectedIconKey = selectedIconKey,
-                            onIconSelected = { selectedIconKey = it },
+                            onIconSelected = { iconKey ->
+                                selectedIconKey = iconKey
+                                dismissKeyboard()
+                            },
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
                         )
                     }
@@ -112,8 +181,12 @@ internal fun AddCategorySheet(
                     cancelLabel = cancelLabel,
                     confirmLabel = confirmLabel,
                     confirmEnabled = trimmedCategoryName.isNotEmpty(),
-                    onCancel = onDismiss,
+                    onCancel = {
+                        dismissKeyboard()
+                        onDismiss()
+                    },
                     onConfirm = {
+                        dismissKeyboard()
                         onConfirm(trimmedCategoryName, normalizeCategoryIconKey(selectedIconKey))
                     }
                 )

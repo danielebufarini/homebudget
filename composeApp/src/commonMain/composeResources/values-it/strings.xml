@@ -102,6 +102,7 @@
     <string name="details">Dettagli</string>
     <string name="delete">Elimina</string>
     <string name="difference">Differenza</string>
+    <string name="done">Fine</string>
     <string name="delete_category">Elimina categoria</string>
     <string name="delete_expense">Elimina spesa</string>
     <string name="delete_income">Elimina entrata</string>
