@@ -21,8 +21,12 @@ internal fun DashboardBody(
     sixMonthSavingsAmount: Long,
     chartState: LineChartState,
     categoriesById: Map<String, Category>,
+    showTransactionSearch: Boolean,
+    searchQuery: String,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
     onOpenMonthlyIncomes: () -> Unit,
     onOpenMonthlyExpenses: () -> Unit,
     onOpenDayExpenses: (Int) -> Unit,
@@ -40,6 +44,19 @@ internal fun DashboardBody(
                 onPreviousMonth = onPreviousMonth,
                 onNextMonth = onNextMonth
             )
+            Spacer(Modifier.height(16.dp))
+        }
+
+        if (showTransactionSearch) {
+            DashboardSearchBar(
+                query = searchQuery,
+                placeholder = strings.dashboardSearchPlaceholder,
+                searchContentDescription = strings.searchTransactions,
+                onQueryChange = onSearchQueryChange,
+                onSearch = onSearchSubmit,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             Spacer(Modifier.height(16.dp))
         }
 

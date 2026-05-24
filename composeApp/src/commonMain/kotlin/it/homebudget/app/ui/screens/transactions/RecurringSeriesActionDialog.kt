@@ -22,7 +22,36 @@ import homebudget.composeapp.generated.resources.cancel
 import homebudget.composeapp.generated.resources.delete
 import homebudget.composeapp.generated.resources.this_instance_only
 import homebudget.composeapp.generated.resources.whole_series
+import it.homebudget.app.localization.formatResourceArgs
 import org.jetbrains.compose.resources.stringResource
+
+@Composable
+internal fun TransactionDeleteConfirmationDialog(
+    itemDisplayName: String,
+    recurringSeriesId: String?,
+    deleteTitle: String,
+    deleteItemConfirmationMessageTemplate: String,
+    recurringDeleteMessageTemplate: String,
+    onDeleteItem: () -> Unit,
+    onDeleteSeries: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (recurringSeriesId.isNullOrBlank()) {
+        DeleteConfirmationDialog(
+            message = deleteItemConfirmationMessageTemplate.formatResourceArgs(itemDisplayName),
+            onDelete = onDeleteItem,
+            onDismiss = onDismiss
+        )
+    } else {
+        RecurringSeriesActionDialog(
+            title = deleteTitle,
+            message = recurringDeleteMessageTemplate.formatResourceArgs(itemDisplayName),
+            onThisInstanceOnly = onDeleteItem,
+            onWholeSeries = { onDeleteSeries(recurringSeriesId) },
+            onDismiss = onDismiss
+        )
+    }
+}
 
 @Composable
 internal fun DeleteConfirmationDialog(

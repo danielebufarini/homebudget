@@ -97,6 +97,7 @@
     <string name="csv_transfer_description">Move selected data using CSV files stored on this phone.</string>
     <string name="csv_transfer_note">Not suitable for full app restore.</string>
     <string name="dashboard">Dashboard</string>
+    <string name="dashboard_search_placeholder">Search transactions...</string>
     <string name="date">Date</string>
     <string name="details">Details</string>
     <string name="delete">Delete</string>
@@ -126,6 +127,9 @@
     <string name="export_csv_description">Choose the date range for the data you want to export.</string>
     <string name="highest_day">Highest Day</string>
     <string name="savings">Savings</string>
+    <string name="search_results">Search results</string>
+    <string name="search_transactions">Search transactions</string>
+    <string name="no_search_results">No matching transactions</string>
     <string name="import_action">Import</string>
     <string name="import_csv">Import CSV</string>
     <string name="income">Income</string>

@@ -1331,6 +1331,22 @@
         }
       }
     },
+    "No matching transactions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No matching transactions"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun movimento trovato"
+          }
+        }
+      }
+    },
     "No speech was captured." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1683,6 +1699,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spese condivise"
+          }
+        }
+      }
+    },
+    "Search Results" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search Results"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risultati ricerca"
           }
         }
       }

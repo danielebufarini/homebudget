@@ -17,6 +17,7 @@ import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 
@@ -232,8 +233,8 @@ private fun parseCsvDate(value: String): LocalDate? {
     return runCatching {
         LocalDate(
             year = year,
-            monthNumber = month,
-            dayOfMonth = day
+            month = Month(month),
+            day = day
         )
     }.getOrNull()
 }

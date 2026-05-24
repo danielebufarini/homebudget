@@ -1,40 +1,18 @@
 package it.homebudget.app.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -60,12 +37,9 @@ import homebudget.composeapp.generated.resources.full_month_names
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.monthBounds
-import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.getPlatform
-import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -78,7 +52,8 @@ import org.koin.compose.koinInject
 
 abstract class BaseGroupedExpensesScreen(
     private val year: Int,
-    private val month: Int
+    private val month: Int,
+    private val searchQuery: String = ""
 ) : Screen {
 
     @Composable
@@ -166,13 +141,17 @@ abstract class BaseGroupedExpensesScreen(
         val navigationDescriptor = monthNavigationDescriptor()
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
-        var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
-        var recurringExpenseToDelete by remember { mutableStateOf<Expense?>(null) }
+        var pendingExpenseDelete by remember { mutableStateOf<Expense?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
-        val expensesFlow = remember(repository, monthStartMillis, monthEndMillis) {
-            repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+        val searchMode = searchQuery.isNotBlank()
+        val expensesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
+            if (searchMode) {
+                repository.getAllExpenses()
+            } else {
+                repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+            }
         }
         val categoriesFlow = remember(repository) {
             repository.getAllCategories()
@@ -186,7 +165,9 @@ abstract class BaseGroupedExpensesScreen(
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
-            shortMonthNamesList
+            shortMonthNamesList,
+            searchQuery,
+            currencySymbol
         ) {
             combine(expensesFlow, categoriesFlow) { expenses, categories ->
                 val categoriesById = categories.associateBy { it.id }
@@ -200,7 +181,9 @@ abstract class BaseGroupedExpensesScreen(
                         resolveCategoryName(category.id, category.name)
                     },
                     unknownCategoryLabel = unknownCategoryLabel,
-                    shortMonthNames = shortMonthNamesList
+                    shortMonthNames = shortMonthNamesList,
+                    searchQuery = searchQuery,
+                    currencySymbol = currencySymbol
                 )
             }
                 .distinctUntilChanged()
@@ -214,11 +197,7 @@ abstract class BaseGroupedExpensesScreen(
             deleteAction@{ expenseId ->
                 val expense = groupedExpensesState.visibleExpenses.find { it.id == expenseId }
                     ?: return@deleteAction
-                if (expense.recurringSeriesId.isNullOrBlank()) {
-                    expenseToDelete = expense
-                } else {
-                    recurringExpenseToDelete = expense
-                }
+                pendingExpenseDelete = expense
             }
         } else {
             null
@@ -229,62 +208,21 @@ abstract class BaseGroupedExpensesScreen(
                 contentColor = MaterialTheme.colorScheme.onBackground,
                 contentWindowInsets = WindowInsets.systemBars,
                 topBar = {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            if (navigationDescriptor != null) {
-                                if (showMonthNavigationControls()) {
-                                    MonthNavigationTitle(
-                                        selectedMonth = selectedMonth,
-                                        subtitle = "$navigationDescriptor • ${formatAmount(totalAmount, currencySymbol)}",
-                                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                                        onNextMonth = { selectedMonth = selectedMonth.next() }
-                                    )
-                                } else {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Text(
-                                            text = selectedMonth.label(),
-                                            style = MaterialTheme.typography.titleLarge
-                                        )
-                                        Text(
-                                            text = "$navigationDescriptor • ${formatAmount(totalAmount, currencySymbol)}",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            } else {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(screenTitle(monthName(selectedMonth.month, fullMonthNames)))
-                                    Text(
-                                        text = formatAmount(totalAmount, currencySymbol),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        },
-                        navigationIcon = {
-                            if (isIos) {
-                                TextButton(onClick = onBack) {
-                                    Text(backLabel)
-                                }
-                            }
-                        },
-                        actions = {
-                            if (!isIos && canAddExpense()) {
-                                BottomTransactionQuickActions(
-                                    addContentDescription = addExpenseLabel,
-                                    onAddTransaction = onAddExpense,
-                                    modifier = Modifier.padding(end = 12.dp)
-                                )
-                            }
-                        }
+                    GroupedExpensesTopBar(
+                        selectedMonth = selectedMonth,
+                        title = screenTitle(monthName(selectedMonth.month, fullMonthNames)),
+                        navigationDescriptor = navigationDescriptor,
+                        totalAmount = totalAmount,
+                        currencySymbol = currencySymbol,
+                        isIos = isIos,
+                        canAddExpense = canAddExpense(),
+                        showMonthNavigationControls = showMonthNavigationControls(),
+                        backLabel = backLabel,
+                        addExpenseLabel = addExpenseLabel,
+                        onBack = onBack,
+                        onAddExpense = onAddExpense,
+                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                        onNextMonth = { selectedMonth = selectedMonth.next() }
                     )
                 }
             ) { padding ->
@@ -323,6 +261,8 @@ abstract class BaseGroupedExpensesScreen(
                         },
                         byCategoryLabel = byCategoryLabel,
                         byDateLabel = byDateLabel,
+                        groupsExpandedByDefault = groupsExpandedByDefault(),
+                        sectionStyle = groupedExpenseSectionStyle(),
                         showGroupingControls = !showFloatingBottomControls,
                         listContentPadding = listContentPadding,
                         bottomControlsBottomPadding = bottomControlsPadding
@@ -361,11 +301,13 @@ abstract class BaseGroupedExpensesScreen(
                 },
                 byCategoryLabel = byCategoryLabel,
                 byDateLabel = byDateLabel,
+                groupsExpandedByDefault = groupsExpandedByDefault(),
+                sectionStyle = groupedExpenseSectionStyle(),
                 listContentPadding = PaddingValues(16.dp)
             )
         }
 
-        expenseToDelete?.let { expense ->
+        pendingExpenseDelete?.let { expense ->
             val expenseDisplayName = groupedExpenseRowPresentation(
                 expense = expense,
                 categoriesById = categoriesById,
@@ -376,277 +318,28 @@ abstract class BaseGroupedExpensesScreen(
                     resolveCategoryName(category.id, category.name)
                 }
             ).title
-            DeleteConfirmationDialog(
-                message = deleteItemConfirmationMessageTemplate.formatResourceArgs(expenseDisplayName),
-                onDelete = {
-                    expenseToDelete = null
+            TransactionDeleteConfirmationDialog(
+                itemDisplayName = expenseDisplayName,
+                recurringSeriesId = expense.recurringSeriesId,
+                deleteTitle = deleteLabel,
+                deleteItemConfirmationMessageTemplate = deleteItemConfirmationMessageTemplate,
+                recurringDeleteMessageTemplate = recurringExpenseDeleteMessageTemplate,
+                onDeleteItem = {
+                    pendingExpenseDelete = null
                     scope.launch {
                         repository.deleteExpense(expense.id)
                     }
                 },
-                onDismiss = {
-                    expenseToDelete = null
-                }
-            )
-        }
-
-        recurringExpenseToDelete?.let { expense ->
-            val expenseDisplayName = groupedExpenseRowPresentation(
-                expense = expense,
-                categoriesById = categoriesById,
-                isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
-                expenseFallbackTitle = expenseFallbackTitle,
-                unknownCategoryLabel = unknownCategoryLabel,
-                resolveCategoryName = { category ->
-                    resolveCategoryName(category.id, category.name)
-                }
-            ).title
-            RecurringSeriesActionDialog(
-                title = deleteLabel,
-                message = recurringExpenseDeleteMessageTemplate.formatResourceArgs(expenseDisplayName),
-                onThisInstanceOnly = {
-                    recurringExpenseToDelete = null
+                onDeleteSeries = { seriesId ->
+                    pendingExpenseDelete = null
                     scope.launch {
-                        repository.deleteExpense(expense.id)
-                    }
-                },
-                onWholeSeries = {
-                    recurringExpenseToDelete = null
-                    scope.launch {
-                        repository.deleteRecurringExpenseSeries(expense.recurringSeriesId.orEmpty())
+                        repository.deleteRecurringExpenseSeries(seriesId)
                     }
                 },
                 onDismiss = {
-                    recurringExpenseToDelete = null
+                    pendingExpenseDelete = null
                 }
             )
-        }
-    }
-
-    @Composable
-    private fun GroupedExpensesContent(
-        groupedExpenses: List<ExpenseSection>,
-        categoriesById: Map<String, Category>,
-        modifier: Modifier,
-        groupingMode: ExpenseGroupingMode,
-        onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
-        onOpenExpense: (String) -> Unit,
-        onDeleteExpense: ((String) -> Unit)?,
-        emptyStateText: String,
-        expenseFallbackTitle: String,
-        currencySymbol: String,
-        unknownCategoryLabel: String,
-        resolveCategoryName: (Category) -> String,
-        byCategoryLabel: String,
-        byDateLabel: String,
-        showGroupingControls: Boolean = true,
-        listContentPadding: PaddingValues = PaddingValues(0.dp),
-        bottomControlsBottomPadding: androidx.compose.ui.unit.Dp = 16.dp
-    ) {
-        Box(modifier = modifier) {
-            val listModifier = Modifier.fillMaxSize()
-
-            GroupedExpensesList(
-                groupedExpenses = groupedExpenses,
-                categoriesById = categoriesById,
-                groupingMode = groupingMode,
-                modifier = listModifier,
-                onOpenExpense = onOpenExpense,
-                onDeleteExpense = onDeleteExpense,
-                emptyStateText = emptyStateText,
-                expenseFallbackTitle = expenseFallbackTitle,
-                currencySymbol = currencySymbol,
-                unknownCategoryLabel = unknownCategoryLabel,
-                resolveCategoryName = resolveCategoryName,
-                contentPadding = listContentPadding
-            )
-
-            if (showGroupingControls) {
-                GroupingModeButtons(
-                    groupingMode = groupingMode,
-                    onGroupingModeChange = onGroupingModeChange,
-                    byCategoryLabel = byCategoryLabel,
-                    byDateLabel = byDateLabel,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = bottomControlsBottomPadding)
-                )
-            }
-        }
-    }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    private fun GroupedExpensesList(
-        groupedExpenses: List<ExpenseSection>,
-        categoriesById: Map<String, Category>,
-        groupingMode: ExpenseGroupingMode,
-        modifier: Modifier,
-        onOpenExpense: (String) -> Unit,
-        onDeleteExpense: ((String) -> Unit)?,
-        emptyStateText: String,
-        expenseFallbackTitle: String,
-        currencySymbol: String,
-        unknownCategoryLabel: String,
-        resolveCategoryName: (Category) -> String,
-        contentPadding: PaddingValues = PaddingValues(0.dp)
-    ) {
-        val expandedState = remember { mutableStateMapOf<String, Boolean>() }
-
-        LazyColumn(
-            modifier = modifier,
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (groupedExpenses.isEmpty()) {
-                item {
-                    PlatformCard {
-                        Text(
-                            text = emptyStateText,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-                return@LazyColumn
-            }
-
-            groupedExpenses.forEach { section ->
-                item(key = section.key) {
-                    val expanded = expandedState[section.key] ?: groupsExpandedByDefault()
-                    val chevronRotation by animateFloatAsState(
-                        targetValue = if (expanded) 180f else 0f,
-                        label = "GroupedExpensesSectionChevronRotation"
-                    )
-                    PlatformCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            val headerContainerColor = sectionHeaderContainerColor()
-                            val headerContentColor = sectionHeaderContentColor()
-                            val headerTextStyle = sectionHeaderTextStyle()
-                            val headerIconTint = sectionHeaderIconTint()
-                            val headerChevronContainerColor = sectionHeaderChevronContainerColor()
-                            val headerChevronContentColor = sectionHeaderChevronContentColor()
-
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = headerContainerColor,
-                                contentColor = headerContentColor
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            expandedState[section.key] = !expanded
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val sectionIconKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
-                                        section.expenses.firstOrNull()
-                                            ?.categoryId
-                                            ?.let(categoriesById::get)
-                                            ?.icon
-                                    } else {
-                                        null
-                                    }
-
-                                    CategoryLabel(
-                                        iconKey = sectionIconKey,
-                                        showIcon = groupingMode == ExpenseGroupingMode.ByCategory,
-                                        colorKey = if (groupingMode == ExpenseGroupingMode.ByCategory) {
-                                            section.expenses.firstOrNull()?.categoryId
-                                        } else {
-                                            null
-                                        },
-                                        text = section.title,
-                                        modifier = Modifier.weight(1f),
-                                        textStyle = headerTextStyle,
-                                        textColor = headerContentColor,
-                                        iconTint = headerIconTint,
-                                        maxLines = 1
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = formatAmount(section.totalAmount, currencySymbol),
-                                            style = headerTextStyle,
-                                            color = headerContentColor,
-                                            textAlign = TextAlign.End
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        ExpandableSectionChevron(
-                                            rotation = chevronRotation,
-                                            containerColor = headerChevronContainerColor,
-                                            contentColor = headerChevronContentColor
-                                        )
-                                    }
-                                }
-                            }
-                            if (expanded) {
-                                HorizontalDivider()
-                                section.expenses.forEach { expense ->
-                                    key(expense.id) {
-                                        val row = groupedExpenseRowPresentation(
-                                            expense = expense,
-                                            categoriesById = categoriesById,
-                                            isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
-                                            expenseFallbackTitle = expenseFallbackTitle,
-                                            unknownCategoryLabel = unknownCategoryLabel,
-                                            resolveCategoryName = resolveCategoryName
-                                        )
-
-                                        if (onDeleteExpense == null) {
-                                            ExpenseListItemRow(
-                                                title = row.title,
-                                                subtitleText = row.subtitleText,
-                                                amountText = formatAmount(expense.amount, currencySymbol),
-                                                categoryColorKey = row.categoryColorKey,
-                                                categoryIconKey = row.categoryIconKey,
-                                                isRecurring = row.isRecurring,
-                                                onClick = {
-                                                    onOpenExpense(expense.id)
-                                                }
-                                            )
-                                        } else {
-                                            val dismissState = rememberExpenseSwipeToDeleteBoxState(
-                                                itemId = expense.id,
-                                                onDeleteExpense = onDeleteExpense
-                                            )
-
-                                            SwipeToDismissBox(
-                                                state = dismissState,
-                                                enableDismissFromStartToEnd = false,
-                                                backgroundContent = {
-                                                    DeleteExpenseBackground()
-                                                }
-                                            ) {
-                                                ExpenseListItemRow(
-                                                    title = row.title,
-                                                    subtitleText = row.subtitleText,
-                                                    amountText = formatAmount(expense.amount, currencySymbol),
-                                                    categoryColorKey = row.categoryColorKey,
-                                                    categoryIconKey = row.categoryIconKey,
-                                                    isRecurring = row.isRecurring,
-                                                    onClick = {
-                                                        onOpenExpense(expense.id)
-                                                    }
-                                                )
-                                            }
-                                        }
-                                        HorizontalDivider()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -658,136 +351,15 @@ abstract class BaseGroupedExpensesScreen(
     }
 
     @Composable
-    private fun GroupingModeButtons(
-        groupingMode: ExpenseGroupingMode,
-        onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
-        byCategoryLabel: String,
-        byDateLabel: String,
-        modifier: Modifier = Modifier
-    ) {
-        if (!rememberIsIosPlatform()) {
-            AndroidGroupingModeSegmentedButtons(
-                groupingMode = groupingMode,
-                onGroupingModeChange = onGroupingModeChange,
-                byCategoryLabel = byCategoryLabel,
-                byDateLabel = byDateLabel,
-                modifier = modifier
-            )
-            return
-        }
-
-        Row(
-            modifier = modifier,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            GroupingModeButton(
-                label = byCategoryLabel,
-                selected = groupingMode == ExpenseGroupingMode.ByCategory,
-                onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
-            )
-            GroupingModeButton(
-                label = byDateLabel,
-                selected = groupingMode == ExpenseGroupingMode.ByDate,
-                onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
-            )
-        }
-    }
-
-    @Composable
-    private fun AndroidGroupingModeSegmentedButtons(
-        groupingMode: ExpenseGroupingMode,
-        onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
-        byCategoryLabel: String,
-        byDateLabel: String,
-        modifier: Modifier = Modifier
-    ) {
-        Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.68f),
-            tonalElevation = 0.dp,
-            shadowElevation = 16.dp,
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AndroidGroupingModeButton(
-                    label = byCategoryLabel,
-                    selected = groupingMode == ExpenseGroupingMode.ByCategory,
-                    onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
-                )
-                AndroidGroupingModeButton(
-                    label = byDateLabel,
-                    selected = groupingMode == ExpenseGroupingMode.ByDate,
-                    onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun AndroidGroupingModeButton(
-        label: String,
-        selected: Boolean,
-        onClick: () -> Unit
-    ) {
-        if (selected) {
-            FilledTonalButton(
-                onClick = onClick,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f),
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(label)
-            }
-        } else {
-            OutlinedButton(
-                onClick = onClick,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.50f),
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(label)
-            }
-        }
-    }
-
-    @Composable
-    private fun GroupingModeButton(
-        label: String,
-        selected: Boolean,
-        onClick: () -> Unit
-    ) {
-        if (selected) {
-            FilledTonalButton(
-                onClick = onClick,
-                colors = homeBudgetFilledTonalButtonColors(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(label)
-            }
-        } else {
-            OutlinedButton(
-                onClick = onClick,
-                colors = homeBudgetOutlinedButtonColors(),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(label)
-            }
-        }
+    private fun groupedExpenseSectionStyle(): GroupedExpenseSectionStyle {
+        return GroupedExpenseSectionStyle(
+            containerColor = sectionHeaderContainerColor(),
+            contentColor = sectionHeaderContentColor(),
+            textStyle = sectionHeaderTextStyle(),
+            iconTint = sectionHeaderIconTint(),
+            chevronContainerColor = sectionHeaderChevronContainerColor(),
+            chevronContentColor = sectionHeaderChevronContentColor()
+        )
     }
 
     protected fun monthName(month: Int, fullMonthNames: List<String>): String {

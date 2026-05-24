@@ -277,12 +277,12 @@ let voiceExpenseDisplayDateFormatter: DateFormatter = {
 }()
 
 extension Optional where Wrapped == String {
-    var ifEmptyNil: String {
+    var ifEmptyNil: String? {
         switch self?.trimmingCharacters(in: .whitespacesAndNewlines) {
         case .some(let value) where !value.isEmpty:
             return value
         default:
-            return "-"
+            return nil
         }
     }
 }

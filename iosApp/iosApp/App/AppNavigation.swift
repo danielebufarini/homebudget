@@ -16,6 +16,7 @@ enum Route: Hashable {
     case monthlyExpenses(year: Int, month: Int)
     case sharedExpenses(year: Int, month: Int)
     case categoryExpenses(year: Int, month: Int, categoryName: String)
+    case transactionSearch(year: Int, month: Int, query: String)
 }
 
 func addExpenseTitle(expenseId: String?, readOnly: Bool) -> String {

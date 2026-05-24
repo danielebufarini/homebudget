@@ -218,6 +218,13 @@ struct ContentView: View {
                         }
                         .navigationTitle("\(monthName(month)) \(categoryName)")
                         .navigationBarTitleDisplayMode(.inline)
+                    case let .transactionSearch(year, month, query):
+                        TransactionSearchRootView(
+                            year: year,
+                            month: month,
+                            query: query,
+                            path: $path
+                        )
                     }
                 }
                 .onOpenURL { url in

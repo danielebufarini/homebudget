@@ -10,6 +10,7 @@ import it.homebudget.app.ui.screens.DayExpensesScreen
 import it.homebudget.app.ui.screens.MonthCursor
 import it.homebudget.app.ui.screens.MonthlyExpensesScreen
 import it.homebudget.app.ui.screens.MonthlyIncomesScreen
+import it.homebudget.app.ui.screens.MonthlyTransactionsScreen
 import it.homebudget.app.ui.screens.SharedExpensesScreen
 import it.homebudget.app.ui.screens.TransactionEditorKind
 import it.homebudget.app.ui.screens.categories.management.CategoriesManagementRoute
@@ -32,7 +33,8 @@ fun DashboardContentViewController(
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
     onOpenExpenseDetails: (String, Boolean) -> Unit,
-    onOpenCategoryExpenses: (Int, Int, String) -> Unit
+    onOpenCategoryExpenses: (Int, Int, String) -> Unit,
+    onOpenTransactionSearch: (Int, Int, String) -> Unit
 ) = ComposeUIViewController(
     configure = {
         ensureKoinStarted()
@@ -48,7 +50,36 @@ fun DashboardContentViewController(
             onOpenMonthlyIncomes = onOpenMonthlyIncomes,
             onOpenMonthlyExpenses = onOpenMonthlyExpenses,
             onOpenSharedExpenses = onOpenSharedExpenses,
-            onOpenCategoryExpenses = onOpenCategoryExpenses
+            onOpenCategoryExpenses = onOpenCategoryExpenses,
+            onOpenTransactionSearch = onOpenTransactionSearch
+        )
+    }
+}
+
+fun TransactionSearchViewController(
+    year: Int,
+    month: Int,
+    query: String,
+    onClose: () -> Unit,
+    onOpenExpense: (String) -> Unit,
+    onOpenIncome: (String) -> Unit
+) = ComposeUIViewController(
+    configure = {
+        ensureKoinStarted()
+    }
+) {
+    AppTheme {
+        MonthlyTransactionsScreen(
+            year = year,
+            month = month,
+            initialSearchQuery = query
+        ).RouteContent(
+            showNavigationChrome = true,
+            onBack = onClose,
+            onAddExpense = {},
+            onAddIncome = { _, _ -> },
+            onOpenExpense = onOpenExpense,
+            onOpenIncome = onOpenIncome
         )
     }
 }

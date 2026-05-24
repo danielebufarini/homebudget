@@ -422,6 +422,15 @@ struct DashboardRootView: View {
                             categoryName: categoryName
                         )
                     )
+                },
+                onOpenTransactionSearch: { year, month, query in
+                    path.append(
+                        Route.transactionSearch(
+                            year: year.intValue,
+                            month: month.intValue,
+                            query: query
+                        )
+                    )
                 }
             )
         }
@@ -499,5 +508,29 @@ struct MonthlyIncomesRootView: View {
         ) { incomeId in
             path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
         }
+    }
+}
+
+struct TransactionSearchRootView: View {
+    let year: Int
+    let month: Int
+    let query: String
+    @Binding var path: NavigationPath
+
+    var body: some View {
+        TransactionSearchSectionsRootView(
+            query: query,
+            onClose: {
+                if !path.isEmpty {
+                    path.removeLast()
+                }
+            },
+            onOpenExpense: { expenseId in
+                path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
+            },
+            onOpenIncome: { incomeId in
+                path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
+            }
+        )
     }
 }

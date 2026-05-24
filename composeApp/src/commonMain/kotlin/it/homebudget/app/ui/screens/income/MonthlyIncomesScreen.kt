@@ -60,7 +60,6 @@ import it.homebudget.app.data.formatAmount
 import it.homebudget.app.data.monthBounds
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Income
-import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -97,7 +96,8 @@ private fun rememberMonthlyIncomeStrings(): MonthlyIncomeStrings =
 
 class MonthlyIncomesScreen(
     private val year: Int,
-    private val month: Int
+    private val month: Int,
+    private val searchQuery: String = ""
 ) : Screen {
     @Composable
     override fun Content() {
@@ -140,13 +140,17 @@ class MonthlyIncomesScreen(
         val resolveCategoryName = rememberCategoryNameResolver()
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByDate) }
-        var incomeToDelete by remember { mutableStateOf<Income?>(null) }
-        var recurringIncomeToDelete by remember { mutableStateOf<Income?>(null) }
+        var pendingIncomeDelete by remember { mutableStateOf<Income?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
-        val incomesFlow = remember(repository, monthStartMillis, monthEndMillis) {
-            repository.getIncomesBetween(monthStartMillis, monthEndMillis)
+        val searchMode = searchQuery.isNotBlank()
+        val incomesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
+            if (searchMode) {
+                repository.getAllIncomes()
+            } else {
+                repository.getIncomesBetween(monthStartMillis, monthEndMillis)
+            }
         }
         val categoriesFlow = remember(repository) {
             repository.getAllCategories()
@@ -157,7 +161,9 @@ class MonthlyIncomesScreen(
             groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
-            shortMonthNamesList
+            shortMonthNamesList,
+            searchQuery,
+            strings.currencySymbol
         ) {
             combine(incomesFlow, categoriesFlow) { incomes, categories ->
                 val categoriesById = categories.associateBy { it.id }
@@ -169,7 +175,9 @@ class MonthlyIncomesScreen(
                         resolveCategoryName(category.id, category.name)
                     },
                     unknownCategoryLabel = unknownCategoryLabel,
-                    shortMonthNames = shortMonthNamesList
+                    shortMonthNames = shortMonthNamesList,
+                    searchQuery = searchQuery,
+                    currencySymbol = strings.currencySymbol
                 )
             }
                 .distinctUntilChanged()
@@ -181,11 +189,7 @@ class MonthlyIncomesScreen(
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
             val income = groupedIncomesState.visibleIncomes.find { it.id == incomeId }
                 ?: return@deleteAction
-            if (income.recurringSeriesId.isNullOrBlank()) {
-                incomeToDelete = income
-            } else {
-                recurringIncomeToDelete = income
-            }
+            pendingIncomeDelete = income
         }
         val content: @Composable (PaddingValues) -> Unit = { padding ->
             val listContentPadding = edgeToEdgeListContentPadding(scaffoldPadding = padding)
@@ -331,41 +335,28 @@ class MonthlyIncomesScreen(
             content(PaddingValues(0.dp))
         }
 
-        incomeToDelete?.let { income ->
+        pendingIncomeDelete?.let { income ->
             val incomeDisplayName = income.description?.ifBlank { strings.income } ?: strings.income
-            DeleteConfirmationDialog(
-                message = strings.deleteItemConfirmationMessageTemplate.formatResourceArgs(incomeDisplayName),
-                onDelete = {
-                    incomeToDelete = null
+            TransactionDeleteConfirmationDialog(
+                itemDisplayName = incomeDisplayName,
+                recurringSeriesId = income.recurringSeriesId,
+                deleteTitle = strings.delete,
+                deleteItemConfirmationMessageTemplate = strings.deleteItemConfirmationMessageTemplate,
+                recurringDeleteMessageTemplate = strings.recurringDeleteMessageTemplate,
+                onDeleteItem = {
+                    pendingIncomeDelete = null
                     scope.launch {
                         repository.deleteIncome(income.id)
                     }
                 },
-                onDismiss = {
-                    incomeToDelete = null
-                }
-            )
-        }
-
-        recurringIncomeToDelete?.let { income ->
-            val incomeDisplayName = income.description?.ifBlank { strings.income } ?: strings.income
-            RecurringSeriesActionDialog(
-                title = strings.delete,
-                message = strings.recurringDeleteMessageTemplate.formatResourceArgs(incomeDisplayName),
-                onThisInstanceOnly = {
-                    recurringIncomeToDelete = null
+                onDeleteSeries = { seriesId ->
+                    pendingIncomeDelete = null
                     scope.launch {
-                        repository.deleteIncome(income.id)
-                    }
-                },
-                onWholeSeries = {
-                    recurringIncomeToDelete = null
-                    scope.launch {
-                        repository.deleteRecurringIncomeSeries(income.recurringSeriesId.orEmpty())
+                        repository.deleteRecurringIncomeSeries(seriesId)
                     }
                 },
                 onDismiss = {
-                    recurringIncomeToDelete = null
+                    pendingIncomeDelete = null
                 }
             )
         }

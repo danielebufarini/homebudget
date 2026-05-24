@@ -95,19 +95,84 @@ class TransactionListTransformersTest {
         assertEquals(4500L, state.sections.first().totalAmount)
         assertEquals(5300L, state.totalAmount)
     }
+
+    @Test
+    fun transactionSearch_filtersExpensesAndIncomesByDescriptionCategoryAmountAndDate() {
+        val categories = mapOf(
+            "food" to Category(id = "food", name = "Food", icon = "restaurant", isArchived = 0L),
+            "salary" to Category(id = "salary", name = "Salary", icon = "work", isArchived = 0L)
+        )
+
+        val expenseState = buildGroupedExpensesState(
+            expenses = listOf(
+                expense(
+                    id = "dinner",
+                    amount = 3299,
+                    date = LocalDate(2026, 5, 12),
+                    categoryId = "food",
+                    description = "Team dinner"
+                ),
+                expense(
+                    id = "fuel",
+                    amount = 5000,
+                    date = LocalDate(2026, 5, 13),
+                    categoryId = "food",
+                    description = "Fuel"
+                )
+            ),
+            categoriesById = categories,
+            groupingMode = ExpenseGroupingMode.ByDate,
+            includeExpense = { true },
+            includeCategory = { true },
+            resolveCategoryName = { it.name },
+            unknownCategoryLabel = "Unknown",
+            shortMonthNames = shortMonthNames,
+            searchQuery = "food 32.99",
+            currencySymbol = "$"
+        )
+        val incomeState = buildGroupedIncomesState(
+            incomes = listOf(
+                income(
+                    id = "paycheck",
+                    amount = 250000,
+                    date = LocalDate(2026, 5, 20),
+                    description = "May paycheck",
+                    categoryId = "salary"
+                ),
+                income(
+                    id = "bonus",
+                    amount = 75000,
+                    date = LocalDate(2026, 6, 1),
+                    description = "Bonus",
+                    categoryId = "salary"
+                )
+            ),
+            categoriesById = categories,
+            groupingMode = ExpenseGroupingMode.ByDate,
+            resolveCategoryName = { it.name },
+            unknownCategoryLabel = "Unknown",
+            shortMonthNames = shortMonthNames,
+            searchQuery = "2026-05 paycheck",
+            currencySymbol = "$"
+        )
+
+        assertEquals(listOf("dinner"), expenseState.visibleExpenses.map(Expense::id))
+        assertEquals(listOf("paycheck"), incomeState.visibleIncomes.map(Income::id))
+    }
 }
 
 private fun expense(
     id: String,
     amount: Int,
     date: LocalDate,
-    categoryId: String
+    categoryId: String,
+    description: String? = null
 ) = Expense(
     id = id,
     amount = amount.toLong(),
     date = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
     categoryId = categoryId,
-    description = null,
+    description = description,
     isShared = 0L,
     recurringSeriesId = null
 )
@@ -115,11 +180,14 @@ private fun expense(
 private fun income(
     id: String,
     amount: Int,
-    date: LocalDate
+    date: LocalDate,
+    description: String? = null,
+    categoryId: String? = null
 ) = Income(
     id = id,
     amount = amount.toLong(),
     date = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
-    description = null,
-    recurringSeriesId = null
+    description = description,
+    recurringSeriesId = null,
+    categoryId = categoryId
 )

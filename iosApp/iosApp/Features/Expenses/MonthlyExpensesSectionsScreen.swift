@@ -43,7 +43,7 @@ enum GroupedExpensesKind: Hashable {
     }
 }
 
-private enum ExpenseGroupingMode: String, Hashable {
+enum ExpenseGroupingMode: String, Hashable {
     case byCategory
     case byDate
 
@@ -129,34 +129,6 @@ private extension View {
     }
 }
 
-
-private struct GroupedExpenseRowModel: Identifiable {
-    let id: String
-    let title: String
-    let subtitleText: String
-    let amountText: String
-    let categoryColorKey: String?
-    let categoryIconKey: String?
-    let recurringSeriesId: String?
-
-    var isRecurring: Bool {
-        if let recurringSeriesId {
-            !recurringSeriesId.isEmpty
-        } else {
-            false
-        }
-    }
-}
-
-private struct GroupedExpenseSectionModel: Identifiable {
-    let id: String
-    let title: String
-    let categoryColorKey: String?
-    let categoryIconKey: String?
-    let totalAmountText: String
-    let rows: [GroupedExpenseRowModel]
-}
-
 @MainActor
 private final class GroupedExpensesSectionsViewModel: ObservableObject {
     @Published var totalAmountText = appAmountLabel("0.00")
@@ -233,26 +205,7 @@ private final class GroupedExpensesSectionsViewModel: ObservableObject {
     private func apply(snapshot: IosGroupedExpensesSnapshot) {
         totalAmountText = snapshot.totalAmountText
         emptyStateText = snapshot.emptyStateText
-        sections = snapshot.sections.map { section in
-            GroupedExpenseSectionModel(
-                id: section.id,
-                title: section.title,
-                categoryColorKey: section.categoryColorKey,
-                categoryIconKey: section.categoryIconKey,
-                totalAmountText: section.totalAmountText,
-                rows: section.rows.map { row in
-                    GroupedExpenseRowModel(
-                        id: row.id,
-                        title: row.title,
-                        subtitleText: row.subtitleText,
-                        amountText: row.amountText,
-                        categoryColorKey: row.categoryColorKey,
-                        categoryIconKey: row.categoryIconKey,
-                        recurringSeriesId: row.recurringSeriesId
-                    )
-                }
-            )
-        }
+        sections = snapshot.sections.map(GroupedExpenseSectionModel.init)
 
         let incomingIDs = Set(sections.lazy.map(\.id))
         if hasLoadedInitialExpansionState {
@@ -335,25 +288,8 @@ private final class MonthlyIncomesSectionsViewModel: ObservableObject {
     private func apply(snapshot: IosMonthlyIncomesSnapshot) {
         totalAmountText = snapshot.totalAmountText
         emptyStateText = snapshot.emptyStateText
-        sections = snapshot.sections.map { section in
-            GroupedExpenseSectionModel(
-                id: section.id,
-                title: section.title,
-                categoryColorKey: nil,
-                categoryIconKey: nil,
-                totalAmountText: section.totalAmountText,
-                rows: section.rows.map { row in
-                    GroupedExpenseRowModel(
-                        id: row.id,
-                        title: row.title,
-                        subtitleText: row.subtitleText,
-                        amountText: row.amountText,
-                        categoryColorKey: nil,
-                        categoryIconKey: nil,
-                        recurringSeriesId: row.recurringSeriesId
-                    )
-                }
-            )
+        sections = snapshot.sections.map {
+            GroupedExpenseSectionModel($0, showsCategoryMetadata: false)
         }
 
         hasLoadedSnapshot = true
@@ -417,7 +353,7 @@ struct GroupedExpensesSectionsScreen: View {
     }
 }
 
-private struct ExpenseGroupingGlassControl: View {
+struct ExpenseGroupingGlassControl: View {
     @Binding var selection: ExpenseGroupingMode
 
     var body: some View {
@@ -460,7 +396,7 @@ private struct ExpenseGroupingGlassButton: View {
     }
 }
 
-private enum MonthlyTransactionsHeaderLayout {
+enum MonthlyTransactionsHeaderLayout {
     static let selectorTopSpacing: CGFloat = 14
     static let selectorHeight: CGFloat = 54
     static let bottomSpacing: CGFloat = 20
@@ -601,7 +537,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
     }
 }
 
-private struct MonthlyTransactionKindGlassControl: View {
+struct MonthlyTransactionKindGlassControl: View {
     @Binding var selection: AddTransactionKind
 
     var body: some View {
@@ -663,7 +599,7 @@ private struct MonthlyTransactionKindGlassButton: View {
     }
 }
 
-private func monthlyHeaderAmountText(descriptor: String?, amountText: String) -> String {
+func monthlyHeaderAmountText(descriptor: String?, amountText: String) -> String {
     guard let descriptor, !descriptor.isEmpty else {
         return amountText
     }
@@ -857,35 +793,12 @@ private struct MonthlyIncomesSectionsContent: View {
 
     @ViewBuilder
     private func incomeDeleteDialog(for row: GroupedExpenseRowModel) -> some View {
-        if row.isRecurring {
-            AppGlassRecurringDeleteConfirmationDialog(
-                message: appLocalized("Choose whether to delete only this instance of \"%@\" or the whole series.", row.title),
-                onDeleteInstance: {
-                    viewModel.deleteIncome(row.id)
-                    pendingIncomeDeleteID = nil
-                },
-                onDeleteSeries: {
-                    if let seriesID = row.recurringSeriesId {
-                        viewModel.deleteRecurringIncomeSeries(seriesID)
-                    }
-                    pendingIncomeDeleteID = nil
-                },
-                onCancel: {
-                    pendingIncomeDeleteID = nil
-                }
-            )
-        } else {
-            AppGlassDeleteConfirmationDialog(
-                message: appLocalized("\"%@\" will be permanently deleted.", row.title),
-                onDelete: {
-                    viewModel.deleteIncome(row.id)
-                    pendingIncomeDeleteID = nil
-                },
-                onCancel: {
-                    pendingIncomeDeleteID = nil
-                }
-            )
-        }
+        TransactionDeleteConfirmationDialog(
+            row: row,
+            deleteItem: viewModel.deleteIncome,
+            deleteSeries: viewModel.deleteRecurringIncomeSeries,
+            clearSelection: { pendingIncomeDeleteID = nil }
+        )
     }
 
     private var pendingIncomeDeleteRow: GroupedExpenseRowModel? {
@@ -1126,35 +1039,12 @@ private struct GroupedExpensesSectionsList: View {
 
     @ViewBuilder
     private func expenseDeleteDialog(for row: GroupedExpenseRowModel) -> some View {
-        if row.isRecurring {
-            AppGlassRecurringDeleteConfirmationDialog(
-                message: appLocalized("Choose whether to delete only this instance of \"%@\" or the whole series.", row.title),
-                onDeleteInstance: {
-                    viewModel.deleteExpense(row.id)
-                    pendingExpenseDeleteID = nil
-                },
-                onDeleteSeries: {
-                    if let seriesID = row.recurringSeriesId {
-                        viewModel.deleteRecurringExpenseSeries(seriesID)
-                    }
-                    pendingExpenseDeleteID = nil
-                },
-                onCancel: {
-                    pendingExpenseDeleteID = nil
-                }
-            )
-        } else {
-            AppGlassDeleteConfirmationDialog(
-                message: appLocalized("\"%@\" will be permanently deleted.", row.title),
-                onDelete: {
-                    viewModel.deleteExpense(row.id)
-                    pendingExpenseDeleteID = nil
-                },
-                onCancel: {
-                    pendingExpenseDeleteID = nil
-                }
-            )
-        }
+        TransactionDeleteConfirmationDialog(
+            row: row,
+            deleteItem: viewModel.deleteExpense,
+            deleteSeries: viewModel.deleteRecurringExpenseSeries,
+            clearSelection: { pendingExpenseDeleteID = nil }
+        )
     }
 
     @ViewBuilder
@@ -1200,7 +1090,7 @@ private struct GroupedExpensesSectionsList: View {
 
 }
 
-private struct GroupedExpenseSectionHeaderView: View {
+struct GroupedExpenseSectionHeaderView: View {
     let section: GroupedExpenseSectionModel
     let isExpanded: Bool
 
@@ -1230,7 +1120,7 @@ private struct GroupedExpenseSectionHeaderView: View {
     }
 }
 
-private enum MonthNavigationHeaderLayout {
+enum MonthNavigationHeaderLayout {
     static let horizontalPadding: CGFloat = 22
     static let topPadding: CGFloat = 16
     static let bottomSpacing: CGFloat = 22
@@ -1294,7 +1184,7 @@ private struct DashboardStyleMonthNavigationHeader: View {
 }
 
 
-private struct GroupedExpenseRowView: View {
+struct GroupedExpenseRowView: View {
     let row: GroupedExpenseRowModel
 
     var body: some View {
