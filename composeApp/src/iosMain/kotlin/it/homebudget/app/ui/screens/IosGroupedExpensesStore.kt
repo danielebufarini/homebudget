@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,10 +38,12 @@ internal class IosGroupedExpensesStore(
         }
 
         updatesJob = scope.launch {
-            repository.seedStarterCategoriesIfEmpty()
+            withContext(Dispatchers.Default) {
+                repository.seedStarterCategoriesIfEmpty()
+            }
             combine(repository.getAllExpenses(), repository.getAllCategories()) { expenses, categories ->
                 expenses to categories
-            }.collect { (expenses, categories) ->
+            }.flowOn(Dispatchers.Default).collect { (expenses, categories) ->
                 val localization = loadIosGroupedLocalization()
                 state.value = buildStoreState(
                     expenses = expenses,

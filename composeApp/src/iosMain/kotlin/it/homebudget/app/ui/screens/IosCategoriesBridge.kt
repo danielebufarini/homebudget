@@ -4,10 +4,13 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.loadCategoryNameResolver
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosCategoryItem(
@@ -39,21 +42,29 @@ class IosCategoriesController {
         }
 
         updatesJob = scope.launch {
-            repository.seedStarterCategoriesIfEmpty()
-            repository.getAllCategories().collect { categories ->
+            withContext(Dispatchers.Default) {
+                repository.seedStarterCategoriesIfEmpty()
+            }
+            repository.getAllCategories().flowOn(Dispatchers.Default).collect { categories ->
                 val resolveCategoryName = loadCategoryNameResolver()
-                val selectableCategories = categories.filter { category ->
-                    category.categoryType == categoryType && category.isArchived != 1L
-                }
-                onUpdate(
-                    IosCategoriesSnapshot(
-                        categories = selectableCategories.map { category ->
+                val selectableCategories = withContext(Dispatchers.Default) {
+                    categories
+                        .asSequence()
+                        .filter { category ->
+                            category.categoryType == categoryType && category.isArchived != 1L
+                        }
+                        .map { category ->
                             IosCategoryItem(
                                 id = category.id,
                                 name = resolveCategoryName(category.id, category.name),
                                 iconKey = category.icon
                             )
                         }
+                        .toList()
+                }
+                onUpdate(
+                    IosCategoriesSnapshot(
+                        categories = selectableCategories
                     )
                 )
             }
@@ -78,13 +89,15 @@ class IosCategoriesController {
         }
 
         scope.launch {
-            val success = runCatching {
-                repository.insertCategory(
-                    id = buildCategoryId(),
-                    name = trimmedName,
-                    icon = iconKey
-                )
-            }.isSuccess
+            val success = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.insertCategory(
+                        id = buildCategoryId(),
+                        name = trimmedName,
+                        icon = iconKey
+                    )
+                }.isSuccess
+            }
             onComplete(success)
         }
     }
@@ -111,14 +124,16 @@ class IosCategoriesController {
 
         scope.launch {
             val categoryId = buildCategoryId()
-            val success = runCatching {
-                repository.insertCategory(
-                    id = categoryId,
-                    name = trimmedName,
-                    icon = iconKey,
-                    categoryType = categoryType
-                )
-            }.isSuccess
+            val success = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.insertCategory(
+                        id = categoryId,
+                        name = trimmedName,
+                        icon = iconKey,
+                        categoryType = categoryType
+                    )
+                }.isSuccess
+            }
             onComplete(if (success) categoryId else null)
         }
     }
@@ -131,22 +146,26 @@ class IosCategoriesController {
         }
 
         scope.launch {
-            val success = runCatching {
-                repository.updateCategory(
-                    id = id,
-                    name = trimmedName,
-                    icon = iconKey
-                )
-            }.isSuccess
+            val success = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.updateCategory(
+                        id = id,
+                        name = trimmedName,
+                        icon = iconKey
+                    )
+                }.isSuccess
+            }
             onComplete(success)
         }
     }
 
     fun deleteCategory(id: String, onComplete: (Boolean) -> Unit) {
         scope.launch {
-            val success = runCatching {
-                repository.deleteCategory(id)
-            }.isSuccess
+            val success = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.deleteCategory(id)
+                }.isSuccess
+            }
             onComplete(success)
         }
     }

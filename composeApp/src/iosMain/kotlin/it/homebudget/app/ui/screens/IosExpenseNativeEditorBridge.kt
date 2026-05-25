@@ -7,9 +7,11 @@ import it.homebudget.app.data.buildRecurringMonthlyExpensesFromExistingExpense
 import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosExpenseEditorSnapshot(
@@ -40,8 +42,10 @@ class IosExpenseEditorController {
         onResult: (IosExpenseEditorSnapshot?) -> Unit
     ) {
         scope.launch {
-            repository.seedStarterCategoriesIfEmpty()
-            val expense = repository.getExpenseById(id)
+            val expense = withContext(Dispatchers.Default) {
+                repository.seedStarterCategoriesIfEmpty()
+                repository.getExpenseById(id)
+            }
             onResult(
                 expense?.let {
                     IosExpenseEditorSnapshot(
@@ -85,70 +89,72 @@ class IosExpenseEditorController {
         }
 
         scope.launch {
-            val result = runCatching {
-                val existingExpense = repository.getExpenseById(expenseId)
-                    ?: error("expense-not-found")
-                val normalizedDescription = description.ifBlank { null }
-                val recurringSeriesId = existingExpense.recurringSeriesId
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val existingExpense = repository.getExpenseById(expenseId)
+                        ?: error("expense-not-found")
+                    val normalizedDescription = description.ifBlank { null }
+                    val recurringSeriesId = existingExpense.recurringSeriesId
 
-                when {
-                    recurringSeriesId != null && updateWholeSeries -> {
-                        repository.updateRecurringExpenseSeries(
-                            anchorExpenseId = existingExpense.id,
-                            seriesId = recurringSeriesId,
-                            amount = parsedAmount,
-                            date = dateMillis,
-                            categoryId = categoryId,
-                            description = normalizedDescription,
-                            isShared = isShared
-                        )
-                    }
-
-                    recurringSeriesId != null -> {
-                        repository.insertExpenses(
-                            listOf(
-                                PendingExpense(
-                                    id = existingExpense.id,
-                                    amount = parsedAmount,
-                                    date = dateMillis,
-                                    categoryId = categoryId,
-                                    description = normalizedDescription,
-                                    isShared = isShared,
-                                    recurringSeriesId = recurringSeriesId
-                                )
-                            )
-                        )
-                    }
-
-                    isRecurringMonthly -> {
-                        repository.insertExpenses(
-                            buildRecurringMonthlyExpensesFromExistingExpense(
-                                existingExpenseId = existingExpense.id,
+                    when {
+                        recurringSeriesId != null && updateWholeSeries -> {
+                            repository.updateRecurringExpenseSeries(
+                                anchorExpenseId = existingExpense.id,
+                                seriesId = recurringSeriesId,
                                 amount = parsedAmount,
-                                firstDate = dateMillis,
+                                date = dateMillis,
                                 categoryId = categoryId,
-                                description = description,
-                                isShared = isShared,
-                                recurringSeriesId = buildIosRecurringExpenseSeriesId(),
-                                idProvider = ::buildIosExpenseId
+                                description = normalizedDescription,
+                                isShared = isShared
                             )
-                        )
-                    }
+                        }
 
-                    else -> {
-                        repository.insertExpenses(
-                            listOf(
-                                PendingExpense(
-                                    id = existingExpense.id,
-                                    amount = parsedAmount,
-                                    date = dateMillis,
-                                    categoryId = categoryId,
-                                    description = normalizedDescription,
-                                    isShared = isShared,
-                                    recurringSeriesId = null
+                        recurringSeriesId != null -> {
+                            repository.insertExpenses(
+                                listOf(
+                                    PendingExpense(
+                                        id = existingExpense.id,
+                                        amount = parsedAmount,
+                                        date = dateMillis,
+                                        categoryId = categoryId,
+                                        description = normalizedDescription,
+                                        isShared = isShared,
+                                        recurringSeriesId = recurringSeriesId
+                                    )
                                 )
                             )
-                        )
+                        }
+
+                        isRecurringMonthly -> {
+                            repository.insertExpenses(
+                                buildRecurringMonthlyExpensesFromExistingExpense(
+                                    existingExpenseId = existingExpense.id,
+                                    amount = parsedAmount,
+                                    firstDate = dateMillis,
+                                    categoryId = categoryId,
+                                    description = description,
+                                    isShared = isShared,
+                                    recurringSeriesId = buildIosRecurringExpenseSeriesId(),
+                                    idProvider = ::buildIosExpenseId
+                                )
+                            )
+                        }
+
+                        else -> {
+                            repository.insertExpenses(
+                                listOf(
+                                    PendingExpense(
+                                        id = existingExpense.id,
+                                        amount = parsedAmount,
+                                        date = dateMillis,
+                                        categoryId = categoryId,
+                                        description = normalizedDescription,
+                                        isShared = isShared,
+                                        recurringSeriesId = null
+                                    )
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -169,14 +175,16 @@ class IosExpenseEditorController {
         onComplete: (IosExpenseEditorOperationResult) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                val existingExpense = repository.getExpenseById(expenseId)
-                    ?: error("expense-not-found")
-                val recurringSeriesId = existingExpense.recurringSeriesId
-                if (deleteWholeSeries && recurringSeriesId != null) {
-                    repository.deleteRecurringExpenseSeries(recurringSeriesId)
-                } else {
-                    repository.deleteExpense(expenseId)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val existingExpense = repository.getExpenseById(expenseId)
+                        ?: error("expense-not-found")
+                    val recurringSeriesId = existingExpense.recurringSeriesId
+                    if (deleteWholeSeries && recurringSeriesId != null) {
+                        repository.deleteRecurringExpenseSeries(recurringSeriesId)
+                    } else {
+                        repository.deleteExpense(expenseId)
+                    }
                 }
             }
 

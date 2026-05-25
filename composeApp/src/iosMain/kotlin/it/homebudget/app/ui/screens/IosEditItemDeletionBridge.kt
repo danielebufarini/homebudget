@@ -2,9 +2,11 @@ package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosExpenseDeletionMetadata(
@@ -31,7 +33,9 @@ class IosEditItemDeletionController {
         onResult: (IosExpenseDeletionMetadata?) -> Unit
     ) {
         scope.launch {
-            val expense = repository.getExpenseById(id)
+            val expense = withContext(Dispatchers.Default) {
+                repository.getExpenseById(id)
+            }
             onResult(
                 expense?.let {
                     IosExpenseDeletionMetadata(
@@ -48,7 +52,9 @@ class IosEditItemDeletionController {
         onResult: (IosIncomeDeletionMetadata?) -> Unit
     ) {
         scope.launch {
-            val income = repository.getIncomeById(id)
+            val income = withContext(Dispatchers.Default) {
+                repository.getIncomeById(id)
+            }
             onResult(
                 income?.let {
                     IosIncomeDeletionMetadata(
@@ -65,8 +71,10 @@ class IosEditItemDeletionController {
         onComplete: (Boolean) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                repository.deleteExpense(id)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.deleteExpense(id)
+                }
             }
             onComplete(result.isSuccess)
         }
@@ -77,8 +85,10 @@ class IosEditItemDeletionController {
         onComplete: (Boolean) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                repository.deleteRecurringExpenseSeries(seriesId)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.deleteRecurringExpenseSeries(seriesId)
+                }
             }
             onComplete(result.isSuccess)
         }
@@ -89,8 +99,10 @@ class IosEditItemDeletionController {
         onComplete: (Boolean) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                repository.deleteIncome(id)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.deleteIncome(id)
+                }
             }
             onComplete(result.isSuccess)
         }
@@ -101,8 +113,10 @@ class IosEditItemDeletionController {
         onComplete: (Boolean) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                repository.deleteRecurringIncomeSeries(seriesId)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    repository.deleteRecurringIncomeSeries(seriesId)
+                }
             }
             onComplete(result.isSuccess)
         }

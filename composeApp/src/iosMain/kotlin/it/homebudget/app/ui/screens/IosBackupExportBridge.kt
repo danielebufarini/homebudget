@@ -4,9 +4,11 @@ import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.backup_export_failed
 import it.homebudget.app.data.CloudSyncService
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.koin.mp.KoinPlatformTools
 
@@ -23,11 +25,14 @@ class IosBackupExportController {
         onComplete: (String?, String?, String?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                val backup = cloudSyncService.buildBackupFile()
-                Triple(backup.fileName, backup.content, null as String?)
-            }.getOrElse { error ->
-                Triple(null, null, error.message ?: getString(Res.string.backup_export_failed))
+            val fallbackMessage = getString(Res.string.backup_export_failed)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val backup = cloudSyncService.buildBackupFile()
+                    Triple(backup.fileName, backup.content, null as String?)
+                }.getOrElse { error ->
+                    Triple(null, null, error.message ?: fallbackMessage)
+                }
             }
 
             onComplete(result.first, result.second, result.third)

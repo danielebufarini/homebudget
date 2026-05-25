@@ -6,9 +6,11 @@ import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.csvImportFailedMessage
 import it.homebudget.app.localization.csvImportNoRowsMessage
 import it.homebudget.app.localization.csvImportSuccessMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosCsvImportController {
@@ -25,25 +27,29 @@ class IosCsvImportController {
         onComplete: (String?, String?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                val importResult = importBudgetItemsFromCsv(
-                    repository = repository,
-                    csvText = text
-                )
-
-                if (importResult.importedCount == 0 && importResult.skippedCount == 0) {
-                    csvImportNoRowsMessage()
-                } else {
-                    csvImportSuccessMessage(
-                        importedCount = importResult.importedCount,
-                        skippedCount = importResult.skippedCount
+            val noRowsMessage = csvImportNoRowsMessage()
+            val failedMessage = csvImportFailedMessage()
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val importResult = importBudgetItemsFromCsv(
+                        repository = repository,
+                        csvText = text
                     )
+
+                    if (importResult.importedCount == 0 && importResult.skippedCount == 0) {
+                        noRowsMessage
+                    } else {
+                        csvImportSuccessMessage(
+                            importedCount = importResult.importedCount,
+                            skippedCount = importResult.skippedCount
+                        )
+                    }
                 }
             }
 
             onComplete(
                 result.getOrNull(),
-                result.exceptionOrNull()?.message ?: csvImportFailedMessage()
+                result.exceptionOrNull()?.message ?: failedMessage
             )
         }
     }

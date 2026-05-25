@@ -8,9 +8,11 @@ import it.homebudget.app.data.buildRecurringMonthlyExpenses
 import it.homebudget.app.data.buildRecurringMonthlyIncomes
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosNativeTransactionEditorResult(
@@ -50,29 +52,31 @@ class IosNativeTransactionEditorController {
         }
 
         scope.launch {
-            val result = runCatching {
-                val expenses = if (isRecurringMonthly) {
-                    buildRecurringMonthlyExpenses(
-                        amount = parsedAmount,
-                        firstDate = dateMillis,
-                        categoryId = categoryId,
-                        description = description,
-                        isShared = isShared,
-                        recurringSeriesId = buildIosRecurringExpenseSeriesId(),
-                        idProvider = ::buildIosExpenseId
-                    )
-                } else {
-                    buildPendingExpenses(
-                        amount = parsedAmount,
-                        firstDate = dateMillis,
-                        installments = installmentCount,
-                        categoryId = categoryId,
-                        description = description,
-                        isShared = isShared,
-                        idProvider = ::buildIosExpenseId
-                    )
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val expenses = if (isRecurringMonthly) {
+                        buildRecurringMonthlyExpenses(
+                            amount = parsedAmount,
+                            firstDate = dateMillis,
+                            categoryId = categoryId,
+                            description = description,
+                            isShared = isShared,
+                            recurringSeriesId = buildIosRecurringExpenseSeriesId(),
+                            idProvider = ::buildIosExpenseId
+                        )
+                    } else {
+                        buildPendingExpenses(
+                            amount = parsedAmount,
+                            firstDate = dateMillis,
+                            installments = installmentCount,
+                            categoryId = categoryId,
+                            description = description,
+                            isShared = isShared,
+                            idProvider = ::buildIosExpenseId
+                        )
+                    }
+                    repository.insertExpenses(expenses)
                 }
-                repository.insertExpenses(expenses)
             }
 
             onComplete(
@@ -105,29 +109,31 @@ class IosNativeTransactionEditorController {
 
         scope.launch {
             val normalizedCategoryId = categoryId?.takeIf { it.isNotBlank() }
-            val result = runCatching {
-                val incomes = if (isRecurringMonthly) {
-                    buildRecurringMonthlyIncomes(
-                        amount = parsedAmount,
-                        firstDate = dateMillis,
-                        description = description,
-                        categoryId = normalizedCategoryId,
-                        recurringSeriesId = buildIosRecurringIncomeSeriesId(),
-                        idProvider = ::buildIosIncomeId
-                    )
-                } else {
-                    listOf(
-                        PendingIncome(
-                            id = buildIosIncomeId(),
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val incomes = if (isRecurringMonthly) {
+                        buildRecurringMonthlyIncomes(
                             amount = parsedAmount,
-                            date = dateMillis,
-                            description = description.ifBlank { null },
+                            firstDate = dateMillis,
+                            description = description,
                             categoryId = normalizedCategoryId,
-                            recurringSeriesId = null
+                            recurringSeriesId = buildIosRecurringIncomeSeriesId(),
+                            idProvider = ::buildIosIncomeId
                         )
-                    )
+                    } else {
+                        listOf(
+                            PendingIncome(
+                                id = buildIosIncomeId(),
+                                amount = parsedAmount,
+                                date = dateMillis,
+                                description = description.ifBlank { null },
+                                categoryId = normalizedCategoryId,
+                                recurringSeriesId = null
+                            )
+                        )
+                    }
+                    repository.insertIncomes(incomes)
                 }
-                repository.insertIncomes(incomes)
             }
 
             onComplete(

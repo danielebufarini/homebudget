@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -55,7 +56,9 @@ fun CategoriesManagementRoute(
     onBack: (() -> Unit)? = null,
 ) {
     LaunchedEffect(repository) {
-        repository.seedStarterCategoriesIfEmpty()
+        withContext(Dispatchers.Default) {
+            repository.seedStarterCategoriesIfEmpty()
+        }
     }
 
     val categoryCardsFlow = remember(repository) {

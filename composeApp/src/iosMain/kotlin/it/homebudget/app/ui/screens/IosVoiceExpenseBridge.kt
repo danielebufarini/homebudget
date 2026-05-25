@@ -2,9 +2,11 @@ package it.homebudget.app.ui.screens
 
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosVoiceExpenseCategory(
@@ -40,7 +42,9 @@ class IosVoiceExpenseController {
         onResult: (IosVoiceExpenseSnapshot?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching { loadIosVoiceExpenseSnapshot(repository) }
+            val result = withContext(Dispatchers.Default) {
+                runCatching { loadIosVoiceExpenseSnapshot(repository) }
+            }
 
             onResult(result.getOrNull())
         }
@@ -55,14 +59,16 @@ class IosVoiceExpenseController {
         onComplete: (Boolean, String?) -> Unit
     ) {
         scope.launch {
-            val result = createIosVoiceExpense(
-                repository = repository,
-                amountInput = amountInput,
-                categoryId = categoryId,
-                description = description,
-                date = date,
-                isShared = isShared
-            )
+            val result = withContext(Dispatchers.Default) {
+                createIosVoiceExpense(
+                    repository = repository,
+                    amountInput = amountInput,
+                    categoryId = categoryId,
+                    description = description,
+                    date = date,
+                    isShared = isShared
+                )
+            }
             onComplete(result.first, result.second)
         }
     }
@@ -77,15 +83,17 @@ class IosVoiceExpenseController {
         onComplete: (Boolean, String?) -> Unit
     ) {
         scope.launch {
-            val result = updateIosVoiceExpense(
-                repository = repository,
-                expenseId = expenseId,
-                amountInput = amountInput,
-                categoryId = categoryId,
-                description = description,
-                date = date,
-                isShared = isShared
-            )
+            val result = withContext(Dispatchers.Default) {
+                updateIosVoiceExpense(
+                    repository = repository,
+                    expenseId = expenseId,
+                    amountInput = amountInput,
+                    categoryId = categoryId,
+                    description = description,
+                    date = date,
+                    isShared = isShared
+                )
+            }
             onComplete(result.first, result.second)
         }
     }

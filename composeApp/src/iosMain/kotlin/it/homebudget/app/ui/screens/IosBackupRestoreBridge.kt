@@ -6,9 +6,11 @@ import homebudget.composeapp.generated.resources.backup_restore_invalid
 import it.homebudget.app.data.BudgetBackupCounters
 import it.homebudget.app.data.CloudSyncService
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.koin.mp.KoinPlatformTools
 
@@ -26,22 +28,27 @@ class IosBackupRestoreController {
         onComplete: (BudgetBackupCounters?, String?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                cloudSyncService.previewRestore(text)
+            val fallbackMessage = getString(Res.string.backup_restore_invalid)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    cloudSyncService.previewRestore(text)
+                }
             }
 
             onComplete(
                 result.getOrNull(),
-                result.exceptionOrNull()?.message ?: if (result.isSuccess) null else getString(Res.string.backup_restore_invalid)
+                result.exceptionOrNull()?.message ?: if (result.isSuccess) null else fallbackMessage
             )
         }
     }
 
     fun isRestoreTargetEmpty(onComplete: (Boolean) -> Unit) {
         scope.launch {
-            val isEmpty = runCatching {
-                cloudSyncService.isRestoreTargetEmpty()
-            }.getOrDefault(false)
+            val isEmpty = withContext(Dispatchers.Default) {
+                runCatching {
+                    cloudSyncService.isRestoreTargetEmpty()
+                }.getOrDefault(false)
+            }
             onComplete(isEmpty)
         }
     }
@@ -51,13 +58,16 @@ class IosBackupRestoreController {
         onComplete: (BudgetBackupCounters?, String?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                cloudSyncService.restoreFromBackup(text)
+            val fallbackMessage = getString(Res.string.backup_restore_failed)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    cloudSyncService.restoreFromBackup(text)
+                }
             }
 
             onComplete(
                 result.getOrNull(),
-                result.exceptionOrNull()?.message ?: if (result.isSuccess) null else getString(Res.string.backup_restore_failed)
+                result.exceptionOrNull()?.message ?: if (result.isSuccess) null else fallbackMessage
             )
         }
     }

@@ -4,9 +4,11 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.csv.exportBudgetItemsToCsv
 import it.homebudget.app.di.initKoin
 import it.homebudget.app.localization.csvExportFailedMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.mp.KoinPlatformTools
@@ -27,15 +29,18 @@ class IosCsvExportController {
         onComplete: (String?, String?, String?) -> Unit
     ) {
         scope.launch {
-            val result = runCatching {
-                val export = exportBudgetItemsToCsv(
-                    repository = repository,
-                    startDate = startDateMillis.toLocalDate(),
-                    endDate = endDateMillis.toLocalDate()
-                )
-                Triple(export.fileName, export.content, null as String?)
-            }.getOrElse { error ->
-                Triple(null, null, error.message ?: csvExportFailedMessage())
+            val fallbackMessage = csvExportFailedMessage()
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val export = exportBudgetItemsToCsv(
+                        repository = repository,
+                        startDate = startDateMillis.toLocalDate(),
+                        endDate = endDateMillis.toLocalDate()
+                    )
+                    Triple(export.fileName, export.content, null as String?)
+                }.getOrElse { error ->
+                    Triple(null, null, error.message ?: fallbackMessage)
+                }
             }
 
             onComplete(result.first, result.second, result.third)

@@ -12,6 +12,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
@@ -38,7 +39,9 @@ class IosTransactionSearchObserver(
         this.onUpdate = onUpdate
         updatesJob = scope.launch {
             val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-            repository.seedStarterCategoriesIfEmpty()
+            withContext(Dispatchers.Default) {
+                repository.seedStarterCategoriesIfEmpty()
+            }
 
             combine(
                 repository.getAllExpenses(),
@@ -46,7 +49,7 @@ class IosTransactionSearchObserver(
                 repository.getAllCategories(),
                 groupingMode,
                 ::TransactionSearchInput
-            ).collect { input ->
+            ).flowOn(Dispatchers.Default).collect { input ->
                 val localization = loadIosGroupedLocalization()
                 val snapshot = withContext(Dispatchers.Default) {
                     buildTransactionSearchSnapshot(
@@ -71,27 +74,35 @@ class IosTransactionSearchObserver(
 
     fun deleteExpense(id: String) {
         scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>().deleteExpense(id)
+            withContext(Dispatchers.Default) {
+                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>().deleteExpense(id)
+            }
         }
     }
 
     fun deleteIncome(id: String) {
         scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>().deleteIncome(id)
+            withContext(Dispatchers.Default) {
+                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>().deleteIncome(id)
+            }
         }
     }
 
     fun deleteRecurringExpenseSeries(seriesId: String) {
         scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                .deleteRecurringExpenseSeries(seriesId)
+            withContext(Dispatchers.Default) {
+                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+                    .deleteRecurringExpenseSeries(seriesId)
+            }
         }
     }
 
     fun deleteRecurringIncomeSeries(seriesId: String) {
         scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                .deleteRecurringIncomeSeries(seriesId)
+            withContext(Dispatchers.Default) {
+                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+                    .deleteRecurringIncomeSeries(seriesId)
+            }
         }
     }
 

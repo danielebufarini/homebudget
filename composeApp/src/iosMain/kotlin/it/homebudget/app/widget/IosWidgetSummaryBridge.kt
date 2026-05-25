@@ -6,9 +6,11 @@ import homebudget.composeapp.generated.resources.full_month_names
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.di.initKoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -35,25 +37,27 @@ class IosWidgetSummaryController {
 
     fun loadCurrentMonthSummary(onComplete: (IosWidgetSummary?, String?) -> Unit) {
         scope.launch {
-            val result = runCatching {
-                val now = Clock.System.now()
-                val localDate = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
-                val summary = repository.getWidgetMonthSummary(
-                    year = localDate.year,
-                    month = localDate.month.number
-                )
-                val monthNames = getStringArray(Res.array.full_month_names)
-                val monthName = monthNames.getOrElse(localDate.month.number - 1) {
-                    localDate.month.name.lowercase().replaceFirstChar { it.titlecase() }
-                }
-                val currencySymbol = getString(Res.string.currency_symbol)
+            val monthNames = getStringArray(Res.array.full_month_names)
+            val currencySymbol = getString(Res.string.currency_symbol)
+            val result = withContext(Dispatchers.Default) {
+                runCatching {
+                    val now = Clock.System.now()
+                    val localDate = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
+                    val summary = repository.getWidgetMonthSummary(
+                        year = localDate.year,
+                        month = localDate.month.number
+                    )
+                    val monthName = monthNames.getOrElse(localDate.month.number - 1) {
+                        localDate.month.name.lowercase().replaceFirstChar { it.titlecase() }
+                    }
 
-                IosWidgetSummary(
-                    monthTitle = "$monthName ${localDate.year}",
-                    expenseAmountText = formatAmount(summary.expenseAmount, currencySymbol),
-                    incomeAmountText = formatAmount(summary.incomeAmount, currencySymbol),
-                    updatedAtMillis = now.toEpochMilliseconds()
-                )
+                    IosWidgetSummary(
+                        monthTitle = "$monthName ${localDate.year}",
+                        expenseAmountText = formatAmount(summary.expenseAmount, currencySymbol),
+                        incomeAmountText = formatAmount(summary.incomeAmount, currencySymbol),
+                        updatedAtMillis = now.toEpochMilliseconds()
+                    )
+                }
             }
 
             result
