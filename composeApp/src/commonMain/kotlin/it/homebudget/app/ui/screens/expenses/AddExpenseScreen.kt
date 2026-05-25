@@ -141,12 +141,17 @@ class AddExpenseScreen(
     @Composable
     fun RouteContent(
         showNavigationChrome: Boolean,
-        onClose: () -> Unit
+        onClose: () -> Unit,
+        useHostedFloatingChrome: Boolean = false
     ) {
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
-        val useIosHostedFloatingChrome = isIos && (expenseId != null || readOnly)
+        val useIosTransactionFloatingChrome = isIos && useHostedFloatingChrome
+        val useIosHostedFloatingChrome =
+            useIosTransactionFloatingChrome || (isIos && (expenseId != null || readOnly))
         val useAndroidFixedActionChrome = !isIos && (expenseId != null || readOnly)
+        val contentTopPadding = if (useIosTransactionFloatingChrome) 220.dp else 16.dp
+        val contentBottomPadding = if (useIosTransactionFloatingChrome) 132.dp else 16.dp
         val platformDatePicker = rememberPlatformDatePicker()
         val platformOptionPicker = rememberPlatformOptionPicker()
         val scope = rememberCoroutineScope()
@@ -413,13 +418,13 @@ class AddExpenseScreen(
         }
 
         SideEffect {
-            if (useIosHostedFloatingChrome && !readOnly && expenseId != null) {
+            if (useIosHostedFloatingChrome && !readOnly) {
                 setActiveIosExpenseEditorSaveHandler(::requestSaveExpense)
             }
         }
-        DisposableEffect(useIosHostedFloatingChrome, readOnly, expenseId) {
+        DisposableEffect(useIosHostedFloatingChrome, readOnly) {
             onDispose {
-                if (useIosHostedFloatingChrome && !readOnly && expenseId != null) {
+                if (useIosHostedFloatingChrome && !readOnly) {
                     clearActiveIosExpenseEditorSaveHandler()
                 }
             }
@@ -504,7 +509,12 @@ class AddExpenseScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(
+                        start = 16.dp,
+                        top = contentTopPadding,
+                        end = 16.dp,
+                        bottom = contentBottomPadding
+                    )
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {

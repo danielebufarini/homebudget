@@ -17,7 +17,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -55,11 +54,7 @@ class AddTransactionScreen(
         var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
 
         Scaffold(
-            containerColor = if (isIos) {
-                Color.Transparent
-            } else {
-                MaterialTheme.colorScheme.background
-            },
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 if (showNavigationChrome) {
                     TopAppBar(

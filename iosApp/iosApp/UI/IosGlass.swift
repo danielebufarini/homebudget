@@ -460,22 +460,26 @@ struct AppGlassBottomQuickActionsBar: View {
     let onVoice: () -> Void
 
     var body: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                Button(action: onAdd) {
-                    AppGlassBottomQuickActionIcon(systemName: "plus")
-                }
-                .buttonStyle(.glass)
-                .accessibilityLabel(addAccessibilityLabel)
-
-                Button(action: onVoice) {
-                    AppGlassBottomQuickActionIcon(systemName: "waveform.badge.mic")
-                }
-                .buttonStyle(.glass)
-                .accessibilityLabel(voiceAccessibilityLabel)
+        HStack(spacing: 4) {
+            Button(action: onAdd) {
+                AppGlassBottomQuickActionIcon(systemName: "plus")
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(addAccessibilityLabel)
+
+            Rectangle()
+                .fill(.primary.opacity(0.16))
+                .frame(width: 1, height: 22)
+
+            Button(action: onVoice) {
+                AppGlassBottomQuickActionIcon(systemName: "mic.fill")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(voiceAccessibilityLabel)
         }
-        .background(.clear)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .appGlassSurface(cornerRadius: 24)
     }
 }
 

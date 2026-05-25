@@ -90,39 +90,56 @@ enum MonthNavigationHeaderLayout {
 
 struct DashboardStyleMonthNavigationHeader: View {
     let selectedMonth: MonthCursor
+    let titleText: String?
     let amountText: String
-    let onPreviousMonth: () -> Void
-    let onNextMonth: () -> Void
+    let onPreviousMonth: (() -> Void)?
+    let onNextMonth: (() -> Void)?
 
-    @Environment(\.colorScheme) private var colorScheme
+    init(
+        selectedMonth: MonthCursor,
+        titleText: String? = nil,
+        amountText: String,
+        onPreviousMonth: (() -> Void)? = nil,
+        onNextMonth: (() -> Void)? = nil
+    ) {
+        self.selectedMonth = selectedMonth
+        self.titleText = titleText
+        self.amountText = amountText
+        self.onPreviousMonth = onPreviousMonth
+        self.onNextMonth = onNextMonth
+    }
 
     var body: some View {
         VStack(spacing: 2) {
             HStack(spacing: 2) {
-                Button(action: onPreviousMonth) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .bold))
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
+                if let onPreviousMonth {
+                    Button(action: onPreviousMonth) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 15, weight: .bold))
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .accessibilityLabel(appLocalized("Previous month"))
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.primary)
-                .accessibilityLabel(appLocalized("Previous month"))
 
-                Text(selectedMonth.label)
+                Text(titleText ?? selectedMonth.label)
                     .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
-                Button(action: onNextMonth) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 15, weight: .bold))
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
+                if let onNextMonth {
+                    Button(action: onNextMonth) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 15, weight: .bold))
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .accessibilityLabel(appLocalized("Next month"))
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.primary)
-                .accessibilityLabel(appLocalized("Next month"))
             }
 
             Text(amountText)
@@ -133,12 +150,5 @@ struct DashboardStyleMonthNavigationHeader: View {
         .frame(maxWidth: .infinity)
         .frame(minHeight: MonthNavigationHeaderLayout.minHeight)
         .padding(.horizontal, 16)
-        .appGlassSurface(cornerRadius: 20)
-        .shadow(
-            color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.10),
-            radius: 18,
-            x: 0,
-            y: 10
-        )
     }
 }

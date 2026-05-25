@@ -21,7 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -111,11 +113,15 @@ class AddIncomeScreen(
     @Composable
     fun RouteContent(
         showNavigationChrome: Boolean,
-        onClose: () -> Unit
+        onClose: () -> Unit,
+        useHostedFloatingChrome: Boolean = false
     ) {
         val repository: ExpenseRepository = koinInject()
         val isIos = rememberIsIosPlatform()
+        val useIosHostedFloatingChrome = isIos && useHostedFloatingChrome
         val useFloatingBottomBar = isIos
+        val contentTopPadding = if (useIosHostedFloatingChrome) 220.dp else 16.dp
+        val contentBottomPadding = if (useIosHostedFloatingChrome) 132.dp else 16.dp
         val platformDatePicker = rememberPlatformDatePicker()
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -347,6 +353,19 @@ class AddIncomeScreen(
             }
         }
 
+        SideEffect {
+            if (useIosHostedFloatingChrome) {
+                setActiveIosExpenseEditorSaveHandler(::requestSaveIncome)
+            }
+        }
+        DisposableEffect(useIosHostedFloatingChrome) {
+            onDispose {
+                if (useIosHostedFloatingChrome) {
+                    clearActiveIosExpenseEditorSaveHandler()
+                }
+            }
+        }
+
         Scaffold(
             containerColor = if (useFloatingBottomBar) {
                 Color.Transparent
@@ -386,7 +405,7 @@ class AddIncomeScreen(
                 }
             },
             bottomBar = {
-                if (isInitialized) {
+                if (isInitialized && !useIosHostedFloatingChrome) {
                     SoftActionBar(
                         cancelLabel = cancelLabel,
                         confirmLabel = if (incomeId == null) saveLabel else updateLabel,
@@ -404,7 +423,12 @@ class AddIncomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(
+                        start = 16.dp,
+                        top = contentTopPadding,
+                        end = 16.dp,
+                        bottom = contentBottomPadding
+                    )
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {

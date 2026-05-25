@@ -2,6 +2,8 @@ import SwiftUI
 
 struct GroupedExpensesSectionsScreen: View {
     let kind: GroupedExpensesKind
+    let headerTitle: String?
+    let headerAmountDescriptor: String?
     let onOpenExpense: (String) -> Void
 
     @State private var selectedMonth: MonthCursor
@@ -11,9 +13,13 @@ struct GroupedExpensesSectionsScreen: View {
         kind: GroupedExpensesKind,
         year: Int,
         month: Int,
+        headerTitle: String? = nil,
+        headerAmountDescriptor: String? = nil,
         onOpenExpense: @escaping (String) -> Void
     ) {
         self.kind = kind
+        self.headerTitle = headerTitle
+        self.headerAmountDescriptor = headerAmountDescriptor
         self.onOpenExpense = onOpenExpense
         _selectedMonth = State(initialValue: MonthCursor(year: year, month: month))
     }
@@ -27,7 +33,9 @@ struct GroupedExpensesSectionsScreen: View {
             groupingMode: $groupingMode,
             onPreviousMonth: previousMonthAction,
             onNextMonth: nextMonthAction,
-            onOpenExpense: onOpenExpense
+            onOpenExpense: onOpenExpense,
+            headerTitle: headerTitle,
+            headerAmountDescriptor: headerAmountDescriptor
         )
         .id("\(kind.screenType)-\(selectedMonth.id)")
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -92,29 +100,11 @@ struct MonthlyTransactionsRootView: View {
             }
         )
         .appGlassHostedScreenChrome()
-        .navigationTitle(selectedKind == .income ? appLocalized("Income") : appLocalized("Expenses"))
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    if !path.isEmpty {
-                        path.removeLast()
-                    }
-                } label: {
-                    AppGlassBackButton()
-                }
-                .buttonStyle(.glass)
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                AppGlassBottomQuickActionsBar(
-                    addAccessibilityLabel: selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
-                    voiceAccessibilityLabel: appLocalized("Voice Expense"),
-                    onAdd: addTransaction,
-                    onVoice: onStartVoiceExpense
-                )
-            }
+        .toolbar(.hidden, for: .navigationBar)
+        .overlay(alignment: .top) {
+            transactionsChromeActions
+                .padding(.horizontal, 16)
+                .padding(.top, MonthNavigationHeaderLayout.topPadding)
         }
     }
 
@@ -131,6 +121,30 @@ struct MonthlyTransactionsRootView: View {
                 )
             )
         }
+    }
+
+    private var transactionsChromeActions: some View {
+        HStack {
+            Button {
+                if !path.isEmpty {
+                    path.removeLast()
+                }
+            } label: {
+                AppGlassBackButton()
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            AppGlassBottomQuickActionsBar(
+                addAccessibilityLabel: selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
+                voiceAccessibilityLabel: appLocalized("Voice Expense"),
+                onAdd: addTransaction,
+                onVoice: onStartVoiceExpense
+            )
+        }
+        .frame(height: MonthNavigationHeaderLayout.minHeight)
+        .frame(maxWidth: .infinity)
     }
 }
 

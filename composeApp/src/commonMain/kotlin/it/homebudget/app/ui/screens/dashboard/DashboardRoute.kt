@@ -36,6 +36,8 @@ fun DashboardRoute(
     showTransactionSearch: Boolean = true,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
+    onOpenVoiceExpense: () -> Unit = {},
+    onOpenCsvTransfer: (() -> Unit)? = null,
     onOpenDayExpenses: (Int, Int, Int) -> Unit,
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
@@ -147,6 +149,8 @@ fun DashboardRoute(
             showFab = showFab,
             onOpenCategories = onOpenCategories,
             onOpenAddExpense = onOpenAddExpense,
+            onOpenVoiceExpense = onOpenVoiceExpense,
+            onOpenCsvTransfer = onOpenCsvTransfer,
             onPreviousMonth = { selectedMonth = selectedMonth.previous() },
             onNextMonth = { selectedMonth = selectedMonth.next() }
         ) { modifier ->

@@ -28,6 +28,8 @@ fun MainViewController() = ComposeUIViewController(
 fun DashboardContentViewController(
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
+    onOpenVoiceExpense: () -> Unit,
+    onOpenCsvTransfer: () -> Unit,
     onOpenDayExpenses: (Int, Int, Int) -> Unit,
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
@@ -42,10 +44,12 @@ fun DashboardContentViewController(
 ) {
     AppTheme {
         DashboardRoute(
-            showNavigationChrome = false,
+            showNavigationChrome = true,
             showFab = false,
             onOpenCategories = onOpenCategories,
             onOpenAddExpense = onOpenAddExpense,
+            onOpenVoiceExpense = onOpenVoiceExpense,
+            onOpenCsvTransfer = onOpenCsvTransfer,
             onOpenDayExpenses = onOpenDayExpenses,
             onOpenMonthlyIncomes = onOpenMonthlyIncomes,
             onOpenMonthlyExpenses = onOpenMonthlyExpenses,
@@ -113,6 +117,7 @@ fun AddTransactionViewController(
 fun AddExpenseViewController(
     expenseId: String? = null,
     readOnly: Boolean = false,
+    useHostedFloatingChrome: Boolean = false,
     onClose: () -> Unit
 ) = ComposeUIViewController(
     configure = {
@@ -122,7 +127,8 @@ fun AddExpenseViewController(
     AppTheme {
         AddExpenseScreen(expenseId = expenseId, readOnly = readOnly).RouteContent(
             showNavigationChrome = false,
-            onClose = onClose
+            onClose = onClose,
+            useHostedFloatingChrome = useHostedFloatingChrome
         )
     }
 }
@@ -131,6 +137,7 @@ fun AddIncomeViewController(
     incomeId: String? = null,
     initialYear: Int? = null,
     initialMonth: Int? = null,
+    useHostedFloatingChrome: Boolean = false,
     onClose: () -> Unit
 ) = ComposeUIViewController(
     configure = {
@@ -144,7 +151,8 @@ fun AddIncomeViewController(
             initialMonth = initialMonth
         ).RouteContent(
             showNavigationChrome = false,
-            onClose = onClose
+            onClose = onClose,
+            useHostedFloatingChrome = useHostedFloatingChrome
         )
     }
 }

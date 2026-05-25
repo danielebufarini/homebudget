@@ -6,6 +6,7 @@ struct GroupedExpensesSectionsList: View {
     let onPreviousMonth: (() -> Void)?
     let onNextMonth: (() -> Void)?
     let onOpenExpense: (String) -> Void
+    let headerTitle: String?
     let headerAmountDescriptor: String?
     let topReservedInset: CGFloat?
     let headerAccessory: (() -> AnyView)?
@@ -23,6 +24,7 @@ struct GroupedExpensesSectionsList: View {
         onPreviousMonth: (() -> Void)?,
         onNextMonth: (() -> Void)?,
         onOpenExpense: @escaping (String) -> Void,
+        headerTitle: String? = nil,
         headerAmountDescriptor: String? = nil,
         topReservedInset: CGFloat? = nil,
         headerAccessory: (() -> AnyView)? = nil,
@@ -33,6 +35,7 @@ struct GroupedExpensesSectionsList: View {
         self.onPreviousMonth = onPreviousMonth
         self.onNextMonth = onNextMonth
         self.onOpenExpense = onOpenExpense
+        self.headerTitle = headerTitle
         self.headerAmountDescriptor = headerAmountDescriptor
         self.topReservedInset = topReservedInset
         self.headerAccessory = headerAccessory
@@ -97,7 +100,7 @@ struct GroupedExpensesSectionsList: View {
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .top, spacing: 0) {
-            if onPreviousMonth != nil, onNextMonth != nil {
+            if showsHeader {
                 Color.clear.frame(height: topReservedInset ?? MonthNavigationHeaderLayout.reservedTopInset)
             }
         }
@@ -148,9 +151,10 @@ struct GroupedExpensesSectionsList: View {
 
     @ViewBuilder
     private var monthHeader: some View {
-        if let onPreviousMonth, let onNextMonth {
+        if showsHeader {
             DashboardStyleMonthNavigationHeader(
                 selectedMonth: selectedMonth,
+                titleText: headerTitle,
                 amountText: monthlyHeaderAmountText(
                     descriptor: headerAmountDescriptor,
                     amountText: viewModel.totalAmountText
@@ -161,6 +165,10 @@ struct GroupedExpensesSectionsList: View {
             .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
             .padding(.top, MonthNavigationHeaderLayout.topPadding)
         }
+    }
+
+    private var showsHeader: Bool {
+        headerTitle != nil || (onPreviousMonth != nil && onNextMonth != nil)
     }
 
     private var groupingControlBar: some View {

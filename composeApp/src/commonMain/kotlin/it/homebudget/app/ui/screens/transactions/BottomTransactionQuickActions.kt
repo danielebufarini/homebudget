@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,7 +29,9 @@ internal fun BottomTransactionQuickActions(
     addContentDescription: String,
     onAddTransaction: () -> Unit,
     modifier: Modifier = Modifier,
-    openVoiceExpenseRequest: Int = 0
+    openVoiceExpenseRequest: Int = 0,
+    voiceContentDescription: String? = null,
+    onVoiceExpense: (() -> Unit)? = null
 ) {
     Surface(
         modifier = modifier,
@@ -68,10 +71,26 @@ internal fun BottomTransactionQuickActions(
                     .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f))
             )
 
-            DashboardVoiceExpenseAction(
-                openVoiceExpenseRequest = openVoiceExpenseRequest,
-                modifier = Modifier.size(34.dp)
-            )
+            if (onVoiceExpense != null) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onVoiceExpense),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Mic,
+                        contentDescription = voiceContentDescription,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                DashboardVoiceExpenseAction(
+                    openVoiceExpenseRequest = openVoiceExpenseRequest,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
         }
     }
 }

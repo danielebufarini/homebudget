@@ -22,6 +22,7 @@ import homebudget.composeapp.generated.resources.shared
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.top_category
 import homebudget.composeapp.generated.resources.unknown_category
+import homebudget.composeapp.generated.resources.voice_expense
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -30,6 +31,7 @@ internal data class DashboardStrings(
     val dashboardSearchPlaceholder: String,
     val searchTransactions: String,
     val addExpense: String,
+    val voiceExpense: String,
     val expenses: String,
     val shared: String,
     val income: String,
@@ -58,6 +60,7 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         dashboardSearchPlaceholder = stringResource(Res.string.dashboard_search_placeholder),
         searchTransactions = stringResource(Res.string.search_transactions),
         addExpense = stringResource(Res.string.add_expense),
+        voiceExpense = stringResource(Res.string.voice_expense),
         expenses = stringResource(Res.string.expenses),
         shared = stringResource(Res.string.shared),
         income = stringResource(Res.string.income),

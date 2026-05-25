@@ -30,6 +30,10 @@ class IosCategoriesController {
     }
 
     fun start(onUpdate: (IosCategoriesSnapshot) -> Unit) {
+        startForCategoryType(CATEGORY_TYPE_EXPENSE, onUpdate)
+    }
+
+    fun startForCategoryType(categoryType: String, onUpdate: (IosCategoriesSnapshot) -> Unit) {
         if (updatesJob != null) {
             return
         }
@@ -39,7 +43,7 @@ class IosCategoriesController {
             repository.getAllCategories().collect { categories ->
                 val resolveCategoryName = loadCategoryNameResolver()
                 val selectableCategories = categories.filter { category ->
-                    category.categoryType == CATEGORY_TYPE_EXPENSE && category.isArchived != 1L
+                    category.categoryType == categoryType && category.isArchived != 1L
                 }
                 onUpdate(
                     IosCategoriesSnapshot(
@@ -90,6 +94,15 @@ class IosCategoriesController {
         iconKey: String,
         onComplete: (String?) -> Unit
     ) {
+        insertCategoryAndReturnIdForCategoryType(name, iconKey, CATEGORY_TYPE_EXPENSE, onComplete)
+    }
+
+    fun insertCategoryAndReturnIdForCategoryType(
+        name: String,
+        iconKey: String,
+        categoryType: String,
+        onComplete: (String?) -> Unit
+    ) {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
             onComplete(null)
@@ -102,7 +115,8 @@ class IosCategoriesController {
                 repository.insertCategory(
                     id = categoryId,
                     name = trimmedName,
-                    icon = iconKey
+                    icon = iconKey,
+                    categoryType = categoryType
                 )
             }.isSuccess
             onComplete(if (success) categoryId else null)

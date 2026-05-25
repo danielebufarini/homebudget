@@ -20,28 +20,17 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            DashboardRootView(path: $path)
-                .appGlassHostedScreenChrome()
-                .navigationTitle(appLocalized("Dashboard"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Menu {
-                            Button(appLocalized("Categories")) {
-                                path.append(Route.categories)
-                            }
-                            Button(appLocalized("CSV Import / Export")) {
-                                presentAfterMenuDismiss {
-                                    showCsvTransferSheet = true
-                                }
-                            }
-                        } label: {
-                            AppGlassToolbarIcon(systemName: "line.3.horizontal")
-                                .appGlassSurface(cornerRadius: 18)
-                        }
+            DashboardRootView(
+                path: $path,
+                onStartVoiceExpense: startVoiceExpense,
+                onOpenCsvTransfer: {
+                    presentAfterMenuDismiss {
+                        showCsvTransferSheet = true
                     }
-                    topQuickActionsToolbar(initialKind: .expense, year: nil, month: nil)
                 }
+            )
+                .appGlassHostedScreenChrome()
+                .toolbar(.hidden, for: .navigationBar)
                 .sheet(isPresented: $showVoiceExpenseSheet) {
                     VoiceExpenseEntrySheet(autoStartRequest: voiceExpenseAutoStartRequest) {
                         showVoiceExpenseSheet = false
@@ -110,7 +99,7 @@ struct ContentView: View {
                         .appGlassHostedScreenChrome()
                         .toolbar(.hidden, for: .navigationBar)
                     case let .addTransaction(initialKind, year, month):
-                        TransactionEditorRootView(
+                        NativeTransactionEditorScreen(
                             initialKind: initialKind,
                             initialYear: year,
                             initialMonth: month
@@ -120,12 +109,7 @@ struct ContentView: View {
                             }
                         }
                         .appGlassHostedScreenChrome()
-                        .navigationTitle(initialKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"))
-                        .navigationBarTitleDisplayMode(.inline)
-                        .navigationBarBackButtonHidden()
-                        .toolbar {
-                            backToolbar
-                        }
+                        .toolbar(.hidden, for: .navigationBar)
                     case let .addExpense(expenseId, readOnly):
                         if let expenseId, expenseId.isEmpty == false {
                             NativeExpenseEditorScreen(
@@ -176,12 +160,19 @@ struct ContentView: View {
                         GroupedExpensesSectionsScreen(
                             kind: .day(day: day),
                             year: Int(year),
-                            month: Int(month)
+                            month: Int(month),
+                            headerTitle: "\(day) \(monthName(month))",
+                            headerAmountDescriptor: appLocalized("Highest Day")
                         ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
-                        .navigationTitle("\(day) \(monthName(month))")
-                        .navigationBarTitleDisplayMode(.inline)
+                        .appGlassHostedScreenChrome()
+                        .toolbar(.hidden, for: .navigationBar)
+                        .overlay(alignment: .top) {
+                            leadingBackChrome
+                                .padding(.horizontal, 16)
+                                .padding(.top, MonthNavigationHeaderLayout.topPadding)
+                        }
                     case let .monthlyIncomes(year, month):
                         MonthlyTransactionsRootView(
                             year: Int(year),
@@ -202,22 +193,35 @@ struct ContentView: View {
                         GroupedExpensesSectionsScreen(
                             kind: .shared,
                             year: Int(year),
-                            month: Int(month)
+                            month: Int(month),
+                            headerAmountDescriptor: appLocalized("Shared Expenses")
                         ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
-                        .navigationTitle(appMonthlyTitle(month: month, key: "Shared Expenses"))
-                        .navigationBarTitleDisplayMode(.inline)
+                        .appGlassHostedScreenChrome()
+                        .toolbar(.hidden, for: .navigationBar)
+                        .overlay(alignment: .top) {
+                            leadingBackChrome
+                                .padding(.horizontal, 16)
+                                .padding(.top, MonthNavigationHeaderLayout.topPadding)
+                        }
                     case let .categoryExpenses(year, month, categoryName):
                         GroupedExpensesSectionsScreen(
                             kind: .category(name: categoryName),
                             year: Int(year),
-                            month: Int(month)
+                            month: Int(month),
+                            headerTitle: MonthCursor(year: Int(year), month: Int(month)).label,
+                            headerAmountDescriptor: categoryName
                         ) { expenseId in
                             path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
                         }
-                        .navigationTitle("\(monthName(month)) \(categoryName)")
-                        .navigationBarTitleDisplayMode(.inline)
+                        .appGlassHostedScreenChrome()
+                        .toolbar(.hidden, for: .navigationBar)
+                        .overlay(alignment: .top) {
+                            leadingBackChrome
+                                .padding(.horizontal, 16)
+                                .padding(.top, MonthNavigationHeaderLayout.topPadding)
+                        }
                     case let .transactionSearch(year, month, query):
                         TransactionSearchRootView(
                             year: year,
@@ -257,66 +261,26 @@ struct ContentView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private func topQuickActionsToolbar(
-        initialKind: AddTransactionKind,
-        year: Int?,
-        month: Int?
-    ) -> some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            topQuickActionsBar(initialKind: initialKind, year: year, month: month)
-        }
-    }
-
-    @ToolbarContentBuilder
-    private func leadingBackAndQuickActionsToolbar(
-        initialKind: AddTransactionKind,
-        year: Int?,
-        month: Int?
-    ) -> some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            HStack(spacing: 8) {
-                Button {
-                    if !path.isEmpty {
-                        path.removeLast()
-                    }
-                } label: {
-                    AppGlassBackButton()
-                }
-                .buttonStyle(.glass)
-
-                topQuickActionsBar(initialKind: initialKind, year: year, month: month)
-            }
-        }
-    }
-
-    private func topQuickActionsBar(
-        initialKind: AddTransactionKind,
-        year: Int?,
-        month: Int?
-    ) -> some View {
-        AppGlassBottomQuickActionsBar(
-            addAccessibilityLabel: initialKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
-            voiceAccessibilityLabel: appLocalized("Voice Expense"),
-            onAdd: {
-                path.append(
-                    Route.addTransaction(
-                        initialKind: initialKind,
-                        year: year,
-                        month: month
-                    )
-                )
-            },
-            onVoice: {
-                voiceExpenseAutoStartRequest += 1
-                showVoiceExpenseSheet = true
-            }
-        )
-    }
-
     private func startVoiceExpense() {
         voiceExpenseAutoStartRequest += 1
         showVoiceExpenseSheet = true
+    }
+
+    private var leadingBackChrome: some View {
+        HStack {
+            Button {
+                if !path.isEmpty {
+                    path.removeLast()
+                }
+            } label: {
+                AppGlassBackButton()
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: MonthNavigationHeaderLayout.minHeight)
+        .frame(maxWidth: .infinity)
     }
 
     private func handleIncomingURL(_ url: URL) {

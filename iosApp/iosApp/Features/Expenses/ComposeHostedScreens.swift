@@ -125,26 +125,116 @@ final class IncomeEditorDeletionViewModel: ObservableObject {
     }
 }
 
+private enum ComposeHostedPalette {
+    static var background: Color {
+        Color(uiColor: UIColor { traits in
+            switch traits.userInterfaceStyle {
+            case .dark:
+                UIColor(red: 16.0 / 255.0, green: 24.0 / 255.0, blue: 32.0 / 255.0, alpha: 1.0)
+            default:
+                UIColor(red: 247.0 / 255.0, green: 250.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0)
+            }
+        })
+    }
+}
+
 struct TransactionEditorRootView: View {
-    let initialKind: AddTransactionKind
     let initialYear: Int?
     let initialMonth: Int?
     let onClose: () -> Void
 
+    @State private var selectedKind: AddTransactionKind
+
+    init(
+        initialKind: AddTransactionKind,
+        initialYear: Int?,
+        initialMonth: Int?,
+        onClose: @escaping () -> Void
+    ) {
+        self.initialYear = initialYear
+        self.initialMonth = initialMonth
+        self.onClose = onClose
+        _selectedKind = State(initialValue: initialKind)
+    }
+
     var body: some View {
-        KotlinViewControllerHost {
-            MainViewControllerKt.AddTransactionViewController(
-                initialIncomeSelected: initialKind == .income,
-                initialIncomeYear: initialYear.map(kotlinInt),
-                initialIncomeMonth: initialMonth.map(kotlinInt),
-                onClose: onClose
-            )
+        ZStack {
+            editorHost
+                .id(editorHostID)
+
+            VStack(spacing: 0) {
+                topChrome
+                Spacer(minLength: 0)
+                bottomChrome
+            }
         }
+        .background(ComposeHostedPalette.background.ignoresSafeArea())
         .appGlassHostedScreenChrome()
         .iosNativeDatePickerHost()
         .onDisappear {
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
         }
+    }
+
+    private var editorHost: some View {
+        KotlinViewControllerHost(constrainToSafeArea: false) {
+            switch selectedKind {
+            case .expense:
+                MainViewControllerKt.AddExpenseViewController(
+                    expenseId: nil,
+                    readOnly: false,
+                    useHostedFloatingChrome: true,
+                    onClose: onClose
+                )
+            case .income:
+                MainViewControllerKt.AddIncomeViewController(
+                    incomeId: nil,
+                    initialYear: initialYear.map(kotlinInt),
+                    initialMonth: initialMonth.map(kotlinInt),
+                    useHostedFloatingChrome: true,
+                    onClose: onClose
+                )
+            }
+        }
+    }
+
+    private var editorHostID: String {
+        "\(selectedKind)-\(initialYear ?? -1)-\(initialMonth ?? -1)"
+    }
+
+    private var topChrome: some View {
+        VStack(spacing: TransactionEditorChromeLayout.selectorTopSpacing) {
+            ExpenseEditorGlassHeader(
+                title: title,
+                showsDeleteAction: false,
+                onBack: onClose,
+                onDelete: {}
+            )
+
+            MonthlyTransactionKindGlassControl(selection: $selectedKind)
+                .padding(.horizontal, TransactionEditorChromeLayout.selectorHorizontalPadding)
+        }
+        .padding(.horizontal, TransactionEditorChromeLayout.horizontalPadding)
+        .padding(.top, TransactionEditorChromeLayout.topPadding)
+    }
+
+    private var bottomChrome: some View {
+        ExpenseEditorGlassFooter(
+            onCancel: onClose,
+            onConfirm: {
+                IosExpenseEditorBridgeKt.performIosExpenseEditorSave()
+            },
+            confirmLabel: confirmLabel,
+            showsSecondaryAction: true
+        )
+    }
+
+    private var title: String {
+        selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense")
+    }
+
+    private var confirmLabel: String {
+        selectedKind == .income ? appLocalized("Save") : appLocalized("Save Expense")
     }
 }
 
@@ -171,6 +261,7 @@ struct ExpenseEditorRootView: View {
             MainViewControllerKt.AddExpenseViewController(
                 expenseId: expenseId,
                 readOnly: readOnly,
+                useHostedFloatingChrome: false,
                 onClose: onClose
             )
         }
@@ -267,6 +358,13 @@ enum ExpenseEditorChromeLayout {
     static var reservedBottomInset: CGFloat { bottomPadding + footerHeight + interSectionSpacing }
 }
 
+private enum TransactionEditorChromeLayout {
+    static let horizontalPadding = ExpenseEditorChromeLayout.horizontalPadding
+    static let selectorHorizontalPadding: CGFloat = 6
+    static let topPadding = ExpenseEditorChromeLayout.topPadding
+    static let selectorTopSpacing = MonthlyTransactionsHeaderLayout.selectorTopSpacing
+}
+
 struct ExpenseEditorGlassHeader: View {
     let title: String
     let showsDeleteAction: Bool
@@ -332,6 +430,7 @@ struct IncomeEditorRootView: View {
                 incomeId: incomeId,
                 initialYear: initialYear.map(kotlinInt),
                 initialMonth: initialMonth.map(kotlinInt),
+                useHostedFloatingChrome: false,
                 onClose: onClose
             )
         }
@@ -383,9 +482,11 @@ struct IncomeEditorRootView: View {
 
 struct DashboardRootView: View {
     @Binding var path: NavigationPath
+    let onStartVoiceExpense: () -> Void
+    let onOpenCsvTransfer: () -> Void
 
     var body: some View {
-        KotlinViewControllerHost {
+        KotlinViewControllerHost(constrainToSafeArea: false) {
             MainViewControllerKt.DashboardContentViewController(
                 onOpenCategories: {
                     path.append(Route.categories)
@@ -393,6 +494,8 @@ struct DashboardRootView: View {
                 onOpenAddExpense: {
                     path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
                 },
+                onOpenVoiceExpense: onStartVoiceExpense,
+                onOpenCsvTransfer: onOpenCsvTransfer,
                 onOpenDayExpenses: { year, month, day in
                     path.append(
                         Route.dayExpenses(
@@ -435,6 +538,7 @@ struct DashboardRootView: View {
             )
         }
         .appGlassHostedScreenChrome()
+        .ignoresSafeArea()
     }
 }
 

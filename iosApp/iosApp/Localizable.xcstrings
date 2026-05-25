@@ -160,6 +160,22 @@
         }
       }
     },
+    "%lld Installments" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Installments"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld rate"
+          }
+        }
+      }
+    },
     "Apple Intelligence must be enabled to use voice expense parsing." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -855,6 +871,22 @@
         }
       }
     },
+    "Enter a valid amount" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a valid amount"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci un importo valido"
+          }
+        }
+      }
+    },
     "Export" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1144,6 +1176,22 @@
         }
       }
     },
+    "Highest Day" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Highest Day"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giorno record"
+          }
+        }
+      }
+    },
     "Import" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1191,6 +1239,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Entrate"
+          }
+        }
+      }
+    },
+    "Income Details" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Income Details"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dettagli entrata"
+          }
+        }
+      }
+    },
+    "Installments" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installments"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rate"
           }
         }
       }
@@ -1619,6 +1699,22 @@
         }
       }
     },
+    "Select a date" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a date"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seleziona una data"
+          }
+        }
+      }
+    },
     "Save or restore a complete copy of your app data in the cloud." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1699,6 +1795,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spese condivise"
+          }
+        }
+      }
+    },
+    "Single Payment" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Single Payment"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagamento unico"
           }
         }
       }
@@ -2189,6 +2301,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossibile salvare la spesa."
+          }
+        }
+      }
+    },
+    "Unable to save income." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to save income."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile salvare l'entrata."
           }
         }
       }

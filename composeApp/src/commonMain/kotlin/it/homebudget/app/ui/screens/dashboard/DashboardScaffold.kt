@@ -37,6 +37,8 @@ internal fun DashboardScreenScaffold(
     showFab: Boolean,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
+    onOpenVoiceExpense: () -> Unit,
+    onOpenCsvTransfer: (() -> Unit)?,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     content: @Composable (Modifier) -> Unit
@@ -44,6 +46,7 @@ internal fun DashboardScreenScaffold(
     val isIos = rememberIsIosPlatform()
     val snackbarHostState = remember { SnackbarHostState() }
     val dataTransferState = rememberAndroidDataTransferSheetState()
+    val openCsvTransfer = onOpenCsvTransfer ?: dataTransferState::openCsvTransferSheet
     var showNavigationRail by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -66,7 +69,7 @@ internal fun DashboardScreenScaffold(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (!isIos) showNavigationRail = true },
+                            onClick = { showNavigationRail = true },
                             modifier = Modifier.padding(start = 4.dp)
                         ) {
                             Icon(
@@ -76,14 +79,14 @@ internal fun DashboardScreenScaffold(
                         }
                     },
                     actions = {
-                        if (!isIos) {
-                            BottomTransactionQuickActions(
-                                addContentDescription = strings.addExpense,
-                                onAddTransaction = onOpenAddExpense,
-                                modifier = Modifier.padding(end = 12.dp),
-                                openVoiceExpenseRequest = openVoiceExpenseRequest
-                            )
-                        }
+                        BottomTransactionQuickActions(
+                            addContentDescription = strings.addExpense,
+                            onAddTransaction = onOpenAddExpense,
+                            modifier = Modifier.padding(end = 12.dp),
+                            openVoiceExpenseRequest = openVoiceExpenseRequest,
+                            voiceContentDescription = strings.voiceExpense,
+                            onVoiceExpense = if (isIos) onOpenVoiceExpense else null
+                        )
                     }
                 )
             },
@@ -97,12 +100,12 @@ internal fun DashboardScreenScaffold(
             )
         }
 
-        if (!isIos && showNavigationRail) {
+        if (showNavigationRail) {
             AndroidNavigationRailOverlay(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = onOpenCategories,
-                onOpenCsvTransfer = dataTransferState::openCsvTransferSheet
+                onOpenCsvTransfer = openCsvTransfer
             )
         }
     }

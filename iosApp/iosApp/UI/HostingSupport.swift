@@ -11,13 +11,6 @@ func appDismissKeyboard() {
             window.endEditing(true)
         }
     }
-
-    UIApplication.shared.sendAction(
-        #selector(UIResponder.resignFirstResponder),
-        to: nil,
-        from: nil,
-        for: nil
-    )
 }
 
 struct KotlinViewControllerHost: UIViewControllerRepresentable {
@@ -316,7 +309,7 @@ private final class KeyboardDismissOnTapCoordinator: NSObject, UIGestureRecogniz
             installedWindow?.removeGestureRecognizer(previousGesture)
         }
 
-        let gesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard(_:)))
         gesture.cancelsTouchesInView = false
         gesture.delegate = self
         window.addGestureRecognizer(gesture)
@@ -332,8 +325,12 @@ private final class KeyboardDismissOnTapCoordinator: NSObject, UIGestureRecogniz
             .first { $0.isKeyWindow }
     }
 
-    @objc private func dismissKeyboard() {
-        appDismissKeyboard()
+    @objc private func dismissKeyboard(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard gestureRecognizer.state == .ended else {
+            return
+        }
+
+        installedWindow?.endEditing(true)
     }
 
     func gestureRecognizer(
@@ -362,9 +359,22 @@ private extension UIView {
             if current is UITextField || current is UITextView || current is UISearchTextField {
                 return true
             }
+            if current.isSystemTextInputRelatedView {
+                return true
+            }
             view = current.superview
         }
         return false
+    }
+
+    private var isSystemTextInputRelatedView: Bool {
+        let className = NSStringFromClass(type(of: self))
+        return className.contains("TextField") ||
+            className.contains("TextView") ||
+            className.contains("TextInput") ||
+            className.contains("InputSet") ||
+            className.contains("InputAssistant") ||
+            className.contains("Keyboard")
     }
 }
 
