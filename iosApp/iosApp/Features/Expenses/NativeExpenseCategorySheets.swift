@@ -202,28 +202,20 @@ struct NativeAddCategorySheet: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
 
-                            VStack(spacing: 12) {
-                                ForEach(Array(section.iconKeys.chunked(into: 4).enumerated()), id: \.offset) { _, row in
-                                    HStack(spacing: 12) {
-                                        ForEach(row, id: \.self) { iconKey in
-                                            NativeExpenseCategoryIconChoice(
-                                                iconKey: iconKey,
-                                                isSelected: selectedIconKey == iconKey,
-                                                action: {
-                                                    selectedIconKey = iconKey
-                                                    dismissNameKeyboard()
-                                                }
-                                            )
+                            LazyVGrid(
+                                columns: nativeExpenseCategoryIconChoiceColumns,
+                                alignment: .leading,
+                                spacing: 12
+                            ) {
+                                ForEach(section.iconKeys, id: \.self) { iconKey in
+                                    NativeExpenseCategoryIconChoice(
+                                        iconKey: iconKey,
+                                        isSelected: selectedIconKey == iconKey,
+                                        action: {
+                                            selectedIconKey = iconKey
+                                            dismissNameKeyboard()
                                         }
-
-                                        if row.count < 4 {
-                                            ForEach(0..<(4 - row.count), id: \.self) { _ in
-                                                Color.clear
-                                                    .frame(maxWidth: .infinity)
-                                                    .aspectRatio(1, contentMode: .fit)
-                                            }
-                                        }
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -260,6 +252,11 @@ struct NativeAddCategorySheet: View {
     }
 }
 
+private let nativeExpenseCategoryIconChoiceColumns: [GridItem] = Array(
+    repeating: GridItem(.flexible(), spacing: 12, alignment: .center),
+    count: 4
+)
+
 private struct NativeExpenseCategoryIconChoice: View {
     let iconKey: String
     let isSelected: Bool
@@ -267,16 +264,21 @@ private struct NativeExpenseCategoryIconChoice: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: nativeExpenseCategorySystemImageName(iconKey))
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(categoryIconColor(iconKey))
-                .frame(maxWidth: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(isSelected ? Color.accentColor : Color.white.opacity(0.16), lineWidth: isSelected ? 2 : 1)
-                )
-                .appGlassSurface(cornerRadius: 18)
+            ZStack {
+                Image(systemName: nativeExpenseCategorySystemImageName(iconKey))
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(categoryIconColor(iconKey))
+                    .symbolRenderingMode(.hierarchical)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? Color.accentColor : Color.white.opacity(0.16), lineWidth: isSelected ? 2 : 1)
+            )
+            .appGlassSurface(cornerRadius: 18)
         }
         .buttonStyle(.plain)
     }
