@@ -1,11 +1,13 @@
 package it.homebudget.app.data.csv.import
 
 import it.homebudget.app.data.RECURRING_MONTHLY_OCCURRENCES
+import it.homebudget.app.data.csv.CsvImportedRecurringOccurrenceKey
 
 internal abstract class ImportedRecurringSeriesCompleter<Item, ImportKey> {
     fun complete(
         itemsToInsert: List<Item>,
         existingKeys: MutableSet<ImportKey>,
+        existingRecurringOccurrenceKeys: MutableSet<CsvImportedRecurringOccurrenceKey>,
         targetOccurrencesPerSeries: Int = RECURRING_MONTHLY_OCCURRENCES
     ): List<Item> {
         val completed = itemsToInsert.toMutableList()
@@ -37,6 +39,7 @@ internal abstract class ImportedRecurringSeriesCompleter<Item, ImportKey> {
                 .drop(1)
                 .filter { generatedItem ->
                     distinctExistingDates.add(dateOf(generatedItem)) &&
+                        existingRecurringOccurrenceKeys.add(recurringOccurrenceKeyOf(generatedItem)) &&
                         existingKeys.add(importKeyOf(generatedItem))
                 }
 
@@ -51,6 +54,13 @@ internal abstract class ImportedRecurringSeriesCompleter<Item, ImportKey> {
     protected abstract fun dateOf(item: Item): Long
 
     protected abstract fun importKeyOf(item: Item): ImportKey
+
+    protected fun recurringOccurrenceKeyOf(item: Item): CsvImportedRecurringOccurrenceKey {
+        return CsvImportedRecurringOccurrenceKey(
+            recurringSeriesId = recurringSeriesIdOf(item) ?: error("Recurring item is missing a series id."),
+            date = dateOf(item)
+        )
+    }
 
     protected abstract fun buildRecurringMonthlyItems(
         latestImportedOccurrence: Item,

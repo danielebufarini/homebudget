@@ -1,6 +1,7 @@
 package it.homebudget.app.data.csv.import
 import it.homebudget.app.data.PendingIncome
 import it.homebudget.app.data.csv.CsvImportedIncomeKey
+import it.homebudget.app.data.csv.CsvImportedRecurringOccurrenceKey
 import it.homebudget.app.data.csv.ParsedUnifiedCsvRow
 import it.homebudget.app.data.csv.buildImportedIncomeId
 import it.homebudget.app.data.csv.normalizeDescription
@@ -43,6 +44,20 @@ internal object IncomeCsvRowImportHandler : CsvRowImportHandler {
                 }
                 category.id
             }
+        val recurringSeriesId = row.buildRecurringSeriesId(rowIndex)
+        val recurringOccurrenceKey = recurringSeriesId?.let { seriesId ->
+            CsvImportedRecurringOccurrenceKey(
+                recurringSeriesId = seriesId,
+                date = itemDate
+            )
+        }
+        if (
+            recurringOccurrenceKey != null &&
+            !state.existingIncomeRecurringOccurrenceKeys.add(recurringOccurrenceKey)
+        ) {
+            return false
+        }
+
         val incomeKey = CsvImportedIncomeKey(
             date = itemDate,
             categoryId = categoryId,
@@ -50,6 +65,7 @@ internal object IncomeCsvRowImportHandler : CsvRowImportHandler {
             description = normalizeDescription(row.description)
         )
         if (!state.existingIncomeKeys.add(incomeKey)) {
+            recurringOccurrenceKey?.let(state.existingIncomeRecurringOccurrenceKeys::remove)
             return false
         }
 
@@ -59,7 +75,7 @@ internal object IncomeCsvRowImportHandler : CsvRowImportHandler {
             date = itemDate,
             categoryId = categoryId,
             description = row.description?.takeIf { it.isNotBlank() },
-            recurringSeriesId = row.buildRecurringSeriesId(rowIndex)
+            recurringSeriesId = recurringSeriesId
         )
 
         return true

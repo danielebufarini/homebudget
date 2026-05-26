@@ -134,8 +134,12 @@ internal suspend fun importBudgetItemsFromCsv(
         categoriesByNormalizedName = categoriesByNormalizedName,
         existingExpenseKeys = repository.getAllExpensesSnapshot()
             .mapTo(mutableSetOf()) { expense -> expense.asImportKey() },
+        existingExpenseRecurringOccurrenceKeys = repository.getAllExpensesSnapshot()
+            .mapNotNullTo(mutableSetOf()) { expense -> expense.asRecurringOccurrenceKey() },
         existingIncomeKeys = repository.getAllIncomesSnapshot()
-            .mapTo(mutableSetOf()) { income -> income.asImportKey() }
+            .mapTo(mutableSetOf()) { income -> income.asImportKey() },
+        existingIncomeRecurringOccurrenceKeys = repository.getAllIncomesSnapshot()
+            .mapNotNullTo(mutableSetOf()) { income -> income.asRecurringOccurrenceKey() }
     )
 
     parsedRows.forEachIndexed { index, row ->
@@ -163,12 +167,14 @@ internal suspend fun importBudgetItemsFromCsv(
 
     val completedExpensesToInsert = ImportedRecurringExpenseSeriesCompleter().complete(
         itemsToInsert = importState.expensesToInsert,
-        existingKeys = importState.existingExpenseKeys
+        existingKeys = importState.existingExpenseKeys,
+        existingRecurringOccurrenceKeys = importState.existingExpenseRecurringOccurrenceKeys
     )
 
     val completedIncomesToInsert = ImportedRecurringIncomeSeriesCompleter().complete(
         itemsToInsert = importState.incomesToInsert,
-        existingKeys = importState.existingIncomeKeys
+        existingKeys = importState.existingIncomeKeys,
+        existingRecurringOccurrenceKeys = importState.existingIncomeRecurringOccurrenceKeys
     )
 
     if (completedExpensesToInsert.isNotEmpty()) {
@@ -214,6 +220,11 @@ internal data class CsvImportedIncomeKey(
     val categoryId: String?,
     val amount: Long,
     val description: String
+)
+
+internal data class CsvImportedRecurringOccurrenceKey(
+    val recurringSeriesId: String,
+    val date: Long
 )
 
 internal fun registerCategoryNames(
@@ -356,12 +367,18 @@ internal fun Expense.asImportKey() = CsvImportedExpenseKey(
     description = normalizeDescription(description)
 )
 
+internal fun Expense.asRecurringOccurrenceKey(): CsvImportedRecurringOccurrenceKey? =
+    recurringSeriesId.toRecurringOccurrenceKey(date)
+
 internal fun PendingExpense.asImportKey() = CsvImportedExpenseKey(
     date = date,
     categoryId = categoryId,
     amount = amount,
     description = normalizeDescription(description)
 )
+
+internal fun PendingExpense.asRecurringOccurrenceKey(): CsvImportedRecurringOccurrenceKey? =
+    recurringSeriesId.toRecurringOccurrenceKey(date)
 
 internal fun Income.asImportKey() = CsvImportedIncomeKey(
     date = date,
@@ -370,12 +387,29 @@ internal fun Income.asImportKey() = CsvImportedIncomeKey(
     description = normalizeDescription(description)
 )
 
+internal fun Income.asRecurringOccurrenceKey(): CsvImportedRecurringOccurrenceKey? =
+    recurringSeriesId.toRecurringOccurrenceKey(date)
+
 internal fun PendingIncome.asImportKey() = CsvImportedIncomeKey(
     date = date,
     categoryId = categoryId,
     amount = amount,
     description = normalizeDescription(description)
 )
+
+internal fun PendingIncome.asRecurringOccurrenceKey(): CsvImportedRecurringOccurrenceKey? =
+    recurringSeriesId.toRecurringOccurrenceKey(date)
+
+private fun String?.toRecurringOccurrenceKey(date: Long): CsvImportedRecurringOccurrenceKey? =
+    this
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?.let { seriesId ->
+            CsvImportedRecurringOccurrenceKey(
+                recurringSeriesId = seriesId,
+                date = date
+            )
+        }
 
 private fun buildImportedId(prefix: String): String = IdGenerator.newId("csv-$prefix")
 

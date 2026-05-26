@@ -10,8 +10,18 @@ interface IncomeDao {
     @Query("SELECT * FROM income ORDER BY date DESC")
     fun getAllIncomes(): Flow<List<Income>>
 
-    @Query("SELECT * FROM income ORDER BY date DESC LIMIT :limit")
-    fun getRecentIncomes(limit: Int): Flow<List<Income>>
+    @Query(
+        """
+        SELECT * FROM income
+        WHERE date < :toExclusiveMillis
+        ORDER BY date DESC
+        LIMIT :limit
+        """
+    )
+    fun getRecentIncomes(
+        limit: Int,
+        toExclusiveMillis: Long
+    ): Flow<List<Income>>
 
     @Query(
         """
