@@ -18,8 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.homebudget.app.data.DashboardPreferencesStore
 import it.homebudget.app.data.ExpenseRepository
-import it.homebudget.app.data.addAmountsExact
+import it.homebudget.app.data.subtractAmountsExact
 import it.homebudget.app.ui.screens.EnsureStarterCategoriesSeeded
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +47,9 @@ fun DashboardRoute(
     onOpenTransactionSearch: (Int, Int, String) -> Unit = { _, _, _ -> }
 ) {
     val repository: ExpenseRepository = koinInject()
+    val dashboardPreferencesStore: DashboardPreferencesStore = koinInject()
     val strings = rememberDashboardStrings()
+    val pinnedDashboardCard by dashboardPreferencesStore.pinnedDashboardCard.collectAsState()
 
     val categoriesFlow = remember(repository) {
         repository.getAllCategories()
@@ -100,10 +103,15 @@ fun DashboardRoute(
     }
     val chartState by chartStateFlow.collectAsState(initial = emptyLineChartState(selectedMonth))
 
-    val sixMonthSavingsAmount = remember(chartState.monthSnapshots) {
-        chartState.monthSnapshots.fold(0L) { total, month ->
-            addAmountsExact(total, month.differenceAmount)
-        }
+    val recentTransactionsFlow = remember(repository) {
+        repository.getDashboardRecentTransactions()
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+    }
+    val recentTransactions by recentTransactionsFlow.collectAsState(initial = emptyList())
+
+    val monthlySavingsAmount = remember(summary.incomeAmount, summary.totalAmount) {
+        subtractAmountsExact(summary.incomeAmount, summary.totalAmount)
     }
 
     val dashboardBody: @Composable (Modifier) -> Unit = { modifier ->
@@ -113,8 +121,11 @@ fun DashboardRoute(
             showMonthHeaderCard = !showNavigationChrome,
             selectedMonth = selectedMonth,
             summary = summary,
-            sixMonthSavingsAmount = sixMonthSavingsAmount,
+            monthlySavingsAmount = monthlySavingsAmount,
             chartState = chartState,
+            recentTransactions = recentTransactions,
+            pinnedDashboardCard = pinnedDashboardCard,
+            onPinDashboardCard = dashboardPreferencesStore::pinDashboardCard,
             categoriesById = categoriesById,
             showTransactionSearch = showTransactionSearch,
             searchQuery = searchQuery,

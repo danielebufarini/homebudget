@@ -39,9 +39,6 @@ class SharedExpensesScreen(
     override fun sectionHeaderTextStyle(): TextStyle = MaterialTheme.typography.titleMedium
 
     @Composable
-    override fun sectionHeaderIconTint(): Color = MaterialTheme.colorScheme.onPrimaryContainer
-
-    @Composable
     override fun sectionHeaderChevronContainerColor(): Color =
         MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f)
 

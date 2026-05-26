@@ -77,7 +77,9 @@ final class GroupedExpensesSectionsViewModel: ObservableObject {
     private func apply(snapshot: IosGroupedExpensesSnapshot) {
         totalAmountText = snapshot.totalAmountText
         emptyStateText = snapshot.emptyStateText
-        sections = snapshot.sections.map(GroupedExpenseSectionModel.init)
+        sections = snapshot.sections.map { section in
+            GroupedExpenseSectionModel(section)
+        }
         expandedSectionIDs = expansionState.nextExpandedSectionIDs(
             current: expandedSectionIDs,
             sections: sections
@@ -95,7 +97,7 @@ final class MonthlyIncomesSectionsViewModel: ObservableObject {
 
     private let observer: IosMonthlyIncomesObserver
     private var expansionState = GroupedSectionExpansionState(
-        strategy: NewSectionsExpansionStrategy(expandsInitially: true)
+        strategy: NewSectionsExpansionStrategy(expandsInitially: false)
     )
     private var isObserving = false
 
@@ -149,11 +151,15 @@ final class MonthlyIncomesSectionsViewModel: ObservableObject {
         observer.deleteRecurringIncomeSeries(seriesId: seriesID)
     }
 
+    func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
+        observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+    }
+
     private func apply(snapshot: IosMonthlyIncomesSnapshot) {
         totalAmountText = snapshot.totalAmountText
         emptyStateText = snapshot.emptyStateText
-        sections = snapshot.sections.map {
-            GroupedExpenseSectionModel($0, showsCategoryMetadata: false)
+        sections = snapshot.sections.map { section in
+            GroupedExpenseSectionModel(section)
         }
         hasLoadedSnapshot = true
         expandedSectionIDs = expansionState.nextExpandedSectionIDs(

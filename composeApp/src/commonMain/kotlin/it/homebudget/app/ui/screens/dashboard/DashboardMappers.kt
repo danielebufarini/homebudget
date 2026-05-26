@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.IntSize
 import it.homebudget.app.data.DashboardCashFlow
 import it.homebudget.app.data.DashboardCategoryTotal
 import it.homebudget.app.data.DashboardMonthSummary
+import it.homebudget.app.data.addAmountsExact
 import it.homebudget.app.data.toDisplayDouble
 import it.homebudget.app.ui.screens.MonthCursor
 import kotlinx.datetime.TimeZone
@@ -36,6 +37,7 @@ internal fun emptyLineChartState(selectedMonth: MonthCursor): LineChartState {
         maxValue = 0.0,
         months = months,
         yAxisLabels = listOf("0", "0", "0"),
+        periodDifferenceAmount = 0L,
         monthSnapshots = emptyList(),
         series = emptyList()
     )
@@ -99,7 +101,9 @@ internal fun buildCashFlowChartState(
     }
     val expenseValues = monthSnapshots.map { it.expenseAmount.toDisplayDouble() }
     val incomeValues = monthSnapshots.map { it.incomeAmount.toDisplayDouble() }
-    val differenceValues = monthSnapshots.map { it.differenceAmount.toDisplayDouble() }
+    val cumulativeDifferenceAmounts = monthSnapshots.runningTotalOf { it.differenceAmount }
+    val differenceValues = cumulativeDifferenceAmounts.map { it.toDisplayDouble() }
+    val periodDifferenceAmount = cumulativeDifferenceAmounts.lastOrNull() ?: 0L
 
     val expenseMarkerDays = buildSet {
         months.forEachIndexed { index, month ->
@@ -135,6 +139,7 @@ internal fun buildCashFlowChartState(
             formatAxisAmount(middleValue),
             formatAxisAmount(minValue)
         ),
+        periodDifferenceAmount = periodDifferenceAmount,
         monthSnapshots = monthSnapshots,
         series = listOf(
             LineSeries(
@@ -160,6 +165,14 @@ internal fun buildCashFlowChartState(
 }
 
 internal fun formatAxisAmount(amount: Double): String = amount.roundToInt().toString()
+
+private inline fun <T> Iterable<T>.runningTotalOf(value: (T) -> Long): List<Long> {
+    var total = 0L
+    return map { item ->
+        total = addAmountsExact(total, value(item))
+        total
+    }
+}
 
 internal fun MonthCursor.toDayLabel(dayOfMonth: Int, weekdayNames: List<String>): String {
     val dayOfWeek = kotlinx.datetime.LocalDate(year, month, dayOfMonth).dayOfWeek

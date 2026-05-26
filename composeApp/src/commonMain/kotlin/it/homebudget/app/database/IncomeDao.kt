@@ -10,6 +10,9 @@ interface IncomeDao {
     @Query("SELECT * FROM income ORDER BY date DESC")
     fun getAllIncomes(): Flow<List<Income>>
 
+    @Query("SELECT * FROM income ORDER BY date DESC LIMIT :limit")
+    fun getRecentIncomes(limit: Int): Flow<List<Income>>
+
     @Query(
         """
         SELECT COALESCE(SUM(amount), 0) AS totalAmount

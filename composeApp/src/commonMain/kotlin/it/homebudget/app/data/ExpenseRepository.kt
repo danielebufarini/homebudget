@@ -45,6 +45,20 @@ data class DashboardCashFlow(
     val incomeTotalsByMonth: List<DashboardMonthTotal>
 )
 
+enum class DashboardRecentTransactionType {
+    Expense,
+    Income
+}
+
+data class DashboardRecentTransaction(
+    val id: String,
+    val type: DashboardRecentTransactionType,
+    val amount: Long,
+    val date: Long,
+    val categoryId: String?,
+    val description: String?
+)
+
 data class WidgetMonthSummary(
     val expenseAmount: Long,
     val incomeAmount: Long
@@ -138,6 +152,10 @@ class ExpenseRepository(
             selectedMonth = selectedMonth,
             trailingMonthCount = trailingMonthCount
         )
+    }
+
+    fun getDashboardRecentTransactions(limit: Int = 15): Flow<List<DashboardRecentTransaction>> {
+        return dashboardRepository.getRecentTransactions(limit = limit)
     }
 
     suspend fun getWidgetMonthSummary(year: Int, month: Int): WidgetMonthSummary {

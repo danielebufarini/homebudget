@@ -89,6 +89,40 @@ class DashboardRepository(
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
+    fun getRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> {
+        return combine(
+            expenseDao.getRecentExpenses(limit),
+            incomeDao.getRecentIncomes(limit)
+        ) { expenses, incomes ->
+            buildList(expenses.size + incomes.size) {
+                expenses.mapTo(this) { expense ->
+                    DashboardRecentTransaction(
+                        id = expense.id,
+                        type = DashboardRecentTransactionType.Expense,
+                        amount = expense.amount,
+                        date = expense.date,
+                        categoryId = expense.categoryId,
+                        description = expense.description
+                    )
+                }
+                incomes.mapTo(this) { income ->
+                    DashboardRecentTransaction(
+                        id = income.id,
+                        type = DashboardRecentTransactionType.Income,
+                        amount = income.amount,
+                        date = income.date,
+                        categoryId = income.categoryId,
+                        description = income.description
+                    )
+                }
+            }.sortedWith(
+                compareByDescending<DashboardRecentTransaction> { it.date }
+                    .thenBy { it.type.ordinal }
+                    .thenBy { it.id }
+            ).take(limit)
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
+    }
+
     suspend fun getWidgetMonthSummary(
         year: Int,
         month: Int

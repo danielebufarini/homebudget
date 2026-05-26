@@ -337,6 +337,9 @@ private final class KeyboardDismissOnTapCoordinator: NSObject, UIGestureRecogniz
         _ gestureRecognizer: UIGestureRecognizer,
         shouldReceive touch: UITouch
     ) -> Bool {
+        guard installedWindow?.currentFirstResponder != nil else {
+            return false
+        }
         guard let touchedView = touch.view else {
             return true
         }
@@ -353,6 +356,20 @@ private final class KeyboardDismissOnTapCoordinator: NSObject, UIGestureRecogniz
 }
 
 private extension UIView {
+    var currentFirstResponder: UIView? {
+        if isFirstResponder {
+            return self
+        }
+
+        for subview in subviews {
+            if let responder = subview.currentFirstResponder {
+                return responder
+            }
+        }
+
+        return nil
+    }
+
     var isDescendantOfTextInput: Bool {
         var view: UIView? = self
         while let current = view {

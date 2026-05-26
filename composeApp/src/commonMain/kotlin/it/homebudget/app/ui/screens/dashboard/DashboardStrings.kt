@@ -16,6 +16,10 @@ import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.monthly_summary
 import homebudget.composeapp.generated.resources.no_expenses_for_month
 import homebudget.composeapp.generated.resources.no_expenses_in_period
+import homebudget.composeapp.generated.resources.no_recent_transactions
+import homebudget.composeapp.generated.resources.pin_dashboard_card
+import homebudget.composeapp.generated.resources.pinned_dashboard_card
+import homebudget.composeapp.generated.resources.recent_transactions
 import homebudget.composeapp.generated.resources.savings
 import homebudget.composeapp.generated.resources.search_transactions
 import homebudget.composeapp.generated.resources.shared
@@ -42,6 +46,10 @@ internal data class DashboardStrings(
     val monthlySummary: String,
     val noExpensesForMonth: String,
     val noExpensesInPeriod: String,
+    val recentTransactions: String,
+    val noRecentTransactions: String,
+    val pinDashboardCard: String,
+    val pinnedDashboardCard: String,
     val unknownCategory: String,
     val cashFlow: String,
     val expensesByCategory: String,
@@ -71,6 +79,10 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         monthlySummary = stringResource(Res.string.monthly_summary),
         noExpensesForMonth = stringResource(Res.string.no_expenses_for_month),
         noExpensesInPeriod = stringResource(Res.string.no_expenses_in_period),
+        recentTransactions = stringResource(Res.string.recent_transactions),
+        noRecentTransactions = stringResource(Res.string.no_recent_transactions),
+        pinDashboardCard = stringResource(Res.string.pin_dashboard_card),
+        pinnedDashboardCard = stringResource(Res.string.pinned_dashboard_card),
         unknownCategory = stringResource(Res.string.unknown_category),
         cashFlow = stringResource(Res.string.cash_flow),
         expensesByCategory = stringResource(Res.string.expenses_by_category),

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.homebudget.app.data.DashboardCardPage
+import it.homebudget.app.data.DashboardRecentTransaction
 import it.homebudget.app.database.Category
 import it.homebudget.app.localization.rememberCategoryNameResolver
 import it.homebudget.app.ui.screens.MonthCursor
@@ -18,8 +20,11 @@ internal fun DashboardBody(
     showMonthHeaderCard: Boolean,
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
-    sixMonthSavingsAmount: Long,
+    monthlySavingsAmount: Long,
     chartState: LineChartState,
+    recentTransactions: List<DashboardRecentTransaction>,
+    pinnedDashboardCard: DashboardCardPage?,
+    onPinDashboardCard: (DashboardCardPage?) -> Unit,
     categoriesById: Map<String, Category>,
     showTransactionSearch: Boolean,
     searchQuery: String,
@@ -65,7 +70,7 @@ internal fun DashboardBody(
             strings = strings,
             selectedMonth = selectedMonth,
             summary = summary,
-            sixMonthSavingsAmount = sixMonthSavingsAmount,
+            monthlySavingsAmount = monthlySavingsAmount,
             categoriesById = categoriesById,
             onExpensesClick = onOpenMonthlyExpenses,
             onIncomeClick = onOpenMonthlyIncomes,
@@ -89,6 +94,9 @@ internal fun DashboardBody(
             strings = strings,
             lineChartState = chartState,
             categoryTotals = summary.categoryTotals,
+            recentTransactions = recentTransactions,
+            pinnedDashboardCard = pinnedDashboardCard,
+            onPinDashboardCard = onPinDashboardCard,
             categoriesById = categoriesById
         )
     }

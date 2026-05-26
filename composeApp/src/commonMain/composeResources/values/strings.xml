@@ -150,10 +150,14 @@
     <string name="no_expenses_for_month">No expenses for this month</string>
     <string name="no_expenses_in_period">No expenses in this period</string>
     <string name="no_income_for_month">No income for this month</string>
+    <string name="no_recent_transactions">No recent transactions</string>
     <string name="no_shared_expenses_for_month">No shared expenses for this month</string>
     <string name="nothing_to_save">Nothing to save</string>
     <string name="options">Options</string>
+    <string name="pin_dashboard_card">Pin dashboard card</string>
+    <string name="pinned_dashboard_card">Pinned dashboard card</string>
     <string name="recurring_monthly">Recurring Monthly</string>
+    <string name="recent_transactions">Recent transactions</string>
     <string name="refresh">Refresh</string>
     <string name="restore">Restore</string>
     <string name="restore_backup">Restore Backup</string>

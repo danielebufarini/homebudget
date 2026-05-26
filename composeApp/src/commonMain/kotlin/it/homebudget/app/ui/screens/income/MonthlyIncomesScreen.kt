@@ -40,13 +40,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add_income
 import homebudget.composeapp.generated.resources.back
+import homebudget.composeapp.generated.resources.by_category
+import homebudget.composeapp.generated.resources.by_date
 import homebudget.composeapp.generated.resources.currency_symbol
 import homebudget.composeapp.generated.resources.delete
 import homebudget.composeapp.generated.resources.delete_item_confirmation_message
@@ -73,6 +74,8 @@ import org.koin.compose.koinInject
 private data class MonthlyIncomeStrings(
     val addIncome: String,
     val back: String,
+    val byCategory: String,
+    val byDate: String,
     val currencySymbol: String,
     val delete: String,
     val deleteItemConfirmationMessageTemplate: String,
@@ -86,6 +89,8 @@ private fun rememberMonthlyIncomeStrings(): MonthlyIncomeStrings =
     MonthlyIncomeStrings(
         addIncome = stringResource(Res.string.add_income),
         back = stringResource(Res.string.back),
+        byCategory = stringResource(Res.string.by_category),
+        byDate = stringResource(Res.string.by_date),
         currencySymbol = stringResource(Res.string.currency_symbol),
         delete = stringResource(Res.string.delete),
         deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
@@ -139,7 +144,7 @@ class MonthlyIncomesScreen(
         val shortMonthNamesList = remember(shortMonthNames) { shortMonthNames.toList() }
         val resolveCategoryName = rememberCategoryNameResolver()
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
-        var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByDate) }
+        var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         var pendingIncomeDelete by remember { mutableStateOf<Income?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
@@ -186,13 +191,20 @@ class MonthlyIncomesScreen(
         val groupedIncomesState by groupedIncomesFlow.collectAsState(initial = emptyGroupedIncomesState())
         val groupedIncomes = groupedIncomesState.sections
         val totalAmount = groupedIncomesState.totalAmount
+        val categoriesById = groupedIncomesState.categoriesById
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
             val income = groupedIncomesState.visibleIncomes.find { it.id == incomeId }
                 ?: return@deleteAction
             pendingIncomeDelete = income
         }
         val content: @Composable (PaddingValues) -> Unit = { padding ->
-            val listContentPadding = edgeToEdgeListContentPadding(scaffoldPadding = padding)
+            val showFloatingBottomControls = !isIos
+            val bottomControlClearance = if (showFloatingBottomControls) 88.dp else 0.dp
+            val listContentPadding = edgeToEdgeListContentPadding(
+                scaffoldPadding = padding,
+                bottom = 16.dp + bottomControlClearance
+            )
+            val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
 
             Box(
                 modifier = Modifier
@@ -228,13 +240,16 @@ class MonthlyIncomesScreen(
                         for (section in groupedIncomes) {
                             item(key = section.key) {
                                 val sectionId = section.key
-                                val expanded = expandedState.getOrPut(sectionId) { true }
+                                val expanded = expandedState.getOrPut(sectionId) { false }
                                 val chevronRotation by animateFloatAsState(
                                     targetValue = if (expanded) 180f else 0f,
                                     label = "MonthlyIncomeSectionChevronRotation"
                                 )
                                 PlatformCard(contentPadding = PaddingValues(0.dp)) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
+                                        val firstCategoryId = section.incomes.firstOrNull()?.categoryId
+                                        val sectionCategory = firstCategoryId?.let(categoriesById::get)
+                                        val isGroupedByCategory = groupingMode == ExpenseGroupingMode.ByCategory
                                         Surface(
                                             modifier = Modifier.fillMaxWidth(),
                                             color = MaterialTheme.colorScheme.primaryContainer,
@@ -249,13 +264,15 @@ class MonthlyIncomesScreen(
                                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(
+                                                CategoryLabel(
+                                                    iconKey = sectionCategory?.icon,
                                                     text = section.title,
                                                     modifier = Modifier.weight(1f),
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    showIcon = isGroupedByCategory,
+                                                    colorKey = firstCategoryId.takeIf { isGroupedByCategory },
+                                                    textStyle = MaterialTheme.typography.titleMedium,
+                                                    textColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                                     maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                                 Spacer(modifier = Modifier.width(16.dp))
                                                 Text(
@@ -277,8 +294,11 @@ class MonthlyIncomesScreen(
                                             HorizontalDivider()
                                             for (income in section.incomes) {
                                                 key(income.id) {
+                                                    val category = income.categoryId?.let(categoriesById::get)
                                                     MonthlyIncomeRow(
                                                         income = income,
+                                                        categoryIconKey = category?.icon,
+                                                        categoryColorKey = income.categoryId,
                                                         onOpenIncome = onOpenIncome,
                                                         onDeleteIncome = deleteIncomeAction
                                                     )
@@ -291,6 +311,18 @@ class MonthlyIncomesScreen(
                             }
                         }
                     }
+                }
+
+                if (showFloatingBottomControls) {
+                    GroupingModeButtons(
+                        groupingMode = groupingMode,
+                        onGroupingModeChange = { groupingMode = it },
+                        byCategoryLabel = strings.byCategory,
+                        byDateLabel = strings.byDate,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = bottomControlsPadding)
+                    )
                 }
             }
         }
@@ -367,6 +399,8 @@ class MonthlyIncomesScreen(
 @Composable
 private fun MonthlyIncomeRow(
     income: Income,
+    categoryIconKey: String?,
+    categoryColorKey: String?,
     onOpenIncome: (String) -> Unit,
     onDeleteIncome: (String) -> Unit
 ) {
@@ -402,6 +436,8 @@ private fun MonthlyIncomeRow(
             title = income.description?.ifBlank { incomeLabel } ?: incomeLabel,
             subtitleText = formatExpenseDateGroupTitle(epochMillisToLocalDate(income.date)),
             amountText = formatAmount(income.amount, currencySymbol),
+            categoryIconKey = categoryIconKey,
+            categoryColorKey = categoryColorKey,
             isRecurring = !income.recurringSeriesId.isNullOrBlank(),
             subtitleFontSizeOffsetSp = -2,
             onClick = { onOpenIncome(income.id) }

@@ -33,6 +33,77 @@ data class CsvImportResult(
 suspend fun importBudgetItemsFromCsv(
     repository: ExpenseRepository,
     csvText: String
+): CsvImportResult = importBudgetItemsFromCsv(
+    repository = ExpenseRepositoryCsvImportStore(repository),
+    csvText = csvText
+)
+
+internal interface CsvImportStore {
+    suspend fun seedStarterCategoriesIfEmpty()
+    suspend fun getAllCategoriesSnapshot(): List<Category>
+    suspend fun getAllExpensesSnapshot(): List<Expense>
+    suspend fun getAllIncomesSnapshot(): List<Income>
+    suspend fun insertCategory(
+        id: String,
+        name: String,
+        icon: String,
+        color: String,
+        categoryType: String,
+        isArchived: Boolean,
+        sortOrder: Long
+    )
+    suspend fun insertExpenses(expenses: List<PendingExpense>)
+    suspend fun insertIncomes(incomes: List<PendingIncome>)
+}
+
+private class ExpenseRepositoryCsvImportStore(
+    private val repository: ExpenseRepository
+) : CsvImportStore {
+    override suspend fun seedStarterCategoriesIfEmpty() {
+        repository.seedStarterCategoriesIfEmpty()
+    }
+
+    override suspend fun getAllCategoriesSnapshot(): List<Category> =
+        repository.getAllCategoriesSnapshot()
+
+    override suspend fun getAllExpensesSnapshot(): List<Expense> =
+        repository.getAllExpensesSnapshot()
+
+    override suspend fun getAllIncomesSnapshot(): List<Income> =
+        repository.getAllIncomesSnapshot()
+
+    override suspend fun insertCategory(
+        id: String,
+        name: String,
+        icon: String,
+        color: String,
+        categoryType: String,
+        isArchived: Boolean,
+        sortOrder: Long
+    ) {
+        repository.insertCategory(
+            id = id,
+            name = name,
+            icon = icon,
+            color = color,
+            categoryType = categoryType,
+            isArchived = isArchived,
+            sortOrder = sortOrder
+        )
+    }
+
+    override suspend fun insertExpenses(expenses: List<PendingExpense>) {
+        repository.insertExpenses(expenses)
+    }
+
+    override suspend fun insertIncomes(incomes: List<PendingIncome>) {
+        repository.insertIncomes(incomes)
+    }
+}
+
+internal suspend fun importBudgetItemsFromCsv(
+    repository: CsvImportStore,
+    csvText: String
 ): CsvImportResult {
     require(csvText.encodeToByteArray().size <= MAX_CSV_IMPORT_BYTES) {
         "CSV import file is too large."

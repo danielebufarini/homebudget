@@ -42,6 +42,7 @@ internal data class LineChartState(
     val maxValue: Double,
     val months: List<MonthCursor>,
     val yAxisLabels: List<String>,
+    val periodDifferenceAmount: Long,
     val monthSnapshots: List<ChartMonthSnapshot>,
     val series: List<LineSeries>
 )

@@ -36,7 +36,7 @@ internal fun ExpenseSummary(
     strings: DashboardStrings,
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
-    sixMonthSavingsAmount: Long,
+    monthlySavingsAmount: Long,
     categoriesById: Map<String, Category>,
     onExpensesClick: () -> Unit,
     onIncomeClick: () -> Unit,
@@ -92,12 +92,11 @@ internal fun ExpenseSummary(
             value = highestDayValue,
             containerColor = colorScheme.surfaceVariant,
             contentColor = colorScheme.onSurfaceVariant,
-            trailingValue = formatAmount(summary.highestDayAmount, strings.currencySymbol),
             onClick = if (summary.highestDayOfMonth != null) onHighestDayClick else null
         ),
         SummaryMetricUi(
             label = strings.savings,
-            value = formatAmount(sixMonthSavingsAmount, strings.currencySymbol),
+            value = formatAmount(monthlySavingsAmount, strings.currencySymbol),
             containerColor = colorScheme.primary,
             contentColor = colorScheme.onPrimary
         )
@@ -231,17 +230,29 @@ private fun SummaryMetric(
                         ellipsize = true
                     )
                     Spacer(modifier = Modifier.width(if (isIos) 10.dp else 12.dp))
-                    Text(
+                    AmountText(
                         text = trailingValue,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        textAlign = TextAlign.End
+                        modifier = Modifier
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun AmountText(
+    text: String,
+    modifier: Modifier
+) {
+    Text(
+        text = "\u2066$text\u2069",
+        modifier = modifier,
+        style = MaterialTheme.typography.titleMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        textAlign = TextAlign.End
+    )
 }
 
 @Composable

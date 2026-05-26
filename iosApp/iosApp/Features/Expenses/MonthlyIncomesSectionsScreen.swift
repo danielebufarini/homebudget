@@ -4,6 +4,7 @@ struct MonthlyIncomesSectionsScreen: View {
     let onOpenIncome: (String) -> Void
 
     @State private var selectedMonth: MonthCursor
+    @State private var groupingMode: ExpenseGroupingMode = .byCategory
 
     init(
         year: Int,
@@ -19,7 +20,8 @@ struct MonthlyIncomesSectionsScreen: View {
             selectedMonth: selectedMonth,
             onPreviousMonth: previousMonth,
             onNextMonth: nextMonth,
-            onOpenIncome: onOpenIncome
+            onOpenIncome: onOpenIncome,
+            groupingMode: $groupingMode
         )
         .id(selectedMonth.id)
     }
@@ -41,6 +43,7 @@ struct MonthlyIncomesSectionsContent: View {
     let headerAmountDescriptor: String?
     let topReservedInset: CGFloat?
     let headerAccessory: (() -> AnyView)?
+    @Binding private var groupingMode: ExpenseGroupingMode
 
     @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
     @State private var pendingIncomeDeleteID: String?
@@ -53,7 +56,7 @@ struct MonthlyIncomesSectionsContent: View {
         headerAmountDescriptor: String? = nil,
         topReservedInset: CGFloat? = nil,
         headerAccessory: (() -> AnyView)? = nil,
-        groupingMode: ExpenseGroupingMode = .byDate
+        groupingMode: Binding<ExpenseGroupingMode>
     ) {
         self.selectedMonth = selectedMonth
         self.onPreviousMonth = onPreviousMonth
@@ -62,11 +65,12 @@ struct MonthlyIncomesSectionsContent: View {
         self.headerAmountDescriptor = headerAmountDescriptor
         self.topReservedInset = topReservedInset
         self.headerAccessory = headerAccessory
+        _groupingMode = groupingMode
         _viewModel = StateObject(
             wrappedValue: MonthlyIncomesSectionsViewModel(
                 year: selectedMonth.year,
                 month: selectedMonth.month,
-                groupingMode: groupingMode
+                groupingMode: groupingMode.wrappedValue
             )
         )
     }
@@ -85,10 +89,17 @@ struct MonthlyIncomesSectionsContent: View {
         )
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
+            viewModel.updateGroupingMode(groupingMode)
             viewModel.start()
+        }
+        .onChange(of: groupingMode) { _, updatedMode in
+            viewModel.updateGroupingMode(updatedMode)
         }
         .onDisappear {
             viewModel.stop()
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            groupingControlBar
         }
         .overlay {
             if let pendingIncomeDeleteRow {
@@ -186,6 +197,18 @@ struct MonthlyIncomesSectionsContent: View {
         )
         .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
         .padding(.top, MonthNavigationHeaderLayout.topPadding)
+    }
+
+    private var groupingControlBar: some View {
+        HStack {
+            Spacer(minLength: 0)
+            ExpenseGroupingGlassControl(selection: $groupingMode)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
 
     @ViewBuilder

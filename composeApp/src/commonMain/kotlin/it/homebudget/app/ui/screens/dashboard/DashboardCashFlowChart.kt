@@ -290,6 +290,7 @@ internal fun LineChartPage(
             CashFlowPointPopup(
                 strings = strings,
                 point = popupPoint,
+                periodDifferenceAmount = state.periodDifferenceAmount,
                 rootSize = rootSize,
                 popupSize = popupSize,
                 onPopupSizeChanged = { popupSize = it }
@@ -302,6 +303,7 @@ internal fun LineChartPage(
 private fun BoxScope.CashFlowPointPopup(
     strings: DashboardStrings,
     point: SelectedChartPoint,
+    periodDifferenceAmount: Long,
     rootSize: IntSize,
     popupSize: IntSize,
     onPopupSizeChanged: (IntSize) -> Unit
@@ -357,7 +359,7 @@ private fun BoxScope.CashFlowPointPopup(
             )
             CashFlowPointPopupRow(
                 label = strings.difference,
-                value = formatAmount(point.detail.differenceAmount, strings.currencySymbol)
+                value = formatAmount(periodDifferenceAmount, strings.currencySymbol)
             )
         }
     }

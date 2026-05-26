@@ -182,7 +182,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
                     headerAmountDescriptor: appLocalized("Income"),
                     topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
                     headerAccessory: transactionKindSelector,
-                    groupingMode: groupingMode
+                    groupingMode: $groupingMode
                 )
             }
         }
