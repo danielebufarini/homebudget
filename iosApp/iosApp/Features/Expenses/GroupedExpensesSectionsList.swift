@@ -59,10 +59,6 @@ struct GroupedExpensesSectionsList: View {
                 .zIndex(1)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
-        .monthSwipeNavigationGesture(
-            onPreviousMonth: onPreviousMonth,
-            onNextMonth: onNextMonth
-        )
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.updateGroupingMode(groupingMode)
@@ -147,6 +143,10 @@ struct GroupedExpensesSectionsList: View {
                 headerAccessory()
             }
         }
+        .monthSwipeNavigationGesture(
+            onPreviousMonth: onPreviousMonth,
+            onNextMonth: onNextMonth
+        )
     }
 
     @ViewBuilder

@@ -83,10 +83,6 @@ struct MonthlyIncomesSectionsContent: View {
                 .zIndex(1)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
-        .monthSwipeNavigationGesture(
-            onPreviousMonth: onPreviousMonth,
-            onNextMonth: onNextMonth
-        )
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.updateGroupingMode(groupingMode)
@@ -183,6 +179,10 @@ struct MonthlyIncomesSectionsContent: View {
                 headerAccessory()
             }
         }
+        .monthSwipeNavigationGesture(
+            onPreviousMonth: onPreviousMonth,
+            onNextMonth: onNextMonth
+        )
     }
 
     private var monthHeader: some View {
