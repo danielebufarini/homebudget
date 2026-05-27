@@ -28,6 +28,18 @@ interface IncomeDao {
         toExclusiveYearMonth: Int
     ): Flow<List<DashboardMonthAmountGroupRow>>
 
+    @Query(
+        """
+        SELECT COALESCE(SUM(amount), 0)
+        FROM income
+        WHERE yearMonth < :toExclusiveYearMonth
+        """
+    )
+    fun getDashboardIncomeTotalBeforeYearMonth(
+        toExclusiveYearMonth: Int
+    ): Flow<Long>
+
+
     @Query("SELECT * FROM income ORDER BY date DESC")
     suspend fun getAllIncomesSnapshot(): List<Income>
 

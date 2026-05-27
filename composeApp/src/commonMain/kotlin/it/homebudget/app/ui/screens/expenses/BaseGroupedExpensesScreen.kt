@@ -11,7 +11,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,8 +33,10 @@ import homebudget.composeapp.generated.resources.delete
 import homebudget.composeapp.generated.resources.delete_item_confirmation_message
 import homebudget.composeapp.generated.resources.delete_recurring_item_confirmation_message
 import homebudget.composeapp.generated.resources.full_month_names
+import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
+import it.homebudget.app.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.monthBounds
 import it.homebudget.app.database.Expense
@@ -53,7 +54,9 @@ import org.koin.compose.koinInject
 abstract class BaseGroupedExpensesScreen(
     private val year: Int,
     private val month: Int,
-    private val searchQuery: String = ""
+    private val searchQuery: String = "",
+    private val externalSearchCandidateLimit: Int? = null,
+    private val onLoadMoreSearchResults: (() -> Unit)? = null
 ) : Screen {
 
     @Composable
@@ -132,6 +135,7 @@ abstract class BaseGroupedExpensesScreen(
         val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
         val recurringExpenseDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message)
         val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+        val loadMoreSearchResultsLabel = stringResource(Res.string.load_more_search_results)
         val fullMonthNames = stringArrayResource(Res.array.full_month_names)
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
         val shortMonthNamesList = remember(shortMonthNames) { shortMonthNames.toList() }
@@ -141,14 +145,30 @@ abstract class BaseGroupedExpensesScreen(
         val navigationDescriptor = monthNavigationDescriptor()
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
+        var localSearchPage by remember(searchQuery) { mutableStateOf(1) }
         var pendingExpenseDelete by remember { mutableStateOf<Expense?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
         val searchMode = searchQuery.isNotBlank()
-        val expensesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
+        val searchCandidateLimit = if (searchMode) {
+            externalSearchCandidateLimit ?: (localSearchPage * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE)
+        } else {
+            DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+        }
+        val loadMoreSearchResults = onLoadMoreSearchResults ?: {
+            localSearchPage += 1
+        }
+        val expensesFlow = remember(
+            repository,
+            monthStartMillis,
+            monthEndMillis,
+            searchMode,
+            searchQuery,
+            searchCandidateLimit
+        ) {
             if (searchMode) {
-                repository.searchExpenseCandidates(searchQuery)
+                repository.searchExpenseCandidates(searchQuery, limit = searchCandidateLimit)
             } else {
                 repository.getExpensesBetween(monthStartMillis, monthEndMillis)
             }
@@ -189,10 +209,19 @@ abstract class BaseGroupedExpensesScreen(
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
-        val groupedExpensesState by groupedExpensesFlow.collectAsState(initial = emptyGroupedExpensesState())
+        val groupedExpensesLoadKey = remember(monthStartMillis, monthEndMillis, searchMode, searchQuery) {
+            "${monthStartMillis}:${monthEndMillis}:${searchMode}:${searchQuery}"
+        }
+        val groupedExpensesLoadState = groupedExpensesFlow.collectAsFlowLoadState(
+            initialValue = emptyGroupedExpensesState(),
+            resetKey = groupedExpensesLoadKey
+        )
+        val groupedExpensesState = groupedExpensesLoadState.value
         val groupedExpenses = groupedExpensesState.sections
         val totalAmount = groupedExpensesState.totalAmount
         val categoriesById = groupedExpensesState.categoriesById
+        val canLoadMoreSearchResults = searchMode &&
+            groupedExpensesState.candidateCount >= searchCandidateLimit
         val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
             deleteAction@{ expenseId ->
                 val expense = groupedExpensesState.visibleExpenses.find { it.id == expenseId }
@@ -265,7 +294,11 @@ abstract class BaseGroupedExpensesScreen(
                         sectionStyle = groupedExpenseSectionStyle(),
                         showGroupingControls = !showFloatingBottomControls,
                         listContentPadding = listContentPadding,
-                        bottomControlsBottomPadding = bottomControlsPadding
+                        bottomControlsBottomPadding = bottomControlsPadding,
+                        loadMoreSearchResultsLabel = loadMoreSearchResultsLabel,
+                        canLoadMoreSearchResults = canLoadMoreSearchResults,
+                        onLoadMoreSearchResults = loadMoreSearchResults,
+                        isLoading = groupedExpensesLoadState.isLoading
                     )
 
                     if (showFloatingBottomControls) {
@@ -303,7 +336,11 @@ abstract class BaseGroupedExpensesScreen(
                 byDateLabel = byDateLabel,
                 groupsExpandedByDefault = groupsExpandedByDefault(),
                 sectionStyle = groupedExpenseSectionStyle(),
-                listContentPadding = PaddingValues(16.dp)
+                listContentPadding = PaddingValues(16.dp),
+                loadMoreSearchResultsLabel = loadMoreSearchResultsLabel,
+                canLoadMoreSearchResults = canLoadMoreSearchResults,
+                onLoadMoreSearchResults = loadMoreSearchResults,
+                isLoading = groupedExpensesLoadState.isLoading
             )
         }
 

@@ -8,11 +8,13 @@ import it.homebudget.app.data.buildRecurringMonthlyIncomes
 import it.homebudget.app.data.csv.buildExpensesCsvExport
 import it.homebudget.app.data.csv.buildIncomesCsvExport
 import it.homebudget.app.data.parseAmountInput
+import it.homebudget.app.data.parseBudgetBackup
 import it.homebudget.app.data.parseSerializedAmount
 import it.homebudget.app.data.splitAmountIntoInstallments
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
+import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -225,6 +227,64 @@ class ComposeAppCommonTest {
             export.content
         )
     }
+
+    @Test
+    fun parseBudgetBackup_acceptsLegacyVersionOneFiles() = runTest {
+        val legacyJson = """
+            {
+              "format": "homebudget_backup",
+              "version": 1,
+              "createdAtEpochMillis": 1760000000000,
+              "categories": [
+                {"id": "salary", "name": "Salary", "icon": "work"}
+              ],
+              "expenses": [],
+              "incomes": [
+                {"id": "income-1", "amount": "250000", "date": 1760000000000, "description": "Paycheck"}
+              ]
+            }
+        """.trimIndent()
+
+        val preview = parseBudgetBackup(legacyJson)
+
+        assertEquals(1, preview.categoriesCount)
+        assertEquals(0, preview.expensesCount)
+        assertEquals(1, preview.incomesCount)
+        assertEquals(1, preview.version)
+        assertEquals(1760000000000, preview.createdAtEpochMillis)
+    }
+
+    @Test
+    fun parseBudgetBackup_rejectsTamperedChecksummedFiles() = runTest {
+        val tamperedJson = """
+            {
+              "format": "homebudget_backup",
+              "version": 4,
+              "createdAtEpochMillis": 1760000000000,
+              "checksumSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+              "categories": [
+                {
+                  "id": "food",
+                  "name": "Food",
+                  "icon": "restaurant",
+                  "color": "#6F45E9",
+                  "categoryType": "expense",
+                  "isArchived": false,
+                  "sortOrder": 0
+                }
+              ],
+              "expenses": [],
+              "incomes": []
+            }
+        """.trimIndent()
+
+        val error = runCatching {
+            parseBudgetBackup(tamperedJson)
+        }.exceptionOrNull()
+
+        assertEquals("Backup integrity check failed.", error?.message)
+    }
+
 }
 
 private fun expense(

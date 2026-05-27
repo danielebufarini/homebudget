@@ -1,5 +1,8 @@
 package it.homebudget.app.data
+
+import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
+import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import kotlinx.coroutines.Dispatchers
@@ -9,7 +12,8 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
 private const val BACKUP_FORMAT = "homebudget_backup"
-private const val BACKUP_VERSION = 3
+private const val BACKUP_VERSION = 4
+private const val MIN_SUPPORTED_BACKUP_VERSION = 1
 const val BACKUP_FILE_NAME = "homebudget-backup.json"
 const val CLOUD_BACKUP_DIRECTORY_NAME = "Data"
 
@@ -17,7 +21,7 @@ private val budgetBackupJson = Json {
     prettyPrint = true
     encodeDefaults = true
     explicitNulls = false
-    ignoreUnknownKeys = false
+    ignoreUnknownKeys = true
 }
 
 data class BudgetBackupFile(
@@ -28,11 +32,24 @@ data class BudgetBackupFile(
 data class BudgetBackupCounters(
     val categoriesCount: Int,
     val expensesCount: Int,
-    val incomesCount: Int
+    val incomesCount: Int,
+    val createdAtEpochMillis: Long? = null,
+    val version: Int? = null
 )
 
 @Serializable
 private data class BudgetBackupSnapshot(
+    val format: String,
+    val version: Int,
+    val createdAtEpochMillis: Long = 0L,
+    val checksumSha256: String? = null,
+    val categories: List<BudgetBackupCategory>,
+    val expenses: List<BudgetBackupExpense>,
+    val incomes: List<BudgetBackupIncome>
+)
+
+@Serializable
+private data class BudgetBackupChecksumPayload(
     val format: String,
     val version: Int,
     val createdAtEpochMillis: Long,
@@ -46,10 +63,10 @@ private data class BudgetBackupCategory(
     val id: String,
     val name: String,
     val icon: String,
-    val color: String,
-    val categoryType: String,
-    val isArchived: Boolean,
-    val sortOrder: Long
+    val color: String = DEFAULT_CATEGORY_COLOR,
+    val categoryType: String = CATEGORY_TYPE_EXPENSE,
+    val isArchived: Boolean = false,
+    val sortOrder: Long = 0L
 )
 
 @Serializable
@@ -59,7 +76,7 @@ private data class BudgetBackupExpense(
     val date: Long,
     val categoryId: String,
     val description: String? = null,
-    val isShared: Boolean,
+    val isShared: Boolean = false,
     val recurringSeriesId: String? = null
 )
 
@@ -79,9 +96,7 @@ suspend fun exportBudgetBackup(repository: ExpenseRepository): BudgetBackupFile 
     val incomes = repository.getAllIncomesSnapshot()
 
     return withContext(Dispatchers.Default) {
-        val snapshot = BudgetBackupSnapshot(
-            format = BACKUP_FORMAT,
-            version = BACKUP_VERSION,
+        val snapshot = buildBudgetBackupSnapshot(
             createdAtEpochMillis = Clock.System.now().toEpochMilliseconds(),
             categories = categories.map(Category::toBackupModel),
             expenses = expenses.map(Expense::toBackupModel),
@@ -97,12 +112,7 @@ suspend fun exportBudgetBackup(repository: ExpenseRepository): BudgetBackupFile 
 
 suspend fun parseBudgetBackup(jsonText: String): BudgetBackupCounters {
     return withContext(Dispatchers.Default) {
-        val snapshot = decodeBudgetBackupSnapshot(jsonText)
-        BudgetBackupCounters(
-            categoriesCount = snapshot.categories.size,
-            expensesCount = snapshot.expenses.size,
-            incomesCount = snapshot.incomes.size
-        )
+        decodeBudgetBackupSnapshot(jsonText).toCounters()
     }
 }
 
@@ -115,7 +125,7 @@ suspend fun restoreBudgetBackup(
     }
 
     repository.replaceAllData(
-        categories = snapshot.categories.map { category ->
+        categories = snapshot.categories.mapIndexed { index, category ->
             RestoredCategory(
                 id = category.id,
                 name = category.name,
@@ -123,7 +133,7 @@ suspend fun restoreBudgetBackup(
                 color = category.color,
                 categoryType = category.categoryType,
                 isArchived = category.isArchived,
-                sortOrder = category.sortOrder
+                sortOrder = if (snapshot.version < 3) index.toLong() else category.sortOrder
             )
         },
         expenses = snapshot.expenses.map { expense ->
@@ -151,10 +161,36 @@ suspend fun restoreBudgetBackup(
         }
     )
 
-    return BudgetBackupCounters(
-        categoriesCount = snapshot.categories.size,
-        expensesCount = snapshot.expenses.size,
-        incomesCount = snapshot.incomes.size
+    return snapshot.toCounters()
+}
+
+private fun buildBudgetBackupSnapshot(
+    createdAtEpochMillis: Long,
+    categories: List<BudgetBackupCategory>,
+    expenses: List<BudgetBackupExpense>,
+    incomes: List<BudgetBackupIncome>
+): BudgetBackupSnapshot {
+    val checksumPayload = BudgetBackupChecksumPayload(
+        format = BACKUP_FORMAT,
+        version = BACKUP_VERSION,
+        createdAtEpochMillis = createdAtEpochMillis,
+        categories = categories,
+        expenses = expenses,
+        incomes = incomes
+    )
+    val checksumSource = budgetBackupJson.encodeToString(
+        BudgetBackupChecksumPayload.serializer(),
+        checksumPayload
+    )
+
+    return BudgetBackupSnapshot(
+        format = BACKUP_FORMAT,
+        version = BACKUP_VERSION,
+        createdAtEpochMillis = createdAtEpochMillis,
+        checksumSha256 = sha256Hex(checksumSource.encodeToByteArray()),
+        categories = categories,
+        expenses = expenses,
+        incomes = incomes
     )
 }
 
@@ -163,7 +199,10 @@ private fun decodeBudgetBackupSnapshot(jsonText: String): BudgetBackupSnapshot {
 
     val snapshot = budgetBackupJson.decodeFromString(BudgetBackupSnapshot.serializer(), jsonText)
     require(snapshot.format == BACKUP_FORMAT) { "Unsupported backup format." }
-    require(snapshot.version == BACKUP_VERSION) { "Unsupported backup version." }
+    require(snapshot.version in MIN_SUPPORTED_BACKUP_VERSION..BACKUP_VERSION) {
+        "Unsupported backup version ${snapshot.version}."
+    }
+    verifyChecksumIfPresent(snapshot)
 
     ensureUniqueIds(snapshot.categories, "category") { it.id }
     ensureUniqueIds(snapshot.expenses, "expense") { it.id }
@@ -183,6 +222,34 @@ private fun decodeBudgetBackupSnapshot(jsonText: String): BudgetBackupSnapshot {
 
     return snapshot
 }
+
+private fun verifyChecksumIfPresent(snapshot: BudgetBackupSnapshot) {
+    val expectedChecksum = snapshot.checksumSha256 ?: return
+    val checksumPayload = BudgetBackupChecksumPayload(
+        format = snapshot.format,
+        version = snapshot.version,
+        createdAtEpochMillis = snapshot.createdAtEpochMillis,
+        categories = snapshot.categories,
+        expenses = snapshot.expenses,
+        incomes = snapshot.incomes
+    )
+    val checksumSource = budgetBackupJson.encodeToString(
+        BudgetBackupChecksumPayload.serializer(),
+        checksumPayload
+    )
+    val actualChecksum = sha256Hex(checksumSource.encodeToByteArray())
+    require(actualChecksum.equals(expectedChecksum, ignoreCase = true)) {
+        "Backup integrity check failed."
+    }
+}
+
+private fun BudgetBackupSnapshot.toCounters() = BudgetBackupCounters(
+    categoriesCount = categories.size,
+    expensesCount = expenses.size,
+    incomesCount = incomes.size,
+    createdAtEpochMillis = createdAtEpochMillis.takeIf { it > 0L },
+    version = version
+)
 
 private fun <T> ensureUniqueIds(
     items: List<T>,
@@ -224,3 +291,7 @@ private fun Income.toBackupModel() = BudgetBackupIncome(
     description = description,
     recurringSeriesId = recurringSeriesId
 )
+
+private fun sha256Hex(input: ByteArray): String = Sha256.digest(input).joinToString("") { byte ->
+    (byte.toInt() and 0xff).toString(16).padStart(2, '0')
+}

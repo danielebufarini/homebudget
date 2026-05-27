@@ -29,7 +29,7 @@
     <string name="cancel">Cancel</string>
     <string name="cumulative_balance">Cumulative balance</string>
     <string name="this_month">This month:</string>
-    <string name="cash_flow">Cumulative Balance</string>
+    <string name="balance_chart">Cumulative Balance</string>
     <string name="categories">Categories</string>
     <string name="categories_subtitle">Organize your spending your way</string>
     <string name="categories_search_placeholder">Search categories...</string>
@@ -133,6 +133,7 @@
     <string name="search_results">Search results</string>
     <string name="search_transactions">Search transactions</string>
     <string name="no_search_results">No matching transactions</string>
+    <string name="load_more_search_results">Load more results</string>
     <string name="import_action">Import</string>
     <string name="import_csv">Import CSV</string>
     <string name="income">Income</string>

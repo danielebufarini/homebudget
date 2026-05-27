@@ -26,6 +26,22 @@ internal val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+
+internal val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `category` ADD COLUMN `color` TEXT NOT NULL DEFAULT '#6F45E9'")
+        connection.execSQL("ALTER TABLE `category` ADD COLUMN `categoryType` TEXT NOT NULL DEFAULT 'expense'")
+        connection.execSQL("ALTER TABLE `category` ADD COLUMN `isArchived` INTEGER NOT NULL DEFAULT 0")
+        migrateIncomeTableForCategories(connection)
+    }
+}
+
+internal val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(connection: SQLiteConnection) {
+        migrateCategoryTableForSortOrder(connection)
+    }
+}
+
 internal val MIGRATION_5_6 = object : Migration(5, 6) {
     override fun migrate(connection: SQLiteConnection) {
         addStoredDateKeys(
@@ -64,8 +80,201 @@ internal val MIGRATION_6_7 = object : Migration(6, 7) {
 
 internal fun RoomDatabase.Builder<HomeBudgetDatabase>.addHomeBudgetMigrations():
     RoomDatabase.Builder<HomeBudgetDatabase> = this
-        .addMigrations(MIGRATION_5_6, MIGRATION_6_7)
-        .fallbackToDestructiveMigration(dropAllTables = true)
+        .addMigrations(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7
+        )
+
+private fun migrateIncomeTableForCategories(connection: SQLiteConnection) {
+    connection.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS `income_new` (
+            `id` TEXT NOT NULL,
+            `amount` INTEGER NOT NULL,
+            `date` INTEGER NOT NULL,
+            `description` TEXT,
+            `recurringSeriesId` TEXT,
+            `categoryId` TEXT DEFAULT NULL,
+            PRIMARY KEY(`id`),
+            FOREIGN KEY(`categoryId`) REFERENCES `category`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+        )
+        """.trimIndent()
+    )
+
+    connection.execSQL(
+        """
+        INSERT INTO `income_new`(
+            `id`,
+            `amount`,
+            `date`,
+            `description`,
+            `recurringSeriesId`,
+            `categoryId`
+        )
+        SELECT
+            `id`,
+            `amount`,
+            `date`,
+            `description`,
+            `recurringSeriesId`,
+            NULL
+        FROM `income`
+        """.trimIndent()
+    )
+
+    connection.execSQL("DROP TABLE `income`")
+    connection.execSQL("ALTER TABLE `income_new` RENAME TO `income`")
+    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_income_categoryId` ON `income` (`categoryId`)")
+    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_income_date` ON `income` (`date`)")
+    connection.execSQL(
+        "CREATE INDEX IF NOT EXISTS `index_income_recurringSeriesId_date` ON `income` (`recurringSeriesId`, `date`)"
+    )
+}
+
+private fun migrateCategoryTableForSortOrder(connection: SQLiteConnection) {
+    connection.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS `category_new` (
+            `id` TEXT NOT NULL,
+            `name` TEXT NOT NULL,
+            `icon` TEXT NOT NULL,
+            `color` TEXT NOT NULL DEFAULT '#6F45E9',
+            `categoryType` TEXT NOT NULL DEFAULT 'expense',
+            `isArchived` INTEGER NOT NULL DEFAULT 0,
+            `sortOrder` INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY(`id`)
+        )
+        """.trimIndent()
+    )
+
+    connection.execSQL(
+        """
+        INSERT INTO `category_new`(
+            `id`,
+            `name`,
+            `icon`,
+            `color`,
+            `categoryType`,
+            `isArchived`,
+            `sortOrder`
+        )
+        SELECT
+            `id`,
+            `name`,
+            `icon`,
+            `color`,
+            `categoryType`,
+            `isArchived`,
+            0
+        FROM `category`
+        """.trimIndent()
+    )
+
+    migrateExpenseTableForCategorySchemaRefresh(connection)
+    migrateIncomeTableForCategorySchemaRefresh(connection)
+
+    connection.execSQL("DROP TABLE `category`")
+    connection.execSQL("ALTER TABLE `category_new` RENAME TO `category`")
+}
+
+private fun migrateExpenseTableForCategorySchemaRefresh(connection: SQLiteConnection) {
+    connection.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS `expense_new` (
+            `id` TEXT NOT NULL,
+            `amount` INTEGER NOT NULL,
+            `date` INTEGER NOT NULL,
+            `categoryId` TEXT NOT NULL,
+            `description` TEXT,
+            `isShared` INTEGER NOT NULL DEFAULT 0,
+            `recurringSeriesId` TEXT,
+            PRIMARY KEY(`id`),
+            FOREIGN KEY(`categoryId`) REFERENCES `category_new`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+        )
+        """.trimIndent()
+    )
+
+    connection.execSQL(
+        """
+        INSERT INTO `expense_new`(
+            `id`,
+            `amount`,
+            `date`,
+            `categoryId`,
+            `description`,
+            `isShared`,
+            `recurringSeriesId`
+        )
+        SELECT
+            `id`,
+            `amount`,
+            `date`,
+            `categoryId`,
+            `description`,
+            `isShared`,
+            `recurringSeriesId`
+        FROM `expense`
+        """.trimIndent()
+    )
+
+    connection.execSQL("DROP TABLE `expense`")
+    connection.execSQL("ALTER TABLE `expense_new` RENAME TO `expense`")
+    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_expense_categoryId` ON `expense` (`categoryId`)")
+    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_expense_date` ON `expense` (`date`)")
+    connection.execSQL(
+        "CREATE INDEX IF NOT EXISTS `index_expense_recurringSeriesId_date` ON `expense` (`recurringSeriesId`, `date`)"
+    )
+}
+
+private fun migrateIncomeTableForCategorySchemaRefresh(connection: SQLiteConnection) {
+    connection.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS `income_new` (
+            `id` TEXT NOT NULL,
+            `amount` INTEGER NOT NULL,
+            `date` INTEGER NOT NULL,
+            `description` TEXT,
+            `recurringSeriesId` TEXT,
+            `categoryId` TEXT DEFAULT NULL,
+            PRIMARY KEY(`id`),
+            FOREIGN KEY(`categoryId`) REFERENCES `category_new`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+        )
+        """.trimIndent()
+    )
+
+    connection.execSQL(
+        """
+        INSERT INTO `income_new`(
+            `id`,
+            `amount`,
+            `date`,
+            `description`,
+            `recurringSeriesId`,
+            `categoryId`
+        )
+        SELECT
+            `id`,
+            `amount`,
+            `date`,
+            `description`,
+            `recurringSeriesId`,
+            `categoryId`
+        FROM `income`
+        """.trimIndent()
+    )
+
+    connection.execSQL("DROP TABLE `income`")
+    connection.execSQL("ALTER TABLE `income_new` RENAME TO `income`")
+    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_income_categoryId` ON `income` (`categoryId`)")
+    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_income_date` ON `income` (`date`)")
+    connection.execSQL(
+        "CREATE INDEX IF NOT EXISTS `index_income_recurringSeriesId_date` ON `income` (`recurringSeriesId`, `date`)"
+    )
+}
 
 private fun createExpenseSearchTable(connection: SQLiteConnection) {
     connection.execSQL(

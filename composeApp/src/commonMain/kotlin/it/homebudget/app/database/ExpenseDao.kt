@@ -111,6 +111,18 @@ interface ExpenseDao {
 
     @Query(
         """
+        SELECT COALESCE(SUM(amount), 0)
+        FROM expense
+        WHERE yearMonth < :toExclusiveYearMonth
+        """
+    )
+    fun getDashboardExpenseTotalBeforeYearMonth(
+        toExclusiveYearMonth: Int
+    ): Flow<Long>
+
+
+    @Query(
+        """
         SELECT
             (
                 SELECT COALESCE(SUM(amount), 0)

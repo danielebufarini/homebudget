@@ -45,16 +45,16 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
-internal fun LineChartPage(
+internal fun BalanceChartPage(
     strings: DashboardStrings,
-    state: LineChartState
+    state: BalanceChartState
 ) {
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val xAxisLabelBandHeight = 28.dp
     val xAxisLabels = state.months
     val density = LocalDensity.current
-    var selectedPoint by remember(state) { mutableStateOf<SelectedChartPoint?>(null) }
+    var selectedPoint by remember(state) { mutableStateOf<SelectedBalanceChartPoint?>(null) }
     var rootPositionInRoot by remember { mutableStateOf(Offset.Zero) }
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
     var chartPositionInRoot by remember { mutableStateOf(Offset.Zero) }
@@ -64,7 +64,7 @@ internal fun LineChartPage(
     val zeroAxisLabelHalfHeightPx = with(density) { 8.dp.toPx() }
     val hitTargetRadiusPx = with(density) { 18.dp.toPx() }
     val chartGeometry = remember(state, chartSize, topInsetPx) {
-        state.buildChartGeometry(chartSize = chartSize, topInsetPx = topInsetPx)
+        state.buildBalanceChartGeometry(chartSize = chartSize, topInsetPx = topInsetPx)
     }
     val shouldShowZeroAxisLabel = remember(chartGeometry) {
         val geometry = chartGeometry ?: return@remember false
@@ -100,7 +100,7 @@ internal fun LineChartPage(
                     }
 
                     selectedPoint = nearestPoint?.let { point ->
-                        SelectedChartPoint(
+                        SelectedBalanceChartPoint(
                             monthIndex = point.monthIndex,
                             detail = state.monthSnapshots[point.monthIndex],
                             anchor = point.center + chartOrigin
@@ -260,7 +260,7 @@ internal fun LineChartPage(
         }
 
         selectedPoint?.let { popupPoint ->
-            CashFlowPointPopup(
+            BalancePointPopup(
                 strings = strings,
                 point = popupPoint,
                 rootSize = rootSize,
@@ -272,9 +272,9 @@ internal fun LineChartPage(
 }
 
 @Composable
-private fun BoxScope.CashFlowPointPopup(
+private fun BoxScope.BalancePointPopup(
     strings: DashboardStrings,
-    point: SelectedChartPoint,
+    point: SelectedBalanceChartPoint,
     rootSize: IntSize,
     popupSize: IntSize,
     onPopupSizeChanged: (IntSize) -> Unit
@@ -320,7 +320,7 @@ private fun BoxScope.CashFlowPointPopup(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            CashFlowPointPopupRow(
+            BalancePointPopupRow(
                 label = strings.cumulativeBalance,
                 value = formatAmount(point.detail.cumulativeDifferenceAmount, strings.currencySymbol)
             )
@@ -330,15 +330,15 @@ private fun BoxScope.CashFlowPointPopup(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            CashFlowPointPopupRow(
+            BalancePointPopupRow(
                 label = strings.income,
                 value = formatAmount(point.detail.incomeAmount, strings.currencySymbol)
             )
-            CashFlowPointPopupRow(
+            BalancePointPopupRow(
                 label = strings.expenses,
                 value = formatAmount(point.detail.expenseAmount, strings.currencySymbol)
             )
-            CashFlowPointPopupRow(
+            BalancePointPopupRow(
                 label = strings.difference,
                 value = formatAmount(point.detail.differenceAmount, strings.currencySymbol)
             )
@@ -350,7 +350,7 @@ private fun MonthCursor.shortLabelWithFullYear(shortMonthNames: List<String>): S
     "${shortMonthNames[month - 1]} $year"
 
 @Composable
-private fun CashFlowPointPopupRow(
+private fun BalancePointPopupRow(
     label: String,
     value: String
 ) {

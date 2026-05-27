@@ -2,6 +2,7 @@ package it.homebudget.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -10,14 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -115,7 +115,14 @@ class DayExpensesScreen(
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
-        val dayExpensesState by dayExpensesStateFlow.collectAsState(initial = DayExpensesState())
+        val dayExpensesLoadKey = remember(dayStartMillis, dayEndMillis) {
+            "${dayStartMillis}:${dayEndMillis}"
+        }
+        val dayExpensesLoadState = dayExpensesStateFlow.collectAsFlowLoadState(
+            initialValue = DayExpensesState(),
+            resetKey = dayExpensesLoadKey
+        )
+        val dayExpensesState = dayExpensesLoadState.value
 
         EnsureStarterCategoriesSeeded(repository)
 
@@ -131,6 +138,7 @@ class DayExpensesScreen(
                 expenseFallbackTitle = expenseFallbackTitle,
                 currencySymbol = currencySymbol,
                 unknownCategoryLabel = unknownCategoryLabel,
+                isLoading = dayExpensesLoadState.isLoading,
                 onOpenExpense = onOpenExpense,
                 resolveCategoryName = { category ->
                     resolveCategoryName(category.id, category.name)
@@ -186,9 +194,20 @@ private fun DayExpensesList(
     expenseFallbackTitle: String,
     currencySymbol: String,
     unknownCategoryLabel: String,
+    isLoading: Boolean,
     onOpenExpense: (String) -> Unit,
     resolveCategoryName: (Category) -> String
 ) {
+    if (expenses.isEmpty() && isLoading) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     LazyColumn(
         modifier = modifier,
         contentPadding = contentPadding,

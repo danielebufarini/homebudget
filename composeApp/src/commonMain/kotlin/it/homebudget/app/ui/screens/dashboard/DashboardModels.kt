@@ -36,28 +36,23 @@ internal data class SummaryMetricUi(
     val onClick: (() -> Unit)? = null
 )
 
-internal data class LineChartState(
+internal data class BalanceChartState(
     val pointCount: Int,
     val minValue: Double,
     val maxValue: Double,
     val months: List<MonthCursor>,
     val yAxisLabels: List<String>,
-    val monthSnapshots: List<ChartMonthSnapshot>,
-    val series: List<LineSeries>
+    val monthSnapshots: List<BalanceMonthSnapshot>,
+    val series: List<BalanceChartSeries>
 )
 
-internal enum class ChartSeriesKind {
-    Balance
-}
-
-internal data class LineSeries(
-    val kind: ChartSeriesKind,
+internal data class BalanceChartSeries(
     val color: Color,
     val values: List<Double>,
     val markerDays: Set<Int> = emptySet()
 )
 
-internal data class ChartMonthSnapshot(
+internal data class BalanceMonthSnapshot(
     val month: MonthCursor,
     val expenseAmount: Long,
     val incomeAmount: Long,
@@ -71,29 +66,28 @@ internal data class ChartMonthSnapshot(
         get() = subtractAmountsExact(cumulativeIncomeAmount, cumulativeExpenseAmount)
 }
 
-internal data class ChartPoint(
+internal data class BalanceChartPoint(
     val monthIndex: Int,
-    val kind: ChartSeriesKind,
     val center: Offset
 )
 
-internal data class SelectedChartPoint(
+internal data class SelectedBalanceChartPoint(
     val monthIndex: Int,
-    val detail: ChartMonthSnapshot,
+    val detail: BalanceMonthSnapshot,
     val anchor: Offset
 )
 
-internal data class RenderedLineSeries(
+internal data class RenderedBalanceChartSeries(
     val color: Color,
     val path: Path,
     val fillPath: Path?,
-    val markers: List<ChartPoint>
+    val markers: List<BalanceChartPoint>
 )
 
-internal data class LineChartGeometry(
+internal data class BalanceChartGeometry(
     val horizontalGridYs: List<Float>,
     val verticalGridXs: List<Float>,
     val zeroLineY: Float?,
-    val series: List<RenderedLineSeries>,
-    val points: List<ChartPoint>
+    val series: List<RenderedBalanceChartSeries>,
+    val points: List<BalanceChartPoint>
 )

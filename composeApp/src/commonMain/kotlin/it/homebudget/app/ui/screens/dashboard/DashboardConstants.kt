@@ -2,7 +2,7 @@ package it.homebudget.app.ui.screens.dashboard
 
 import androidx.compose.ui.graphics.Color
 
-internal const val CASH_FLOW_CHART_MONTH_COUNT = 6
+internal const val BALANCE_CHART_MONTH_COUNT = 6
 
 internal val chartPalette: List<Color> = listOf(
     Color(0xFF006874),

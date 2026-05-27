@@ -14,8 +14,16 @@ import org.jetbrains.compose.resources.stringResource
 class MonthlyExpensesScreen(
     year: Int,
     month: Int,
-    searchQuery: String = ""
-) : BaseGroupedExpensesScreen(year, month, searchQuery) {
+    searchQuery: String = "",
+    searchCandidateLimit: Int? = null,
+    onLoadMoreSearchResults: (() -> Unit)? = null
+) : BaseGroupedExpensesScreen(
+    year = year,
+    month = month,
+    searchQuery = searchQuery,
+    externalSearchCandidateLimit = searchCandidateLimit,
+    onLoadMoreSearchResults = onLoadMoreSearchResults
+) {
 
     @Composable
     override fun screenTitle(monthName: String): String = "$monthName ${stringResource(Res.string.expenses)}"

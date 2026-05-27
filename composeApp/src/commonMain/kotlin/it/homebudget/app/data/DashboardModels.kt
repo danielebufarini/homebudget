@@ -23,7 +23,9 @@ data class DashboardMonthSummary(
     val categoryTotals: List<DashboardCategoryTotal>
 )
 
-data class DashboardCashFlow(
+data class DashboardBalanceTrend(
+    val initialExpenseAmount: Long = 0L,
+    val initialIncomeAmount: Long = 0L,
     val expenseTotalsByMonth: List<DashboardMonthTotal>,
     val incomeTotalsByMonth: List<DashboardMonthTotal>
 )

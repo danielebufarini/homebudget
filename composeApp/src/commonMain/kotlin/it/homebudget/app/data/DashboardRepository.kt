@@ -53,11 +53,11 @@ class DashboardRepository(
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
-    fun getDashboardCashFlow(
+    fun getDashboardBalanceTrend(
         selectedYear: Int,
         selectedMonth: Int,
         trailingMonthCount: Int = 6
-    ): Flow<DashboardCashFlow> {
+    ): Flow<DashboardBalanceTrend> {
         val selectedMonthKey = MonthKey(
             year = selectedYear,
             month = selectedMonth
@@ -68,6 +68,8 @@ class DashboardRepository(
         val toExclusiveYearMonth = monthAfterLastVisibleMonth.toYearMonthKey()
 
         return combine(
+            getExpenseTotalBeforeYearMonth(toExclusiveYearMonth = fromInclusiveYearMonth),
+            getIncomeTotalBeforeYearMonth(toExclusiveYearMonth = fromInclusiveYearMonth),
             getMonthlyExpenseTotals(
                 fromInclusiveYearMonth = fromInclusiveYearMonth,
                 toExclusiveYearMonth = toExclusiveYearMonth
@@ -76,8 +78,10 @@ class DashboardRepository(
                 fromInclusiveYearMonth = fromInclusiveYearMonth,
                 toExclusiveYearMonth = toExclusiveYearMonth
             )
-        ) { expenseTotals, incomeTotals ->
-            DashboardCashFlow(
+        ) { initialExpenseAmount, initialIncomeAmount, expenseTotals, incomeTotals ->
+            DashboardBalanceTrend(
+                initialExpenseAmount = initialExpenseAmount,
+                initialIncomeAmount = initialIncomeAmount,
                 expenseTotalsByMonth = expenseTotals.map { row ->
                     row.toDashboardMonthTotal()
                 },
@@ -133,6 +137,14 @@ class DashboardRepository(
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
+    private fun getExpenseTotalBeforeYearMonth(
+        toExclusiveYearMonth: Int
+    ): Flow<Long> {
+        return expenseDao.getDashboardExpenseTotalBeforeYearMonth(
+            toExclusiveYearMonth = toExclusiveYearMonth
+        ).distinctUntilChanged().flowOn(Dispatchers.Default)
+    }
+
     private fun getMonthlyIncomeTotals(
         fromInclusiveYearMonth: Int,
         toExclusiveYearMonth: Int
@@ -144,6 +156,15 @@ class DashboardRepository(
             rows.toMonthTotals()
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
+
+    private fun getIncomeTotalBeforeYearMonth(
+        toExclusiveYearMonth: Int
+    ): Flow<Long> {
+        return incomeDao.getDashboardIncomeTotalBeforeYearMonth(
+            toExclusiveYearMonth = toExclusiveYearMonth
+        ).distinctUntilChanged().flowOn(Dispatchers.Default)
+    }
+
 }
 
 private fun currentMonthUpperBoundMillis(

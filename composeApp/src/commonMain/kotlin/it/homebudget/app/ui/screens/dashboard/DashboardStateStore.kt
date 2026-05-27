@@ -1,6 +1,6 @@
 package it.homebudget.app.ui.screens.dashboard
 
-import it.homebudget.app.data.DashboardCashFlow
+import it.homebudget.app.data.DashboardBalanceTrend
 import it.homebudget.app.data.DashboardRecentTransaction
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.ui.screens.MonthCursor
@@ -45,13 +45,13 @@ internal class DashboardStateStore(
             initialValue = emptyDashboardMonthSummary().toUiMonthlySummary()
         )
 
-    private val cashFlow: SharedFlow<Pair<MonthCursor, DashboardCashFlow>> = monthCursor
+    private val balanceTrend: SharedFlow<Pair<MonthCursor, DashboardBalanceTrend>> = monthCursor
         .flatMapLatest { month ->
-            repository.getDashboardCashFlow(
+            repository.getDashboardBalanceTrend(
                 selectedYear = month.year,
                 selectedMonth = month.month,
-                trailingMonthCount = CASH_FLOW_CHART_MONTH_COUNT
-            ).map { cashFlow -> month to cashFlow }
+                trailingMonthCount = BALANCE_CHART_MONTH_COUNT
+            ).map { balanceTrend -> month to balanceTrend }
         }
         .distinctUntilChanged()
         .flowOn(Dispatchers.Default)
@@ -61,10 +61,10 @@ internal class DashboardStateStore(
             replay = 1
         )
 
-    val chartState: StateFlow<LineChartState> = cashFlow
-        .map { (month, cashFlow) ->
-            buildCashFlowChartState(
-                cashFlow = cashFlow,
+    val chartState: StateFlow<BalanceChartState> = balanceTrend
+        .map { (month, balanceTrend) ->
+            buildBalanceChartState(
+                balanceTrend = balanceTrend,
                 selectedMonth = month
             )
         }
@@ -73,7 +73,7 @@ internal class DashboardStateStore(
         .stateIn(
             scope = scope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = emptyLineChartState(initialMonth)
+            initialValue = emptyBalanceChartState(initialMonth)
         )
 
     val recentTransactions: StateFlow<List<DashboardRecentTransaction>> = repository

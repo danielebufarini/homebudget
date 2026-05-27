@@ -4,7 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.IntSize
-import it.homebudget.app.data.DashboardCashFlow
+import it.homebudget.app.data.DashboardBalanceTrend
 import it.homebudget.app.data.DashboardCategoryTotal
 import it.homebudget.app.data.DashboardMonthSummary
 import it.homebudget.app.data.addAmountsExact
@@ -28,10 +28,10 @@ internal fun emptyDashboardMonthSummary() = DashboardMonthSummary(
     categoryTotals = emptyList()
 )
 
-internal fun emptyLineChartState(selectedMonth: MonthCursor): LineChartState {
-    val months = selectedMonth.trailingMonths(count = CASH_FLOW_CHART_MONTH_COUNT)
+internal fun emptyBalanceChartState(selectedMonth: MonthCursor): BalanceChartState {
+    val months = selectedMonth.trailingMonths(count = BALANCE_CHART_MONTH_COUNT)
 
-    return LineChartState(
+    return BalanceChartState(
         pointCount = months.size,
         minValue = 0.0,
         maxValue = 0.0,
@@ -75,24 +75,29 @@ internal fun DashboardCategoryTotal.toUiCategoryTotal(
     )
 }
 
-internal fun buildCashFlowChartState(
-    cashFlow: DashboardCashFlow,
+internal fun buildBalanceChartState(
+    balanceTrend: DashboardBalanceTrend,
     selectedMonth: MonthCursor
-): LineChartState {
-    val months = selectedMonth.trailingMonths(count = CASH_FLOW_CHART_MONTH_COUNT)
-    val expenseTotalsByMonth = cashFlow.expenseTotalsByMonth.associate { total ->
+): BalanceChartState {
+    val months = selectedMonth.trailingMonths(count = BALANCE_CHART_MONTH_COUNT)
+    val expenseTotalsByMonth = balanceTrend.expenseTotalsByMonth.associate { total ->
         MonthCursor(total.year, total.month) to total.amount
     }
-    val incomeTotalsByMonth = cashFlow.incomeTotalsByMonth.associate { total ->
+    val incomeTotalsByMonth = balanceTrend.incomeTotalsByMonth.associate { total ->
         MonthCursor(total.year, total.month) to total.amount
     }
 
-    if (expenseTotalsByMonth.isEmpty() && incomeTotalsByMonth.isEmpty()) {
-        return emptyLineChartState(selectedMonth)
+    if (
+        expenseTotalsByMonth.isEmpty() &&
+        incomeTotalsByMonth.isEmpty() &&
+        balanceTrend.initialExpenseAmount == 0L &&
+        balanceTrend.initialIncomeAmount == 0L
+    ) {
+        return emptyBalanceChartState(selectedMonth)
     }
 
-    var cumulativeExpenseAmount = 0L
-    var cumulativeIncomeAmount = 0L
+    var cumulativeExpenseAmount = balanceTrend.initialExpenseAmount
+    var cumulativeIncomeAmount = balanceTrend.initialIncomeAmount
     val monthSnapshots = months.map { month ->
         val expenseAmount = expenseTotalsByMonth[month] ?: 0L
         val incomeAmount = incomeTotalsByMonth[month] ?: 0L
@@ -100,7 +105,7 @@ internal fun buildCashFlowChartState(
         cumulativeExpenseAmount = addAmountsExact(cumulativeExpenseAmount, expenseAmount)
         cumulativeIncomeAmount = addAmountsExact(cumulativeIncomeAmount, incomeAmount)
 
-        ChartMonthSnapshot(
+        BalanceMonthSnapshot(
             month = month,
             expenseAmount = expenseAmount,
             incomeAmount = incomeAmount,
@@ -121,7 +126,7 @@ internal fun buildCashFlowChartState(
     val minValue = minOf(rawMinValue, 0.0)
     val middleValue = (maxValue + minValue) / 2.0
 
-    return LineChartState(
+    return BalanceChartState(
         pointCount = months.size,
         minValue = minValue,
         maxValue = maxValue,
@@ -133,8 +138,7 @@ internal fun buildCashFlowChartState(
         ),
         monthSnapshots = monthSnapshots,
         series = listOf(
-            LineSeries(
-                kind = ChartSeriesKind.Balance,
+            BalanceChartSeries(
                 color = Color(0xFF1565C0),
                 values = balanceValues,
                 markerDays = balanceMarkerDays
@@ -156,10 +160,10 @@ internal fun currentMonthCursor(): MonthCursor {
     return MonthCursor(now.year, now.month.ordinal + 1)
 }
 
-internal fun LineChartState.buildChartGeometry(
+internal fun BalanceChartState.buildBalanceChartGeometry(
     chartSize: IntSize,
     topInsetPx: Float
-): LineChartGeometry? {
+): BalanceChartGeometry? {
     if (chartSize.width <= 0 || chartSize.height <= 0 || pointCount <= 0 || series.isEmpty()) {
         return null
     }
@@ -212,14 +216,13 @@ internal fun LineChartState.buildChartGeometry(
         }
         val markers = series.markerDays.mapNotNull { index ->
             points.getOrNull(index)?.let { point ->
-                ChartPoint(
+                BalanceChartPoint(
                     monthIndex = index,
-                    kind = series.kind,
                     center = point
                 )
             }
         }
-        RenderedLineSeries(
+        RenderedBalanceChartSeries(
             color = series.color,
             path = path,
             fillPath = fillPath,
@@ -230,7 +233,7 @@ internal fun LineChartState.buildChartGeometry(
         renderedSeries.forEach { addAll(it.markers) }
     }
 
-    return LineChartGeometry(
+    return BalanceChartGeometry(
         horizontalGridYs = horizontalGridYs,
         verticalGridXs = verticalGridXs,
         zeroLineY = zeroLineY,
@@ -239,11 +242,11 @@ internal fun LineChartState.buildChartGeometry(
     )
 }
 
-internal fun LineChartGeometry.findNearestPoint(
+internal fun BalanceChartGeometry.findNearestPoint(
     tapOffset: Offset,
     hitTargetRadiusPx: Float
-): ChartPoint? {
-    var nearestPoint: ChartPoint? = null
+): BalanceChartPoint? {
+    var nearestPoint: BalanceChartPoint? = null
     var nearestDistance = hitTargetRadiusPx
 
     points.forEach { point ->

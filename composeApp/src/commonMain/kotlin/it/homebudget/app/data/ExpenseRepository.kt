@@ -16,7 +16,7 @@ class ExpenseRepository(
     private val dataReplacementService: DataReplacementService
 ) {
     companion object {
-        const val DEFAULT_SEARCH_CANDIDATE_LIMIT = 10_000
+        const val DEFAULT_SEARCH_CANDIDATE_LIMIT = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
     }
 
     fun getAllCategories(): Flow<List<Category>> = categoryRepository.getAllCategories()
@@ -129,12 +129,12 @@ class ExpenseRepository(
         return dashboardRepository.getDashboardMonthSummary(year = year, month = month)
     }
 
-    fun getDashboardCashFlow(
+    fun getDashboardBalanceTrend(
         selectedYear: Int,
         selectedMonth: Int,
         trailingMonthCount: Int = 6
-    ): Flow<DashboardCashFlow> {
-        return dashboardRepository.getDashboardCashFlow(
+    ): Flow<DashboardBalanceTrend> {
+        return dashboardRepository.getDashboardBalanceTrend(
             selectedYear = selectedYear,
             selectedMonth = selectedMonth,
             trailingMonthCount = trailingMonthCount

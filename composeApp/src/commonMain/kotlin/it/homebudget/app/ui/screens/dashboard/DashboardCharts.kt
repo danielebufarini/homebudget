@@ -43,16 +43,16 @@ private data class DashboardChartPageSpec(
 internal fun DashboardCharts(
     modifier: Modifier,
     strings: DashboardStrings,
-    lineChartState: LineChartState,
+    balanceChartState: BalanceChartState,
     categoryTotals: List<CategoryTotal>,
     recentTransactions: List<DashboardRecentTransaction>,
     pinnedDashboardCard: DashboardCardPage?,
     onPinDashboardCard: (DashboardCardPage?) -> Unit,
     categoriesById: Map<String, Category>
 ) {
-    val pages = remember(strings.cashFlow, strings.expensesByCategory, strings.recentTransactions) {
+    val pages = remember(strings.balanceChart, strings.expensesByCategory, strings.recentTransactions) {
         listOf(
-            DashboardChartPageSpec(DashboardCardPage.CashFlow, strings.cashFlow),
+            DashboardChartPageSpec(DashboardCardPage.Balance, strings.balanceChart),
             DashboardChartPageSpec(DashboardCardPage.ExpensesByCategory, strings.expensesByCategory),
             DashboardChartPageSpec(DashboardCardPage.RecentTransactions, strings.recentTransactions)
         )
@@ -140,7 +140,7 @@ internal fun DashboardCharts(
 
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (pages[page].page) {
-                    DashboardCardPage.CashFlow -> LineChartPage(strings = strings, state = lineChartState)
+                    DashboardCardPage.Balance -> BalanceChartPage(strings = strings, state = balanceChartState)
                     DashboardCardPage.ExpensesByCategory -> CategoryBreakdownPage(
                         strings = strings,
                         categoryTotals = categoryTotals,

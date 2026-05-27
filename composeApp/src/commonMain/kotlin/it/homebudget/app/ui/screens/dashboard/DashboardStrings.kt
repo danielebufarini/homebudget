@@ -3,7 +3,7 @@ package it.homebudget.app.ui.screens.dashboard
 import androidx.compose.runtime.Composable
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add_expense
-import homebudget.composeapp.generated.resources.cash_flow
+import homebudget.composeapp.generated.resources.balance_chart
 import homebudget.composeapp.generated.resources.cumulative_balance
 import homebudget.composeapp.generated.resources.currency_symbol
 import homebudget.composeapp.generated.resources.dashboard
@@ -53,7 +53,7 @@ internal data class DashboardStrings(
     val pinDashboardCard: String,
     val pinnedDashboardCard: String,
     val unknownCategory: String,
-    val cashFlow: String,
+    val balanceChart: String,
     val expensesByCategory: String,
     val cumulativeBalance: String,
     val thisMonth: String,
@@ -88,7 +88,7 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         pinDashboardCard = stringResource(Res.string.pin_dashboard_card),
         pinnedDashboardCard = stringResource(Res.string.pinned_dashboard_card),
         unknownCategory = stringResource(Res.string.unknown_category),
-        cashFlow = stringResource(Res.string.cash_flow),
+        balanceChart = stringResource(Res.string.balance_chart),
         expensesByCategory = stringResource(Res.string.expenses_by_category),
         cumulativeBalance = stringResource(Res.string.cumulative_balance),
         thisMonth = stringResource(Res.string.this_month),

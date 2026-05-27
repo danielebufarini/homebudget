@@ -1,40 +1,59 @@
 package it.homebudget.app.ui.screens.dashboard
 
-import it.homebudget.app.data.DashboardCashFlow
+import it.homebudget.app.data.DashboardBalanceTrend
 import it.homebudget.app.data.DashboardMonthTotal
 import it.homebudget.app.ui.screens.MonthCursor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class DashboardCashFlowChartStateTest {
+class DashboardBalanceChartStateTest {
 
     @Test
-    fun buildCashFlowChartState_usesCumulativeBalanceSeries() {
-        val state = buildCashFlowChartState(
-            cashFlow = DashboardCashFlow(
+    fun buildBalanceChartState_usesAllTimeCumulativeBalanceSeries() {
+        val state = buildBalanceChartState(
+            balanceTrend = DashboardBalanceTrend(
+                initialExpenseAmount = 10_000L,
+                initialIncomeAmount = 15_000L,
                 expenseTotalsByMonth = listOf(
-                    DashboardMonthTotal(year = 2026, month = 1, amount = 100L),
-                    DashboardMonthTotal(year = 2026, month = 3, amount = 25L),
-                    DashboardMonthTotal(year = 2026, month = 5, amount = 50L)
+                    DashboardMonthTotal(year = 2026, month = 1, amount = 1_000L),
+                    DashboardMonthTotal(year = 2026, month = 5, amount = 500L)
                 ),
                 incomeTotalsByMonth = listOf(
-                    DashboardMonthTotal(year = 2026, month = 1, amount = 300L),
-                    DashboardMonthTotal(year = 2026, month = 4, amount = 50L)
+                    DashboardMonthTotal(year = 2026, month = 2, amount = 2_500L)
                 )
             ),
             selectedMonth = MonthCursor(year = 2026, month = 5)
         )
 
-        val balance = state.series.single { it.kind == ChartSeriesKind.Balance }
+        val balance = state.series.single()
 
-        assertEquals(listOf(0.0, 200.0, 200.0, 175.0, 225.0, 175.0), balance.values)
+        assertEquals(listOf(50.0, 40.0, 65.0, 65.0, 65.0, 60.0), balance.values)
         assertEquals(setOf(0, 1, 2, 3, 4, 5), balance.markerDays)
 
         val may = state.monthSnapshots.last()
-        assertEquals(50L, may.expenseAmount)
+        assertEquals(500L, may.expenseAmount)
         assertEquals(0L, may.incomeAmount)
-        assertEquals(175L, may.cumulativeExpenseAmount)
-        assertEquals(350L, may.cumulativeIncomeAmount)
-        assertEquals(175L, may.cumulativeDifferenceAmount)
+        assertEquals(11_500L, may.cumulativeExpenseAmount)
+        assertEquals(17_500L, may.cumulativeIncomeAmount)
+        assertEquals(6_000L, may.cumulativeDifferenceAmount)
+    }
+
+    @Test
+    fun buildBalanceChartState_keepsBaselineBalanceWhenVisibleMonthsAreEmpty() {
+        val state = buildBalanceChartState(
+            balanceTrend = DashboardBalanceTrend(
+                initialExpenseAmount = 2_000L,
+                initialIncomeAmount = 5_000L,
+                expenseTotalsByMonth = emptyList(),
+                incomeTotalsByMonth = emptyList()
+            ),
+            selectedMonth = MonthCursor(year = 2026, month = 5)
+        )
+
+        val balance = state.series.single()
+
+        assertEquals(listOf(30.0, 30.0, 30.0, 30.0, 30.0, 30.0), balance.values)
+        assertEquals(6, state.monthSnapshots.size)
+        assertEquals(3_000L, state.monthSnapshots.last().cumulativeDifferenceAmount)
     }
 }

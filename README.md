@@ -276,6 +276,3 @@ Common verification commands:
 ./gradlew :composeApp:compileAndroidMain :composeApp:compileKotlinIosSimulatorArm64
 ./gradlew :androidApp:assembleDebug
 ```
-
-# TODO
-* There is a bug with the difference value shown in the cash flow graph tooltip: it is always the same value and does not change when tapping from one point of the graph to another.

@@ -21,7 +21,7 @@ internal fun DashboardBody(
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
     monthlySavingsAmount: Long,
-    chartState: LineChartState,
+    chartState: BalanceChartState,
     recentTransactions: List<DashboardRecentTransaction>,
     pinnedDashboardCard: DashboardCardPage?,
     onPinDashboardCard: (DashboardCardPage?) -> Unit,
@@ -92,7 +92,7 @@ internal fun DashboardBody(
                 .weight(1f)
                 .fillMaxWidth(),
             strings = strings,
-            lineChartState = chartState,
+            balanceChartState = chartState,
             categoryTotals = summary.categoryTotals,
             recentTransactions = recentTransactions,
             pinnedDashboardCard = pinnedDashboardCard,

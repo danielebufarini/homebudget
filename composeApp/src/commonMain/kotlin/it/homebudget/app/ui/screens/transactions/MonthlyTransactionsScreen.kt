@@ -32,14 +32,11 @@ import homebudget.composeapp.generated.resources.expense
 import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.search_results
-import homebudget.composeapp.generated.resources.unknown_category
+import it.homebudget.app.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
-import it.homebudget.app.localization.rememberCategoryNameResolver
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -97,41 +94,19 @@ class MonthlyTransactionsScreen(
         val expensesLabel = stringResource(Res.string.expenses)
         val incomeLabel = stringResource(Res.string.income)
         val searchResultsLabel = stringResource(Res.string.search_results)
-        val unknownCategoryLabel = stringResource(Res.string.unknown_category)
-        val resolveCategoryName = rememberCategoryNameResolver()
         val searchQuery = remember(initialSearchQuery) { initialSearchQuery.trim() }
         val searchMode = searchQuery.isNotBlank()
 
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
+        var searchPage by remember(searchQuery) { mutableStateOf(1) }
+        val searchCandidateLimit = searchPage * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+        val loadMoreSearchResults = {
+            searchPage += 1
+        }
         val totals by if (searchMode) {
-            remember(
-                repository,
-                searchQuery,
-                resolveCategoryName,
-                unknownCategoryLabel,
-                currencySymbol
-            ) {
-                combine(
-                    repository.searchExpenseCandidates(searchQuery),
-                    repository.searchIncomeCandidates(searchQuery),
-                    repository.getAllCategories()
-                ) { expenses, incomes, categories ->
-                    val categoriesById = categories.associateBy { it.id }
-                    buildTransactionSearchTotals(
-                        expenses = expenses,
-                        incomes = incomes,
-                        categoriesById = categoriesById,
-                        resolveCategoryName = { category ->
-                            resolveCategoryName(category.id, category.name)
-                        },
-                        unknownCategoryLabel = unknownCategoryLabel,
-                        currencySymbol = currencySymbol,
-                        searchQuery = searchQuery
-                    )
-                }
-                    .distinctUntilChanged()
-                    .flowOn(Dispatchers.Default)
+            remember(searchQuery) {
+                flowOf(TransactionTotals())
             }
         } else {
             remember(repository, selectedMonth) {
@@ -170,7 +145,7 @@ class MonthlyTransactionsScreen(
                                 Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                                     Text(searchResultsLabel)
                                     Text(
-                                        text = "\"$searchQuery\" • $descriptor • ${formatAmount(totalAmount, currencySymbol)}",
+                                        text = "\"$searchQuery\" • $descriptor",
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -242,6 +217,8 @@ class MonthlyTransactionsScreen(
                             year = selectedMonth.year,
                             month = selectedMonth.month,
                             searchQuery = searchQuery,
+                            searchCandidateLimit = searchCandidateLimit,
+                            onLoadMoreSearchResults = loadMoreSearchResults,
                         ).RouteContent(
                             showNavigationChrome = false,
                             onBack = onBack,
@@ -253,6 +230,8 @@ class MonthlyTransactionsScreen(
                             year = selectedMonth.year,
                             month = selectedMonth.month,
                             searchQuery = searchQuery,
+                            externalSearchCandidateLimit = searchCandidateLimit,
+                            onLoadMoreSearchResults = loadMoreSearchResults,
                         ).RouteContent(
                             initialMonth = selectedMonth,
                             showNavigationChrome = false,
