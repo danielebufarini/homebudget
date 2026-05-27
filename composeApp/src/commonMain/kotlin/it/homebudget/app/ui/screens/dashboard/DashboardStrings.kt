@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.add_expense
 import homebudget.composeapp.generated.resources.cash_flow
+import homebudget.composeapp.generated.resources.cumulative_balance
 import homebudget.composeapp.generated.resources.currency_symbol
 import homebudget.composeapp.generated.resources.dashboard
 import homebudget.composeapp.generated.resources.dashboard_search_placeholder
@@ -24,6 +25,7 @@ import homebudget.composeapp.generated.resources.savings
 import homebudget.composeapp.generated.resources.search_transactions
 import homebudget.composeapp.generated.resources.shared
 import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.this_month
 import homebudget.composeapp.generated.resources.top_category
 import homebudget.composeapp.generated.resources.unknown_category
 import homebudget.composeapp.generated.resources.voice_expense
@@ -53,6 +55,8 @@ internal data class DashboardStrings(
     val unknownCategory: String,
     val cashFlow: String,
     val expensesByCategory: String,
+    val cumulativeBalance: String,
+    val thisMonth: String,
     val currencySymbol: String,
     val weekdayNames: List<String>,
     val shortMonthNames: List<String>
@@ -86,6 +90,8 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         unknownCategory = stringResource(Res.string.unknown_category),
         cashFlow = stringResource(Res.string.cash_flow),
         expensesByCategory = stringResource(Res.string.expenses_by_category),
+        cumulativeBalance = stringResource(Res.string.cumulative_balance),
+        thisMonth = stringResource(Res.string.this_month),
         currencySymbol = stringResource(Res.string.currency_symbol),
         weekdayNames = weekdayNames,
         shortMonthNames = shortMonthNames

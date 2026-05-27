@@ -37,7 +37,6 @@ internal fun emptyLineChartState(selectedMonth: MonthCursor): LineChartState {
         maxValue = 0.0,
         months = months,
         yAxisLabels = listOf("0", "0", "0"),
-        periodDifferenceAmount = 0L,
         monthSnapshots = emptyList(),
         series = emptyList()
     )
@@ -92,41 +91,34 @@ internal fun buildCashFlowChartState(
         return emptyLineChartState(selectedMonth)
     }
 
+    var cumulativeExpenseAmount = 0L
+    var cumulativeIncomeAmount = 0L
     val monthSnapshots = months.map { month ->
+        val expenseAmount = expenseTotalsByMonth[month] ?: 0L
+        val incomeAmount = incomeTotalsByMonth[month] ?: 0L
+
+        cumulativeExpenseAmount = addAmountsExact(cumulativeExpenseAmount, expenseAmount)
+        cumulativeIncomeAmount = addAmountsExact(cumulativeIncomeAmount, incomeAmount)
+
         ChartMonthSnapshot(
             month = month,
-            expenseAmount = expenseTotalsByMonth[month] ?: 0L,
-            incomeAmount = incomeTotalsByMonth[month] ?: 0L
+            expenseAmount = expenseAmount,
+            incomeAmount = incomeAmount,
+            cumulativeExpenseAmount = cumulativeExpenseAmount,
+            cumulativeIncomeAmount = cumulativeIncomeAmount
         )
     }
-    val expenseValues = monthSnapshots.map { it.expenseAmount.toDisplayDouble() }
-    val incomeValues = monthSnapshots.map { it.incomeAmount.toDisplayDouble() }
-    val cumulativeDifferenceAmounts = monthSnapshots.runningTotalOf { it.differenceAmount }
-    val differenceValues = cumulativeDifferenceAmounts.map { it.toDisplayDouble() }
-    val periodDifferenceAmount = cumulativeDifferenceAmounts.lastOrNull() ?: 0L
+    val balanceValues = monthSnapshots.map { it.cumulativeDifferenceAmount.toDisplayDouble() }
+    val balanceMarkerDays = months.indices.toSet()
 
-    val expenseMarkerDays = buildSet {
-        months.forEachIndexed { index, month ->
-            if (expenseTotalsByMonth[month] != null) add(index)
-        }
-    }
-    val incomeMarkerDays = buildSet {
-        months.forEachIndexed { index, month ->
-            if (incomeTotalsByMonth[month] != null) add(index)
-        }
-    }
-    val differenceMarkerDays = expenseMarkerDays + incomeMarkerDays
-
-    val maxValue = maxOf(
-        expenseValues.maxOrNull() ?: 0.0,
-        incomeValues.maxOrNull() ?: 0.0,
-        differenceValues.maxOrNull() ?: 0.0,
+    val rawMaxValue = balanceValues.maxOrNull() ?: 0.0
+    val rawMinValue = balanceValues.minOrNull() ?: 0.0
+    val maxValue = if (rawMaxValue == 0.0 && rawMinValue == 0.0) {
         1.0
-    )
-    val minValue = minOf(
-        differenceValues.minOrNull() ?: 0.0,
-        0.0
-    )
+    } else {
+        maxOf(rawMaxValue, 0.0)
+    }
+    val minValue = minOf(rawMinValue, 0.0)
     val middleValue = (maxValue + minValue) / 2.0
 
     return LineChartState(
@@ -139,26 +131,13 @@ internal fun buildCashFlowChartState(
             formatAxisAmount(middleValue),
             formatAxisAmount(minValue)
         ),
-        periodDifferenceAmount = periodDifferenceAmount,
         monthSnapshots = monthSnapshots,
         series = listOf(
             LineSeries(
-                kind = ChartSeriesKind.Expenses,
-                color = Color(0xFFC62828),
-                values = expenseValues,
-                markerDays = expenseMarkerDays
-            ),
-            LineSeries(
-                kind = ChartSeriesKind.Income,
-                color = Color(0xFF5BC98A),
-                values = incomeValues,
-                markerDays = incomeMarkerDays
-            ),
-            LineSeries(
-                kind = ChartSeriesKind.Difference,
+                kind = ChartSeriesKind.Balance,
                 color = Color(0xFF1565C0),
-                values = differenceValues,
-                markerDays = differenceMarkerDays
+                values = balanceValues,
+                markerDays = balanceMarkerDays
             )
         )
     )
@@ -166,13 +145,6 @@ internal fun buildCashFlowChartState(
 
 internal fun formatAxisAmount(amount: Double): String = amount.roundToInt().toString()
 
-private inline fun <T> Iterable<T>.runningTotalOf(value: (T) -> Long): List<Long> {
-    var total = 0L
-    return map { item ->
-        total = addAmountsExact(total, value(item))
-        total
-    }
-}
 
 internal fun MonthCursor.toDayLabel(dayOfMonth: Int, weekdayNames: List<String>): String {
     val dayOfWeek = kotlinx.datetime.LocalDate(year, month, dayOfMonth).dayOfWeek
@@ -224,6 +196,20 @@ internal fun LineChartState.buildChartGeometry(
                 else lineTo(offset.x, offset.y)
             }
         }
+        val baselineY = zeroLineY ?: yFor(normalizedMinValue)
+        val fillPath = if (points.isEmpty()) {
+            null
+        } else {
+            Path().apply {
+                points.forEachIndexed { index, offset ->
+                    if (index == 0) moveTo(offset.x, offset.y)
+                    else lineTo(offset.x, offset.y)
+                }
+                lineTo(points.last().x, baselineY)
+                lineTo(points.first().x, baselineY)
+                close()
+            }
+        }
         val markers = series.markerDays.mapNotNull { index ->
             points.getOrNull(index)?.let { point ->
                 ChartPoint(
@@ -236,6 +222,7 @@ internal fun LineChartState.buildChartGeometry(
         RenderedLineSeries(
             color = series.color,
             path = path,
+            fillPath = fillPath,
             markers = markers
         )
     }

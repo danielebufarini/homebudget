@@ -2,7 +2,6 @@ package it.homebudget.app.ui.screens.dashboard
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,12 +15,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -217,6 +213,13 @@ internal fun LineChartPage(
                             }
 
                             geometry.series.forEach { series ->
+                                series.fillPath?.let { fillPath ->
+                                    drawPath(
+                                        path = fillPath,
+                                        color = series.color.copy(alpha = 0.16f)
+                                    )
+                                }
+
                                 drawPath(
                                     path = series.path,
                                     color = series.color,
@@ -254,43 +257,12 @@ internal fun LineChartPage(
                 }
             }
 
-            if (state.series.size > 1) {
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    state.series.forEach { series ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .background(series.color, CircleShape)
-                            )
-                            Text(
-                                text = when (series.kind) {
-                                    ChartSeriesKind.Expenses -> strings.expenses
-                                    ChartSeriesKind.Income -> strings.income
-                                    ChartSeriesKind.Difference -> strings.difference
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
         }
 
         selectedPoint?.let { popupPoint ->
             CashFlowPointPopup(
                 strings = strings,
                 point = popupPoint,
-                periodDifferenceAmount = state.periodDifferenceAmount,
                 rootSize = rootSize,
                 popupSize = popupSize,
                 onPopupSizeChanged = { popupSize = it }
@@ -303,7 +275,6 @@ internal fun LineChartPage(
 private fun BoxScope.CashFlowPointPopup(
     strings: DashboardStrings,
     point: SelectedChartPoint,
-    periodDifferenceAmount: Long,
     rootSize: IntSize,
     popupSize: IntSize,
     onPopupSizeChanged: (IntSize) -> Unit
@@ -342,7 +313,7 @@ private fun BoxScope.CashFlowPointPopup(
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 text = point.detail.month.shortLabelWithFullYear(strings.shortMonthNames),
@@ -350,16 +321,26 @@ private fun BoxScope.CashFlowPointPopup(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             CashFlowPointPopupRow(
-                label = strings.expenses,
-                value = formatAmount(point.detail.expenseAmount, strings.currencySymbol)
+                label = strings.cumulativeBalance,
+                value = formatAmount(point.detail.cumulativeDifferenceAmount, strings.currencySymbol)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = strings.thisMonth,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             CashFlowPointPopupRow(
                 label = strings.income,
                 value = formatAmount(point.detail.incomeAmount, strings.currencySymbol)
             )
             CashFlowPointPopupRow(
+                label = strings.expenses,
+                value = formatAmount(point.detail.expenseAmount, strings.currencySymbol)
+            )
+            CashFlowPointPopupRow(
                 label = strings.difference,
-                value = formatAmount(periodDifferenceAmount, strings.currencySymbol)
+                value = formatAmount(point.detail.differenceAmount, strings.currencySymbol)
             )
         }
     }
@@ -378,7 +359,7 @@ private fun CashFlowPointPopupRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = label,
+            text = "$label:",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

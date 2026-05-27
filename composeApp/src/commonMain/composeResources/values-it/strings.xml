@@ -27,7 +27,9 @@
     <string name="by_date">Per data</string>
     <string name="calendar">Calendario</string>
     <string name="cancel">Annulla</string>
-    <string name="cash_flow">Flusso di cassa</string>
+    <string name="cumulative_balance">Saldo cumulativo</string>
+    <string name="this_month">Questo mese:</string>
+    <string name="cash_flow">Saldo cumulativo</string>
     <string name="categories">Categorie</string>
     <string name="categories_subtitle">Organizza le tue spese come preferisci</string>
     <string name="categories_search_placeholder">Cerca categorie...</string>

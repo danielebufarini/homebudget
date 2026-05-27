@@ -42,15 +42,12 @@ internal data class LineChartState(
     val maxValue: Double,
     val months: List<MonthCursor>,
     val yAxisLabels: List<String>,
-    val periodDifferenceAmount: Long,
     val monthSnapshots: List<ChartMonthSnapshot>,
     val series: List<LineSeries>
 )
 
 internal enum class ChartSeriesKind {
-    Expenses,
-    Income,
-    Difference
+    Balance
 }
 
 internal data class LineSeries(
@@ -63,10 +60,15 @@ internal data class LineSeries(
 internal data class ChartMonthSnapshot(
     val month: MonthCursor,
     val expenseAmount: Long,
-    val incomeAmount: Long
+    val incomeAmount: Long,
+    val cumulativeExpenseAmount: Long,
+    val cumulativeIncomeAmount: Long
 ) {
     val differenceAmount: Long
         get() = subtractAmountsExact(incomeAmount, expenseAmount)
+
+    val cumulativeDifferenceAmount: Long
+        get() = subtractAmountsExact(cumulativeIncomeAmount, cumulativeExpenseAmount)
 }
 
 internal data class ChartPoint(
@@ -84,6 +86,7 @@ internal data class SelectedChartPoint(
 internal data class RenderedLineSeries(
     val color: Color,
     val path: Path,
+    val fillPath: Path?,
     val markers: List<ChartPoint>
 )
 
