@@ -10,6 +10,8 @@ private final class TransactionSearchSectionsViewModel: ObservableObject {
     @Published var expenseSections: [GroupedExpenseSectionModel] = []
     @Published var incomeSections: [GroupedExpenseSectionModel] = []
     @Published var hasLoadedSnapshot = false
+    @Published var canLoadMoreExpenseResults = false
+    @Published var canLoadMoreIncomeResults = false
     @Published var expandedExpenseSectionIDs = Set<String>()
     @Published var expandedIncomeSectionIDs = Set<String>()
 
@@ -60,6 +62,10 @@ private final class TransactionSearchSectionsViewModel: ObservableObject {
         observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
     }
 
+    func loadMoreResults() {
+        observer.loadMoreResults()
+    }
+
     func deleteExpense(_ expenseID: String) {
         observer.deleteExpense(id: expenseID)
     }
@@ -81,6 +87,8 @@ private final class TransactionSearchSectionsViewModel: ObservableObject {
         incomeTotalAmountText = snapshot.incomeSnapshot.totalAmountText
         expenseEmptyStateText = snapshot.expenseSnapshot.emptyStateText
         incomeEmptyStateText = snapshot.incomeSnapshot.emptyStateText
+        canLoadMoreExpenseResults = snapshot.canLoadMoreExpenseResults
+        canLoadMoreIncomeResults = snapshot.canLoadMoreIncomeResults
         expenseSections = snapshot.expenseSnapshot.sections.map(GroupedExpenseSectionModel.init)
         incomeSections = snapshot.incomeSnapshot.sections.map {
             GroupedExpenseSectionModel($0)
@@ -204,6 +212,9 @@ struct TransactionSearchSectionsRootView: View {
                 emptySection
             } else {
                 resultSections
+                if currentCanLoadMoreResults {
+                    loadMoreSection
+                }
             }
         }
         .listStyle(.insetGrouped)
@@ -234,6 +245,19 @@ struct TransactionSearchSectionsRootView: View {
                 Text(currentEmptyStateText)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private var loadMoreSection: some View {
+        Section {
+            AppGlassListCard {
+                Button(appLocalized("Load more results")) {
+                    viewModel.loadMoreResults()
+                }
+                .frame(maxWidth: .infinity)
             }
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
@@ -285,6 +309,10 @@ struct TransactionSearchSectionsRootView: View {
 
     private var currentEmptyStateText: String {
         selectedKind == .income ? viewModel.incomeEmptyStateText : viewModel.expenseEmptyStateText
+    }
+
+    private var currentCanLoadMoreResults: Bool {
+        selectedKind == .income ? viewModel.canLoadMoreIncomeResults : viewModel.canLoadMoreExpenseResults
     }
 
     private var currentExpandedSectionIDs: Set<String> {

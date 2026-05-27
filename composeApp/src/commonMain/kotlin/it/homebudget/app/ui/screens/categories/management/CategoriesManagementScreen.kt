@@ -64,13 +64,13 @@ fun CategoriesManagementRoute(
     val categoryCardsFlow = remember(repository) {
         combine(
             repository.getAllCategories(),
-            repository.getAllExpenses(),
-            repository.getAllIncomes(),
-        ) { categories, expenses, incomes ->
+            repository.getExpenseCategoryUsageCounts(),
+            repository.getIncomeCategoryUsageCounts(),
+        ) { categories, expenseUsageCounts, incomeUsageCounts ->
             buildCategoryUiModels(
                 categories = categories,
-                expenses = expenses,
-                incomes = incomes,
+                expenseUsageCounts = expenseUsageCounts,
+                incomeUsageCounts = incomeUsageCounts,
             )
         }
             .distinctUntilChanged()

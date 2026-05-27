@@ -28,9 +28,8 @@ import it.homebudget.app.data.IdGenerator
 import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.CATEGORY_TYPE_INCOME
 import it.homebudget.app.database.Category
+import it.homebudget.app.database.CategoryUsageCountRow
 import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
-import it.homebudget.app.database.Expense
-import it.homebudget.app.database.Income
 import org.jetbrains.compose.resources.stringResource
 
 @Immutable
@@ -89,13 +88,15 @@ internal val EditorIconOptions = listOf(
 
 internal fun buildCategoryUiModels(
     categories: List<Category>,
-    expenses: List<Expense>,
-    incomes: List<Income>,
+    expenseUsageCounts: List<CategoryUsageCountRow>,
+    incomeUsageCounts: List<CategoryUsageCountRow>,
 ): List<CategoryUiModel> {
-    val expensesByCategory = expenses.groupBy { it.categoryId }
-    val incomesByCategory = incomes
-        .filter { !it.categoryId.isNullOrBlank() }
-        .groupBy { it.categoryId.orEmpty() }
+    val expensesByCategory = expenseUsageCounts.associate { row ->
+        row.categoryId to row.transactionCount.toInt()
+    }
+    val incomesByCategory = incomeUsageCounts.associate { row ->
+        row.categoryId to row.transactionCount.toInt()
+    }
 
     return categories.map { category ->
         val accent = category.color.toColorOrDefault()
@@ -107,9 +108,9 @@ internal fun buildCategoryUiModels(
             categoryType = category.categoryType,
             isArchived = category.isArchived == 1L,
             transactionCount = if (category.categoryType == CATEGORY_TYPE_INCOME) {
-                incomesByCategory[category.id].orEmpty().size
+                incomesByCategory[category.id] ?: 0
             } else {
-                expensesByCategory[category.id].orEmpty().size
+                expensesByCategory[category.id] ?: 0
             },
             accent = accent,
         )

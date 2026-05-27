@@ -28,6 +28,12 @@ data class WidgetMonthSummaryRow(
     val incomeAmount: Long
 )
 
+// Raw Room projection: category usage counters for management UI.
+data class CategoryUsageCountRow(
+    val categoryId: String,
+    val transactionCount: Long
+)
+
 // Raw Room projection: recent mixed expense/income dashboard rows.
 data class DashboardRecentTransactionRow(
     val id: String,

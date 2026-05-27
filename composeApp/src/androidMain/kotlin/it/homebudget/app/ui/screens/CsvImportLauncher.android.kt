@@ -14,7 +14,9 @@ import homebudget.composeapp.generated.resources.csv_import_success_with_skipped
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.csv.MAX_CSV_IMPORT_BYTES
 import it.homebudget.app.data.csv.importBudgetItemsFromCsv
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import java.io.ByteArrayOutputStream
@@ -55,14 +57,18 @@ internal actual fun rememberCsvImportLauncher(
 
         scope.launch {
             runCatching {
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.readUtf8TextWithLimit(MAX_CSV_IMPORT_BYTES)
-                } ?: error(csvImportFailedLabel)
-            }.onSuccess { csvText ->
-                val result = importBudgetItemsFromCsv(
-                    repository = repository,
-                    csvText = csvText
-                )
+                val csvText = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.readUtf8TextWithLimit(MAX_CSV_IMPORT_BYTES)
+                    } ?: error(csvImportFailedLabel)
+                }
+                withContext(Dispatchers.Default) {
+                    importBudgetItemsFromCsv(
+                        repository = repository,
+                        csvText = csvText
+                    )
+                }
+            }.onSuccess { result ->
 
                 onImportMessage(
                     if (result.importedCount == 0 && result.skippedCount == 0) {

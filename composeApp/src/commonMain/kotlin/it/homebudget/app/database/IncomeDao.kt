@@ -45,6 +45,18 @@ interface IncomeDao {
 
     @Query(
         """
+        SELECT categoryId, COUNT(*) AS transactionCount
+        FROM income
+        WHERE categoryId IS NOT NULL
+          AND categoryId != ''
+        GROUP BY categoryId
+        ORDER BY categoryId ASC
+        """
+    )
+    fun getIncomeCategoryUsageCounts(): Flow<List<CategoryUsageCountRow>>
+
+    @Query(
+        """
         SELECT * FROM income
         WHERE date >= :startMillis
           AND date < :endMillis

@@ -15,13 +15,13 @@ class MonthlyExpensesScreen(
     year: Int,
     month: Int,
     searchQuery: String = "",
-    searchCandidateLimit: Int? = null,
+    searchPageCount: Int? = null,
     onLoadMoreSearchResults: (() -> Unit)? = null
 ) : BaseGroupedExpensesScreen(
     year = year,
     month = month,
     searchQuery = searchQuery,
-    externalSearchCandidateLimit = searchCandidateLimit,
+    externalSearchPageCount = searchPageCount,
     onLoadMoreSearchResults = onLoadMoreSearchResults
 ) {
 

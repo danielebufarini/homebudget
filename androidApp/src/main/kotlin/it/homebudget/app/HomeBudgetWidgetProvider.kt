@@ -12,7 +12,11 @@ import android.widget.RemoteViews
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import it.homebudget.app.widget.HOME_BUDGET_WIDGET_REFRESH_ACTION
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -30,10 +34,11 @@ open class HomeBudgetWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == HOME_BUDGET_WIDGET_REFRESH_ACTION) {
-            HomeBudgetWidgetUpdater.updateWidgetsForProvider(
-                context = context,
+            HomeBudgetWidgetUpdater.updateWidgetsForProviderAsync(
+                context = context.applicationContext,
                 providerClass = this::class.java,
-                layoutMode = widgetLayoutMode
+                layoutMode = widgetLayoutMode,
+                pendingResult = goAsync()
             )
         }
     }
@@ -43,8 +48,8 @@ open class HomeBudgetWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        HomeBudgetWidgetUpdater.updateWidgets(
-            context = context,
+        HomeBudgetWidgetUpdater.updateWidgetsAsync(
+            context = context.applicationContext,
             appWidgetManager = appWidgetManager,
             appWidgetIds = appWidgetIds,
             layoutMode = widgetLayoutMode
@@ -57,8 +62,8 @@ open class HomeBudgetWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle
     ) {
-        HomeBudgetWidgetUpdater.updateWidget(
-            context = context,
+        HomeBudgetWidgetUpdater.updateWidgetAsync(
+            context = context.applicationContext,
             appWidgetManager = appWidgetManager,
             appWidgetId = appWidgetId,
             layoutMode = widgetLayoutMode
@@ -67,7 +72,7 @@ open class HomeBudgetWidgetProvider : AppWidgetProvider() {
 
     companion object {
         fun updateAllWidgets(context: Context) {
-            HomeBudgetWidgetUpdater.updateAllWidgets(context)
+            HomeBudgetWidgetUpdater.updateAllWidgetsAsync(context.applicationContext)
         }
     }
 }
@@ -88,7 +93,77 @@ private object HomeBudgetWidgetUpdater {
     private const val WIDE_WIDGET_MIN_WIDTH_DP = 300
     private const val WIDE_WIDGET_MAX_MIN_HEIGHT_DP = 90
 
-    fun updateAllWidgets(context: Context) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    fun updateAllWidgetsAsync(context: Context) {
+        launchWidgetUpdate {
+            updateAllWidgets(context.applicationContext)
+        }
+    }
+
+    fun updateWidgetsForProviderAsync(
+        context: Context,
+        providerClass: Class<out AppWidgetProvider>,
+        layoutMode: HomeBudgetWidgetLayoutMode,
+        pendingResult: android.content.BroadcastReceiver.PendingResult? = null
+    ) {
+        launchWidgetUpdate(pendingResult) {
+            updateWidgetsForProvider(
+                context = context.applicationContext,
+                providerClass = providerClass,
+                layoutMode = layoutMode
+            )
+        }
+    }
+
+    fun updateWidgetsAsync(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+        layoutMode: HomeBudgetWidgetLayoutMode
+    ) {
+        launchWidgetUpdate {
+            updateWidgets(
+                context = context.applicationContext,
+                appWidgetManager = appWidgetManager,
+                appWidgetIds = appWidgetIds,
+                layoutMode = layoutMode
+            )
+        }
+    }
+
+    fun updateWidgetAsync(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        layoutMode: HomeBudgetWidgetLayoutMode
+    ) {
+        launchWidgetUpdate {
+            val summary = loadCurrentMonthWidgetSummary(context.applicationContext)
+            updateWidget(
+                context = context.applicationContext,
+                appWidgetManager = appWidgetManager,
+                appWidgetId = appWidgetId,
+                layoutMode = layoutMode,
+                summary = summary
+            )
+        }
+    }
+
+    private fun launchWidgetUpdate(
+        pendingResult: android.content.BroadcastReceiver.PendingResult? = null,
+        block: suspend () -> Unit
+    ) {
+        scope.launch {
+            try {
+                block()
+            } finally {
+                pendingResult?.finish()
+            }
+        }
+    }
+
+    private suspend fun updateAllWidgets(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val defaultWidgetIds = appWidgetManager.getAppWidgetIds(
             ComponentName(context, HomeBudgetWidgetProvider::class.java)
@@ -117,7 +192,7 @@ private object HomeBudgetWidgetUpdater {
         )
     }
 
-    fun updateWidgetsForProvider(
+    private suspend fun updateWidgetsForProvider(
         context: Context,
         providerClass: Class<out AppWidgetProvider>,
         layoutMode: HomeBudgetWidgetLayoutMode
@@ -132,7 +207,7 @@ private object HomeBudgetWidgetUpdater {
         )
     }
 
-    fun updateWidgets(
+    private suspend fun updateWidgets(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
@@ -155,12 +230,12 @@ private object HomeBudgetWidgetUpdater {
         }
     }
 
-    fun updateWidget(
+    private fun updateWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int,
         layoutMode: HomeBudgetWidgetLayoutMode,
-        summary: HomeBudgetWidgetSummary = loadCurrentMonthWidgetSummary(context)
+        summary: HomeBudgetWidgetSummary
     ) {
         val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
         val resolvedLayout = resolveWidgetLayout(options, layoutMode)
@@ -208,7 +283,7 @@ private object HomeBudgetWidgetUpdater {
         }
     }
 
-    private fun loadCurrentMonthWidgetSummary(context: Context): HomeBudgetWidgetSummary {
+    private suspend fun loadCurrentMonthWidgetSummary(context: Context): HomeBudgetWidgetSummary {
         val today = LocalDate.now()
         val monthName = today.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
             .replaceFirstChar { char ->
@@ -218,19 +293,19 @@ private object HomeBudgetWidgetUpdater {
         val currencySymbol = context.getString(R.string.widget_currency_symbol)
 
         return runCatching {
-            val repository = GlobalContext.get().get<ExpenseRepository>()
-            val monthSummary = runBlocking {
-                repository.getWidgetMonthSummary(
+            withContext(Dispatchers.Default) {
+                val repository = GlobalContext.get().get<ExpenseRepository>()
+                val monthSummary = repository.getWidgetMonthSummary(
                     year = today.year,
                     month = today.monthValue
                 )
+                HomeBudgetWidgetSummary(
+                    monthTitle = monthTitle,
+                    monthNameText = monthName,
+                    expensesAmountText = formatAmount(monthSummary.expenseAmount, currencySymbol),
+                    incomeAmountText = formatAmount(monthSummary.incomeAmount, currencySymbol)
+                )
             }
-            HomeBudgetWidgetSummary(
-                monthTitle = monthTitle,
-                monthNameText = monthName,
-                expensesAmountText = formatAmount(monthSummary.expenseAmount, currencySymbol),
-                incomeAmountText = formatAmount(monthSummary.incomeAmount, currencySymbol)
-            )
         }.getOrElse {
             HomeBudgetWidgetSummary(
                 monthTitle = monthTitle,

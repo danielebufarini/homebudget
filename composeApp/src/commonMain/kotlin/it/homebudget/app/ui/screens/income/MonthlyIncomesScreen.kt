@@ -91,7 +91,7 @@ class MonthlyIncomesScreen(
     private val year: Int,
     private val month: Int,
     private val searchQuery: String = "",
-    private val externalSearchCandidateLimit: Int? = null,
+    private val externalSearchPageCount: Int? = null,
     private val onLoadMoreSearchResults: (() -> Unit)? = null
 ) : Screen {
     @Composable
@@ -135,19 +135,20 @@ class MonthlyIncomesScreen(
         val resolveCategoryName = rememberCategoryNameResolver()
         var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
-        var localSearchPage by remember(searchQuery) { mutableStateOf(1) }
+        var localSearchPageCount by remember(searchQuery) { mutableStateOf(1) }
         var pendingIncomeDelete by remember { mutableStateOf<Income?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
         val searchMode = searchQuery.isNotBlank()
-        val searchCandidateLimit = if (searchMode) {
-            externalSearchCandidateLimit ?: (localSearchPage * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE)
+        val searchPageCount = if (searchMode) {
+            externalSearchPageCount ?: localSearchPageCount
         } else {
-            DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+            1
         }
+        val loadedSearchCandidateCount = searchPageCount * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
         val loadMoreSearchResults = onLoadMoreSearchResults ?: {
-            localSearchPage += 1
+            localSearchPageCount += 1
         }
         val incomesFlow = remember(
             repository,
@@ -155,10 +156,14 @@ class MonthlyIncomesScreen(
             monthEndMillis,
             searchMode,
             searchQuery,
-            searchCandidateLimit
+            searchPageCount
         ) {
             if (searchMode) {
-                repository.searchIncomeCandidates(searchQuery, limit = searchCandidateLimit)
+                repository.searchIncomeCandidatePages(
+                    query = searchQuery,
+                    pageCount = searchPageCount,
+                    pageSize = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+                )
             } else {
                 repository.getIncomesBetween(monthStartMillis, monthEndMillis)
             }
@@ -206,7 +211,7 @@ class MonthlyIncomesScreen(
         val totalAmount = groupedIncomesState.totalAmount
         val categoriesById = groupedIncomesState.categoriesById
         val canLoadMoreSearchResults = searchMode &&
-            groupedIncomesState.candidateCount >= searchCandidateLimit
+            groupedIncomesState.candidateCount >= loadedSearchCandidateCount
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
             val income = groupedIncomesState.visibleIncomes.find { it.id == incomeId }
                 ?: return@deleteAction

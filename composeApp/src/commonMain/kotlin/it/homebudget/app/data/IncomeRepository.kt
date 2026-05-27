@@ -1,5 +1,6 @@
 package it.homebudget.app.data
 
+import it.homebudget.app.database.CategoryUsageCountRow
 import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Income
 import it.homebudget.app.database.refreshIncomeSearchRows
@@ -16,6 +17,9 @@ class IncomeRepository(
     private val searchIndexDao = database.searchIndexDao()
 
     fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes().distinctUntilChanged()
+
+    fun getIncomeCategoryUsageCounts(): Flow<List<CategoryUsageCountRow>> =
+        incomeDao.getIncomeCategoryUsageCounts().distinctUntilChanged()
 
     fun getIncomesBetween(startMillis: Long, endMillis: Long): Flow<List<Income>> =
         incomeDao.getIncomesBetween(startMillis, endMillis).distinctUntilChanged()

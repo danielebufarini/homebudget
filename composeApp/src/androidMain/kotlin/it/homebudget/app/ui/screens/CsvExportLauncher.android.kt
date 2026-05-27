@@ -39,7 +39,9 @@ import homebudget.composeapp.generated.resources.to
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.csv.CsvExportFile
 import it.homebudget.app.data.csv.exportBudgetItemsToCsv
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -106,9 +108,11 @@ internal actual fun rememberCsvExportLauncher(
 
         scope.launch {
             val result = runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(exportFile.content.encodeToByteArray())
-                } ?: error(csvExportFailedLabel)
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        outputStream.write(exportFile.content.encodeToByteArray())
+                    } ?: error(csvExportFailedLabel)
+                }
             }
 
             onExportMessage(
@@ -163,11 +167,13 @@ internal actual fun rememberCsvExportLauncher(
 
                                     scope.launch {
                                         val exportFile = runCatching {
-                                            exportBudgetItemsToCsv(
-                                                repository = repository,
-                                                startDate = startDate,
-                                                endDate = endDate
-                                            )
+                                            withContext(Dispatchers.Default) {
+                                                exportBudgetItemsToCsv(
+                                                    repository = repository,
+                                                    startDate = startDate,
+                                                    endDate = endDate
+                                                )
+                                            }
                                         }.getOrElse {
                                             onExportMessage(csvExportFailedLabel)
                                             null

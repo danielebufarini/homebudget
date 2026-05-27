@@ -55,7 +55,7 @@ abstract class BaseGroupedExpensesScreen(
     private val year: Int,
     private val month: Int,
     private val searchQuery: String = "",
-    private val externalSearchCandidateLimit: Int? = null,
+    private val externalSearchPageCount: Int? = null,
     private val onLoadMoreSearchResults: (() -> Unit)? = null
 ) : Screen {
 
@@ -145,19 +145,20 @@ abstract class BaseGroupedExpensesScreen(
         val navigationDescriptor = monthNavigationDescriptor()
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
-        var localSearchPage by remember(searchQuery) { mutableStateOf(1) }
+        var localSearchPageCount by remember(searchQuery) { mutableStateOf(1) }
         var pendingExpenseDelete by remember { mutableStateOf<Expense?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
         val searchMode = searchQuery.isNotBlank()
-        val searchCandidateLimit = if (searchMode) {
-            externalSearchCandidateLimit ?: (localSearchPage * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE)
+        val searchPageCount = if (searchMode) {
+            externalSearchPageCount ?: localSearchPageCount
         } else {
-            DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+            1
         }
+        val loadedSearchCandidateCount = searchPageCount * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
         val loadMoreSearchResults = onLoadMoreSearchResults ?: {
-            localSearchPage += 1
+            localSearchPageCount += 1
         }
         val expensesFlow = remember(
             repository,
@@ -165,10 +166,14 @@ abstract class BaseGroupedExpensesScreen(
             monthEndMillis,
             searchMode,
             searchQuery,
-            searchCandidateLimit
+            searchPageCount
         ) {
             if (searchMode) {
-                repository.searchExpenseCandidates(searchQuery, limit = searchCandidateLimit)
+                repository.searchExpenseCandidatePages(
+                    query = searchQuery,
+                    pageCount = searchPageCount,
+                    pageSize = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+                )
             } else {
                 repository.getExpensesBetween(monthStartMillis, monthEndMillis)
             }
@@ -221,7 +226,7 @@ abstract class BaseGroupedExpensesScreen(
         val totalAmount = groupedExpensesState.totalAmount
         val categoriesById = groupedExpensesState.categoriesById
         val canLoadMoreSearchResults = searchMode &&
-            groupedExpensesState.candidateCount >= searchCandidateLimit
+            groupedExpensesState.candidateCount >= loadedSearchCandidateCount
         val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
             deleteAction@{ expenseId ->
                 val expense = groupedExpensesState.visibleExpenses.find { it.id == expenseId }

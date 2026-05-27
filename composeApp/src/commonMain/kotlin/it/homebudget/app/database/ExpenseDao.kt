@@ -145,6 +145,16 @@ interface ExpenseDao {
 
     @Query(
         """
+        SELECT categoryId, COUNT(*) AS transactionCount
+        FROM expense
+        GROUP BY categoryId
+        ORDER BY categoryId ASC
+        """
+    )
+    fun getExpenseCategoryUsageCounts(): Flow<List<CategoryUsageCountRow>>
+
+    @Query(
+        """
         SELECT * FROM expense
         WHERE date >= :startMillis
           AND date < :endMillis

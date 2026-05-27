@@ -1,2462 +1,2474 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "" : {
-
-    },
-    "\"%@\" will be permanently deleted." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "\"%@\" will be permanently deleted."
+  "sourceLanguage": "en",
+  "strings": {
+    "": {},
+    "\"%@\" will be permanently deleted.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"%@\" will be permanently deleted."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "\"%@\" verrà eliminato definitivamente."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"%@\" verrà eliminato definitivamente."
           }
         }
       }
     },
-    "%@ %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@"
+    "%@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@"
           }
         }
       }
     },
-    "%lld %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@"
+    "%lld %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld %2$@"
           }
         }
       }
     },
-    "Action" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Action"
+    "Action": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Azione"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Azione"
           }
         }
       }
     },
-    "Add" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add"
+    "Add": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi"
           }
         }
       }
     },
-    "Add Category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Category"
+    "Add Category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi categoria"
           }
         }
       }
     },
-    "Add Expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Expense"
+    "Add Expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi spesa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi spesa"
           }
         }
       }
     },
-    "Add Income" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Income"
+    "Add Income": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Income"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi entrata"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi entrata"
           }
         }
       }
     },
-    "All dates" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All dates"
+    "All dates": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All dates"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tutte le date"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le date"
           }
         }
       }
     },
-    "Amount" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Amount"
+    "Amount": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Importo"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importo"
           }
         }
       }
     },
-    "%lld Installments" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld Installments"
+    "%lld Installments": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld Installments"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld rate"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld rate"
           }
         }
       }
     },
-    "Apple Intelligence must be enabled to use voice expense parsing." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence must be enabled to use voice expense parsing."
+    "Apple Intelligence must be enabled to use voice expense parsing.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence must be enabled to use voice expense parsing."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence deve essere attivata per usare il riconoscimento vocale delle spese."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence deve essere attivata per usare il riconoscimento vocale delle spese."
           }
         }
       }
     },
-    "Back Up Now" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back Up Now"
+    "Back Up Now": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Now"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esegui backup ora"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esegui backup ora"
           }
         }
       }
     },
-    "Backup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cloud backup/restore"
+    "Backup": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud backup/restore"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup/ripristino cloud"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup/ripristino cloud"
           }
         }
       }
     },
-    "Backup file exported" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Full app backup saved to the cloud file."
+    "Backup file exported": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full app backup saved to the cloud file."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup completo dell'app salvato nel file cloud."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup completo dell'app salvato nel file cloud."
           }
         }
       }
     },
-    "Backup restored: %1$d categories, %2$d expenses, %3$d incomes." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Full app backup restored: %1$d categories, %2$d expenses, %3$d incomes."
+    "Backup restored: %1$d categories, %2$d expenses, %3$d incomes.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full app backup restored: %1$d categories, %2$d expenses, %3$d incomes."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup completo dell'app ripristinato: %1$d categorie, %2$d spese, %3$d entrate."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup completo dell'app ripristinato: %1$d categorie, %2$d spese, %3$d entrate."
           }
         }
       }
     },
-    "Backup to iCloud" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup to iCloud"
+    "Backup to iCloud": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup to iCloud"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup su iCloud"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup su iCloud"
           }
         }
       }
     },
-    "Budget data is still loading." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Budget data is still loading."
+    "Budget data is still loading.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget data is still loading."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I dati del budget sono ancora in caricamento."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I dati del budget sono ancora in caricamento."
           }
         }
       }
     },
-    "By Category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "By Category"
+    "By Category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Per categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per categoria"
           }
         }
       }
     },
-    "By Date" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "By Date"
+    "By Date": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Date"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Per data"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per data"
           }
         }
       }
     },
-    "Cancel" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
+    "Cancel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Annulla"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla"
           }
         }
       }
     },
-    "Choose whether to delete only this instance or the whole series." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose whether to delete only this instance or the whole series."
+    "Choose whether to delete only this instance or the whole series.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose whether to delete only this instance or the whole series."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli se eliminare solo questa occorrenza o l'intera serie."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli se eliminare solo questa occorrenza o l'intera serie."
           }
         }
       }
     },
-    "Choose whether to update only this instance or the whole series." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose whether to update only this instance or the whole series."
+    "Choose whether to update only this instance or the whole series.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose whether to update only this instance or the whole series."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli se aggiornare solo questa occorrenza o l'intera serie."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli se aggiornare solo questa occorrenza o l'intera serie."
           }
         }
       }
     },
-    "Categories" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Categories"
+    "Categories": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categories"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Categorie"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categorie"
           }
         }
       }
     },
-    "Category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Category"
+    "Category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categoria"
           }
         }
       }
     },
-    "Category Name" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Category Name"
+    "Category Name": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category Name"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nome categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome categoria"
           }
         }
       }
     },
-    "Category name is required" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Category name is required"
+    "Category name is required": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category name is required"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il nome della categoria è obbligatorio"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nome della categoria è obbligatorio"
           }
         }
       }
     },
-    "Choose the date range for the data you want to export." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose the date range for the data you want to export."
+    "Choose the date range for the data you want to export.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the date range for the data you want to export."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli l'intervallo di date dei dati che vuoi esportare."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli l'intervallo di date dei dati che vuoi esportare."
           }
         }
       }
     },
-    "Choose whether to delete only this instance of \"%@\" or the whole series." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose whether to delete only this instance of \"%@\" or the whole series."
+    "Choose whether to delete only this instance of \"%@\" or the whole series.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose whether to delete only this instance of \"%@\" or the whole series."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli se eliminare solo questa occorrenza di \"%@\" o l'intera serie."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli se eliminare solo questa occorrenza di \"%@\" o l'intera serie."
           }
         }
       }
     },
-    "Close" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close"
+    "Close": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chiudi"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi"
           }
         }
       }
     },
-    "Cloud Backup & Restore" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cloud Backup & Restore"
+    "Cloud Backup & Restore": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud Backup & Restore"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup e ripristino cloud"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup e ripristino cloud"
           }
         }
       }
     },
-    "Create new expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create new expense"
+    "Create new expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create new expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crea nuova spesa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea nuova spesa"
           }
         }
       }
     },
-    "CSV" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local import/export"
+    "CSV": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local import/export"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import/export locale"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import/export locale"
           }
         }
       }
     },
-    "CSV file exported" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CSV file exported"
+    "CSV file exported": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV file exported"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File CSV esportato"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File CSV esportato"
           }
         }
       }
     },
-    "CSV Import / Export" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CSV Import / Export"
+    "CSV Import / Export": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV Import / Export"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import/export CSV"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import/export CSV"
           }
         }
       }
     },
-    "CSV Import & Export" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CSV Import & Export"
+    "CSV Import & Export": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV Import & Export"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import ed export CSV"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import ed export CSV"
           }
         }
       }
     },
-    "Custom category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom category"
+    "Custom category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Categoria personalizzata"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categoria personalizzata"
           }
         }
       }
     },
-    "Custom range" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom range"
+    "Custom range": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom range"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervallo personalizzato"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo personalizzato"
           }
         }
       }
     },
-    "Dashboard" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dashboard"
+    "Dashboard": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Riepilogo"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo"
           }
         }
       }
     },
-    "Date" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Date"
+    "Date": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
           }
         }
       }
     },
-    "Date range" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Date range"
+    "Date range": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date range"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervallo di date"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo di date"
           }
         }
       }
     },
-    "Default category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default category"
+    "Default category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Categoria predefinita"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categoria predefinita"
           }
         }
       }
     },
-    "Delete" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete"
+    "Delete": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elimina"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina"
           }
         }
       }
     },
-    "Description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Description"
+    "Description": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Descrizione"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrizione"
           }
         }
       }
     },
-    "Edit Category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit Category"
+    "Edit Category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifica categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica categoria"
           }
         }
       }
     },
-    "Edit Expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit Expense"
+    "Edit Expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifica spesa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica spesa"
           }
         }
       }
     },
-    "Edit Income" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit Income"
+    "Edit Income": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Income"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifica entrata"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica entrata"
           }
         }
       }
     },
-    "End Date" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End Date"
+    "End Date": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End Date"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data finale"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data finale"
           }
         }
       }
     },
-    "Expense Details" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Expense Details"
+    "Expense Details": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense Details"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dettagli spesa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dettagli spesa"
           }
         }
       }
     },
-    "Expense Grouping" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Expense Grouping"
+    "Expense Grouping": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense Grouping"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raggruppamento spese"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raggruppamento spese"
           }
         }
       }
     },
-    "Expense not found." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Expense not found."
+    "Expense not found.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense not found."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spesa non trovata."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spesa non trovata."
           }
         }
       }
     },
-    "Expenses" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Expenses"
+    "Expenses": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expenses"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spese"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spese"
           }
         }
       }
     },
-    "Enter a valid amount" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a valid amount"
+    "Enter a valid amount": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid amount"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inserisci un importo valido"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un importo valido"
           }
         }
       }
     },
-    "Export" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export"
+    "Export": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esporta"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta"
           }
         }
       }
     },
-    "Export CSV" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export CSV"
+    "Export CSV": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export CSV"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esporta CSV"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta CSV"
           }
         }
       }
     },
-    "Export CSV…" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export CSV…"
+    "Export CSV…": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export CSV…"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esporta CSV…"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta CSV…"
           }
         }
       }
     },
-    "Food & Dining" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Food & Dining"
+    "Food & Dining": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Food & Dining"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cibo e ristorazione"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cibo e ristorazione"
           }
         }
       }
     },
-    "Foundation Models are currently unavailable." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foundation Models are currently unavailable."
+    "Foundation Models are currently unavailable.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foundation Models are currently unavailable."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foundation Models non è al momento disponibile."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foundation Models non è al momento disponibile."
           }
         }
       }
     },
-    "Foundation Models are unavailable on this device." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foundation Models are unavailable on this device."
+    "Foundation Models are unavailable on this device.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foundation Models are unavailable on this device."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foundation Models non è disponibile su questo dispositivo."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foundation Models non è disponibile su questo dispositivo."
           }
         }
       }
     },
-    "From" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "From"
+    "From": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Da"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da"
           }
         }
       }
     },
-    "Full Cloud Backup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Full Cloud Backup"
+    "Full Cloud Backup": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full Cloud Backup"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup completo cloud"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup completo cloud"
           }
         }
       }
     },
-    "Full Database" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Full Database"
+    "Full Database": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full Database"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Database completo"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Database completo"
           }
         }
       }
     },
-    "General & Hobbies" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "General & Hobbies"
+    "General & Hobbies": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General & Hobbies"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Generale e hobby"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generale e hobby"
           }
         }
       }
     },
-    "Health & Wellness" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health & Wellness"
+    "Health & Wellness": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health & Wellness"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salute e benessere"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salute e benessere"
           }
         }
       }
     },
-    "Home & Bills" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Home & Bills"
+    "Home & Bills": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home & Bills"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casa e bollette"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casa e bollette"
           }
         }
       }
     },
-    "I could not match the spoken category to one of your categories." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I could not match the spoken category to one of your categories."
+    "I could not match the spoken category to one of your categories.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I could not match the spoken category to one of your categories."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non ho trovato una categoria corrispondente tra le tue categorie."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non ho trovato una categoria corrispondente tra le tue categorie."
           }
         }
       }
     },
-    "I could not understand the amount well enough to prepare the expense." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I could not understand the amount well enough to prepare the expense."
+    "I could not understand the amount well enough to prepare the expense.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I could not understand the amount well enough to prepare the expense."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non ho capito l'importo abbastanza bene da preparare la spesa."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non ho capito l'importo abbastanza bene da preparare la spesa."
           }
         }
       }
     },
-    "I understood the request, but I could not prepare a saveable expense draft." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I understood the request, but I could not prepare a saveable expense draft."
+    "I understood the request, but I could not prepare a saveable expense draft.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I understood the request, but I could not prepare a saveable expense draft."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ho capito la richiesta, ma non ho potuto preparare una bozza salvabile."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ho capito la richiesta, ma non ho potuto preparare una bozza salvabile."
           }
         }
       }
     },
-    "iCloud backup is unavailable on this device or account." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud backup is unavailable on this device or account."
+    "iCloud backup is unavailable on this device or account.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud backup is unavailable on this device or account."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il backup iCloud non è disponibile su questo dispositivo o account."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il backup iCloud non è disponibile su questo dispositivo o account."
           }
         }
       }
     },
-    "Icon" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Icon"
+    "Icon": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Icona"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icona"
           }
         }
       }
     },
-    "Highest Day" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highest Day"
+    "Highest Day": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highest Day"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giorno record"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorno record"
           }
         }
       }
     },
-    "Import" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import"
+    "Import": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Importa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa"
           }
         }
       }
     },
-    "Import CSV" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import CSV"
+    "Import CSV": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import CSV"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Importa CSV"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa CSV"
           }
         }
       }
     },
-    "Income" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Income"
+    "Income": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Entrate"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrate"
           }
         }
       }
     },
-    "Income Details" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Income Details"
+    "Income Details": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income Details"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dettagli entrata"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dettagli entrata"
           }
         }
       }
     },
-    "Installments" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Installments"
+    "Installments": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installments"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rate"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate"
           }
         }
       }
     },
-    "Last 30 days" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last 30 days"
+    "Last 30 days": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 days"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ultimi 30 giorni"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimi 30 giorni"
           }
         }
       }
     },
-    "Loading budget data..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading budget data..."
+    "Loading budget data...": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading budget data..."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Caricamento dati del budget..."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricamento dati del budget..."
           }
         }
       }
     },
-    "Microphone permission is required." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Microphone permission is required."
+    "Microphone permission is required.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone permission is required."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "È richiesta l'autorizzazione al microfono."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È richiesta l'autorizzazione al microfono."
           }
         }
       }
     },
-    "Move selected data using CSV files stored on this phone." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move selected data using CSV files stored on this phone."
+    "Move selected data using CSV files stored on this phone.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move selected data using CSV files stored on this phone."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sposta dati selezionati usando file CSV salvati su questo telefono."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sposta dati selezionati usando file CSV salvati su questo telefono."
           }
         }
       }
     },
-    "No" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No"
+    "No": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
           }
         }
       }
     },
-    "No cloud backup file was found." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No cloud backup file was found."
+    "No cloud backup file was found.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No cloud backup file was found."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessun file di backup cloud trovato."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun file di backup cloud trovato."
           }
         }
       }
     },
-    "No expenses for this month" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No expenses for this month"
+    "No expenses for this month": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No expenses for this month"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessuna spesa per questo mese"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna spesa per questo mese"
           }
         }
       }
     },
-    "No income for this month" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No income for this month"
+    "No income for this month": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No income for this month"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessuna entrata per questo mese"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna entrata per questo mese"
           }
         }
       }
     },
-    "No matching transactions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No matching transactions"
+    "No matching transactions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching transactions"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessun movimento trovato"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun movimento trovato"
           }
         }
       }
     },
-    "No speech was captured." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No speech was captured."
+    "No speech was captured.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No speech was captured."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessun parlato acquisito."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun parlato acquisito."
           }
         }
       }
     },
-    "Options" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Options"
+    "Options": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Options"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opzioni"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opzioni"
           }
         }
       }
     },
-    "No usable microphone input is available." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No usable microphone input is available."
+    "No usable microphone input is available.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No usable microphone input is available."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessun ingresso microfono utilizzabile disponibile."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun ingresso microfono utilizzabile disponibile."
           }
         }
       }
     },
-    "Not suitable for full app restore." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not suitable for full app restore."
+    "Not suitable for full app restore.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not suitable for full app restore."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non adatto a un ripristino completo dell'app."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non adatto a un ripristino completo dell'app."
           }
         }
       }
     },
-    "People & Work" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "People & Work"
+    "People & Work": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People & Work"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Persone e lavoro"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Persone e lavoro"
           }
         }
       }
     },
-    "R" : {
-
+    "R": {},
+    "Recurring Monthly": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring Monthly"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensile ricorrente"
+          }
+        }
+      }
     },
-    "Recurring Monthly" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recurring Monthly"
+    "Ready to Save": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to Save"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mensile ricorrente"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto per il salvataggio"
           }
         }
       }
     },
-    "Ready to Save" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ready to Save"
+    "Ready to save a new expense.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to save a new expense."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pronto per il salvataggio"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto per salvare una nuova spesa."
           }
         }
       }
     },
-    "Ready to save a new expense." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ready to save a new expense."
+    "Ready to update the matched expense.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to update the matched expense."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pronto per salvare una nuova spesa."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto per aggiornare la spesa trovata."
           }
         }
       }
     },
-    "Ready to update the matched expense." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ready to update the matched expense."
+    "Restore": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pronto per aggiornare la spesa trovata."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina"
           }
         }
       }
     },
-    "Restore" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore"
+    "Restore backup": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore backup"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ripristina"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina backup"
           }
         }
       }
     },
-    "Restore backup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore backup"
+    "Restore Backup": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Backup"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ripristina backup"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina backup"
           }
         }
       }
     },
-    "Restore Backup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore Backup"
+    "Restore from iCloud": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore from iCloud"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ripristina backup"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina da iCloud"
           }
         }
       }
     },
-    "Restore from iCloud" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore from iCloud"
+    "Save": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ripristina da iCloud"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva"
           }
         }
       }
     },
-    "Save" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save"
+    "Save Expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salva"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva spesa"
           }
         }
       }
     },
-    "Save Expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save Expense"
+    "Select Category": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salva spesa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona categoria"
           }
         }
       }
     },
-    "Select Category" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select Category"
+    "Select a date": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a date"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seleziona categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona una data"
           }
         }
       }
     },
-    "Select a date" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select a date"
+    "Save or restore a complete copy of your app data in the cloud.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save or restore a complete copy of your app data in the cloud."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seleziona una data"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva o ripristina una copia completa dei dati dell'app nel cloud."
           }
         }
       }
     },
-    "Save or restore a complete copy of your app data in the cloud." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save or restore a complete copy of your app data in the cloud."
+    "Saving expense...": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving expense..."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salva o ripristina una copia completa dei dati dell'app nel cloud."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvataggio spesa..."
           }
         }
       }
     },
-    "Saving expense..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saving expense..."
+    "Shared": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salvataggio spesa..."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Condivisa"
           }
         }
       }
     },
-    "Shared" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shared"
+    "Shared Expense": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared Expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condivisa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spesa condivisa"
           }
         }
       }
     },
-    "Shared Expense" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shared Expense"
+    "Shared Expenses": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared Expenses"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spesa condivisa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spese condivise"
           }
         }
       }
     },
-    "Shared Expenses" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shared Expenses"
+    "Single Payment": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single Payment"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spese condivise"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagamento unico"
           }
         }
       }
     },
-    "Single Payment" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Single Payment"
+    "Search Results": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Results"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pagamento unico"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risultati ricerca"
           }
         }
       }
     },
-    "Search Results" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search Results"
+    "Speak an expense command.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speak an expense command."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Risultati ricerca"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronuncia un comando per una spesa."
           }
         }
       }
     },
-    "Speak an expense command." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speak an expense command."
+    "Speech recognition permission is required.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech recognition permission is required."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pronuncia un comando per una spesa."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È richiesta l'autorizzazione al riconoscimento vocale."
           }
         }
       }
     },
-    "Speech recognition permission is required." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speech recognition permission is required."
+    "Speech transcription is unavailable on this device.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech transcription is unavailable on this device."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "È richiesta l'autorizzazione al riconoscimento vocale."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La trascrizione vocale non è disponibile su questo dispositivo."
           }
         }
       }
     },
-    "Speech transcription is unavailable on this device." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speech transcription is unavailable on this device."
+    "Start Date": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Date"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La trascrizione vocale non è disponibile su questo dispositivo."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data iniziale"
           }
         }
       }
     },
-    "Start Date" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start Date"
+    "Start date must be on or before end date": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start date must be on or before end date"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data iniziale"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La data iniziale deve essere precedente o uguale a quella finale"
           }
         }
       }
     },
-    "Start date must be on or before end date" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start date must be on or before end date"
+    "Start Recording": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Recording"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La data iniziale deve essere precedente o uguale a quella finale"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia registrazione"
           }
         }
       }
     },
-    "Start Recording" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start Recording"
+    "Starting microphone...": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting microphone..."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avvia registrazione"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvio microfono..."
           }
         }
       }
     },
-    "Starting microphone..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starting microphone..."
+    "Stop Recording": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Recording"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avvio microfono..."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferma registrazione"
           }
         }
       }
     },
-    "Stop Recording" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop Recording"
+    "The on-device language model could not parse this command. Try again, or use a simpler phrase like \"20 euros yesterday food\".": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The on-device language model could not parse this command. Try again, or use a simpler phrase like \"20 euros yesterday food\"."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ferma registrazione"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello sul dispositivo non ha interpretato questo comando. Riprova o usa una frase più semplice, per esempio \"20 euro ieri cibo\"."
           }
         }
       }
     },
-    "The on-device language model could not parse this command. Try again, or use a simpler phrase like \"20 euros yesterday food\"." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The on-device language model could not parse this command. Try again, or use a simpler phrase like \"20 euros yesterday food\"."
+    "The on-device model is still preparing. Try again in a moment.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The on-device model is still preparing. Try again in a moment."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il modello sul dispositivo non ha interpretato questo comando. Riprova o usa una frase più semplice, per esempio \"20 euro ieri cibo\"."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello sul dispositivo è ancora in preparazione. Riprova tra poco."
           }
         }
       }
     },
-    "The on-device model is still preparing. Try again in a moment." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The on-device model is still preparing. Try again in a moment."
+    "The spoken command still needs clarification.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The spoken command still needs clarification."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il modello sul dispositivo è ancora in preparazione. Riprova tra poco."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il comando vocale richiede ancora chiarimenti."
           }
         }
       }
     },
-    "The spoken command still needs clarification." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The spoken command still needs clarification."
+    "This affects the complete app data.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This affects the complete app data."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il comando vocale richiede ancora chiarimenti."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa operazione riguarda tutti i dati dell'app."
           }
         }
       }
     },
-    "This affects the complete app data." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This affects the complete app data."
+    "This instance only": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This instance only"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questa operazione riguarda tutti i dati dell'app."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo questa occorrenza"
           }
         }
       }
     },
-    "This instance only" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This instance only"
+    "This expense belongs to a recurring monthly series.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This expense belongs to a recurring monthly series."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solo questa occorrenza"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa spesa fa parte di una serie mensile ricorrente."
           }
         }
       }
     },
-    "This expense belongs to a recurring monthly series." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This expense belongs to a recurring monthly series."
+    "Creates the same expense every month on this day for the next %lld years.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creates the same expense every month on this day for the next %1$lld years."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questa spesa fa parte di una serie mensile ricorrente."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea la stessa spesa ogni mese in questo giorno per i prossimi %1$lld anni."
           }
         }
       }
     },
-    "Creates the same expense every month on this day for the next %lld years." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Creates the same expense every month on this day for the next %1$lld years."
+    "This recurring item belongs to a series.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recurring item belongs to a series."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crea la stessa spesa ogni mese in questo giorno per i prossimi %1$lld anni."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa voce ricorrente appartiene a una serie."
           }
         }
       }
     },
-    "This recurring item belongs to a series." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This recurring item belongs to a series."
+    "This will replace the current data with %1$d categories, %2$d expenses, and %3$d incomes from the backup file.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This will replace all current app data with %1$d categories, %2$d expenses, and %3$d incomes from the cloud backup file."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questa voce ricorrente appartiene a una serie."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa operazione sostituirà tutti i dati attuali dell'app con %1$d categorie, %2$d spese e %3$d entrate del file di backup cloud."
           }
         }
       }
     },
-    "This will replace the current data with %1$d categories, %2$d expenses, and %3$d incomes from the backup file." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This will replace all current app data with %1$d categories, %2$d expenses, and %3$d incomes from the cloud backup file."
+    "To": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questa operazione sostituirà tutti i dati attuali dell'app con %1$d categorie, %2$d spese e %3$d entrate del file di backup cloud."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
           }
         }
       }
     },
-    "To" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To"
+    "Transcript": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcript"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione"
           }
         }
       }
     },
-    "Transcript" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Transcript"
+    "Transport & Travel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transport & Travel"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trascrizione"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trasporti e viaggi"
           }
         }
       }
     },
-    "Transport & Travel" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Transport & Travel"
+    "Unable to delete category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to delete category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trasporti e viaggi"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile eliminare la categoria"
           }
         }
       }
     },
-    "Unable to delete category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to delete category"
+    "Unable to export the backup file": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to save the full app backup to the cloud file."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile eliminare la categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare il backup completo dell'app nel file cloud."
           }
         }
       }
     },
-    "Unable to export the backup file" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to save the full app backup to the cloud file."
+    "Unable to export the CSV file": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to export the CSV file"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile salvare il backup completo dell'app nel file cloud."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile esportare il file CSV"
           }
         }
       }
     },
-    "Unable to export the CSV file" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to export the CSV file"
+    "Unable to load expenses and categories.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to load expenses and categories."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile esportare il file CSV"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile caricare spese e categorie."
           }
         }
       }
     },
-    "Unable to load expenses and categories." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to load expenses and categories."
+    "Unable to read the backup file": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to read the full app backup file."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile caricare spese e categorie."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere il file di backup completo dell'app."
           }
         }
       }
     },
-    "Unable to read the backup file" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to read the full app backup file."
+    "Unable to restore the backup file": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to restore the full app backup."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile leggere il file di backup completo dell'app."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile ripristinare il backup completo dell'app."
           }
         }
       }
     },
-    "Unable to restore the backup file" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to restore the full app backup."
+    "Unable to save category": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to save category"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile ripristinare il backup completo dell'app."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare la categoria"
           }
         }
       }
     },
-    "Unable to save category" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to save category"
+    "Unable to save expense.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to save expense."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile salvare la categoria"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare la spesa."
           }
         }
       }
     },
-    "Unable to save expense." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to save expense."
+    "Unable to save income.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to save income."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile salvare la spesa."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare l'entrata."
           }
         }
       }
     },
-    "Unable to save income." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to save income."
+    "Understanding expense...": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Understanding expense..."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile salvare l'entrata."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interpretazione spesa..."
           }
         }
       }
     },
-    "Understanding expense..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Understanding expense..."
+    "Update": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interpretazione spesa..."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna"
           }
         }
       }
     },
-    "Update" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update"
+    "Update existing expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update existing expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiorna"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna spesa esistente"
           }
         }
       }
     },
-    "Update existing expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update existing expense"
+    "Update Expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiorna spesa esistente"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna spesa"
           }
         }
       }
     },
-    "Update Expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update Expense"
+    "Updating expense...": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating expense..."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiorna spesa"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento spesa..."
           }
         }
       }
     },
-    "Updating expense..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Updating expense..."
+    "Voice Expense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice Expense"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiornamento spesa..."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spesa vocale"
           }
         }
       }
     },
-    "Voice Expense" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice Expense"
+    "Whole series": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole series"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spesa vocale"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutta la serie"
           }
         }
       }
     },
-    "Whole series" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Whole series"
+    "Yes": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tutta la serie"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sì"
           }
         }
       }
     },
-    "Yes" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Yes"
+    "Load more results": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Load more results"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sì"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica altri risultati"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

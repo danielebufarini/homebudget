@@ -1,5 +1,6 @@
 package it.homebudget.app.data
 
+import it.homebudget.app.database.CategoryUsageCountRow
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.refreshExpenseSearchRows
@@ -16,6 +17,9 @@ class ExpenseEntryRepository(
     private val searchIndexDao = database.searchIndexDao()
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses().distinctUntilChanged()
+
+    fun getExpenseCategoryUsageCounts(): Flow<List<CategoryUsageCountRow>> =
+        expenseDao.getExpenseCategoryUsageCounts().distinctUntilChanged()
 
     fun getExpensesBetween(startMillis: Long, endMillis: Long): Flow<List<Expense>> =
         expenseDao.getExpensesBetween(startMillis, endMillis).distinctUntilChanged()

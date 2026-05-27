@@ -2,6 +2,7 @@ package it.homebudget.app.data
 
 import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
+import it.homebudget.app.database.CategoryUsageCountRow
 import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
@@ -65,6 +66,9 @@ class ExpenseRepository(
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseEntryRepository.getAllExpenses()
 
+    fun getExpenseCategoryUsageCounts(): Flow<List<CategoryUsageCountRow>> =
+        expenseEntryRepository.getExpenseCategoryUsageCounts()
+
     fun getExpensesBetween(startMillis: Long, endMillis: Long): Flow<List<Expense>> =
         expenseEntryRepository.getExpensesBetween(startMillis, endMillis)
 
@@ -94,6 +98,9 @@ class ExpenseRepository(
         expenseEntryRepository.getExpensesSnapshotBetween(startMillis, endMillis)
 
     fun getAllIncomes(): Flow<List<Income>> = incomeRepository.getAllIncomes()
+
+    fun getIncomeCategoryUsageCounts(): Flow<List<CategoryUsageCountRow>> =
+        incomeRepository.getIncomeCategoryUsageCounts()
 
     fun getIncomesBetween(startMillis: Long, endMillis: Long): Flow<List<Income>> =
         incomeRepository.getIncomesBetween(startMillis, endMillis)

@@ -32,7 +32,6 @@ import homebudget.composeapp.generated.resources.expense
 import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.search_results
-import it.homebudget.app.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.formatAmount
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -99,10 +98,9 @@ class MonthlyTransactionsScreen(
 
         var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
         var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
-        var searchPage by remember(searchQuery) { mutableStateOf(1) }
-        val searchCandidateLimit = searchPage * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+        var searchPageCount by remember(searchQuery, selectedKind) { mutableStateOf(1) }
         val loadMoreSearchResults = {
-            searchPage += 1
+            searchPageCount += 1
         }
         val totals by if (searchMode) {
             remember(searchQuery) {
@@ -217,7 +215,7 @@ class MonthlyTransactionsScreen(
                             year = selectedMonth.year,
                             month = selectedMonth.month,
                             searchQuery = searchQuery,
-                            searchCandidateLimit = searchCandidateLimit,
+                            searchPageCount = searchPageCount,
                             onLoadMoreSearchResults = loadMoreSearchResults,
                         ).RouteContent(
                             showNavigationChrome = false,
@@ -230,7 +228,7 @@ class MonthlyTransactionsScreen(
                             year = selectedMonth.year,
                             month = selectedMonth.month,
                             searchQuery = searchQuery,
-                            externalSearchCandidateLimit = searchCandidateLimit,
+                            externalSearchPageCount = searchPageCount,
                             onLoadMoreSearchResults = loadMoreSearchResults,
                         ).RouteContent(
                             initialMonth = selectedMonth,

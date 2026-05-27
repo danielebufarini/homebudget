@@ -19,7 +19,7 @@
     <string name="backup_restore_failed">Impossibile ripristinare il backup completo dell'app.</string>
     <string name="backup_restore_invalid">Impossibile leggere il file di backup completo dell'app.</string>
     <string name="auto_backup_title">Backup completo cloud</string>
-    <string name="auto_backup_description">Android prepara un file JSON di backup completo per la sincronizzazione cloud. Il backup di sistema puo ripristinare questo file durante la configurazione del dispositivo o la reinstallazione dell'app.</string>
+    <string name="auto_backup_description">HomeBudget prepara un file JSON di backup completo per la sincronizzazione cloud. Il backup di sistema puo ripristinare questo file durante la configurazione del dispositivo o la reinstallazione dell'app.</string>
     <string name="auto_backup_note">Quando un account Google ha gia concesso l'accesso a Drive, la sincronizzazione in background carica lo stesso file JSON nello spazio privato dell'app su Drive.</string>
     <string name="cloud_backup_unavailable">Il backup cloud non è disponibile su questo dispositivo o account.</string>
     <string name="cloud_backup_not_found">Nessun file di backup cloud trovato.</string>
