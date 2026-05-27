@@ -1,9 +1,8 @@
 package it.homebudget.app.data
 
 import it.homebudget.app.database.Category
-import it.homebudget.app.database.Expense
 import it.homebudget.app.database.HomeBudgetDatabase
-import it.homebudget.app.database.Income
+import it.homebudget.app.database.rebuildAllSearchIndexes
 
 class DataReplacementService(
     database: HomeBudgetDatabase,
@@ -13,6 +12,7 @@ class DataReplacementService(
     private val expenseDao = database.expenseDao()
     private val incomeDao = database.incomeDao()
     private val categoryDao = database.categoryDao()
+    private val searchIndexDao = database.searchIndexDao()
 
     suspend fun replaceAllData(
         categories: List<RestoredCategory>,
@@ -39,31 +39,14 @@ class DataReplacementService(
             )
 
             expenseDao.insertExpenses(
-                expenses.map { expense ->
-                    Expense(
-                        id = expense.id,
-                        amount = expense.amount,
-                        date = expense.date,
-                        categoryId = expense.categoryId,
-                        description = expense.description,
-                        isShared = if (expense.isShared) 1L else 0L,
-                        recurringSeriesId = expense.recurringSeriesId
-                    )
-                }
+                expenses.map(PendingExpense::toEntity)
             )
 
             incomeDao.insertIncomes(
-                incomes.map { income ->
-                    Income(
-                        id = income.id,
-                        amount = income.amount,
-                        date = income.date,
-                        description = income.description,
-                        recurringSeriesId = income.recurringSeriesId,
-                        categoryId = income.categoryId
-                    )
-                }
+                incomes.map(PendingIncome::toEntity)
             )
+
+            searchIndexDao.rebuildAllSearchIndexes()
         }
         widgetRefreshCoordinator.refreshNow()
     }

@@ -7,10 +7,12 @@ data class DashboardCategoryAmountGroupRow(
     val totalAmount: Long
 )
 
-// Raw Room projection: directly read from SQLite.
-data class DashboardDayAmountGroupRow(
-    val date: Long,
-    val totalAmount: Long
+// Raw Room projection: compact monthly dashboard scalar totals.
+data class DashboardMonthSummaryAmountRow(
+    val expenseCount: Int,
+    val totalAmount: Long,
+    val sharedAmount: Long,
+    val incomeAmount: Long
 )
 
 // Raw Room projection: directly read from SQLite.
@@ -20,15 +22,20 @@ data class DashboardMonthAmountGroupRow(
     val totalAmount: Long
 )
 
-// Raw Room projection: directly read from SQLite.
-data class DashboardTotalAmountRow(
-    val totalAmount: Long
-)
-
 // Raw Room projection: compact widget-only monthly totals.
 data class WidgetMonthSummaryRow(
     val expenseAmount: Long,
     val incomeAmount: Long
+)
+
+// Raw Room projection: recent mixed expense/income dashboard rows.
+data class DashboardRecentTransactionRow(
+    val id: String,
+    val typeOrdinal: Int,
+    val amount: Long,
+    val date: Long,
+    val categoryId: String?,
+    val description: String?
 )
 
 // Computed in Kotlin.
@@ -47,9 +54,9 @@ data class DashboardExpenseAggregates(
 )
 
 // Computed in Kotlin.
-// date = first day of the month at start of day, in epoch millis.
 data class MonthTotalRow(
-    val date: Long,
+    val year: Int,
+    val month: Int,
     val amount: Long
 )
 

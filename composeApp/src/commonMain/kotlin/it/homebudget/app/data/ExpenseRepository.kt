@@ -1,68 +1,11 @@
 package it.homebudget.app.data
+
 import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-
-data class RestoredCategory(
-    val id: String,
-    val name: String,
-    val icon: String,
-    val color: String = DEFAULT_CATEGORY_COLOR,
-    val categoryType: String = CATEGORY_TYPE_EXPENSE,
-    val isArchived: Boolean = false,
-    val sortOrder: Long = 0L
-)
-
-data class DashboardMonthTotal(
-    val year: Int,
-    val month: Int,
-    val amount: Long
-)
-
-data class DashboardCategoryTotal(
-    val categoryId: String,
-    val amount: Long
-)
-
-data class DashboardMonthSummary(
-    val expenseCount: Int,
-    val totalAmount: Long,
-    val incomeAmount: Long,
-    val sharedAmount: Long,
-    val averageAmount: Long,
-    val topCategoryId: String?,
-    val highestDayOfMonth: Int?,
-    val highestDayAmount: Long,
-    val categoryTotals: List<DashboardCategoryTotal>
-)
-
-data class DashboardCashFlow(
-    val expenseTotalsByMonth: List<DashboardMonthTotal>,
-    val incomeTotalsByMonth: List<DashboardMonthTotal>
-)
-
-enum class DashboardRecentTransactionType {
-    Expense,
-    Income
-}
-
-data class DashboardRecentTransaction(
-    val id: String,
-    val type: DashboardRecentTransactionType,
-    val amount: Long,
-    val date: Long,
-    val categoryId: String?,
-    val description: String?
-)
-
-data class WidgetMonthSummary(
-    val expenseAmount: Long,
-    val incomeAmount: Long
-)
 
 class ExpenseRepository(
     private val categoryRepository: CategoryRepository,
@@ -72,6 +15,10 @@ class ExpenseRepository(
     private val recurringTransactionService: RecurringTransactionService,
     private val dataReplacementService: DataReplacementService
 ) {
+    companion object {
+        const val DEFAULT_SEARCH_CANDIDATE_LIMIT = 10_000
+    }
+
     fun getAllCategories(): Flow<List<Category>> = categoryRepository.getAllCategories()
 
     suspend fun insertCategory(
@@ -121,20 +68,60 @@ class ExpenseRepository(
     fun getExpensesBetween(startMillis: Long, endMillis: Long): Flow<List<Expense>> =
         expenseEntryRepository.getExpensesBetween(startMillis, endMillis)
 
+    fun getExpensesPageBetween(
+        startMillis: Long,
+        endMillis: Long,
+        limit: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
+        offset: Int = 0
+    ): Flow<List<Expense>> {
+        return expenseEntryRepository.getExpensesPageBetween(
+            startMillis = startMillis,
+            endMillis = endMillis,
+            limit = limit,
+            offset = offset
+        )
+    }
+
+    fun searchExpenseCandidates(
+        query: String,
+        limit: Int = DEFAULT_SEARCH_CANDIDATE_LIMIT,
+        offset: Int = 0
+    ): Flow<List<Expense>> = expenseEntryRepository.searchExpenseCandidates(query, limit, offset)
+
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseEntryRepository.getAllExpensesSnapshot()
 
     suspend fun getExpensesSnapshotBetween(startMillis: Long, endMillis: Long): List<Expense> =
-        expenseEntryRepository.getExpensesBetween(startMillis, endMillis).first()
+        expenseEntryRepository.getExpensesSnapshotBetween(startMillis, endMillis)
 
     fun getAllIncomes(): Flow<List<Income>> = incomeRepository.getAllIncomes()
 
     fun getIncomesBetween(startMillis: Long, endMillis: Long): Flow<List<Income>> =
         incomeRepository.getIncomesBetween(startMillis, endMillis)
 
+    fun getIncomesPageBetween(
+        startMillis: Long,
+        endMillis: Long,
+        limit: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
+        offset: Int = 0
+    ): Flow<List<Income>> {
+        return incomeRepository.getIncomesPageBetween(
+            startMillis = startMillis,
+            endMillis = endMillis,
+            limit = limit,
+            offset = offset
+        )
+    }
+
+    fun searchIncomeCandidates(
+        query: String,
+        limit: Int = DEFAULT_SEARCH_CANDIDATE_LIMIT,
+        offset: Int = 0
+    ): Flow<List<Income>> = incomeRepository.searchIncomeCandidates(query, limit, offset)
+
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeRepository.getAllIncomesSnapshot()
 
     suspend fun getIncomesSnapshotBetween(startMillis: Long, endMillis: Long): List<Income> =
-        incomeRepository.getIncomesBetween(startMillis, endMillis).first()
+        incomeRepository.getIncomesSnapshotBetween(startMillis, endMillis)
 
     suspend fun getAllCategoriesSnapshot(): List<Category> = categoryRepository.getAllCategoriesSnapshot()
 

@@ -14,6 +14,7 @@ import it.homebudget.app.database.CATEGORY_TYPE_INCOME
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.DEFAULT_CATEGORY_COLOR
 import it.homebudget.app.database.HomeBudgetDatabase
+import it.homebudget.app.database.rebuildAllSearchIndexes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.getString
@@ -32,6 +33,7 @@ class CategoryRepository(
     private val categoryDao = database.categoryDao()
     private val expenseDao = database.expenseDao()
     private val incomeDao = database.incomeDao()
+    private val searchIndexDao = database.searchIndexDao()
 
     fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories().distinctUntilChanged()
 
@@ -69,13 +71,16 @@ class CategoryRepository(
         color: String,
         categoryType: String
     ) {
-        categoryDao.updateCategory(
-            id = id,
-            name = name,
-            icon = icon,
-            color = color,
-            categoryType = categoryType
-        )
+        transactionRunner.runInTransaction {
+            categoryDao.updateCategory(
+                id = id,
+                name = name,
+                icon = icon,
+                color = color,
+                categoryType = categoryType
+            )
+            searchIndexDao.rebuildAllSearchIndexes()
+        }
     }
 
     suspend fun setCategoryArchived(id: String, isArchived: Boolean) {
@@ -97,6 +102,7 @@ class CategoryRepository(
             } else {
                 categoryDao.deleteCategory(id)
             }
+            searchIndexDao.rebuildAllSearchIndexes()
         }
     }
 
@@ -139,6 +145,7 @@ class CategoryRepository(
             if (!isCategoryInUseInternal(sourceCategory.id)) {
                 categoryDao.deleteCategory(sourceCategory.id)
             }
+            searchIndexDao.rebuildAllSearchIndexes()
         }
     }
 

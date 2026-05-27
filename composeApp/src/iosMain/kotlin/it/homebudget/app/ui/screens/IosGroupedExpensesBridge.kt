@@ -22,10 +22,9 @@ class IosGroupedExpensesObserver(
     initialGroupingMode: String
 ) {
     private val scope = MainScope()
+    private val groupingMode = MutableStateFlow(initialGroupingMode)
     private var updatesJob: Job? = null
     private var onUpdate: ((IosGroupedExpensesSnapshot) -> Unit)? = null
-    private var latestSnapshotsCache: IosGroupedSnapshotsCache? = null
-    private var groupingMode: String = initialGroupingMode
     private val cacheKey = GroupedExpensesCacheKey(
         year = year,
         month = month,
@@ -34,40 +33,50 @@ class IosGroupedExpensesObserver(
         dayOfMonth = dayOfMonth
     )
 
-    private val store: IosGroupedExpensesStore by lazy {
-        startIosGroupedExpensesStore()
-        KoinPlatformTools.defaultContext().get().get<IosGroupedExpensesStore>()
-    }
-
     fun start(onUpdate: (IosGroupedExpensesSnapshot) -> Unit) {
         if (updatesJob != null) {
             return
         }
 
         this.onUpdate = onUpdate
-        store.currentCache(cacheKey)?.let { cache ->
-            latestSnapshotsCache = cache
-            onUpdate(cache.snapshotFor(groupingMode))
-        }
         updatesJob = scope.launch {
-            store.trackKey(cacheKey)
-            store.observeCache(cacheKey).collect { cache ->
-                latestSnapshotsCache = cache
-                emitSnapshot()
+            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+            withContext(Dispatchers.Default) {
+                repository.seedStarterCategoriesIfEmpty()
+            }
+            val (startMillis, endMillis) = monthBounds(year, month)
+
+            combine(
+                repository.getExpensesBetween(startMillis, endMillis),
+                repository.getAllCategories(),
+                groupingMode
+            ) { expenses, categories, currentGroupingMode ->
+                Triple(expenses, categories, currentGroupingMode)
+            }.flowOn(Dispatchers.Default).collect { (expenses, categories, currentGroupingMode) ->
+                val localization = loadIosGroupedLocalization()
+                val snapshot = withContext(Dispatchers.Default) {
+                    val categoriesById = categories.associateBy { it.id }
+                    val preparedExpenses = expenses.map { expense ->
+                        prepareExpense(
+                            expense = expense,
+                            categoriesById = categoriesById,
+                            localization = localization
+                        )
+                    }
+                    buildSnapshotsCache(
+                        preparedExpenses = preparedExpenses,
+                        key = cacheKey,
+                        localization = localization
+                    ).snapshotFor(currentGroupingMode)
+                }
+                onUpdate(snapshot)
             }
         }
     }
 
     fun setGroupingMode(groupingMode: String) {
-        if (this.groupingMode == groupingMode) {
-            return
-        }
-
-        this.groupingMode = groupingMode
-        if (updatesJob != null) {
-            scope.launch {
-                emitSnapshot()
-            }
+        if (this.groupingMode.value != groupingMode) {
+            this.groupingMode.value = groupingMode
         }
     }
 
@@ -100,11 +109,6 @@ class IosGroupedExpensesObserver(
         scope.cancel()
     }
 
-    private suspend fun emitSnapshot() {
-        val callback = onUpdate ?: return
-        val snapshot = latestSnapshotsCache?.snapshotFor(groupingMode) ?: return
-        callback(snapshot)
-    }
 }
 
 class IosMonthlyIncomesObserver(

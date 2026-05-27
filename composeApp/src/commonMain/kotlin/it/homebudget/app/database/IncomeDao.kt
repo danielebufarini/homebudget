@@ -12,48 +12,20 @@ interface IncomeDao {
 
     @Query(
         """
-        SELECT * FROM income
-        WHERE date < :toExclusiveMillis
-        ORDER BY date DESC
-        LIMIT :limit
-        """
-    )
-    fun getRecentIncomes(
-        limit: Int,
-        toExclusiveMillis: Long
-    ): Flow<List<Income>>
-
-    @Query(
-        """
-        SELECT COALESCE(SUM(amount), 0) AS totalAmount
-        FROM income
-        WHERE date >= :fromInclusiveMillis
-          AND date < :toExclusiveMillis
-        """
-    )
-    fun getIncomeAmountGroupBetween(
-        fromInclusiveMillis: Long,
-        toExclusiveMillis: Long
-    ): Flow<DashboardTotalAmountRow>
-
-    @Query(
-        """
         SELECT
-            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year,
-            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month,
+            yearMonth / 100 AS year,
+            yearMonth % 100 AS month,
             SUM(amount) AS totalAmount
         FROM income
-        WHERE date >= :fromInclusiveMillis
-          AND date < :toExclusiveMillis
-        GROUP BY
-            CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER),
-            CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER)
+        WHERE yearMonth >= :fromInclusiveYearMonth
+          AND yearMonth < :toExclusiveYearMonth
+        GROUP BY yearMonth
         ORDER BY year ASC, month ASC
         """
     )
-    fun getDashboardIncomeMonthAmountGroupsBetween(
-        fromInclusiveMillis: Long,
-        toExclusiveMillis: Long
+    fun getDashboardIncomeMonthAmountGroupsBetweenYearMonths(
+        fromInclusiveYearMonth: Int,
+        toExclusiveYearMonth: Int
     ): Flow<List<DashboardMonthAmountGroupRow>>
 
     @Query("SELECT * FROM income ORDER BY date DESC")
@@ -71,6 +43,51 @@ interface IncomeDao {
         startMillis: Long,
         endMillis: Long
     ): Flow<List<Income>>
+
+    @Query(
+        """
+        SELECT * FROM income
+        WHERE date >= :startMillis
+          AND date < :endMillis
+        ORDER BY income.date DESC
+        LIMIT :limit OFFSET :offset
+        """
+    )
+    fun getIncomesPageBetween(
+        startMillis: Long,
+        endMillis: Long,
+        limit: Int,
+        offset: Int
+    ): Flow<List<Income>>
+
+    @Query(
+        """
+        SELECT income.*
+        FROM income
+        JOIN income_search_fts ON income_search_fts.transactionId = income.id
+        WHERE income_search_fts MATCH :ftsQuery
+        ORDER BY income.date DESC
+        LIMIT :limit OFFSET :offset
+        """
+    )
+    fun searchIncomes(
+        ftsQuery: String,
+        limit: Int,
+        offset: Int
+    ): Flow<List<Income>>
+
+    @Query(
+        """
+        SELECT * FROM income
+        WHERE date >= :startMillis
+          AND date < :endMillis
+        ORDER BY date DESC
+        """
+    )
+    suspend fun getIncomesSnapshotBetween(
+        startMillis: Long,
+        endMillis: Long
+    ): List<Income>
 
     @Query("SELECT * FROM income WHERE id = :id")
     suspend fun getIncomeById(id: String): Income?

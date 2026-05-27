@@ -44,8 +44,8 @@ class IosTransactionSearchObserver(
             }
 
             combine(
-                repository.getAllExpenses(),
-                repository.getAllIncomes(),
+                repository.searchExpenseCandidates(query),
+                repository.searchIncomeCandidates(query),
                 repository.getAllCategories(),
                 groupingMode,
                 ::TransactionSearchInput

@@ -28,6 +28,10 @@ fun MonthKey.minusMonths(monthsToSubtract: Int): MonthKey {
     return plusMonths(-monthsToSubtract)
 }
 
+fun yearMonthKey(year: Int, month: Int): Int = year * 100 + month
+
+fun MonthKey.toYearMonthKey(): Int = yearMonthKey(year = year, month = month)
+
 fun monthBounds(
     year: Int,
     month: Int,
@@ -75,12 +79,4 @@ fun MonthKey.toStartOfMonthMillis(
     )
         .atStartOfDayIn(timeZone)
         .toEpochMilliseconds()
-}
-
-fun Long.toDayOfMonth(
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Int {
-    return Instant.fromEpochMilliseconds(this)
-        .toLocalDateTime(timeZone)
-        .day
 }

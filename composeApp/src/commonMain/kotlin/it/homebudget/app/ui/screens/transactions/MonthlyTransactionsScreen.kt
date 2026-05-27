@@ -113,8 +113,8 @@ class MonthlyTransactionsScreen(
                 currencySymbol
             ) {
                 combine(
-                    repository.getAllExpenses(),
-                    repository.getAllIncomes(),
+                    repository.searchExpenseCandidates(searchQuery),
+                    repository.searchIncomeCandidates(searchQuery),
                     repository.getAllCategories()
                 ) { expenses, incomes, categories ->
                     val categoriesById = categories.associateBy { it.id }

@@ -2,36 +2,25 @@ package it.homebudget.app.data
 
 import it.homebudget.app.database.CategoryTotalRow
 import it.homebudget.app.database.DashboardCategoryAmountGroupRow
-import it.homebudget.app.database.DashboardDayAmountGroupRow
 import it.homebudget.app.database.DashboardExpenseAggregates
 import it.homebudget.app.database.DashboardMonthAmountGroupRow
-import it.homebudget.app.database.DashboardTotalAmountRow
 import it.homebudget.app.database.ExpenseMonthSummaryRow
 import it.homebudget.app.database.HighestDaySummaryRow
 import it.homebudget.app.database.MonthTotalRow
 import it.homebudget.app.database.TopCategorySummaryRow
-import kotlinx.datetime.TimeZone
 
 fun buildDashboardExpenseAggregates(
-    expenseCount: Int,
+    summary: ExpenseMonthSummaryRow,
     categoryAmountGroups: List<DashboardCategoryAmountGroupRow>,
-    dayAmountGroups: List<DashboardDayAmountGroupRow>,
-    sharedAmountGroup: DashboardTotalAmountRow,
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
+    highestDay: HighestDaySummaryRow?
 ): DashboardExpenseAggregates {
     val categoryTotals = categoryAmountGroups.toCategoryTotals()
-    val totalAmount = categoryTotals.fold(0L) { acc, row -> addAmountsExact(acc, row.amount) }
-    val summary = ExpenseMonthSummaryRow(
-        expenseCount = expenseCount,
-        totalAmount = totalAmount,
-        sharedAmount = sharedAmountGroup.totalAmount
-    )
 
     return DashboardExpenseAggregates(
         summary = summary,
         categoryTotals = categoryTotals,
         topCategory = categoryAmountGroups.toTopCategorySummary(),
-        highestDay = dayAmountGroups.toHighestDaySummary(timeZone)
+        highestDay = highestDay
     )
 }
 
@@ -65,23 +54,11 @@ fun List<DashboardCategoryAmountGroupRow>.toTopCategorySummary(): TopCategorySum
         }
 }
 
-fun List<DashboardDayAmountGroupRow>.toHighestDaySummary(
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
-): HighestDaySummaryRow? {
-    return map { row ->
-        HighestDaySummaryRow(
-            dayOfMonth = row.date.toDayOfMonth(timeZone),
-            amount = row.totalAmount
-        )
-    }.maxByOrNull { row -> row.amount }
-}
-
-fun List<DashboardMonthAmountGroupRow>.toMonthTotals(
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
-): List<MonthTotalRow> {
+fun List<DashboardMonthAmountGroupRow>.toMonthTotals(): List<MonthTotalRow> {
     return map { row ->
         MonthTotalRow(
-            date = MonthKey(row.year, row.month).toStartOfMonthMillis(timeZone),
+            year = row.year,
+            month = row.month,
             amount = row.totalAmount
         )
     }

@@ -33,7 +33,7 @@ val sharedModule = module {
     single { ExpenseEntryRepository(get(), get(), get()) }
     single { IncomeRepository(get(), get(), get()) }
     single { DashboardRepository(get()) }
-    single { RecurringTransactionService(get(), get()) }
+    single { RecurringTransactionService(get(), get(), get()) }
     single { DataReplacementService(get(), get(), get()) }
     single { ExpenseRepository(get(), get(), get(), get(), get(), get()) }
     single { BackupRestoreService(get()) }

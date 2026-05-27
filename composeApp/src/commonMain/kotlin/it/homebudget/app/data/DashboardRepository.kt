@@ -16,7 +16,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
-import kotlin.time.Instant
 
 class DashboardRepository(
     database: HomeBudgetDatabase
@@ -28,25 +27,25 @@ class DashboardRepository(
         year: Int,
         month: Int
     ): Flow<DashboardMonthSummary> {
-        val (startMillis, endMillis) = monthBounds(year, month)
+        val yearMonth = yearMonthKey(year = year, month = month)
 
         return combine(
-            expenseDao.getExpenseCountBetween(startMillis, endMillis),
-            expenseDao.getDashboardCategoryAmountGroupsBetween(startMillis, endMillis),
-            expenseDao.getDashboardDayAmountGroupsBetween(startMillis, endMillis),
-            expenseDao.getSharedExpenseAmountGroupBetween(startMillis, endMillis),
-            incomeDao.getIncomeAmountGroupBetween(startMillis, endMillis)
-        ) { expenseCount, categoryAmountGroups, dayAmountGroups, sharedAmountGroup, incomeAmountGroup ->
+            expenseDao.getDashboardMonthSummaryAmountsForYearMonth(yearMonth),
+            expenseDao.getDashboardCategoryAmountGroupsForYearMonth(yearMonth),
+            expenseDao.getDashboardHighestDayForYearMonth(yearMonth)
+        ) { summaryAmounts, categoryAmountGroups, highestDay ->
             val expenseAggregates = buildDashboardExpenseAggregates(
-                expenseCount = expenseCount,
+                summary = ExpenseMonthSummaryRow(
+                    expenseCount = summaryAmounts.expenseCount,
+                    totalAmount = summaryAmounts.totalAmount,
+                    sharedAmount = summaryAmounts.sharedAmount
+                ),
                 categoryAmountGroups = categoryAmountGroups,
-                dayAmountGroups = dayAmountGroups,
-                sharedAmountGroup = sharedAmountGroup
+                highestDay = highestDay
             )
-            val incomeAmount = incomeAmountGroup.totalAmount
             buildDashboardMonthSummary(
                 expenseSummary = expenseAggregates.summary,
-                incomeAmount = incomeAmount,
+                incomeAmount = summaryAmounts.incomeAmount,
                 categoryTotals = expenseAggregates.categoryTotals,
                 topCategory = expenseAggregates.topCategory,
                 highestDay = expenseAggregates.highestDay
@@ -59,32 +58,31 @@ class DashboardRepository(
         selectedMonth: Int,
         trailingMonthCount: Int = 6
     ): Flow<DashboardCashFlow> {
-        val timeZone = TimeZone.currentSystemDefault()
         val selectedMonthKey = MonthKey(
             year = selectedYear,
             month = selectedMonth
         )
         val firstVisibleMonth = selectedMonthKey.minusMonths(trailingMonthCount - 1)
         val monthAfterLastVisibleMonth = selectedMonthKey.plusMonths(1)
-        val fromInclusiveMillis = firstVisibleMonth.toStartOfMonthMillis(timeZone)
-        val toExclusiveMillis = monthAfterLastVisibleMonth.toStartOfMonthMillis(timeZone)
+        val fromInclusiveYearMonth = firstVisibleMonth.toYearMonthKey()
+        val toExclusiveYearMonth = monthAfterLastVisibleMonth.toYearMonthKey()
 
         return combine(
             getMonthlyExpenseTotals(
-                fromInclusiveMillis = fromInclusiveMillis,
-                toExclusiveMillis = toExclusiveMillis
+                fromInclusiveYearMonth = fromInclusiveYearMonth,
+                toExclusiveYearMonth = toExclusiveYearMonth
             ),
             getMonthlyIncomeTotals(
-                fromInclusiveMillis = fromInclusiveMillis,
-                toExclusiveMillis = toExclusiveMillis
+                fromInclusiveYearMonth = fromInclusiveYearMonth,
+                toExclusiveYearMonth = toExclusiveYearMonth
             )
         ) { expenseTotals, incomeTotals ->
             DashboardCashFlow(
                 expenseTotalsByMonth = expenseTotals.map { row ->
-                    row.toDashboardMonthTotal(timeZone)
+                    row.toDashboardMonthTotal()
                 },
                 incomeTotalsByMonth = incomeTotals.map { row ->
-                    row.toDashboardMonthTotal(timeZone)
+                    row.toDashboardMonthTotal()
                 }
             )
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
@@ -93,42 +91,20 @@ class DashboardRepository(
     fun getRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> {
         val toExclusiveMillis = currentMonthUpperBoundMillis()
 
-        return combine(
-            expenseDao.getRecentExpenses(
-                limit = limit,
-                toExclusiveMillis = toExclusiveMillis
-            ),
-            incomeDao.getRecentIncomes(
-                limit = limit,
-                toExclusiveMillis = toExclusiveMillis
-            )
-        ) { expenses, incomes ->
-            buildList(expenses.size + incomes.size) {
-                expenses.mapTo(this) { expense ->
-                    DashboardRecentTransaction(
-                        id = expense.id,
-                        type = DashboardRecentTransactionType.Expense,
-                        amount = expense.amount,
-                        date = expense.date,
-                        categoryId = expense.categoryId,
-                        description = expense.description
-                    )
-                }
-                incomes.mapTo(this) { income ->
-                    DashboardRecentTransaction(
-                        id = income.id,
-                        type = DashboardRecentTransactionType.Income,
-                        amount = income.amount,
-                        date = income.date,
-                        categoryId = income.categoryId,
-                        description = income.description
-                    )
-                }
-            }.sortedWith(
-                compareByDescending<DashboardRecentTransaction> { it.date }
-                    .thenBy { it.type.ordinal }
-                    .thenBy { it.id }
-            ).take(limit)
+        return expenseDao.getRecentTransactions(
+            limit = limit,
+            toExclusiveMillis = toExclusiveMillis
+        ).map { rows ->
+            rows.map { row ->
+                DashboardRecentTransaction(
+                    id = row.id,
+                    type = DashboardRecentTransactionType.entries[row.typeOrdinal],
+                    amount = row.amount,
+                    date = row.date,
+                    categoryId = row.categoryId,
+                    description = row.description
+                )
+            }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
@@ -136,8 +112,9 @@ class DashboardRepository(
         year: Int,
         month: Int
     ): WidgetMonthSummary {
-        val (startMillis, endMillis) = monthBounds(year, month)
-        val row = expenseDao.getWidgetMonthSummaryBetween(startMillis, endMillis)
+        val row = expenseDao.getWidgetMonthSummaryForYearMonth(
+            yearMonth = yearMonthKey(year = year, month = month)
+        )
         return WidgetMonthSummary(
             expenseAmount = row.expenseAmount,
             incomeAmount = row.incomeAmount
@@ -145,26 +122,26 @@ class DashboardRepository(
     }
 
     private fun getMonthlyExpenseTotals(
-        fromInclusiveMillis: Long,
-        toExclusiveMillis: Long
+        fromInclusiveYearMonth: Int,
+        toExclusiveYearMonth: Int
     ): Flow<List<MonthTotalRow>> {
-        return expenseDao.getDashboardExpenseMonthAmountGroupsBetween(
-            fromInclusiveMillis = fromInclusiveMillis,
-            toExclusiveMillis = toExclusiveMillis
+        return expenseDao.getDashboardExpenseMonthAmountGroupsBetweenYearMonths(
+            fromInclusiveYearMonth = fromInclusiveYearMonth,
+            toExclusiveYearMonth = toExclusiveYearMonth
         ).map { rows ->
-            rows.toMonthTotals(timeZone = TimeZone.currentSystemDefault())
+            rows.toMonthTotals()
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
     private fun getMonthlyIncomeTotals(
-        fromInclusiveMillis: Long,
-        toExclusiveMillis: Long
+        fromInclusiveYearMonth: Int,
+        toExclusiveYearMonth: Int
     ): Flow<List<MonthTotalRow>> {
-        return incomeDao.getDashboardIncomeMonthAmountGroupsBetween(
-            fromInclusiveMillis = fromInclusiveMillis,
-            toExclusiveMillis = toExclusiveMillis
+        return incomeDao.getDashboardIncomeMonthAmountGroupsBetweenYearMonths(
+            fromInclusiveYearMonth = fromInclusiveYearMonth,
+            toExclusiveYearMonth = toExclusiveYearMonth
         ).map { rows ->
-            rows.toMonthTotals(timeZone = TimeZone.currentSystemDefault())
+            rows.toMonthTotals()
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 }
@@ -207,15 +184,10 @@ private fun buildDashboardMonthSummary(
     )
 }
 
-private fun MonthTotalRow.toDashboardMonthTotal(
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
-): DashboardMonthTotal {
-    val localDate = Instant.fromEpochMilliseconds(date)
-        .toLocalDateTime(timeZone)
-        .date
+private fun MonthTotalRow.toDashboardMonthTotal(): DashboardMonthTotal {
     return DashboardMonthTotal(
-        year = localDate.year,
-        month = localDate.month.number,
+        year = year,
+        month = month,
         amount = amount
     )
 }

@@ -1,8 +1,11 @@
 package it.homebudget.app.data
+
 import it.homebudget.app.database.HomeBudgetDatabase
 import it.homebudget.app.database.Income
+import it.homebudget.app.database.refreshIncomeSearchRows
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 
 class IncomeRepository(
     database: HomeBudgetDatabase,
@@ -10,13 +13,40 @@ class IncomeRepository(
     private val widgetRefreshCoordinator: WidgetRefreshCoordinator
 ) {
     private val incomeDao = database.incomeDao()
+    private val searchIndexDao = database.searchIndexDao()
 
     fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes().distinctUntilChanged()
 
     fun getIncomesBetween(startMillis: Long, endMillis: Long): Flow<List<Income>> =
         incomeDao.getIncomesBetween(startMillis, endMillis).distinctUntilChanged()
 
+    fun getIncomesPageBetween(
+        startMillis: Long,
+        endMillis: Long,
+        limit: Int,
+        offset: Int
+    ): Flow<List<Income>> {
+        return incomeDao.getIncomesPageBetween(
+            startMillis = startMillis,
+            endMillis = endMillis,
+            limit = limit,
+            offset = offset
+        ).distinctUntilChanged()
+    }
+
+    fun searchIncomeCandidates(query: String, limit: Int, offset: Int = 0): Flow<List<Income>> {
+        val ftsQuery = ftsSearchQuery(query) ?: return flowOf(emptyList())
+        return incomeDao.searchIncomes(
+            ftsQuery = ftsQuery,
+            limit = limit.coerceAtLeast(1),
+            offset = offset.coerceAtLeast(0)
+        ).distinctUntilChanged()
+    }
+
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeDao.getAllIncomesSnapshot()
+
+    suspend fun getIncomesSnapshotBetween(startMillis: Long, endMillis: Long): List<Income> =
+        incomeDao.getIncomesSnapshotBetween(startMillis, endMillis)
 
     suspend fun getIncomeById(id: String): Income? = incomeDao.getIncomeById(id)
 
@@ -50,29 +80,31 @@ class IncomeRepository(
         if (incomes.isEmpty()) return
 
         transactionRunner.runInTransaction {
+            val ids = incomes.map(PendingIncome::id)
             incomeDao.insertIncomes(
-                incomes.map { income ->
-                    Income(
-                        id = income.id,
-                        amount = income.amount,
-                        date = income.date,
-                        description = income.description,
-                        recurringSeriesId = income.recurringSeriesId,
-                        categoryId = income.categoryId
-                    )
-                }
+                incomes.map(PendingIncome::toEntity)
             )
+            searchIndexDao.refreshIncomeSearchRows(ids)
         }
         widgetRefreshCoordinator.requestRefresh()
     }
 
     suspend fun deleteIncome(id: String) {
-        incomeDao.deleteIncome(id)
+        transactionRunner.runInTransaction {
+            searchIndexDao.deleteIncomeSearchRows(listOf(id))
+            incomeDao.deleteIncome(id)
+        }
         widgetRefreshCoordinator.requestRefresh()
     }
 
     suspend fun deleteRecurringIncomeSeries(seriesId: String) {
-        incomeDao.deleteRecurringIncomeSeries(seriesId)
+        transactionRunner.runInTransaction {
+            val ids = incomeDao.getRecurringIncomesBySeries(seriesId).map(Income::id)
+            if (ids.isNotEmpty()) {
+                searchIndexDao.deleteIncomeSearchRows(ids)
+            }
+            incomeDao.deleteRecurringIncomeSeries(seriesId)
+        }
         widgetRefreshCoordinator.requestRefresh()
     }
 }

@@ -21,11 +21,8 @@ import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
 import it.homebudget.app.localization.formatResourceArgs
 import it.homebudget.app.localization.loadCategoryNameResolver
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.getStringArray
-import kotlin.time.Clock
 
 internal data class IosPreparedGroup<T>(
     val name: String,
@@ -260,22 +257,6 @@ internal fun prepareIncome(
     )
 }
 
-internal fun defaultPrewarmKeys(preparedExpenses: List<PreparedIosExpense>): Set<GroupedExpensesCacheKey> {
-    val (currentYear, currentMonth) = currentYearMonth()
-    val keys = mutableSetOf(
-        GroupedExpensesCacheKey(currentYear, currentMonth, "monthly", null),
-        GroupedExpensesCacheKey(currentYear, currentMonth, "shared", null)
-    )
-    preparedExpenses
-        .map { it.year to it.month }
-        .distinct()
-        .forEach { (year, month) ->
-            keys += GroupedExpensesCacheKey(year, month, "monthly", null)
-            keys += GroupedExpensesCacheKey(year, month, "shared", null)
-        }
-    return keys
-}
-
 internal suspend fun loadIosGroupedLocalization(): IosGroupedLocalization {
     return IosGroupedLocalization(
         currencySymbol = getString(Res.string.currency_symbol),
@@ -350,13 +331,6 @@ private fun List<PreparedIosIncome>.sortedIncomesByTransactionFields(): List<Pre
             .thenBy { it.categoryName }
             .thenBy { it.description.orEmpty() }
     )
-
-private fun currentYearMonth(): Pair<Int, Int> {
-    val now = Clock.System.now()
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-        .date
-    return now.year to (now.month.ordinal + 1)
-}
 
 private fun includeExpense(expense: PreparedIosExpense, screenType: String): Boolean = when (screenType) {
     "shared" -> expense.isShared

@@ -1,9 +1,18 @@
 package it.homebudget.app.data
 
+import it.homebudget.app.database.HomeBudgetDatabase
+import it.homebudget.app.database.refreshExpenseSearchRows
+import it.homebudget.app.database.refreshIncomeSearchRows
+
 class RecurringTransactionService(
-    private val expenseEntryRepository: ExpenseEntryRepository,
-    private val incomeRepository: IncomeRepository
+    database: HomeBudgetDatabase,
+    private val transactionRunner: DatabaseTransactionRunner,
+    private val widgetRefreshCoordinator: WidgetRefreshCoordinator
 ) {
+    private val expenseDao = database.expenseDao()
+    private val incomeDao = database.incomeDao()
+    private val searchIndexDao = database.searchIndexDao()
+
     suspend fun updateRecurringIncomeSeries(
         anchorIncomeId: String,
         seriesId: String,
@@ -12,16 +21,15 @@ class RecurringTransactionService(
         description: String?,
         categoryId: String?
     ) {
-        val seriesItems = incomeRepository.getRecurringIncomesBySeries(seriesId)
-            .map { income ->
-                ExistingRecurringIncomeItem(
-                    id = income.id,
-                    date = income.date
-                )
-            }
-
-        incomeRepository.insertIncomes(
-            buildUpdatedRecurringIncomeSeries(
+        transactionRunner.runInTransaction {
+            val seriesItems = incomeDao.getRecurringIncomesBySeries(seriesId)
+                .map { income ->
+                    ExistingRecurringIncomeItem(
+                        id = income.id,
+                        date = income.date
+                    )
+                }
+            val updatedIncomes = buildUpdatedRecurringIncomeSeries(
                 existingItems = seriesItems,
                 anchorItemId = anchorIncomeId,
                 anchorDate = date,
@@ -30,7 +38,13 @@ class RecurringTransactionService(
                 categoryId = categoryId,
                 recurringSeriesId = seriesId
             )
-        )
+
+            incomeDao.insertIncomes(
+                updatedIncomes.map(PendingIncome::toEntity)
+            )
+            searchIndexDao.refreshIncomeSearchRows(updatedIncomes.map(PendingIncome::id))
+        }
+        widgetRefreshCoordinator.requestRefresh()
     }
 
     suspend fun updateRecurringExpenseSeries(
@@ -42,16 +56,15 @@ class RecurringTransactionService(
         description: String?,
         isShared: Boolean
     ) {
-        val seriesItems = expenseEntryRepository.getRecurringExpensesBySeries(seriesId)
-            .map { expense ->
-                ExistingRecurringExpenseItem(
-                    id = expense.id,
-                    date = expense.date
-                )
-            }
-
-        expenseEntryRepository.insertExpenses(
-            buildUpdatedRecurringExpenseSeries(
+        transactionRunner.runInTransaction {
+            val seriesItems = expenseDao.getRecurringExpensesBySeries(seriesId)
+                .map { expense ->
+                    ExistingRecurringExpenseItem(
+                        id = expense.id,
+                        date = expense.date
+                    )
+                }
+            val updatedExpenses = buildUpdatedRecurringExpenseSeries(
                 existingItems = seriesItems,
                 anchorItemId = anchorExpenseId,
                 anchorDate = date,
@@ -61,6 +74,12 @@ class RecurringTransactionService(
                 isShared = isShared,
                 recurringSeriesId = seriesId
             )
-        )
+
+            expenseDao.insertExpenses(
+                updatedExpenses.map(PendingExpense::toEntity)
+            )
+            searchIndexDao.refreshExpenseSearchRows(updatedExpenses.map(PendingExpense::id))
+        }
+        widgetRefreshCoordinator.requestRefresh()
     }
 }

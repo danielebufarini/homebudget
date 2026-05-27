@@ -9,9 +9,11 @@ import androidx.room.RoomDatabaseConstructor
     entities = [
         Category::class,
         Expense::class,
-        Income::class
+        Income::class,
+        ExpenseSearchFts::class,
+        IncomeSearchFts::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = true
 )
 @ConstructedBy(HomeBudgetDatabaseConstructor::class)
@@ -19,6 +21,7 @@ abstract class HomeBudgetDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun incomeDao(): IncomeDao
+    abstract fun searchIndexDao(): SearchIndexDao
 }
 
 @Suppress("KotlinNoActualForExpect")

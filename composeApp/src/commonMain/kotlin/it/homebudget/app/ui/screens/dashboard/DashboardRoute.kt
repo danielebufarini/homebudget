@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -23,10 +24,6 @@ import it.homebudget.app.data.ExpenseRepository
 import it.homebudget.app.data.subtractAmountsExact
 import it.homebudget.app.ui.screens.EnsureStarterCategoriesSeeded
 import it.homebudget.app.ui.screens.rememberIsIosPlatform
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 
 @Composable
@@ -62,10 +59,16 @@ fun DashboardRoute(
     val currentMonth = remember {
         currentMonthCursor()
     }
-
-    var selectedMonth by remember {
-        mutableStateOf(currentMonth)
+    val dashboardScope = rememberCoroutineScope()
+    val dashboardStore = remember(repository, dashboardScope, currentMonth) {
+        DashboardStateStore(
+            repository = repository,
+            initialMonth = currentMonth,
+            scope = dashboardScope
+        )
     }
+
+    val selectedMonth by dashboardStore.selectedMonth.collectAsState()
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
@@ -78,37 +81,9 @@ fun DashboardRoute(
 
     EnsureStarterCategoriesSeeded(repository)
 
-    val summaryFlow = remember(repository, selectedMonth) {
-        repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
-            .map { summary -> summary.toUiMonthlySummary() }
-            .distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
-    }
-    val summary by summaryFlow.collectAsState(initial = emptyDashboardMonthSummary().toUiMonthlySummary())
-
-    val chartStateFlow = remember(repository, selectedMonth) {
-        repository.getDashboardCashFlow(
-            selectedYear = selectedMonth.year,
-            selectedMonth = selectedMonth.month,
-            trailingMonthCount = CASH_FLOW_CHART_MONTH_COUNT
-        )
-            .map { cashFlow ->
-                buildCashFlowChartState(
-                    cashFlow = cashFlow,
-                    selectedMonth = selectedMonth
-                )
-            }
-            .distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
-    }
-    val chartState by chartStateFlow.collectAsState(initial = emptyLineChartState(selectedMonth))
-
-    val recentTransactionsFlow = remember(repository) {
-        repository.getDashboardRecentTransactions()
-            .distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
-    }
-    val recentTransactions by recentTransactionsFlow.collectAsState(initial = emptyList())
+    val summary by dashboardStore.summary.collectAsState()
+    val chartState by dashboardStore.chartState.collectAsState()
+    val recentTransactions by dashboardStore.recentTransactions.collectAsState()
 
     val monthlySavingsAmount = remember(summary.incomeAmount, summary.totalAmount) {
         subtractAmountsExact(summary.incomeAmount, summary.totalAmount)
@@ -129,8 +104,8 @@ fun DashboardRoute(
             categoriesById = categoriesById,
             showTransactionSearch = showTransactionSearch,
             searchQuery = searchQuery,
-            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-            onNextMonth = { selectedMonth = selectedMonth.next() },
+            onPreviousMonth = dashboardStore::selectPreviousMonth,
+            onNextMonth = dashboardStore::selectNextMonth,
             onSearchQueryChange = { searchQuery = it },
             onSearchSubmit = submitSearch,
             onOpenMonthlyIncomes = {
@@ -162,8 +137,8 @@ fun DashboardRoute(
             onOpenAddExpense = onOpenAddExpense,
             onOpenVoiceExpense = onOpenVoiceExpense,
             onOpenCsvTransfer = onOpenCsvTransfer,
-            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-            onNextMonth = { selectedMonth = selectedMonth.next() }
+            onPreviousMonth = dashboardStore::selectPreviousMonth,
+            onNextMonth = dashboardStore::selectNextMonth
         ) { modifier ->
             dashboardBody(modifier)
         }

@@ -152,7 +152,7 @@ class MonthlyIncomesScreen(
         val searchMode = searchQuery.isNotBlank()
         val incomesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
             if (searchMode) {
-                repository.getAllIncomes()
+                repository.searchIncomeCandidates(searchQuery)
             } else {
                 repository.getIncomesBetween(monthStartMillis, monthEndMillis)
             }

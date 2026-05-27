@@ -11,6 +11,9 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["categoryId"]),
         Index(value = ["date"]),
+        Index(value = ["yearMonth"]),
+        Index(value = ["yearMonth", "categoryId"]),
+        Index(value = ["localDate"]),
         Index(value = ["recurringSeriesId", "date"])
     ],
     foreignKeys = [
@@ -27,6 +30,12 @@ data class Income(
     val id: String,
     val amount: Long,
     val date: Long,
+    @ColumnInfo(defaultValue = "0")
+    val yearMonth: Int = date.toStoredYearMonth(),
+    @ColumnInfo(defaultValue = "0")
+    val localDate: Int = date.toStoredLocalDate(),
+    @ColumnInfo(defaultValue = "0")
+    val dayOfMonth: Int = date.toStoredDayOfMonth(),
     val description: String?,
     val recurringSeriesId: String? = null,
     @ColumnInfo(defaultValue = "NULL")

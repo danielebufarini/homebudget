@@ -1,15 +1,20 @@
+@preconcurrency import ComposeApp
 import SwiftUI
 
 struct MonthCursor: Hashable {
+    private static let navigationBridge = IosMonthNavigationBridge()
+
     let year: Int
     let month: Int
 
     func previous() -> MonthCursor {
-        month == 1 ? MonthCursor(year: year - 1, month: 12) : MonthCursor(year: year, month: month - 1)
+        let cursor = Self.navigationBridge.previous(year: Int32(year), month: Int32(month))
+        return MonthCursor(year: Int(cursor.year), month: Int(cursor.month))
     }
 
     func next() -> MonthCursor {
-        month == 12 ? MonthCursor(year: year + 1, month: 1) : MonthCursor(year: year, month: month + 1)
+        let cursor = Self.navigationBridge.next(year: Int32(year), month: Int32(month))
+        return MonthCursor(year: Int(cursor.year), month: Int(cursor.month))
     }
 
     var label: String {

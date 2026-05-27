@@ -148,7 +148,7 @@ abstract class BaseGroupedExpensesScreen(
         val searchMode = searchQuery.isNotBlank()
         val expensesFlow = remember(repository, monthStartMillis, monthEndMillis, searchMode) {
             if (searchMode) {
-                repository.getAllExpenses()
+                repository.searchExpenseCandidates(searchQuery)
             } else {
                 repository.getExpensesBetween(monthStartMillis, monthEndMillis)
             }
