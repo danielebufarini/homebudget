@@ -143,6 +143,9 @@ interface ExpenseDao {
     @Query("SELECT * FROM expense ORDER BY date DESC")
     suspend fun getAllExpensesSnapshot(): List<Expense>
 
+    @Query("SELECT * FROM expense ORDER BY date DESC LIMIT :limit")
+    suspend fun getRecentExpensesSnapshot(limit: Int): List<Expense>
+
     @Query(
         """
         SELECT categoryId, COUNT(*) AS transactionCount

@@ -2,7 +2,20 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum CsvImportReadError: LocalizedError {
+    case fileTooLarge
+
+    var errorDescription: String? {
+        switch self {
+        case .fileTooLarge:
+            return appLocalized("Unable to import the CSV file")
+        }
+    }
+}
+
 struct ContentView: View {
+    nonisolated private static let maxCsvImportBytes = 5 * 1024 * 1024
+
     @State private var path = NavigationPath()
     @State private var showVoiceExpenseSheet = false
     @State private var voiceExpenseAutoStartRequest = 0
@@ -301,6 +314,25 @@ struct ContentView: View {
     private func handleCsvSelection(result: Result<URL, Error>) {
         switch result {
         case let .success(url):
+            Task {
+                do {
+                    let text = try await readCsvText(from: url)
+                    await MainActor.run {
+                        importCsv(text: text)
+                    }
+                } catch {
+                    await MainActor.run {
+                        showCsvFeedback(error.localizedDescription, style: .error)
+                    }
+                }
+            }
+        case let .failure(error):
+            showCsvFeedback(error.localizedDescription, style: .error)
+        }
+    }
+
+    private func readCsvText(from url: URL) async throws -> String {
+        try await Task.detached(priority: .userInitiated) {
             let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
             defer {
                 if didAccessSecurityScope {
@@ -308,17 +340,21 @@ struct ContentView: View {
                 }
             }
 
-            do {
-                let data = try Data(contentsOf: url)
-                importCsv(text: String(decoding: data, as: UTF8.self))
-            } catch {
-                showCsvFeedback(error.localizedDescription, style: .error)
+            if let fileSize = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+               fileSize > Self.maxCsvImportBytes {
+                throw CsvImportReadError.fileTooLarge
             }
-        case let .failure(error):
-            showCsvFeedback(error.localizedDescription, style: .error)
-        }
+
+            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+            guard data.count <= Self.maxCsvImportBytes else {
+                throw CsvImportReadError.fileTooLarge
+            }
+
+            return String(decoding: data, as: UTF8.self)
+        }.value
     }
 
+    @MainActor
     private func importCsv(text: String) {
         guard !text.isEmpty else {
             showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)

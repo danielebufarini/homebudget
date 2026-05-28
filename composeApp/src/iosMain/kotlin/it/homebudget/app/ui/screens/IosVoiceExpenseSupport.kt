@@ -9,7 +9,6 @@ import it.homebudget.app.data.formatAmountInput
 import it.homebudget.app.data.parseAmountInput
 import it.homebudget.app.database.CATEGORY_TYPE_EXPENSE
 import it.homebudget.app.database.Category
-import it.homebudget.app.database.Expense
 import it.homebudget.app.localization.loadCategoryNameResolver
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -36,9 +35,7 @@ internal suspend fun loadIosVoiceExpenseSnapshot(
         .toList()
 
     val categoriesById = categorySnapshot.associateBy(Category::id)
-    val recentExpenses = repository.getAllExpensesSnapshot()
-        .sortedByDescending(Expense::date)
-        .take(120)
+    val recentExpenses = repository.getRecentExpensesSnapshot(limit = 120)
         .mapNotNull { expense ->
             val category = categoriesById[expense.categoryId] ?: return@mapNotNull null
             IosVoiceExpenseRecord(

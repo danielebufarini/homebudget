@@ -7,15 +7,11 @@ import it.homebudget.app.data.sumAmountOf
 import it.homebudget.app.database.Category
 import it.homebudget.app.database.Expense
 import it.homebudget.app.database.Income
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
@@ -31,113 +27,84 @@ class IosTransactionSearchObserver(
     private val query: String,
     initialGroupingMode: String
 ) {
-    private val scope = MainScope()
-    private val groupingMode = MutableStateFlow(initialGroupingMode)
-    private val loadedPageCount = MutableStateFlow(1)
-    private var updatesJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var groupingMode = initialGroupingMode
+    private var loadedPageCount = 0
+    private var loadedExpenses: List<Expense> = emptyList()
+    private var loadedIncomes: List<Income> = emptyList()
+    private var latestCategories: List<Category> = emptyList()
+    private var localization: IosGroupedLocalization? = null
+    private var canLoadMoreExpenseResults = false
+    private var canLoadMoreIncomeResults = false
+    private var isLoadingPage = false
+    private var isObserving = false
     private var onUpdate: ((IosTransactionSearchSnapshot) -> Unit)? = null
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun start(onUpdate: (IosTransactionSearchSnapshot) -> Unit) {
-        if (updatesJob != null) {
+        if (isObserving) {
             return
         }
 
         this.onUpdate = onUpdate
-        updatesJob = scope.launch {
-            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-            withContext(Dispatchers.Default) {
-                repository.seedStarterCategoriesIfEmpty()
-            }
-
-            loadedPageCount.flatMapLatest { pageCount ->
-                combine(
-                    repository.searchExpenseCandidatePages(
-                        query = query,
-                        pageCount = pageCount,
-                        pageSize = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-                    ),
-                    repository.searchIncomeCandidatePages(
-                        query = query,
-                        pageCount = pageCount,
-                        pageSize = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-                    ),
-                    repository.getAllCategories(),
-                    groupingMode
-                ) { expenses, incomes, categories, groupingMode ->
-                    TransactionSearchInput(
-                        expenses = expenses,
-                        incomes = incomes,
-                        categories = categories,
-                        groupingMode = groupingMode,
-                        loadedPageCount = pageCount
-                    )
-                }
-            }.flowOn(Dispatchers.Default).collect { input ->
-                val localization = loadIosGroupedLocalization()
-                val snapshot = withContext(Dispatchers.Default) {
-                    buildTransactionSearchSnapshot(
-                        query = query,
-                        expenses = input.expenses,
-                        incomes = input.incomes,
-                        categories = input.categories,
-                        groupingMode = input.groupingMode,
-                        localization = localization,
-                        loadedPageCount = input.loadedPageCount
-                    )
-                }
-                onUpdate(snapshot)
-            }
+        isObserving = true
+        scope.launch {
+            val repository = repository()
+            repository.seedStarterCategoriesIfEmpty()
+            localization = loadIosGroupedLocalization()
+            latestCategories = repository.getAllCategories().first()
+            loadNextPage(repository)
         }
     }
 
     fun setGroupingMode(groupingMode: String) {
-        if (this.groupingMode.value != groupingMode) {
-            this.groupingMode.value = groupingMode
+        if (this.groupingMode != groupingMode) {
+            this.groupingMode = groupingMode
+            scope.launch {
+                publishSnapshot()
+            }
         }
     }
 
     fun loadMoreResults() {
-        loadedPageCount.value += 1
+        scope.launch {
+            loadNextPage(repository())
+        }
     }
 
     fun deleteExpense(id: String) {
         scope.launch {
-            withContext(Dispatchers.Default) {
-                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>().deleteExpense(id)
-            }
+            repository().deleteExpense(id)
+            loadedExpenses = loadedExpenses.filterNot { it.id == id }
+            publishSnapshot()
         }
     }
 
     fun deleteIncome(id: String) {
         scope.launch {
-            withContext(Dispatchers.Default) {
-                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>().deleteIncome(id)
-            }
+            repository().deleteIncome(id)
+            loadedIncomes = loadedIncomes.filterNot { it.id == id }
+            publishSnapshot()
         }
     }
 
     fun deleteRecurringExpenseSeries(seriesId: String) {
         scope.launch {
-            withContext(Dispatchers.Default) {
-                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                    .deleteRecurringExpenseSeries(seriesId)
-            }
+            repository().deleteRecurringExpenseSeries(seriesId)
+            loadedExpenses = loadedExpenses.filterNot { it.recurringSeriesId == seriesId }
+            publishSnapshot()
         }
     }
 
     fun deleteRecurringIncomeSeries(seriesId: String) {
         scope.launch {
-            withContext(Dispatchers.Default) {
-                KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                    .deleteRecurringIncomeSeries(seriesId)
-            }
+            repository().deleteRecurringIncomeSeries(seriesId)
+            loadedIncomes = loadedIncomes.filterNot { it.recurringSeriesId == seriesId }
+            publishSnapshot()
         }
     }
 
     fun stop() {
-        updatesJob?.cancel()
-        updatesJob = null
+        isObserving = false
         onUpdate = null
     }
 
@@ -145,15 +112,58 @@ class IosTransactionSearchObserver(
         stop()
         scope.cancel()
     }
-}
 
-private data class TransactionSearchInput(
-    val expenses: List<Expense>,
-    val incomes: List<Income>,
-    val categories: List<Category>,
-    val groupingMode: String,
-    val loadedPageCount: Int
-)
+    private suspend fun loadNextPage(repository: ExpenseRepository) {
+        if (!isObserving || isLoadingPage) {
+            return
+        }
+
+        isLoadingPage = true
+        try {
+            val pageIndex = loadedPageCount
+            val offset = pageIndex * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+            val nextExpenses = repository.searchExpenseCandidates(
+                query = query,
+                limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
+                offset = offset
+            ).first()
+            val nextIncomes = repository.searchIncomeCandidates(
+                query = query,
+                limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
+                offset = offset
+            ).first()
+
+            loadedExpenses = (loadedExpenses + nextExpenses).distinctBy(Expense::id)
+            loadedIncomes = (loadedIncomes + nextIncomes).distinctBy(Income::id)
+            canLoadMoreExpenseResults = nextExpenses.size >= DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+            canLoadMoreIncomeResults = nextIncomes.size >= DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+            loadedPageCount += 1
+            publishSnapshot()
+        } finally {
+            isLoadingPage = false
+        }
+    }
+
+    private suspend fun publishSnapshot() {
+        val localization = localization ?: return
+        val snapshot = buildTransactionSearchSnapshot(
+            query = query,
+            expenses = loadedExpenses,
+            incomes = loadedIncomes,
+            categories = latestCategories,
+            groupingMode = groupingMode,
+            localization = localization,
+            canLoadMoreExpenseResults = canLoadMoreExpenseResults,
+            canLoadMoreIncomeResults = canLoadMoreIncomeResults
+        )
+        withContext(Dispatchers.Main) {
+            onUpdate?.invoke(snapshot)
+        }
+    }
+
+    private fun repository(): ExpenseRepository =
+        KoinPlatformTools.defaultContext().get().get()
+}
 
 private fun buildTransactionSearchSnapshot(
     query: String,
@@ -162,7 +172,8 @@ private fun buildTransactionSearchSnapshot(
     categories: List<Category>,
     groupingMode: String,
     localization: IosGroupedLocalization,
-    loadedPageCount: Int
+    canLoadMoreExpenseResults: Boolean,
+    canLoadMoreIncomeResults: Boolean
 ): IosTransactionSearchSnapshot {
     val categoriesById = categories.associateBy { it.id }
     val searchTokens = transactionSearchTokens(query)
@@ -200,8 +211,6 @@ private fun buildTransactionSearchSnapshot(
         }
         .toList()
 
-    val loadedCandidateCount = loadedPageCount * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-
     return IosTransactionSearchSnapshot(
         expenseSnapshot = IosGroupedExpensesSnapshot(
             totalAmountText = formatAmount(
@@ -222,7 +231,7 @@ private fun buildTransactionSearchSnapshot(
             emptyStateText = localization.noSearchResults,
             localization = localization
         ),
-        canLoadMoreExpenseResults = expenses.size >= loadedCandidateCount,
-        canLoadMoreIncomeResults = incomes.size >= loadedCandidateCount
+        canLoadMoreExpenseResults = canLoadMoreExpenseResults,
+        canLoadMoreIncomeResults = canLoadMoreIncomeResults
     )
 }

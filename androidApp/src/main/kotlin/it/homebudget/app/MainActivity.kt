@@ -2,6 +2,7 @@ package it.homebudget.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.StrictMode
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,6 +16,7 @@ class MainActivity : ComponentActivity() {
     private var openVoiceExpenseRequest by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableDebugStrictMode()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
@@ -33,6 +35,28 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         HomeBudgetWidgetProvider.updateAllWidgets(this)
+    }
+
+    private fun enableDebugStrictMode() {
+        if (!BuildConfig.DEBUG) {
+            return
+        }
+
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .penaltyLog()
+                .build()
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectLeakedClosableObjects()
+                .detectLeakedRegistrationObjects()
+                .penaltyLog()
+                .build()
+        )
     }
 
     private fun consumeWidgetVoiceExpenseIntent(intent: Intent?) {

@@ -49,6 +49,9 @@ class ExpenseEntryRepository(
 
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseDao.getAllExpensesSnapshot()
 
+    suspend fun getRecentExpensesSnapshot(limit: Int): List<Expense> =
+        expenseDao.getRecentExpensesSnapshot(limit.coerceAtLeast(1))
+
     suspend fun getExpensesSnapshotBetween(startMillis: Long, endMillis: Long): List<Expense> =
         expenseDao.getExpensesSnapshotBetween(startMillis, endMillis)
 

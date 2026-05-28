@@ -90,7 +90,7 @@ struct iOSApp: App {
             }
         }
 
-        if startupRestoreMarkerExists() {
+        if await startupRestoreMarkerExists() {
             return
         }
 
@@ -106,7 +106,7 @@ struct iOSApp: App {
         }
 
         guard isRestoreTargetEmpty else {
-            markStartupRestoreCompleted()
+            await markStartupRestoreCompleted()
             return
         }
 
@@ -152,7 +152,7 @@ struct iOSApp: App {
         }
 
         if restored {
-            markStartupRestoreCompleted()
+            await markStartupRestoreCompleted()
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
         }
         isStartupReady = true
@@ -161,34 +161,42 @@ struct iOSApp: App {
     @MainActor
     private func skipStartupRestore() {
         pendingStartupRestore = nil
-        markStartupRestoreCompleted()
-        isStartupReady = true
-    }
-
-    private func startupRestoreMarkerExists() -> Bool {
-        guard let url = startupRestoreMarkerURL() else {
-            return false
+        Task {
+            await markStartupRestoreCompleted()
+            await MainActor.run {
+                isStartupReady = true
+            }
         }
-        return FileManager.default.fileExists(atPath: url.path)
     }
 
-    private func markStartupRestoreCompleted() {
-        guard let url = startupRestoreMarkerURL() else {
-            return
-        }
-
-        let directory = url.deletingLastPathComponent()
-        try? FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        FileManager.default.createFile(
-            atPath: url.path,
-            contents: Data("completed".utf8)
-        )
+    private func startupRestoreMarkerExists() async -> Bool {
+        await Task.detached(priority: .utility) {
+            guard let url = Self.startupRestoreMarkerURL() else {
+                return false
+            }
+            return FileManager.default.fileExists(atPath: url.path)
+        }.value
     }
 
-    private func startupRestoreMarkerURL() -> URL? {
+    private func markStartupRestoreCompleted() async {
+        await Task.detached(priority: .utility) {
+            guard let url = Self.startupRestoreMarkerURL() else {
+                return
+            }
+
+            let directory = url.deletingLastPathComponent()
+            try? FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            FileManager.default.createFile(
+                atPath: url.path,
+                contents: Data("completed".utf8)
+            )
+        }.value
+    }
+
+    nonisolated private static func startupRestoreMarkerURL() -> URL? {
         return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
             .first?
             .appendingPathComponent("startup-restore/completed.marker", isDirectory: false)

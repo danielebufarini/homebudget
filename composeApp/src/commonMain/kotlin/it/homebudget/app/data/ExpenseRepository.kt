@@ -94,6 +94,9 @@ class ExpenseRepository(
 
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseEntryRepository.getAllExpensesSnapshot()
 
+    suspend fun getRecentExpensesSnapshot(limit: Int): List<Expense> =
+        expenseEntryRepository.getRecentExpensesSnapshot(limit)
+
     suspend fun getExpensesSnapshotBetween(startMillis: Long, endMillis: Long): List<Expense> =
         expenseEntryRepository.getExpensesSnapshotBetween(startMillis, endMillis)
 
