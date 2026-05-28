@@ -1745,6 +1745,8 @@ function gameMenu(callbackFun)
 	var titleName;
 	
 	var demoItemObj =        { name: " Demo Mode ",  activeFun: demoPlay };
+	var saveGameStateItemObj = { name: " Save Game State ", activeFun: saveGameStateMenu };
+	var loadGameStateItemObj = { name: " Load Game State ", activeFun: loadGameStateMenu };
 	var editPlayItemObj =    { name: " Play Mode ",  activeFun: editPlay };
 	var editBackupItemObj =  { name: " Backup ",     activeFun: backupDialog };
 	var	editRestoreItemObj = { name: " Restore ",    activeFun: restoreDialog };
@@ -1789,6 +1791,9 @@ function gameMenu(callbackFun)
 		return;	
 	}
 	
+	if(canSaveGameState()) addMenuItem(gameMenuList, saveGameStateItemObj, -1);
+	if(hasSavedGameState()) addMenuItem(gameMenuList, loadGameStateItemObj, -1);
+
 	//set active menu id for play mode
 	switch(playMode) {
 	case PLAY_CLASSIC:

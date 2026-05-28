@@ -193,6 +193,7 @@ var STORAGE_THEME_COLOR = "loderunner_color_";
 
 var STORAGE_REPEAT_ACTION = "loderunner_actRepeat";
 var STORAGE_GAMEPAD_MODE = "loderunner_gamepadMode";
+var STORAGE_GAME_STATE = "loderunner_currentGameState";
 
 //================================
 // backup & restore file header
