@@ -2,6 +2,8 @@ Lode Runner - Total Recall
 =======================================
 ## (超級運動員 - 全面回憶)
 
+**NOTE:** This is a fork of https://github.com/SimonHung/LodeRunner_TotalRecall created to add the ability to load/save game state
+
 This program build with Javascript + [CreateJS](http://www.createjs.com).
 
 ### * 3 GAME Mode & 1 DEMO Mode
