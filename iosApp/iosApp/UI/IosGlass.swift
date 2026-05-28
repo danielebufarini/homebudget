@@ -1,4 +1,5 @@
 import SwiftUI
+import Observation
 
 // Shared SwiftUI chrome helpers for the iOS-native shell and sheets.
 
@@ -142,10 +143,11 @@ struct AppGlassFeedbackBannerState: Identifiable, Equatable {
 }
 
 @MainActor
-final class AppGlassBannerPresenter: ObservableObject {
-    @Published var banner: AppGlassFeedbackBannerState?
+@Observable
+final class AppGlassBannerPresenter {
+    var banner: AppGlassFeedbackBannerState?
 
-    private var dismissTask: Task<Void, Never>?
+    @ObservationIgnored private var dismissTask: Task<Void, Never>?
 
     deinit {
         dismissTask?.cancel()
@@ -212,7 +214,7 @@ struct AppGlassBanner: View {
 }
 
 struct AppGlassBannerOverlay: View {
-    @ObservedObject var presenter: AppGlassBannerPresenter
+    var presenter: AppGlassBannerPresenter
 
     var body: some View {
         if let banner = presenter.banner {

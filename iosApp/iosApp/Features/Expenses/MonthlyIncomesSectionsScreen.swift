@@ -45,7 +45,7 @@ struct MonthlyIncomesSectionsContent: View {
     let headerAccessory: (() -> AnyView)?
     @Binding private var groupingMode: ExpenseGroupingMode
 
-    @StateObject private var viewModel: MonthlyIncomesSectionsViewModel
+    @State private var viewModel: MonthlyIncomesSectionsViewModel
     @State private var pendingIncomeDeleteID: String?
 
     init(
@@ -66,8 +66,8 @@ struct MonthlyIncomesSectionsContent: View {
         self.topReservedInset = topReservedInset
         self.headerAccessory = headerAccessory
         _groupingMode = groupingMode
-        _viewModel = StateObject(
-            wrappedValue: MonthlyIncomesSectionsViewModel(
+        _viewModel = State(
+            initialValue: MonthlyIncomesSectionsViewModel(
                 year: selectedMonth.year,
                 month: selectedMonth.month,
                 groupingMode: groupingMode.wrappedValue

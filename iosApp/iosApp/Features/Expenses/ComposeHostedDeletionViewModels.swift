@@ -1,9 +1,11 @@
 @preconcurrency import ComposeApp
 import SwiftUI
+import Observation
 
 @MainActor
-final class ExpenseEditorDeletionViewModel: ObservableObject {
-    @Published var pendingSeriesId: String?
+@Observable
+final class ExpenseEditorDeletionViewModel {
+    var pendingSeriesId: String?
 
     private let controller = IosEditItemDeletionController()
 
@@ -64,8 +66,9 @@ final class ExpenseEditorDeletionViewModel: ObservableObject {
 }
 
 @MainActor
-final class IncomeEditorDeletionViewModel: ObservableObject {
-    @Published var pendingSeriesId: String?
+@Observable
+final class IncomeEditorDeletionViewModel {
+    var pendingSeriesId: String?
 
     private let controller = IosEditItemDeletionController()
 

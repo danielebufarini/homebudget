@@ -1,27 +1,29 @@
 @preconcurrency import ComposeApp
 import FoundationModels
 import SwiftUI
+import Observation
 
 // Main-actor orchestration for the iOS voice expense entry flow.
 
 @MainActor
-final class VoiceExpenseEntryViewModel: ObservableObject {
-    @Published var transcript = ""
-    @Published var statusMessage: String?
-    @Published var errorMessage: String?
-    @Published var draft: VoiceExpenseDraft?
-    @Published var isRecording = false
-    @Published var isBusy = false
-    @Published var busyLabel = ""
+@Observable
+final class VoiceExpenseEntryViewModel {
+    var transcript = ""
+    var statusMessage: String?
+    var errorMessage: String?
+    var draft: VoiceExpenseDraft?
+    var isRecording = false
+    var isBusy = false
+    var busyLabel = ""
 
     private let controller = IosVoiceExpenseController()
     private let recorder = VoiceExpenseRecorder()
     private let languageModel = SystemLanguageModel.default
-    private var categoriesById: [String: VoiceExpenseCategory] = [:]
-    private var expensesById: [String: VoiceExpenseCandidate] = [:]
+    @ObservationIgnored private var categoriesById: [String: VoiceExpenseCategory] = [:]
+    @ObservationIgnored private var expensesById: [String: VoiceExpenseCandidate] = [:]
     private var snapshotLoaded = false
-    private var shouldAutoStartWhenReady = false
-    private var hasHandledAutoStart = false
+    @ObservationIgnored private var shouldAutoStartWhenReady = false
+    @ObservationIgnored private var hasHandledAutoStart = false
 
     init() {
         loadSnapshot()

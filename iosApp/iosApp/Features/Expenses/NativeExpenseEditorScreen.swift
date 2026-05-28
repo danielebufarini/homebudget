@@ -5,8 +5,8 @@ struct NativeExpenseEditorScreen: View {
     let readOnly: Bool
     let onClose: () -> Void
 
-    @StateObject private var viewModel: NativeExpenseEditorViewModel
-    @StateObject private var bannerPresenter = AppGlassBannerPresenter()
+    @State private var viewModel: NativeExpenseEditorViewModel
+    @State private var bannerPresenter = AppGlassBannerPresenter()
     @State private var showDatePicker = false
     @State private var showCategoryPicker = false
     @State private var showAddCategorySheet = false
@@ -21,7 +21,7 @@ struct NativeExpenseEditorScreen: View {
         self.expenseId = expenseId
         self.readOnly = readOnly
         self.onClose = onClose
-        _viewModel = StateObject(wrappedValue: NativeExpenseEditorViewModel(expenseId: expenseId))
+        _viewModel = State(initialValue: NativeExpenseEditorViewModel(expenseId: expenseId))
     }
 
     private var title: String {

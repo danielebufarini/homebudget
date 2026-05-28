@@ -11,8 +11,8 @@ struct VoiceExpenseEntrySheet: View {
         self.onClose = onClose
     }
 
-    @StateObject private var viewModel = VoiceExpenseEntryViewModel()
-    @StateObject private var bannerPresenter = AppGlassBannerPresenter()
+    @State private var viewModel = VoiceExpenseEntryViewModel()
+    @State private var bannerPresenter = AppGlassBannerPresenter()
 
     var body: some View {
         NavigationStack {

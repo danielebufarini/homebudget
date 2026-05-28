@@ -1,5 +1,6 @@
 @preconcurrency import ComposeApp
 import SwiftUI
+import Observation
 
 struct NativeExpenseCategory: Identifiable, Hashable {
     let id: String
@@ -14,23 +15,24 @@ struct NativeExpenseEditorIconSection: Identifiable {
 }
 
 @MainActor
-final class NativeExpenseEditorViewModel: ObservableObject {
-    @Published var isLoading = true
-    @Published var didFailToLoad = false
-    @Published var amount = ""
-    @Published var selectedDate = Date()
-    @Published var selectedCategoryId = ""
-    @Published var description = ""
-    @Published var isShared = false
-    @Published var isRecurringMonthly = false
-    @Published var recurringSeriesId: String?
-    @Published var categories: [NativeExpenseCategory] = []
-    @Published var isSaving = false
+@Observable
+final class NativeExpenseEditorViewModel {
+    var isLoading = true
+    var didFailToLoad = false
+    var amount = ""
+    var selectedDate = Date()
+    var selectedCategoryId = ""
+    var description = ""
+    var isShared = false
+    var isRecurringMonthly = false
+    var recurringSeriesId: String?
+    var categories: [NativeExpenseCategory] = []
+    var isSaving = false
 
     private let expenseId: String
     private let editorController = IosExpenseEditorController()
     private let categoriesController = IosCategoriesController()
-    private var hasStarted = false
+    @ObservationIgnored private var hasStarted = false
 
     init(expenseId: String) {
         self.expenseId = expenseId

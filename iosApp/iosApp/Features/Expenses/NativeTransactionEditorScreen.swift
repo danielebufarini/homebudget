@@ -1,9 +1,11 @@
 @preconcurrency import ComposeApp
 import SwiftUI
+import Observation
 
 @MainActor
-final class NativeTransactionEditorViewModel: ObservableObject {
-    @Published var selectedKind: AddTransactionKind {
+@Observable
+final class NativeTransactionEditorViewModel {
+    var selectedKind: AddTransactionKind {
         didSet {
             guard oldValue != selectedKind, hasStarted else {
                 return
@@ -16,19 +18,19 @@ final class NativeTransactionEditorViewModel: ObservableObject {
         }
     }
 
-    @Published var amount = ""
-    @Published var selectedDate: Date
-    @Published var selectedCategoryId = ""
-    @Published var description = ""
-    @Published var isShared = false
-    @Published var isRecurringMonthly = false
-    @Published var installmentCount = 1
-    @Published var categories: [NativeExpenseCategory] = []
-    @Published var isSaving = false
+    var amount = ""
+    var selectedDate: Date
+    var selectedCategoryId = ""
+    var description = ""
+    var isShared = false
+    var isRecurringMonthly = false
+    var installmentCount = 1
+    var categories: [NativeExpenseCategory] = []
+    var isSaving = false
 
     private let editorController = IosNativeTransactionEditorController()
     private let categoriesController = IosCategoriesController()
-    private var hasStarted = false
+    @ObservationIgnored private var hasStarted = false
 
     init(initialKind: AddTransactionKind, initialYear: Int?, initialMonth: Int?) {
         selectedKind = initialKind
@@ -173,8 +175,8 @@ final class NativeTransactionEditorViewModel: ObservableObject {
 struct NativeTransactionEditorScreen: View {
     let onClose: () -> Void
 
-    @StateObject private var viewModel: NativeTransactionEditorViewModel
-    @StateObject private var bannerPresenter = AppGlassBannerPresenter()
+    @State private var viewModel: NativeTransactionEditorViewModel
+    @State private var bannerPresenter = AppGlassBannerPresenter()
     @State private var showDatePicker = false
     @State private var showCategoryPicker = false
     @State private var showAddCategorySheet = false
@@ -187,8 +189,8 @@ struct NativeTransactionEditorScreen: View {
         onClose: @escaping () -> Void
     ) {
         self.onClose = onClose
-        _viewModel = StateObject(
-            wrappedValue: NativeTransactionEditorViewModel(
+        _viewModel = State(
+            initialValue: NativeTransactionEditorViewModel(
                 initialKind: initialKind,
                 initialYear: initialYear,
                 initialMonth: initialMonth

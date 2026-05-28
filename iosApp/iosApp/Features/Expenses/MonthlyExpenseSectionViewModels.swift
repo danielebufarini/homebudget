@@ -1,16 +1,18 @@
 @preconcurrency import ComposeApp
 import SwiftUI
+import Observation
 
 @MainActor
-final class GroupedExpensesSectionsViewModel: ObservableObject {
-    @Published var totalAmountText = appAmountLabel("0.00")
-    @Published var emptyStateText = appLocalized("No expenses for this month")
-    @Published var sections: [GroupedExpenseSectionModel] = []
-    @Published var expandedSectionIDs = Set<String>()
+@Observable
+final class GroupedExpensesSectionsViewModel {
+    var totalAmountText = appAmountLabel("0.00")
+    var emptyStateText = appLocalized("No expenses for this month")
+    var sections: [GroupedExpenseSectionModel] = []
+    var expandedSectionIDs = Set<String>()
 
     private let observer: IosGroupedExpensesObserver
-    private var expansionState: GroupedSectionExpansionState
-    private var isObserving = false
+    @ObservationIgnored private var expansionState: GroupedSectionExpansionState
+    @ObservationIgnored private var isObserving = false
 
     init(
         year: Int,
@@ -47,7 +49,7 @@ final class GroupedExpensesSectionsViewModel: ObservableObject {
                 return
             }
 
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self.apply(snapshot: snapshot)
             }
         }
@@ -88,18 +90,19 @@ final class GroupedExpensesSectionsViewModel: ObservableObject {
 }
 
 @MainActor
-final class MonthlyIncomesSectionsViewModel: ObservableObject {
-    @Published var totalAmountText = appAmountLabel("0.00")
-    @Published var emptyStateText = appLocalized("No income for this month")
-    @Published var sections: [GroupedExpenseSectionModel] = []
-    @Published var hasLoadedSnapshot = false
-    @Published var expandedSectionIDs = Set<String>()
+@Observable
+final class MonthlyIncomesSectionsViewModel {
+    var totalAmountText = appAmountLabel("0.00")
+    var emptyStateText = appLocalized("No income for this month")
+    var sections: [GroupedExpenseSectionModel] = []
+    var hasLoadedSnapshot = false
+    var expandedSectionIDs = Set<String>()
 
     private let observer: IosMonthlyIncomesObserver
-    private var expansionState = GroupedSectionExpansionState(
+    @ObservationIgnored private var expansionState = GroupedSectionExpansionState(
         strategy: NewSectionsExpansionStrategy(expandsInitially: false)
     )
-    private var isObserving = false
+    @ObservationIgnored private var isObserving = false
 
     init(
         year: Int,
@@ -128,7 +131,7 @@ final class MonthlyIncomesSectionsViewModel: ObservableObject {
                 return
             }
 
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self.apply(snapshot: snapshot)
             }
         }

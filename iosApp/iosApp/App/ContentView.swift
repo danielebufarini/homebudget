@@ -23,7 +23,7 @@ struct ContentView: View {
     @State private var showCsvExportSheet = false
     @State private var showCsvExporter = false
     @State private var activeImportPicker: ImportPickerKind?
-    @StateObject private var bannerPresenter = AppGlassBannerPresenter()
+    @State private var bannerPresenter = AppGlassBannerPresenter()
     @State private var csvExportDocument = CsvExportDocument()
     @State private var csvExportFilename = "budget.csv"
     @State private var csvExportStartDate = Calendar.current.date(byAdding: .day, value: -29, to: Date()) ?? Date()

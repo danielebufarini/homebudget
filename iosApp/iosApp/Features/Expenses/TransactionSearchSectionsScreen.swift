@@ -1,25 +1,27 @@
 @preconcurrency import ComposeApp
 import SwiftUI
+import Observation
 
 @MainActor
-private final class TransactionSearchSectionsViewModel: ObservableObject {
-    @Published var expenseTotalAmountText = appAmountLabel("0.00")
-    @Published var incomeTotalAmountText = appAmountLabel("0.00")
-    @Published var expenseEmptyStateText = appLocalized("No matching transactions")
-    @Published var incomeEmptyStateText = appLocalized("No matching transactions")
-    @Published var expenseSections: [GroupedExpenseSectionModel] = []
-    @Published var incomeSections: [GroupedExpenseSectionModel] = []
-    @Published var hasLoadedSnapshot = false
-    @Published var canLoadMoreExpenseResults = false
-    @Published var canLoadMoreIncomeResults = false
-    @Published var expandedExpenseSectionIDs = Set<String>()
-    @Published var expandedIncomeSectionIDs = Set<String>()
+@Observable
+private final class TransactionSearchSectionsViewModel {
+    var expenseTotalAmountText = appAmountLabel("0.00")
+    var incomeTotalAmountText = appAmountLabel("0.00")
+    var expenseEmptyStateText = appLocalized("No matching transactions")
+    var incomeEmptyStateText = appLocalized("No matching transactions")
+    var expenseSections: [GroupedExpenseSectionModel] = []
+    var incomeSections: [GroupedExpenseSectionModel] = []
+    var hasLoadedSnapshot = false
+    var canLoadMoreExpenseResults = false
+    var canLoadMoreIncomeResults = false
+    var expandedExpenseSectionIDs = Set<String>()
+    var expandedIncomeSectionIDs = Set<String>()
 
     private let observer: IosTransactionSearchObserver
-    private var knownExpenseSectionIDs = Set<String>()
-    private var knownIncomeSectionIDs = Set<String>()
-    private var hasLoadedInitialExpansionState = false
-    private var isObserving = false
+    @ObservationIgnored private var knownExpenseSectionIDs = Set<String>()
+    @ObservationIgnored private var knownIncomeSectionIDs = Set<String>()
+    @ObservationIgnored private var hasLoadedInitialExpansionState = false
+    @ObservationIgnored private var isObserving = false
 
     init(query: String, groupingMode: ExpenseGroupingMode) {
         observer = IosTransactionSearchObserver(
@@ -43,7 +45,7 @@ private final class TransactionSearchSectionsViewModel: ObservableObject {
                 return
             }
 
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self.apply(snapshot: snapshot)
             }
         }
@@ -126,7 +128,7 @@ struct TransactionSearchSectionsRootView: View {
 
     @State private var selectedKind: AddTransactionKind = .expense
     @State private var groupingMode: ExpenseGroupingMode = .byCategory
-    @StateObject private var viewModel: TransactionSearchSectionsViewModel
+    @State private var viewModel: TransactionSearchSectionsViewModel
     @State private var pendingExpenseDeleteID: String?
     @State private var pendingIncomeDeleteID: String?
 
@@ -140,8 +142,8 @@ struct TransactionSearchSectionsRootView: View {
         self.onClose = onClose
         self.onOpenExpense = onOpenExpense
         self.onOpenIncome = onOpenIncome
-        _viewModel = StateObject(
-            wrappedValue: TransactionSearchSectionsViewModel(
+        _viewModel = State(
+            initialValue: TransactionSearchSectionsViewModel(
                 query: query,
                 groupingMode: .byCategory
             )

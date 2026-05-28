@@ -119,7 +119,7 @@ struct ExpenseEditorRootView: View {
     let readOnly: Bool
     let onClose: () -> Void
 
-    @StateObject private var deletionViewModel = ExpenseEditorDeletionViewModel()
+    @State private var deletionViewModel = ExpenseEditorDeletionViewModel()
 
     private var usesHostedGlassChrome: Bool {
         expenseId != nil || readOnly
@@ -298,7 +298,7 @@ struct IncomeEditorRootView: View {
     let initialMonth: Int?
     let onClose: () -> Void
 
-    @StateObject private var deletionViewModel = IncomeEditorDeletionViewModel()
+    @State private var deletionViewModel = IncomeEditorDeletionViewModel()
 
     var body: some View {
         KotlinViewControllerHost {
