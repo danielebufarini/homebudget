@@ -1,7 +1,7 @@
 /**
  * Save/load support for the current in-progress game.
  *
- * This feature intentionally uses a dedicated localStorage slot so it does not
+ * This feature intentionally uses dedicated localStorage slots so it does not
  * interfere with the game's existing progress, high-score, custom-level backup,
  * or restore mechanisms.
  */
@@ -10,21 +10,21 @@ var GAME_STATE_SAVE_VERSION = 1;
 
 function hasSavedGameState()
 {
-	return getStorage(STORAGE_GAME_STATE) != null;
+	return getSavedGameStateEntries().length > 0;
 }
 
 function canSaveGameState()
 {
-	if(playMode !== PLAY_CLASSIC && playMode != PLAY_MODERN) return false;
+	if(playMode != PLAY_CLASSIC && playMode != PLAY_MODERN) return false;
 	if(changingLevel || !map || !runner) return false;
-	if(gameState === GAME_START || gameState == GAME_RUNNING) return true;
+	if(gameState == GAME_START || gameState == GAME_RUNNING) return true;
 	if(gameState == GAME_PAUSE && (lastGameState == GAME_START || lastGameState == GAME_RUNNING)) return true;
 	return false;
 }
 
 function saveGameStateMenu(id, callbackFun)
 {
-	var saved = saveCurrentGameState(0);
+	var saved = saveCurrentGameStateToNewSlot(0);
 	if(callbackFun) callbackFun();
 	setTimeout(function() {
 		showTipsText(saved ? "GAME STATE SAVED" : "CANNOT SAVE NOW", 2500);
@@ -34,10 +34,31 @@ function saveGameStateMenu(id, callbackFun)
 function loadGameStateMenu(id, callbackFun)
 {
 	if(callbackFun) callbackFun();
-	loadCurrentGameState(1);
+	showLoadGameStateMenu();
+}
+
+function deleteGameStateMenu(id, callbackFun)
+{
+	if(callbackFun) callbackFun();
+	showDeleteGameStateMenu();
 }
 
 function saveCurrentGameState(showMsg)
+{
+	return saveCurrentGameStateToNewSlot(showMsg);
+}
+
+function loadCurrentGameState(showMsg)
+{
+	var saves = getSavedGameStateEntries();
+	if(saves.length <= 0) {
+		if(showMsg) showTipsText("NO SAVED GAME", 2500);
+		return false;
+	}
+	return loadGameStateById(saves[0].id, showMsg);
+}
+
+function saveCurrentGameStateToNewSlot(showMsg)
 {
 	if(!canSaveGameState()) {
 		if(showMsg) showTipsText("CANNOT SAVE NOW", 2500);
@@ -46,38 +67,238 @@ function saveCurrentGameState(showMsg)
 
 	try {
 		var snapshot = buildGameStateSnapshot();
-		setStorage(STORAGE_GAME_STATE, JSON.stringify(snapshot));
+		var entry = createGameStateSaveEntry(snapshot);
+		var saves = getSavedGameStateEntries();
+
+		saves.unshift(entry);
+		if(saves.length > MAX_GAME_STATE_SAVES) saves = saves.slice(0, MAX_GAME_STATE_SAVES);
+
+		setSavedGameStateEntries(saves);
 		if(showMsg) showTipsText("GAME STATE SAVED", 2500);
 		return true;
 	} catch(e) {
-		error("saveCurrentGameState failed: " + e.message);
+		error("saveCurrentGameStateToNewSlot failed: " + e.message);
 		if(showMsg) showTipsText("SAVE FAILED", 2500);
 		return false;
 	}
 }
 
-function loadCurrentGameState(showMsg)
+function showLoadGameStateMenu()
 {
-	var infoJSON = getStorage(STORAGE_GAME_STATE);
-	if(infoJSON == null) {
-		if(showMsg) showTipsText("NO SAVED GAME", 2500);
+	var saves = getSavedGameStateEntries();
+	if(saves.length <= 0) {
+		setTimeout(function() { showTipsText("NO SAVED GAME", 2500); }, 50);
+		return false;
+	}
+
+	var menuList = buildSavedGameMenuList(saves, loadSelectedGameStateMenu, null);
+	menuDialog(" Load Saved Game ", menuList, mainStage, tileScale, 1, null, saves);
+	return true;
+}
+
+function showDeleteGameStateMenu()
+{
+	var saves = getSavedGameStateEntries();
+	if(saves.length <= 0) {
+		setTimeout(function() { showTipsText("NO SAVED GAME", 2500); }, 50);
+		return false;
+	}
+
+	var menuList = buildSavedGameMenuList(saves, confirmDeleteSelectedGameStateMenu, null);
+	menuDialog(" Delete Saved Game ", menuList, mainStage, tileScale, 1, null, saves);
+	return true;
+}
+
+function buildSavedGameMenuList(saves, activeFun, backFun)
+{
+	var menuList = [{ activeItem: 0 }];
+	for(var i = 0; i < saves.length; i++) {
+		menuList.push({ name: " " + buildSaveMenuLabel(saves[i], i) + " ", activeFun: activeFun });
+	}
+	menuList.push({ name: " Back ", activeFun: backFun });
+	return menuList;
+}
+
+function buildSaveMenuLabel(entry, idx)
+{
+	var modeName = entry.mode == PLAY_MODERN ? "Training" : "Challenge";
+	var levelNo = ("00" + safeNumber(entry.level, 1)).slice(-3);
+	var scoreNo = safeNumber(entry.score, 0);
+	return (idx + 1) + ". " + modeName + " L" + levelNo + " S" + scoreNo + " " + formatSaveDate(entry.updatedAt || entry.createdAt);
+}
+
+function loadSelectedGameStateMenu(id, saves)
+{
+	if(!saves || id >= saves.length) return;
+	loadGameStateById(saves[id].id, 1);
+}
+
+function confirmDeleteSelectedGameStateMenu(id, saves)
+{
+	if(!saves || id >= saves.length) return;
+	var saveEntry = saves[id];
+	var msg = ["Delete saved game ?", buildShortSaveDescription(saveEntry)];
+	yesNoDialog(msg, yesBitmap, noBitmap, mainStage, tileScale, function(yes) {
+		if(yes) deleteGameStateById(saveEntry.id, 1);
+	});
+}
+
+function buildShortSaveDescription(entry)
+{
+	var modeName = entry.mode == PLAY_MODERN ? "Training" : "Challenge";
+	return modeName + " Level " + safeNumber(entry.level, 1) + " - " + formatSaveDate(entry.updatedAt || entry.createdAt);
+}
+
+function loadGameStateById(saveId, showMsg)
+{
+	var entry = getSavedGameStateEntryById(saveId);
+	if(!entry) {
+		if(showMsg) showTipsText("SAVED GAME NOT FOUND", 2500);
+		return false;
+	}
+	if(!isValidSaveEntry(entry) || !validateGameStateSnapshot(entry.state)) {
+		if(showMsg) showTipsText("INVALID SAVE DATA", 2500);
 		return false;
 	}
 
 	try {
-		var snapshot = JSON.parse(infoJSON);
-		if(!validateGameStateSnapshot(snapshot)) {
-			if(showMsg) showTipsText("INVALID SAVE DATA", 2500);
-			return false;
-		}
-
-		restoreGameStateSnapshot(snapshot);
+		restoreGameStateSnapshot(entry.state);
 		if(showMsg) showTipsText("GAME STATE LOADED", 2500);
 		return true;
 	} catch(e) {
-		error("loadCurrentGameState failed: " + e.message);
+		error("loadGameStateById failed: " + e.message);
 		if(showMsg) showTipsText("LOAD FAILED", 2500);
 		return false;
+	}
+}
+
+function deleteGameStateById(saveId, showMsg)
+{
+	try {
+		var saves = getSavedGameStateEntries();
+		var nextSaves = [];
+		var deleted = false;
+
+		for(var i = 0; i < saves.length; i++) {
+			if(saves[i].id == saveId) deleted = true;
+			else nextSaves.push(saves[i]);
+		}
+
+		if(!deleted) {
+			if(showMsg) showTipsText("SAVED GAME NOT FOUND", 2500);
+			return false;
+		}
+
+		setSavedGameStateEntries(nextSaves);
+		if(showMsg) showTipsText("SAVED GAME DELETED", 2500);
+		return true;
+	} catch(e) {
+		error("deleteGameStateById failed: " + e.message);
+		if(showMsg) showTipsText("DELETE FAILED", 2500);
+		return false;
+	}
+}
+
+function getSavedGameStateEntryById(saveId)
+{
+	var saves = getSavedGameStateEntries();
+	for(var i = 0; i < saves.length; i++) {
+		if(saves[i].id == saveId) return saves[i];
+	}
+	return null;
+}
+
+function getSavedGameStateEntries()
+{
+	migrateLegacySingleSaveIfNeeded();
+
+	var infoJSON = getStorage(STORAGE_GAME_STATES);
+	if(infoJSON == null) return [];
+
+	try {
+		var saves = JSON.parse(infoJSON);
+		if(!saves || !saves.length) return [];
+
+		var validSaves = [];
+		for(var i = 0; i < saves.length; i++) {
+			if(isValidSaveEntry(saves[i])) validSaves.push(saves[i]);
+		}
+		return validSaves;
+	} catch(e) {
+		error("getSavedGameStateEntries failed: " + e.message);
+		return [];
+	}
+}
+
+function setSavedGameStateEntries(saves)
+{
+	setStorage(STORAGE_GAME_STATES, JSON.stringify(saves || []));
+}
+
+function isValidSaveEntry(entry)
+{
+	return entry &&
+		typeof entry.id == "string" &&
+		entry.state &&
+		typeof entry.createdAt == "number" &&
+		typeof entry.updatedAt == "number";
+}
+
+function createGameStateSaveEntry(snapshot)
+{
+	var now = Date.now();
+	return {
+		id: createGameStateSaveId(now),
+		label: buildSnapshotLabel(snapshot),
+		createdAt: now,
+		updatedAt: now,
+		mode: snapshot.game.playMode,
+		level: snapshot.game.curLevel,
+		score: snapshot.game.curScore,
+		lives: snapshot.game.runnerLife,
+		state: snapshot
+	};
+}
+
+function createGameStateSaveId(time)
+{
+	return "save-" + time + "-" + Math.floor(Math.random() * 1000000);
+}
+
+function buildSnapshotLabel(snapshot)
+{
+	var modeName = snapshot.game.playMode == PLAY_MODERN ? "Training" : "Challenge";
+	return modeName + " - Level " + snapshot.game.curLevel + " - Score " + snapshot.game.curScore;
+}
+
+function formatSaveDate(time)
+{
+	var d = new Date(time);
+	if(isNaN(d.getTime())) return "unknown";
+	return d.getFullYear() + "-" +
+		("0" + (d.getMonth() + 1)).slice(-2) + "-" +
+		("0" + d.getDate()).slice(-2) + " " +
+		("0" + d.getHours()).slice(-2) + ":" +
+		("0" + d.getMinutes()).slice(-2);
+}
+
+function migrateLegacySingleSaveIfNeeded()
+{
+	var newSaveJSON = getStorage(STORAGE_GAME_STATES);
+	if(newSaveJSON != null) return;
+
+	var legacyJSON = getStorage(STORAGE_GAME_STATE);
+	if(legacyJSON == null) return;
+
+	try {
+		var snapshot = JSON.parse(legacyJSON);
+		if(!validateGameStateSnapshot(snapshot)) return;
+
+		var migrated = createGameStateSaveEntry(snapshot);
+		migrated.label = "Migrated Save";
+		setSavedGameStateEntries([migrated]);
+	} catch(e) {
+		error("migrateLegacySingleSaveIfNeeded failed: " + e.message);
 	}
 }
 
@@ -291,7 +512,7 @@ function applyAnimationQueues(queues)
 				guard[shakeId].shapeFrame = guard[shakeId].shape == "shakeLeft" ? shakeLeft.slice(0) : shakeRight.slice(0);
 			}
 			var frameIdx = clampNumber(guard[shakeId].curFrameIdx, 0, guard[shakeId].shapeFrame.length-1, 0);
-			guard[shakeId].sprite.gotoAndStop(guard[shakeId].shapeFrame[frameIdx]);
+			gotoSpriteShape(guard[shakeId].sprite, guard[shakeId].shapeFrame[frameIdx], true);
 		}
 	}
 
@@ -299,7 +520,7 @@ function applyAnimationQueues(queues)
 		var rebornId = rebornGuardList[i];
 		if(rebornId >= 0 && rebornId < guardCount) {
 			var rebornIdx = clampNumber(guard[rebornId].curFrameIdx, 0, rebornFrame.length-1, 0);
-			guard[rebornId].sprite.gotoAndStop(rebornFrame[rebornIdx]);
+			gotoSpriteShape(guard[rebornId].sprite, rebornFrame[rebornIdx], true);
 		}
 	}
 }
@@ -393,7 +614,7 @@ function applyHoleObj(data)
 	holeObj.shapeFrame = data.shapeFrame ? data.shapeFrame.slice(0) : digHoleLeft.slice(0);
 	holeObj.curFrameIdx = clampNumber(data.curFrameIdx, 0, holeObj.shapeFrame.length-1, 0);
 	holeObj.sprite.setTransform(holeObj.pos.x * tileWScale, holeObj.pos.y * tileHScale, tileScale, tileScale);
-	holeObj.sprite.gotoAndStop(holeObj.shapeFrame[holeObj.curFrameIdx]);
+	gotoSpriteShape(holeObj.sprite, holeObj.shapeFrame[holeObj.curFrameIdx], true);
 	holeObj.sprite.currentAnimationFrame = safeNumber(data.currentAnimationFrame, holeObj.curFrameIdx);
 	mainStage.addChild(holeObj.sprite);
 }
@@ -469,7 +690,9 @@ function gotoSpriteShape(sprite, shape, stopped)
 		if(stopped) sprite.gotoAndStop(shape);
 		else sprite.gotoAndPlay(shape);
 	} catch(e) {
-		sprite.gotoAndStop(0);
+		try {
+			sprite.gotoAndStop(0);
+		} catch(ignore) {}
 	}
 }
 

@@ -193,7 +193,9 @@ var STORAGE_THEME_COLOR = "loderunner_color_";
 
 var STORAGE_REPEAT_ACTION = "loderunner_actRepeat";
 var STORAGE_GAMEPAD_MODE = "loderunner_gamepadMode";
-var STORAGE_GAME_STATE = "loderunner_currentGameState";
+var STORAGE_GAME_STATE = "loderunner_currentGameState"; //legacy single save slot
+var STORAGE_GAME_STATES = "loderunner_currentGameStates";
+var MAX_GAME_STATE_SAVES = 10;
 
 //================================
 // backup & restore file header

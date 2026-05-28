@@ -1747,6 +1747,8 @@ function gameMenu(callbackFun)
 	var demoItemObj =        { name: " Demo Mode ",  activeFun: demoPlay };
 	var saveGameStateItemObj = { name: " Save Game State ", activeFun: saveGameStateMenu };
 	var loadGameStateItemObj = { name: " Load Game State ", activeFun: loadGameStateMenu };
+	var deleteGameStateItemObj = { name: " Delete Saved Game ", activeFun: deleteGameStateMenu };
+	var resetLevelItemObj = { name: " Reset Level to 1 ", activeFun: resetGameLevelToOneMenu };
 	var editPlayItemObj =    { name: " Play Mode ",  activeFun: editPlay };
 	var editBackupItemObj =  { name: " Backup ",     activeFun: backupDialog };
 	var	editRestoreItemObj = { name: " Restore ",    activeFun: restoreDialog };
@@ -1791,8 +1793,12 @@ function gameMenu(callbackFun)
 		return;	
 	}
 	
+	addMenuItem(gameMenuList, resetLevelItemObj, -1);
 	if(canSaveGameState()) addMenuItem(gameMenuList, saveGameStateItemObj, -1);
-	if(hasSavedGameState()) addMenuItem(gameMenuList, loadGameStateItemObj, -1);
+	if(hasSavedGameState()) {
+		addMenuItem(gameMenuList, loadGameStateItemObj, -1);
+		addMenuItem(gameMenuList, deleteGameStateItemObj, -1);
+	}
 
 	//set active menu id for play mode
 	switch(playMode) {
@@ -1866,6 +1872,51 @@ function modernPlay(id, callbackFun)
 	setLastPlayMode();
 	initShowDataMsg();
 	startGame();
+}
+
+function resetGameLevelToOneMenu(id, callbackFun)
+{
+	if(callbackFun != null) callbackFun();
+
+	if(playMode != PLAY_CLASSIC && playMode != PLAY_MODERN) {
+		setTimeout(function() { showTipsText("RESET NOT AVAILABLE", 2500); }, 50);
+		return;
+	}
+
+	var modeName = playMode == PLAY_MODERN ? "Training" : "Challenge";
+	var msg = ["Reset level to 1 ?", modeName + " progress will restart"];
+	yesNoDialog(msg, yesBitmap, noBitmap, mainStage, tileScale, function(yes) {
+		if(yes) resetCurrentGameLevelToOne();
+	});
+}
+
+function resetCurrentGameLevelToOne()
+{
+	if(playMode != PLAY_CLASSIC && playMode != PLAY_MODERN) return false;
+
+	soundStop(soundDig);
+	soundStop(soundFall);
+	disableAutoDemoTimer();
+	stopPlayTicker();
+	stopAllSpriteObj();
+
+	curLevel = 1;
+	curScore = 0;
+	runnerLife = RUNNER_LIFE;
+
+	if(playMode == PLAY_CLASSIC) {
+		maxLevel = 1;
+		passedLevel = 0;
+		sometimePlayInGodMode = 0;
+		setClassicInfo(0);
+	} else {
+		setModernInfo();
+	}
+
+	initShowDataMsg(0);
+	startGame();
+	setTimeout(function() { showTipsText("LEVEL RESET TO 1", 2500); }, 50);
+	return true;
 }
 
 function demoPlay(id, callbackFun)
