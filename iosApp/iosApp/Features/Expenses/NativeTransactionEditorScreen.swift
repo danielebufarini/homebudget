@@ -78,6 +78,14 @@ final class NativeTransactionEditorViewModel {
         }
     }
 
+    func setInstallmentCount(_ count: Int) {
+        let normalizedCount = min(max(count, 1), 30)
+        installmentCount = normalizedCount
+        if normalizedCount > 1 {
+            setRecurringMonthly(false)
+        }
+    }
+
     func save(onComplete: @escaping (String?) -> Void) {
         isSaving = true
         let dateMillis = Int64(selectedDate.timeIntervalSince1970 * 1000.0)
@@ -180,7 +188,6 @@ struct NativeTransactionEditorScreen: View {
     @State private var showDatePicker = false
     @State private var showCategoryPicker = false
     @State private var showAddCategorySheet = false
-    @State private var showInstallmentsPicker = false
 
     init(
         initialKind: AddTransactionKind,
@@ -258,16 +265,6 @@ struct NativeTransactionEditorScreen: View {
             )
             .appGlassSheetPresentation(detents: [.height(630)])
         }
-        .confirmationDialog(appLocalized("Installments"), isPresented: $showInstallmentsPicker) {
-            ForEach(1 ... 12, id: \.self) { count in
-                Button(installmentLabel(count)) {
-                    viewModel.installmentCount = count
-                    if count > 1 {
-                        viewModel.setRecurringMonthly(false)
-                    }
-                }
-            }
-        }
         .overlay(alignment: .top) {
             AppGlassBannerOverlay(presenter: bannerPresenter)
         }
@@ -313,30 +310,41 @@ struct NativeTransactionEditorScreen: View {
 
             AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {
                 if viewModel.selectedKind == .expense {
-                    NativeExpensePickerRow(
+                    NativeInstallmentRulerPicker(
                         label: appLocalized("Installments"),
-                        value: installmentLabel(viewModel.installmentCount),
                         systemImageName: "calendar.badge.clock",
+                        value: installmentCountBinding,
                         enabled: !viewModel.isRecurringMonthly,
-                        action: { showInstallmentsPicker = true }
+                        range: 1 ... 30,
+                        singlePaymentLabel: appLocalized("Single Payment"),
+                        installmentsLabel: appLocalized("Installments")
                     )
                 }
 
-                NativeExpenseToggleRow(
-                    label: appLocalized("Recurring Monthly"),
-                    systemImageName: "arrow.triangle.2.circlepath",
-                    isOn: recurringMonthlyBinding,
-                    enabled: true
-                )
-
-                if viewModel.isRecurringMonthly {
-                    NativeExpenseInfoCard(
-                        systemImageName: "arrow.triangle.2.circlepath",
-                        text: appLocalized(
-                            "Creates the same expense every month on this day for the next %lld years.",
-                            viewModel.recurringMonthlyYears
+                if shouldShowRecurringMonthlyToggle {
+                    VStack(spacing: 0) {
+                        NativeExpenseToggleRow(
+                            label: appLocalized("Recurring Monthly"),
+                            systemImageName: "arrow.triangle.2.circlepath",
+                            isOn: recurringMonthlyBinding,
+                            enabled: true
                         )
-                    )
+
+                        if viewModel.isRecurringMonthly {
+                            NativeExpenseInfoCard(
+                                systemImageName: "arrow.triangle.2.circlepath",
+                                text: appLocalized(
+                                    "Creates the same expense every month on this day for the next %lld years.",
+                                    viewModel.recurringMonthlyYears
+                                )
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity.combined(with: .move(edge: .top))
+                    ))
                 }
 
                 if viewModel.selectedKind == .expense {
@@ -382,16 +390,36 @@ struct NativeTransactionEditorScreen: View {
         viewModel.selectedKind == .income ? appLocalized("Income Details") : appLocalized("Expense Details")
     }
 
+    private var shouldShowRecurringMonthlyToggle: Bool {
+        viewModel.selectedKind != .expense || viewModel.installmentCount == 1
+    }
+
+    private var recurringToggleAnimation: Animation {
+        .spring(response: 0.28, dampingFraction: 0.88)
+    }
+
     private var recurringMonthlyBinding: Binding<Bool> {
         Binding(
             get: { viewModel.isRecurringMonthly },
-            set: { viewModel.setRecurringMonthly($0) }
+            set: { isOn in
+                withAnimation(recurringToggleAnimation) {
+                    viewModel.setRecurringMonthly(isOn)
+                }
+            }
         )
     }
 
-    private func installmentLabel(_ count: Int) -> String {
-        count == 1 ? appLocalized("Single Payment") : appLocalized("%lld Installments", count)
+    private var installmentCountBinding: Binding<Int> {
+        Binding(
+            get: { viewModel.installmentCount },
+            set: { count in
+                withAnimation(recurringToggleAnimation) {
+                    viewModel.setInstallmentCount(count)
+                }
+            }
+        )
     }
+
 
     private func saveTransaction() {
         appDismissKeyboard()

@@ -36,6 +36,7 @@ data class ExistingRecurringIncomeItem(
 )
 
 const val RECURRING_MONTHLY_OCCURRENCES = 36
+const val MAX_EXPENSE_INSTALLMENTS = 30
 
 fun buildPendingExpenses(
     amount: Long,
@@ -47,7 +48,7 @@ fun buildPendingExpenses(
     idProvider: () -> String,
     timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): List<PendingExpense> {
-    require(installments in 1..12) { "installments must be between 1 and 12" }
+    require(installments in 1..MAX_EXPENSE_INSTALLMENTS) { "installments must be between 1 and $MAX_EXPENSE_INSTALLMENTS" }
 
     val installmentAmounts = splitAmountIntoInstallments(amount, installments)
 

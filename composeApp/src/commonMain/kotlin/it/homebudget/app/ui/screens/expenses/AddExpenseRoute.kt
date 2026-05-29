@@ -14,6 +14,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import it.homebudget.app.data.ExpenseRepository
+import it.homebudget.app.data.MAX_EXPENSE_INSTALLMENTS
 import it.homebudget.app.data.PendingExpense
 import it.homebudget.app.data.buildPendingExpenses
 import it.homebudget.app.data.buildRecurringMonthlyExpenses
@@ -45,7 +46,6 @@ internal fun AddExpenseRoute(
     val useIosHostedFloatingChrome = useIosTransactionFloatingChrome || (isIos && (expenseId != null || readOnly))
     val useAndroidFixedActionChrome = !isIos && (expenseId != null || readOnly)
     val platformDatePicker = rememberPlatformDatePicker()
-    val platformOptionPicker = rememberPlatformOptionPicker()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val resolveCategoryName = rememberCategoryNameResolver()
@@ -76,12 +76,6 @@ internal fun AddExpenseRoute(
         }
     }
     val selectedCategory = categories.find { it.id == selectedCategoryId }
-    val installmentOptions = remember { (1..12).toList() }
-    val installmentLabels = remember(installmentOptions, labels.singlePayment, labels.installments) {
-        installmentOptions.associateWith { count ->
-            if (count == 1) labels.singlePayment else "$count ${labels.installments.lowercase()}"
-        }
-    }
 
     EnsureStarterCategoriesSeeded(repository)
 
@@ -267,10 +261,13 @@ internal fun AddExpenseRoute(
         description = description,
         onDescriptionChange = { description = it },
         installmentCount = installmentCount,
-        installmentOptions = installmentOptions,
-        installmentLabels = installmentLabels,
-        platformOptionPicker = platformOptionPicker,
-        onInstallmentCountChange = { installmentCount = it },
+        onInstallmentCountChange = {
+            val normalizedInstallmentCount = it.coerceIn(1, MAX_EXPENSE_INSTALLMENTS)
+            installmentCount = normalizedInstallmentCount
+            if (normalizedInstallmentCount > 1) {
+                isRecurringMonthly = false
+            }
+        },
         isRecurringMonthly = isRecurringMonthly,
         onRecurringMonthlyChange = {
             isRecurringMonthly = it

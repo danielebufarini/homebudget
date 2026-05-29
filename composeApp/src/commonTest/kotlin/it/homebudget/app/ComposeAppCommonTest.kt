@@ -59,6 +59,27 @@ class ComposeAppCommonTest {
     }
 
     @Test
+    fun buildPendingExpenses_allowsThirtyInstallments() {
+        val timeZone = TimeZone.UTC
+        val firstDate = LocalDate(2026, 1, 1).atStartOfDayIn(timeZone).toEpochMilliseconds()
+        var nextId = 0
+
+        val expenses = buildPendingExpenses(
+            amount = 3000L,
+            firstDate = firstDate,
+            installments = 30,
+            categoryId = "appliances",
+            description = "Installment plan",
+            isShared = false,
+            idProvider = { "expense-${nextId++}" },
+            timeZone = timeZone
+        )
+
+        assertEquals(30, expenses.size)
+        assertEquals(3000L, expenses.map { it.amount }.reduce { acc, value -> acc + value })
+    }
+
+    @Test
     fun buildRecurringMonthlyExpenses_repeatsFullAmountAcrossMonths() {
         val timeZone = TimeZone.UTC
         val firstDate = LocalDate(2026, 1, 31).atStartOfDayIn(timeZone).toEpochMilliseconds()

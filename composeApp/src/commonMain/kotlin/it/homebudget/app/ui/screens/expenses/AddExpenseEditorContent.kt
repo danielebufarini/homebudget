@@ -1,5 +1,13 @@
 package it.homebudget.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import it.homebudget.app.data.MAX_EXPENSE_INSTALLMENTS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +62,6 @@ internal fun AddExpenseEditorContent(
     description: String,
     onDescriptionChange: (String) -> Unit,
     installmentCount: Int,
-    installmentOptions: List<Int>,
-    installmentLabels: Map<Int, String>,
-    platformOptionPicker: PlatformOptionPicker,
     onInstallmentCountChange: (Int) -> Unit,
     isRecurringMonthly: Boolean,
     onRecurringMonthlyChange: (Boolean) -> Unit,
@@ -128,9 +134,6 @@ internal fun AddExpenseEditorContent(
                     description = description,
                     onDescriptionChange = onDescriptionChange,
                     installmentCount = installmentCount,
-                    installmentOptions = installmentOptions,
-                    installmentLabels = installmentLabels,
-                    platformOptionPicker = platformOptionPicker,
                     onInstallmentCountChange = onInstallmentCountChange,
                     isRecurringMonthly = isRecurringMonthly,
                     onRecurringMonthlyChange = onRecurringMonthlyChange,
@@ -232,9 +235,6 @@ private fun AddExpenseForm(
     description: String,
     onDescriptionChange: (String) -> Unit,
     installmentCount: Int,
-    installmentOptions: List<Int>,
-    installmentLabels: Map<Int, String>,
-    platformOptionPicker: PlatformOptionPicker,
     onInstallmentCountChange: (Int) -> Unit,
     isRecurringMonthly: Boolean,
     onRecurringMonthlyChange: (Boolean) -> Unit,
@@ -286,9 +286,6 @@ private fun AddExpenseForm(
         readOnly = readOnly,
         expenseId = expenseId,
         installmentCount = installmentCount,
-        installmentOptions = installmentOptions,
-        installmentLabels = installmentLabels,
-        platformOptionPicker = platformOptionPicker,
         onInstallmentCountChange = onInstallmentCountChange,
         isRecurringMonthly = isRecurringMonthly,
         onRecurringMonthlyChange = onRecurringMonthlyChange,
@@ -316,9 +313,6 @@ private fun AddExpenseOptionsSection(
     readOnly: Boolean,
     expenseId: String?,
     installmentCount: Int,
-    installmentOptions: List<Int>,
-    installmentLabels: Map<Int, String>,
-    platformOptionPicker: PlatformOptionPicker,
     onInstallmentCountChange: (Int) -> Unit,
     isRecurringMonthly: Boolean,
     onRecurringMonthlyChange: (Boolean) -> Unit,
@@ -328,39 +322,42 @@ private fun AddExpenseOptionsSection(
 ) {
     SoftSectionCard(title = labels.options) {
         if (expenseId == null && !isRecurringMonthly) {
-            SoftPickerRow(
+            InstallmentRulerPicker(
                 label = labels.installments,
-                value = installmentLabels.getValue(installmentCount),
-                icon = InstallmentsIcon,
+                value = installmentCount,
+                onValueChange = onInstallmentCountChange,
                 enabled = !readOnly,
-                onClick = {
-                    val options = installmentOptions.map { installmentLabels.getValue(it) }
-                    platformOptionPicker.show(
-                        title = labels.selectInstallments,
-                        options = options,
-                        selectedOption = installmentLabels.getValue(installmentCount),
-                    ) { selectedOption ->
-                        onInstallmentCountChange(
-                            installmentOptions.first { installmentLabels.getValue(it) == selectedOption },
-                        )
-                    }
-                },
+                valueRange = 1..MAX_EXPENSE_INSTALLMENTS,
+                singlePaymentLabel = labels.singlePayment,
+                installmentsLabel = labels.installments,
+                icon = InstallmentsIcon,
             )
         }
 
-        if (!readOnly && recurringSeriesId == null) {
-            SoftToggleRow(
-                label = labels.recurringMonthly,
-                description = null,
-                icon = RecurringIcon,
-                checked = isRecurringMonthly,
-                onCheckedChange = onRecurringMonthlyChange,
-            )
-            SoftInlineInfoCard(
-                visible = isRecurringMonthly,
-                text = labels.recurringExpenseInfo,
-                icon = RecurringIcon,
-            )
+        val showRecurringToggle = !readOnly && recurringSeriesId == null && installmentCount == 1
+        AnimatedVisibility(
+            visible = showRecurringToggle,
+            enter = fadeIn(animationSpec = tween(180)) +
+                expandVertically(animationSpec = tween(220)) +
+                slideInVertically(animationSpec = tween(220)) { -it / 4 },
+            exit = fadeOut(animationSpec = tween(120)) +
+                shrinkVertically(animationSpec = tween(180)) +
+                slideOutVertically(animationSpec = tween(180)) { -it / 4 },
+        ) {
+            Column {
+                SoftToggleRow(
+                    label = labels.recurringMonthly,
+                    description = null,
+                    icon = RecurringIcon,
+                    checked = isRecurringMonthly,
+                    onCheckedChange = onRecurringMonthlyChange,
+                )
+                SoftInlineInfoCard(
+                    visible = isRecurringMonthly,
+                    text = labels.recurringExpenseInfo,
+                    icon = RecurringIcon,
+                )
+            }
         }
 
         if (recurringSeriesId != null) {
