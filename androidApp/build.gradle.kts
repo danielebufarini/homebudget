@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace = "it.homebudget.app"
+    namespace = "it.danielebufarini.homebudget"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
-        applicationId = "it.homebudget.app"
+        applicationId = "it.danielebufarini.homebudget"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

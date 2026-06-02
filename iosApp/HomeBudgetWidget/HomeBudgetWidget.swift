@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-private let appGroupId = "group.it.homebudget.app"
+private let appGroupId = "group.it.danielebufarini.homebudget"
 private let voiceExpenseURL = URL(string: "homebudget://voice-expense")!
 
 private enum WidgetKeys {

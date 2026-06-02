@@ -19,7 +19,7 @@
 	<string>Convert your spoken expense command into text.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>it.homebudget.app.cloudsync</string>
+		<string>it.danielebufarini.homebudget.cloudsync</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
@@ -29,7 +29,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>it.homebudget.app</string>
+			<string>it.danielebufarini.homebudget</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>homebudget</string>

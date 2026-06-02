@@ -2,7 +2,7 @@
 import Foundation
 import WidgetKit
 
-private let homeBudgetWidgetAppGroupId = "group.it.homebudget.app"
+private let homeBudgetWidgetAppGroupId = "group.it.danielebufarini.homebudget"
 private let homeBudgetWidgetKind = "HomeBudgetWidget"
 private let homeBudgetWidgetMonthTitleKey = "homebudget.widget.monthTitle"
 private let homeBudgetWidgetExpenseAmountKey = "homebudget.widget.expenseAmount"

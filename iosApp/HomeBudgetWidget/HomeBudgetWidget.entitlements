@@ -4,7 +4,7 @@
 <dict>
     <key>com.apple.security.application-groups</key>
     <array>
-        <string>group.it.homebudget.app</string>
+        <string>group.it.danielebufarini.homebudget</string>
     </array>
 </dict>
 </plist>

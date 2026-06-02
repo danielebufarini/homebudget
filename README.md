@@ -69,9 +69,9 @@ Shared KMP module.
 
 Relevant directories:
 
-- [composeApp/src/commonMain/kotlin/it/homebudget/app/data](./composeApp/src/commonMain/kotlin/it/homebudget/app/data)
-- [composeApp/src/commonMain/kotlin/it/homebudget/app/database](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
-- [composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens)
+- [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data)
+- [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database)
+- [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens)
 - [composeApp/src/commonMain/composeResources](./composeApp/src/commonMain/composeResources)
 - [composeApp/schemas](./composeApp/schemas)
 
@@ -113,14 +113,14 @@ Important iOS feature areas:
 
 Persistence is built on Room KMP over bundled SQLite.
 
-- database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/database/HomeBudgetDatabase.kt)
-- entities and DAOs: [composeApp/src/commonMain/kotlin/it/homebudget/app/database](./composeApp/src/commonMain/kotlin/it/homebudget/app/database)
+- database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database/HomeBudgetDatabase.kt)
+- entities and DAOs: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database)
 - database builders:
-  - [DatabaseBuilderFactory.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.kt)
-  - [DatabaseBuilderFactory.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.android.kt)
-  - [DatabaseBuilderFactory.ios.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/data/DatabaseBuilderFactory.ios.kt)
+  - [DatabaseBuilderFactory.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.kt)
+  - [DatabaseBuilderFactory.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.android.kt)
+  - [DatabaseBuilderFactory.ios.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.ios.kt)
 
-The main application boundary is [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt), with category-specific operations in [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CategoryRepository.kt).
+The main application boundary is [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/ExpenseRepository.kt), with category-specific operations in [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CategoryRepository.kt).
 
 Categories are typed (`expense` / `income`), can be archived, and are seeded when the category table is empty.
 
@@ -128,9 +128,9 @@ Categories are typed (`expense` / `income`), can be archived, and are seeded whe
 
 Koin is the composition root.
 
-- shared graph: [composeApp/src/commonMain/kotlin/it/homebudget/app/di](./composeApp/src/commonMain/kotlin/it/homebudget/app/di)
-- Android graph: [composeApp/src/androidMain/kotlin/it/homebudget/app/di](./composeApp/src/androidMain/kotlin/it/homebudget/app/di)
-- iOS graph: [composeApp/src/iosMain/kotlin/it/homebudget/app/di](./composeApp/src/iosMain/kotlin/it/homebudget/app/di)
+- shared graph: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di)
+- Android graph: [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/di)
+- iOS graph: [composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/di)
 
 ### UI split
 
@@ -144,10 +144,10 @@ iOS uses a mixed model:
 
 Entry points:
 
-- shared app: [composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/App.kt)
-- Android host: [androidApp/src/main/kotlin/it/homebudget/app/MainActivity.kt](./androidApp/src/main/kotlin/it/homebudget/app/MainActivity.kt)
+- shared app: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/App.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/App.kt)
+- Android host: [androidApp/src/main/kotlin/it/danielebufarini/homebudget/MainActivity.kt](./androidApp/src/main/kotlin/it/danielebufarini/homebudget/MainActivity.kt)
 - iOS root view: [iosApp/iosApp/App/ContentView.swift](./iosApp/iosApp/App/ContentView.swift)
-- iOS shared screen host: [composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt](./composeApp/src/iosMain/kotlin/it/homebudget/app/MainViewController.kt)
+- iOS shared screen host: [composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/MainViewController.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/MainViewController.kt)
 
 Native iOS expense screens are split by responsibility:
 
@@ -174,7 +174,7 @@ The codebase uses classic GoF patterns where they reduce coupling without obscur
 - Strategy: [GroupedSectionExpansionStrategy.swift](./iosApp/iosApp/Features/Expenses/GroupedSectionExpansionStrategy.swift) encapsulates section expansion behavior shared by expense and income lists.
 - Factory: `CategoryIconSymbolFactory` in [GroupedExpenseRows.swift](./iosApp/iosApp/Features/Expenses/GroupedExpenseRows.swift) centralizes the mapping from persisted category icon keys to SF Symbols.
 - Bridge: iOS-specific Kotlin bridge classes under [composeApp/src/iosMain](./composeApp/src/iosMain) expose shared data snapshots to native SwiftUI screens.
-- Repository: shared data access is concentrated in [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/ExpenseRepository.kt) and [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CategoryRepository.kt).
+- Repository: shared data access is concentrated in [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/ExpenseRepository.kt) and [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CategoryRepository.kt).
 
 ## Localization
 
@@ -193,13 +193,13 @@ Native iOS strings:
 
 Full backup is JSON-based.
 
-- format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/BudgetBackup.kt)
-- orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/CloudSyncService.kt)
+- format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/BudgetBackup.kt)
+- orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CloudSyncService.kt)
 
 Android stores the canonical backup locally and can mirror it to Google Drive AppData.
 
-- [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/AndroidCloudBackupStore.android.kt)
-- [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/homebudget/app/data/GoogleDriveAuthorizationManager.android.kt)
+- [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/AndroidCloudBackupStore.android.kt)
+- [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/GoogleDriveAuthorizationManager.android.kt)
 
 iOS stores the canonical backup in the app ubiquity container.
 
@@ -209,16 +209,16 @@ iOS stores the canonical backup in the app ubiquity container.
 
 CSV import/export is separate from full backup.
 
-- [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/csv/CsvBudgetExport.kt)
-- [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/data/csv/CsvBudgetImport.kt)
+- [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/csv/CsvBudgetExport.kt)
+- [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/csv/CsvBudgetImport.kt)
 
 ## Voice entry
 
 Voice entry is platform-specific.
 
-- Android implementation lives under [composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens](./composeApp/src/androidMain/kotlin/it/homebudget/app/ui/screens)
+- Android implementation lives under [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens)
 - iOS implementation lives under [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
-- shared prompt and contract helpers live in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/homebudget/app/ui/screens/VoiceExpensePrompt.kt)
+- shared prompt and contract helpers live in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens/VoiceExpensePrompt.kt)
 
 ## Build
 

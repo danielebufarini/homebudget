@@ -1,0 +1,261 @@
+package it.danielebufarini.homebudget.ui.screens.expenses
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import homebudget.composeapp.generated.resources.Res
+import homebudget.composeapp.generated.resources.back
+import homebudget.composeapp.generated.resources.currency_symbol
+import homebudget.composeapp.generated.resources.expense
+import homebudget.composeapp.generated.resources.no_expenses_for_day
+import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unknown_category
+import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.formatAmount
+import it.danielebufarini.homebudget.data.sumAmountOf
+import it.danielebufarini.homebudget.database.Category
+import it.danielebufarini.homebudget.database.Expense
+import it.danielebufarini.homebudget.getPlatform
+import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
+import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
+import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
+import it.danielebufarini.homebudget.ui.screens.edgeToEdgeListContentPadding
+import it.danielebufarini.homebudget.ui.screens.platform.PlatformCard
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
+
+private data class DayExpensesState(
+    val expenses: List<Expense> = emptyList(),
+    val categoriesById: Map<String, Category> = emptyMap(),
+    val totalAmount: Long = 0L,
+)
+
+class DayExpensesScreen(
+    private val year: Int,
+    private val month: Int,
+    private val day: Int
+) : Screen {
+
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.current
+        RouteContent(
+            showNavigationChrome = true,
+            onBack = { navigator?.pop() },
+            onOpenExpense = { expenseId ->
+                navigator?.push(AddExpenseScreen(expenseId))
+            }
+        )
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun RouteContent(
+        showNavigationChrome: Boolean,
+        onBack: () -> Unit,
+        onOpenExpense: (String) -> Unit
+    ) {
+        val repository: ExpenseRepository = koinInject()
+        val isIos = remember { getPlatform().isIos }
+        val backLabel = stringResource(Res.string.back)
+        val currencySymbol = stringResource(Res.string.currency_symbol)
+        val expenseFallbackTitle = stringResource(Res.string.expense)
+        val emptyStateText = stringResource(Res.string.no_expenses_for_day)
+        val unknownCategoryLabel = stringResource(Res.string.unknown_category)
+        val shortMonthNames = stringArrayResource(Res.array.short_month_names)
+        val resolveCategoryName = rememberCategoryNameResolver()
+        val targetDate = remember(year, month, day) { LocalDate(year, month, day) }
+        val title = remember(targetDate, shortMonthNames) {
+            formatExpenseDateGroupTitle(targetDate, shortMonthNames.toList())
+        }
+
+        val (dayStartMillis, dayEndMillis) = remember(targetDate) {
+            val timeZone = TimeZone.currentSystemDefault()
+            targetDate.atStartOfDayIn(timeZone).toEpochMilliseconds() to
+                targetDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone).toEpochMilliseconds()
+        }
+        val dayExpensesStateFlow = remember(repository, dayStartMillis, dayEndMillis) {
+            combine(
+                repository.getExpensesBetween(dayStartMillis, dayEndMillis),
+                repository.getAllCategories()
+            ) { expenses, categories ->
+                DayExpensesState(
+                    expenses = expenses,
+                    categoriesById = categories.associateBy { it.id },
+                    totalAmount = expenses.sumAmountOf(Expense::amount)
+                )
+            }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+        val dayExpensesLoadKey = remember(dayStartMillis, dayEndMillis) {
+            "${dayStartMillis}:${dayEndMillis}"
+        }
+        val dayExpensesLoadState = dayExpensesStateFlow.collectAsFlowLoadState(
+            initialValue = DayExpensesState(),
+            resetKey = dayExpensesLoadKey
+        )
+        val dayExpensesState = dayExpensesLoadState.value
+
+        EnsureStarterCategoriesSeeded(repository)
+
+        val content: @Composable (PaddingValues) -> Unit = { padding ->
+            DayExpensesList(
+                expenses = dayExpensesState.expenses,
+                categoriesById = dayExpensesState.categoriesById,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentPadding = edgeToEdgeListContentPadding(scaffoldPadding = padding),
+                emptyStateText = emptyStateText,
+                expenseFallbackTitle = expenseFallbackTitle,
+                currencySymbol = currencySymbol,
+                unknownCategoryLabel = unknownCategoryLabel,
+                isLoading = dayExpensesLoadState.isLoading,
+                onOpenExpense = onOpenExpense,
+                resolveCategoryName = { category ->
+                    resolveCategoryName(category.id, category.name)
+                }
+            )
+        }
+
+        if (showNavigationChrome) {
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                contentWindowInsets = WindowInsets.systemBars,
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(title)
+                                Text(
+                                    text = formatAmount(dayExpensesState.totalAmount, currencySymbol),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            if (isIos) {
+                                TextButton(onClick = onBack) {
+                                    Text(backLabel)
+                                }
+                            }
+                        }
+                    )
+                }
+            ) { padding ->
+                content(padding)
+            }
+        } else {
+            content(PaddingValues())
+        }
+    }
+}
+
+@Composable
+private fun DayExpensesList(
+    expenses: List<Expense>,
+    categoriesById: Map<String, Category>,
+    modifier: Modifier,
+    contentPadding: PaddingValues,
+    emptyStateText: String,
+    expenseFallbackTitle: String,
+    currencySymbol: String,
+    unknownCategoryLabel: String,
+    isLoading: Boolean,
+    onOpenExpense: (String) -> Unit,
+    resolveCategoryName: (Category) -> String
+) {
+    if (expenses.isEmpty() && isLoading) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (expenses.isEmpty()) {
+            item {
+                PlatformCard {
+                    Text(
+                        text = emptyStateText,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+            return@LazyColumn
+        }
+
+        item {
+            PlatformCard(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    expenses.forEach { expense ->
+                        val row = groupedExpenseRowPresentation(
+                            expense = expense,
+                            categoriesById = categoriesById,
+                            isGroupedByDate = true,
+                            expenseFallbackTitle = expenseFallbackTitle,
+                            unknownCategoryLabel = unknownCategoryLabel,
+                            resolveCategoryName = resolveCategoryName
+                        )
+                        ExpenseListItemRow(
+                            title = row.title,
+                            subtitleText = row.subtitleText,
+                            amountText = formatAmount(expense.amount, currencySymbol),
+                            categoryColorKey = row.categoryColorKey,
+                            categoryIconKey = row.categoryIconKey,
+                            isRecurring = row.isRecurring,
+                            onClick = { onOpenExpense(expense.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

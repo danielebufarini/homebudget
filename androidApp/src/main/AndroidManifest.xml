@@ -20,7 +20,7 @@
                 android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="it.homebudget.app.action.REFRESH_HOME_BUDGET_WIDGETS" />
+                <action android:name="it.danielebufarini.homebudget.action.REFRESH_HOME_BUDGET_WIDGETS" />
             </intent-filter>
             <meta-data
                     android:name="android.appwidget.provider"
@@ -32,7 +32,7 @@
                 android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="it.homebudget.app.action.REFRESH_HOME_BUDGET_WIDGETS" />
+                <action android:name="it.danielebufarini.homebudget.action.REFRESH_HOME_BUDGET_WIDGETS" />
             </intent-filter>
             <meta-data
                     android:name="android.appwidget.provider"

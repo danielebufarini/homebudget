@@ -14,7 +14,7 @@
     <cross-platform-transfer platform="ios">
         <include domain="file" path="Data/homebudget-backup.json" />
         <platform-specific-params
-            bundleId="it.homebudget.app.daniele"
+            bundleId="it.danielebufarini.homebudget.daniele"
             teamId="264H653993"
             contentVersion="json-v1" />
     </cross-platform-transfer>
