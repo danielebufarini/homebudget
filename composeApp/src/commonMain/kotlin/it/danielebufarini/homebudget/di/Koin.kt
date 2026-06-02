@@ -22,6 +22,7 @@ import it.danielebufarini.homebudget.data.ExpenseRepositoryReadAdapter
 import it.danielebufarini.homebudget.data.ExpenseRepositoryTransactionWriteAdapter
 import it.danielebufarini.homebudget.data.IncomeReadRepository
 import it.danielebufarini.homebudget.data.IncomeRepository
+import it.danielebufarini.homebudget.data.PersistentWriteScope
 import it.danielebufarini.homebudget.data.RecurringTransactionService
 import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.WidgetRefreshCoordinator
@@ -41,6 +42,7 @@ val sharedModule = module {
     }
     single { DatabaseTransactionRunner(get()) }
     single { WidgetRefreshCoordinator() }
+    single { PersistentWriteScope() }
     single { CategoryRepository(get(), get()) }
     single { ExpenseEntryRepository(get(), get(), get()) }
     single { IncomeRepository(get(), get(), get()) }

@@ -42,6 +42,7 @@ import homebudget.composeapp.generated.resources.no_income_for_month
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
 import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.PersistentWriteScope
 import it.danielebufarini.homebudget.data.formatAmount
 import it.danielebufarini.homebudget.data.monthBounds
 import it.danielebufarini.homebudget.database.Category
@@ -148,8 +149,8 @@ class MonthlyIncomesScreen(
         onOpenIncome: (String) -> Unit
     ) {
         val repository: ExpenseRepository = koinInject()
+        val writeScope: PersistentWriteScope = koinInject()
         val isIos = rememberIsIosPlatform()
-        val scope = rememberCoroutineScope()
         val strings = rememberMonthlyIncomeStrings()
         val unknownCategoryLabel = stringResource(Res.string.unknown_category)
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
@@ -303,11 +304,11 @@ class MonthlyIncomesScreen(
                 strings = strings,
                 onDeleteItem = {
                     dismiss()
-                    scope.launch { repository.deleteIncome(income.id) }
+                    writeScope.launch { repository.deleteIncome(income.id) }
                 },
                 onDeleteSeries = { seriesId ->
                     dismiss()
-                    scope.launch { repository.deleteRecurringIncomeSeries(seriesId) }
+                    writeScope.launch { repository.deleteRecurringIncomeSeries(seriesId) }
                 },
                 onDismiss = dismiss
             )

@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +36,7 @@ import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
 import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.PersistentWriteScope
 import it.danielebufarini.homebudget.data.monthBounds
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.Expense
@@ -61,7 +61,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -211,8 +210,8 @@ abstract class BaseGroupedExpensesScreen(
         onOpenExpense: (String) -> Unit
     ) {
         val repository: ExpenseRepository = koinInject()
+        val writeScope: PersistentWriteScope = koinInject()
         val isIos = remember { getPlatform().isIos }
-        val scope = rememberCoroutineScope()
         val strings = rememberGroupedExpenseStrings()
         val fullMonthNames = stringArrayResource(Res.array.full_month_names)
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
@@ -313,13 +312,13 @@ abstract class BaseGroupedExpensesScreen(
                 },
                 onDeleteItem = {
                     pendingExpenseDelete = null
-                    scope.launch {
+                    writeScope.launch {
                         repository.deleteExpense(expense.id)
                     }
                 },
                 onDeleteSeries = { seriesId ->
                     pendingExpenseDelete = null
-                    scope.launch {
+                    writeScope.launch {
                         repository.deleteRecurringExpenseSeries(seriesId)
                     }
                 },
