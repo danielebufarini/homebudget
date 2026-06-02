@@ -11,6 +11,8 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -23,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
@@ -40,6 +43,7 @@ import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.no_income_for_month
 import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unable_to_delete_income
 import homebudget.composeapp.generated.resources.unknown_category
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.PersistentWriteScope
@@ -91,7 +95,8 @@ private data class MonthlyIncomeStrings(
     val recurringDeleteMessageTemplate: String,
     val income: String,
     val noIncomeForMonth: String,
-    val loadMoreSearchResults: String
+    val loadMoreSearchResults: String,
+    val unableToDeleteIncome: String
 )
 
 @Composable
@@ -107,7 +112,8 @@ private fun rememberMonthlyIncomeStrings(): MonthlyIncomeStrings =
         recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message),
         income = stringResource(Res.string.income),
         noIncomeForMonth = stringResource(Res.string.no_income_for_month),
-        loadMoreSearchResults = stringResource(Res.string.load_more_search_results)
+        loadMoreSearchResults = stringResource(Res.string.load_more_search_results),
+        unableToDeleteIncome = stringResource(Res.string.unable_to_delete_income)
     )
 
 class MonthlyIncomesScreen(
@@ -150,6 +156,8 @@ class MonthlyIncomesScreen(
     ) {
         val repository: ExpenseRepository = koinInject()
         val writeScope: PersistentWriteScope = koinInject()
+        val notificationScope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
         val isIos = rememberIsIosPlatform()
         val strings = rememberMonthlyIncomeStrings()
         val unknownCategoryLabel = stringResource(Res.string.unknown_category)
@@ -245,6 +253,9 @@ class MonthlyIncomesScreen(
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.onBackground,
                 contentWindowInsets = WindowInsets.systemBars,
+                snackbarHost = {
+                    SnackbarHost(hostState = snackbarHostState)
+                },
                 topBar = {
                     MonthlyIncomeTopBar(
                         selectedMonth = selectedMonth,
@@ -277,38 +288,57 @@ class MonthlyIncomesScreen(
                 )
             }
         } else {
-            MonthlyIncomeContent(
-                padding = PaddingValues(0.dp),
-                sections = incomeSections,
-                categoriesById = categoriesById,
-                groupingMode = groupingMode,
-                onGroupingModeChange = { groupingMode = it },
-                showNavigationChrome = showNavigationChrome,
-                isIos = isIos,
-                strings = strings,
-                canLoadMoreSearchResults = canLoadMoreSearchResults,
-                onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
-                isLoading = groupedIncomesLoadState.isLoading,
-                onOpenIncome = onOpenIncome,
-                onDeleteIncome = deleteIncomeAction,
-                onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                onNextMonth = { selectedMonth = selectedMonth.next() }
-            )
+            Box(modifier = Modifier.fillMaxSize()) {
+                MonthlyIncomeContent(
+                    padding = PaddingValues(0.dp),
+                    sections = incomeSections,
+                    categoriesById = categoriesById,
+                    groupingMode = groupingMode,
+                    onGroupingModeChange = { groupingMode = it },
+                    showNavigationChrome = showNavigationChrome,
+                    isIos = isIos,
+                    strings = strings,
+                    canLoadMoreSearchResults = canLoadMoreSearchResults,
+                    onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
+                    isLoading = groupedIncomesLoadState.isLoading,
+                    onOpenIncome = onOpenIncome,
+                    onDeleteIncome = deleteIncomeAction,
+                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                    onNextMonth = { selectedMonth = selectedMonth.next() }
+                )
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         }
 
         pendingIncomeDelete?.let { income ->
             val dismiss = { pendingIncomeDelete = null }
+            val showDeleteFailure = {
+                notificationScope.launch {
+                    snackbarHostState.showSnackbar(strings.unableToDeleteIncome)
+                }
+            }
 
             IncomeDeleteDialog(
                 income = income,
                 strings = strings,
                 onDeleteItem = {
                     dismiss()
-                    writeScope.launch { repository.deleteIncome(income.id) }
+                    writeScope.launchWrite(
+                        onFailure = { showDeleteFailure() }
+                    ) {
+                        repository.deleteIncome(income.id)
+                    }
                 },
                 onDeleteSeries = { seriesId ->
                     dismiss()
-                    writeScope.launch { repository.deleteRecurringIncomeSeries(seriesId) }
+                    writeScope.launchWrite(
+                        onFailure = { showDeleteFailure() }
+                    ) {
+                        repository.deleteRecurringIncomeSeries(seriesId)
+                    }
                 },
                 onDismiss = dismiss
             )

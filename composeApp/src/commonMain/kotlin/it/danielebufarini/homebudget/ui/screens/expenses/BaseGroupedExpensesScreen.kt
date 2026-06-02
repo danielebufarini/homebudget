@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +37,7 @@ import homebudget.composeapp.generated.resources.delete_recurring_item_confirmat
 import homebudget.composeapp.generated.resources.full_month_names
 import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.short_month_names
+import homebudget.composeapp.generated.resources.unable_to_delete_expense
 import homebudget.composeapp.generated.resources.unknown_category
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.PersistentWriteScope
@@ -61,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -75,7 +80,8 @@ private data class GroupedExpenseStrings(
     val deleteItemConfirmationMessageTemplate: String,
     val recurringDeleteMessageTemplate: String,
     val unknownCategory: String,
-    val loadMoreSearchResults: String
+    val loadMoreSearchResults: String,
+    val unableToDeleteExpense: String
 )
 
 private data class GroupedExpensesRouteData(
@@ -96,7 +102,8 @@ private data class GroupedExpensesScaffoldState(
     val isIos: Boolean,
     val canAddExpense: Boolean,
     val showMonthNavigationControls: Boolean,
-    val strings: GroupedExpenseStrings
+    val strings: GroupedExpenseStrings,
+    val snackbarHostState: SnackbarHostState
 )
 
 private data class GroupedExpensesContentState(
@@ -134,7 +141,8 @@ private fun rememberGroupedExpenseStrings(): GroupedExpenseStrings =
         deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
         recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message),
         unknownCategory = stringResource(Res.string.unknown_category),
-        loadMoreSearchResults = stringResource(Res.string.load_more_search_results)
+        loadMoreSearchResults = stringResource(Res.string.load_more_search_results),
+        unableToDeleteExpense = stringResource(Res.string.unable_to_delete_expense)
     )
 
 abstract class BaseGroupedExpensesScreen(
@@ -211,6 +219,8 @@ abstract class BaseGroupedExpensesScreen(
     ) {
         val repository: ExpenseRepository = koinInject()
         val writeScope: PersistentWriteScope = koinInject()
+        val notificationScope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
         val isIos = remember { getPlatform().isIos }
         val strings = rememberGroupedExpenseStrings()
         val fullMonthNames = stringArrayResource(Res.array.full_month_names)
@@ -272,7 +282,8 @@ abstract class BaseGroupedExpensesScreen(
             isIos = isIos,
             canAddExpense = canAddExpense(),
             showMonthNavigationControls = showMonthNavigationControls(),
-            strings = strings
+            strings = strings,
+            snackbarHostState = snackbarHostState
         )
         val contentState = GroupedExpensesContentState(
             routeData = routeData,
@@ -301,6 +312,12 @@ abstract class BaseGroupedExpensesScreen(
         }
 
         pendingExpenseDelete?.let { expense ->
+            val showDeleteFailure = {
+                notificationScope.launch {
+                    snackbarHostState.showSnackbar(strings.unableToDeleteExpense)
+                }
+            }
+
             ExpenseDeleteDialog(
                 expense = expense,
                 categoriesById = routeData.categoriesById,
@@ -312,13 +329,17 @@ abstract class BaseGroupedExpensesScreen(
                 },
                 onDeleteItem = {
                     pendingExpenseDelete = null
-                    writeScope.launch {
+                    writeScope.launchWrite(
+                        onFailure = { showDeleteFailure() }
+                    ) {
                         repository.deleteExpense(expense.id)
                     }
                 },
                 onDeleteSeries = { seriesId ->
                     pendingExpenseDelete = null
-                    writeScope.launch {
+                    writeScope.launchWrite(
+                        onFailure = { showDeleteFailure() }
+                    ) {
                         repository.deleteRecurringExpenseSeries(seriesId)
                     }
                 },
@@ -437,7 +458,13 @@ private fun GroupedExpensesRouteScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     if (!state.showNavigationChrome) {
-        content(PaddingValues(0.dp))
+        Box(modifier = Modifier.fillMaxSize()) {
+            content(PaddingValues(0.dp))
+            SnackbarHost(
+                hostState = state.snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
         return
     }
 
@@ -445,6 +472,9 @@ private fun GroupedExpensesRouteScaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
         contentWindowInsets = WindowInsets.systemBars,
+        snackbarHost = {
+            SnackbarHost(hostState = state.snackbarHostState)
+        },
         topBar = {
             GroupedExpensesTopBar(
                 selectedMonth = state.selectedMonth,

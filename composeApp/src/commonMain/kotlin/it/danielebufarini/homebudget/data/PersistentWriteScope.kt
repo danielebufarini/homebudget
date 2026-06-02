@@ -1,5 +1,6 @@
 package it.danielebufarini.homebudget.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -8,9 +9,20 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 internal class PersistentWriteScope(
-    coroutineContext: CoroutineContext = SupervisorJob() + Dispatchers.Default
+    coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
-    private val scope = CoroutineScope(coroutineContext)
+    private val scope = CoroutineScope(coroutineContext + SupervisorJob())
 
-    fun launch(block: suspend CoroutineScope.() -> Unit): Job = scope.launch(block = block)
+    fun launchWrite(
+        onFailure: (Throwable) -> Unit = {},
+        block: suspend () -> Unit
+    ): Job = scope.launch {
+        try {
+            block()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (throwable: Throwable) {
+            onFailure(throwable)
+        }
+    }
 }

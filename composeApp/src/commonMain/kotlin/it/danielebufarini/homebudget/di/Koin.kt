@@ -42,7 +42,7 @@ val sharedModule = module {
     }
     single { DatabaseTransactionRunner(get()) }
     single { WidgetRefreshCoordinator() }
-    single { PersistentWriteScope() }
+    single { PersistentWriteScope(databaseQueryCoroutineContext) }
     single { CategoryRepository(get(), get()) }
     single { ExpenseEntryRepository(get(), get(), get()) }
     single { IncomeRepository(get(), get(), get()) }
