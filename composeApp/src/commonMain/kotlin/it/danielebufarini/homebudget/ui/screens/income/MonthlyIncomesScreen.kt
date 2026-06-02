@@ -41,7 +41,6 @@ import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.no_income_for_month
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
-import it.danielebufarini.homebudget.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.formatAmount
 import it.danielebufarini.homebudget.data.monthBounds
@@ -52,6 +51,7 @@ import it.danielebufarini.homebudget.ui.screens.ExpenseGroupingMode
 import it.danielebufarini.homebudget.ui.screens.GroupedTransactionListContent
 import it.danielebufarini.homebudget.ui.screens.GroupedTransactionSection
 import it.danielebufarini.homebudget.ui.screens.GroupedTransactionSectionStyle
+import it.danielebufarini.homebudget.ui.screens.IncomeSection
 import it.danielebufarini.homebudget.ui.screens.buildGroupedIncomesState
 import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
@@ -65,6 +65,7 @@ import it.danielebufarini.homebudget.ui.screens.expenses.formatExpenseDateGroupT
 import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
 import it.danielebufarini.homebudget.ui.screens.searchIncomeCandidatePages
+import it.danielebufarini.homebudget.ui.screens.transactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.transactions.AddTransactionScreen
 import it.danielebufarini.homebudget.ui.screens.transactions.BottomTransactionQuickActions
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionDeleteConfirmationDialog
@@ -161,29 +162,25 @@ class MonthlyIncomesScreen(
         val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
-        val searchMode = searchQuery.isNotBlank()
-        val searchPageCount = if (searchMode) {
-            externalSearchPageCount ?: localSearchPageCount
-        } else {
-            1
-        }
-        val loadedSearchCandidateCount = searchPageCount * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-        val loadMoreSearchResults = onLoadMoreSearchResults ?: {
-            localSearchPageCount += 1
-        }
+        val searchPaging = transactionSearchPaging(
+            searchQuery = searchQuery,
+            externalSearchPageCount = externalSearchPageCount,
+            localSearchPageCount = localSearchPageCount,
+            onLocalSearchPageCountChange = { localSearchPageCount = it },
+            onLoadMoreSearchResults = onLoadMoreSearchResults
+        )
         val incomesFlow = remember(
             repository,
             monthStartMillis,
             monthEndMillis,
-            searchMode,
+            searchPaging.searchMode,
             searchQuery,
-            searchPageCount
+            searchPaging.pageCount
         ) {
-            if (searchMode) {
+            if (searchPaging.searchMode) {
                 repository.searchIncomeCandidatePages(
                     query = searchQuery,
-                    pageCount = searchPageCount,
-                    pageSize = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+                    pageCount = searchPaging.pageCount
                 )
             } else {
                 repository.getIncomesBetween(monthStartMillis, monthEndMillis)
@@ -220,8 +217,8 @@ class MonthlyIncomesScreen(
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
-        val groupedIncomesLoadKey = remember(monthStartMillis, monthEndMillis, searchMode, searchQuery) {
-            "${monthStartMillis}:${monthEndMillis}:${searchMode}:${searchQuery}"
+        val groupedIncomesLoadKey = remember(monthStartMillis, monthEndMillis, searchPaging.searchMode, searchQuery) {
+            "${monthStartMillis}:${monthEndMillis}:${searchPaging.searchMode}:${searchQuery}"
         }
         val groupedIncomesLoadState = groupedIncomesFlow.collectAsFlowLoadState(
             initialValue = emptyGroupedIncomesState(),
@@ -231,80 +228,15 @@ class MonthlyIncomesScreen(
         val groupedIncomes = groupedIncomesState.sections
         val totalAmount = groupedIncomesState.totalAmount
         val categoriesById = groupedIncomesState.categoriesById
-        val canLoadMoreSearchResults = searchMode &&
-            groupedIncomesState.candidateCount >= loadedSearchCandidateCount
+        val canLoadMoreSearchResults = searchPaging.searchMode &&
+            groupedIncomesState.candidateCount >= searchPaging.loadedCandidateCount
+        val incomeSections = remember(groupedIncomes, categoriesById) {
+            groupedIncomes.toTransactionSections(categoriesById)
+        }
         val deleteIncomeAction: (String) -> Unit = deleteAction@{ incomeId ->
             val income = groupedIncomesState.visibleIncomes.find { it.id == incomeId }
                 ?: return@deleteAction
             pendingIncomeDelete = income
-        }
-        val content: @Composable (PaddingValues) -> Unit = { padding ->
-            val showFloatingBottomControls = !isIos
-            val bottomControlClearance = if (showFloatingBottomControls) 88.dp else 0.dp
-            val listContentPadding = edgeToEdgeListContentPadding(
-                scaffoldPadding = padding,
-                bottom = 16.dp + bottomControlClearance
-            )
-            val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .monthSwipeNavigation(
-                        enabled = showNavigationChrome,
-                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                        onNextMonth = { selectedMonth = selectedMonth.next() }
-                    )
-            ) {
-                GroupedTransactionListContent(
-                    sections = groupedIncomes.map { section ->
-                        val firstCategoryId = section.incomes.firstOrNull()?.categoryId
-                        GroupedTransactionSection(
-                            key = section.key,
-                            title = section.title,
-                            totalAmount = section.totalAmount,
-                            categoryId = firstCategoryId,
-                            categoryIconKey = firstCategoryId?.let(categoriesById::get)?.icon,
-                            items = section.incomes
-                        )
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    groupingMode = groupingMode,
-                    onGroupingModeChange = { groupingMode = it },
-                    emptyStateText = strings.noIncomeForMonth,
-                    currencySymbol = strings.currencySymbol,
-                    byCategoryLabel = strings.byCategory,
-                    byDateLabel = strings.byDate,
-                    groupsExpandedByDefault = false,
-                    sectionStyle = GroupedTransactionSectionStyle(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        textStyle = MaterialTheme.typography.titleMedium,
-                        iconTint = null,
-                        chevronContainerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f),
-                        chevronContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    showGroupingControls = showFloatingBottomControls,
-                    listContentPadding = listContentPadding,
-                    bottomControlsBottomPadding = bottomControlsPadding,
-                    loadMoreSearchResultsLabel = strings.loadMoreSearchResults,
-                    canLoadMoreSearchResults = canLoadMoreSearchResults,
-                    onLoadMoreSearchResults = loadMoreSearchResults,
-                    isLoading = groupedIncomesLoadState.isLoading,
-                    emptyStateCentered = true,
-                    itemKey = Income::id
-                ) { income ->
-                    val category = income.categoryId?.let(categoriesById::get)
-                    MonthlyIncomeRow(
-                        income = income,
-                        categoryIconKey = category?.icon,
-                        categoryColorKey = income.categoryId,
-                        onOpenIncome = onOpenIncome,
-                        onDeleteIncome = deleteIncomeAction
-                    )
-                }
-            }
         }
 
         if (showNavigationChrome) {
@@ -313,67 +245,230 @@ class MonthlyIncomesScreen(
                 contentColor = MaterialTheme.colorScheme.onBackground,
                 contentWindowInsets = WindowInsets.systemBars,
                 topBar = {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            MonthNavigationTitle(
-                                selectedMonth = selectedMonth,
-                                subtitle = "${strings.income} • ${formatAmount(totalAmount, strings.currencySymbol)}",
-                                onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                                onNextMonth = { selectedMonth = selectedMonth.next() }
-                            )
-                        },
-                        navigationIcon = {
-                            if (isIos) {
-                                TextButton(onClick = onBack) {
-                                    Text(strings.back)
-                                }
-                            }
-                        },
-                        actions = {
-                            if (!isIos) {
-                                BottomTransactionQuickActions(
-                                    addContentDescription = strings.addIncome,
-                                    onAddTransaction = { onAddIncome(selectedMonth.year, selectedMonth.month) },
-                                    modifier = Modifier.padding(end = 12.dp)
-                                )
-                            }
-                        }
+                    MonthlyIncomeTopBar(
+                        selectedMonth = selectedMonth,
+                        totalAmount = totalAmount,
+                        strings = strings,
+                        isIos = isIos,
+                        onBack = onBack,
+                        onAddIncome = { onAddIncome(selectedMonth.year, selectedMonth.month) },
+                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                        onNextMonth = { selectedMonth = selectedMonth.next() }
                     )
                 }
             ) { padding ->
-                content(padding)
+                MonthlyIncomeContent(
+                    padding = padding,
+                    sections = incomeSections,
+                    categoriesById = categoriesById,
+                    groupingMode = groupingMode,
+                    onGroupingModeChange = { groupingMode = it },
+                    showNavigationChrome = showNavigationChrome,
+                    isIos = isIos,
+                    strings = strings,
+                    canLoadMoreSearchResults = canLoadMoreSearchResults,
+                    onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
+                    isLoading = groupedIncomesLoadState.isLoading,
+                    onOpenIncome = onOpenIncome,
+                    onDeleteIncome = deleteIncomeAction,
+                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                    onNextMonth = { selectedMonth = selectedMonth.next() }
+                )
             }
         } else {
-            content(PaddingValues(0.dp))
+            MonthlyIncomeContent(
+                padding = PaddingValues(0.dp),
+                sections = incomeSections,
+                categoriesById = categoriesById,
+                groupingMode = groupingMode,
+                onGroupingModeChange = { groupingMode = it },
+                showNavigationChrome = showNavigationChrome,
+                isIos = isIos,
+                strings = strings,
+                canLoadMoreSearchResults = canLoadMoreSearchResults,
+                onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
+                isLoading = groupedIncomesLoadState.isLoading,
+                onOpenIncome = onOpenIncome,
+                onDeleteIncome = deleteIncomeAction,
+                onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+                onNextMonth = { selectedMonth = selectedMonth.next() }
+            )
         }
 
         pendingIncomeDelete?.let { income ->
-            val incomeDisplayName = income.description?.ifBlank { strings.income } ?: strings.income
-            TransactionDeleteConfirmationDialog(
-                itemDisplayName = incomeDisplayName,
-                recurringSeriesId = income.recurringSeriesId,
-                deleteTitle = strings.delete,
-                deleteItemConfirmationMessageTemplate = strings.deleteItemConfirmationMessageTemplate,
-                recurringDeleteMessageTemplate = strings.recurringDeleteMessageTemplate,
+            val dismiss = { pendingIncomeDelete = null }
+
+            IncomeDeleteDialog(
+                income = income,
+                strings = strings,
                 onDeleteItem = {
-                    pendingIncomeDelete = null
-                    scope.launch {
-                        repository.deleteIncome(income.id)
-                    }
+                    dismiss()
+                    scope.launch { repository.deleteIncome(income.id) }
                 },
                 onDeleteSeries = { seriesId ->
-                    pendingIncomeDelete = null
-                    scope.launch {
-                        repository.deleteRecurringIncomeSeries(seriesId)
-                    }
+                    dismiss()
+                    scope.launch { repository.deleteRecurringIncomeSeries(seriesId) }
                 },
-                onDismiss = {
-                    pendingIncomeDelete = null
-                }
+                onDismiss = dismiss
             )
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MonthlyIncomeTopBar(
+    selectedMonth: MonthCursor,
+    totalAmount: Long,
+    strings: MonthlyIncomeStrings,
+    isIos: Boolean,
+    onBack: () -> Unit,
+    onAddIncome: () -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    CenterAlignedTopAppBar(
+        title = {
+            MonthNavigationTitle(
+                selectedMonth = selectedMonth,
+                subtitle = "${strings.income} • ${formatAmount(totalAmount, strings.currencySymbol)}",
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth
+            )
+        },
+        navigationIcon = {
+            if (isIos) {
+                TextButton(onClick = onBack) {
+                    Text(strings.back)
+                }
+            }
+        },
+        actions = {
+            if (!isIos) {
+                BottomTransactionQuickActions(
+                    addContentDescription = strings.addIncome,
+                    onAddTransaction = onAddIncome,
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun MonthlyIncomeContent(
+    padding: PaddingValues,
+    sections: List<GroupedTransactionSection<Income>>,
+    categoriesById: Map<String, Category>,
+    groupingMode: ExpenseGroupingMode,
+    onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
+    showNavigationChrome: Boolean,
+    isIos: Boolean,
+    strings: MonthlyIncomeStrings,
+    canLoadMoreSearchResults: Boolean,
+    onLoadMoreSearchResults: () -> Unit,
+    isLoading: Boolean,
+    onOpenIncome: (String) -> Unit,
+    onDeleteIncome: (String) -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    val showFloatingBottomControls = !isIos
+    val bottomControlClearance = if (showFloatingBottomControls) 88.dp else 0.dp
+    val listContentPadding = edgeToEdgeListContentPadding(
+        scaffoldPadding = padding,
+        bottom = 16.dp + bottomControlClearance
+    )
+    val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .monthSwipeNavigation(
+                enabled = showNavigationChrome,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth
+            )
+    ) {
+        GroupedTransactionListContent(
+            sections = sections,
+            modifier = Modifier.fillMaxSize(),
+            groupingMode = groupingMode,
+            onGroupingModeChange = onGroupingModeChange,
+            emptyStateText = strings.noIncomeForMonth,
+            currencySymbol = strings.currencySymbol,
+            byCategoryLabel = strings.byCategory,
+            byDateLabel = strings.byDate,
+            groupsExpandedByDefault = false,
+            sectionStyle = monthlyIncomeSectionStyle(),
+            showGroupingControls = showFloatingBottomControls,
+            listContentPadding = listContentPadding,
+            bottomControlsBottomPadding = bottomControlsPadding,
+            loadMoreSearchResultsLabel = strings.loadMoreSearchResults,
+            canLoadMoreSearchResults = canLoadMoreSearchResults,
+            onLoadMoreSearchResults = onLoadMoreSearchResults,
+            isLoading = isLoading,
+            emptyStateCentered = true,
+            itemKey = Income::id
+        ) { income ->
+            val category = income.categoryId?.let(categoriesById::get)
+            MonthlyIncomeRow(
+                income = income,
+                categoryIconKey = category?.icon,
+                categoryColorKey = income.categoryId,
+                onOpenIncome = onOpenIncome,
+                onDeleteIncome = onDeleteIncome
+            )
+        }
+    }
+}
+
+@Composable
+private fun monthlyIncomeSectionStyle(): GroupedTransactionSectionStyle =
+    GroupedTransactionSectionStyle(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        textStyle = MaterialTheme.typography.titleMedium,
+        iconTint = null,
+        chevronContainerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f),
+        chevronContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    )
+
+@Composable
+private fun IncomeDeleteDialog(
+    income: Income,
+    strings: MonthlyIncomeStrings,
+    onDeleteItem: () -> Unit,
+    onDeleteSeries: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    TransactionDeleteConfirmationDialog(
+        itemDisplayName = income.description?.ifBlank { strings.income } ?: strings.income,
+        recurringSeriesId = income.recurringSeriesId,
+        deleteTitle = strings.delete,
+        deleteItemConfirmationMessageTemplate = strings.deleteItemConfirmationMessageTemplate,
+        recurringDeleteMessageTemplate = strings.recurringDeleteMessageTemplate,
+        onDeleteItem = onDeleteItem,
+        onDeleteSeries = onDeleteSeries,
+        onDismiss = onDismiss
+    )
+}
+
+private fun List<IncomeSection>.toTransactionSections(
+    categoriesById: Map<String, Category>
+): List<GroupedTransactionSection<Income>> =
+    map { section ->
+        val firstCategoryId = section.incomes.firstOrNull()?.categoryId
+        GroupedTransactionSection(
+            key = section.key,
+            title = section.title,
+            totalAmount = section.totalAmount,
+            categoryId = firstCategoryId,
+            categoryIconKey = firstCategoryId?.let(categoriesById::get)?.icon,
+            items = section.incomes
+        )
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

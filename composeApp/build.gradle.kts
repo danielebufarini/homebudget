@@ -15,7 +15,7 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     android {
-        namespace = "it.homebudget.shared"
+        namespace = "it.danielebufarini.homebudget.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         androidResources {
@@ -35,7 +35,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            binaryOption("bundleId", "it.homebudget.composeapp")
+            binaryOption("bundleId", "it.danielebufarini.homebudget.composeapp")
         }
     }
 

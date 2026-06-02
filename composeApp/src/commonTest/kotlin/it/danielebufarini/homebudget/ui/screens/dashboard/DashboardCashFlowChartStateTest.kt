@@ -2,7 +2,7 @@ package it.danielebufarini.homebudget.ui.screens.dashboard
 
 import it.danielebufarini.homebudget.data.DashboardBalanceTrend
 import it.danielebufarini.homebudget.data.DashboardMonthTotal
-import it.danielebufarini.homebudget.ui.screens.MonthCursor
+import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

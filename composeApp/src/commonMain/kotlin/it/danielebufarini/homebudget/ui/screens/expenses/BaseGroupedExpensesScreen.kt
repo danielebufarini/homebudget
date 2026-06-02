@@ -36,13 +36,15 @@ import homebudget.composeapp.generated.resources.full_month_names
 import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
-import it.danielebufarini.homebudget.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.monthBounds
+import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.Expense
 import it.danielebufarini.homebudget.getPlatform
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.ExpenseGroupingMode
+import it.danielebufarini.homebudget.ui.screens.ExpenseSection
+import it.danielebufarini.homebudget.ui.screens.TransactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.buildGroupedExpensesState
 import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
@@ -51,6 +53,7 @@ import it.danielebufarini.homebudget.ui.screens.edgeToEdgeListContentPadding
 import it.danielebufarini.homebudget.ui.screens.emptyGroupedExpensesState
 import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
 import it.danielebufarini.homebudget.ui.screens.searchExpenseCandidatePages
+import it.danielebufarini.homebudget.ui.screens.transactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.transactions.AddTransactionScreen
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionDeleteConfirmationDialog
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionEditorKind
@@ -62,6 +65,78 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+
+private data class GroupedExpenseStrings(
+    val addExpense: String,
+    val back: String,
+    val byCategory: String,
+    val byDate: String,
+    val currencySymbol: String,
+    val delete: String,
+    val deleteItemConfirmationMessageTemplate: String,
+    val recurringDeleteMessageTemplate: String,
+    val unknownCategory: String,
+    val loadMoreSearchResults: String
+)
+
+private data class GroupedExpensesRouteData(
+    val groupedExpenses: List<ExpenseSection>,
+    val visibleExpenses: List<Expense>,
+    val totalAmount: Long,
+    val categoriesById: Map<String, Category>,
+    val canLoadMoreSearchResults: Boolean,
+    val isLoading: Boolean
+)
+
+private data class GroupedExpensesScaffoldState(
+    val showNavigationChrome: Boolean,
+    val selectedMonth: MonthCursor,
+    val screenTitle: String,
+    val navigationDescriptor: String?,
+    val totalAmount: Long,
+    val isIos: Boolean,
+    val canAddExpense: Boolean,
+    val showMonthNavigationControls: Boolean,
+    val strings: GroupedExpenseStrings
+)
+
+private data class GroupedExpensesContentState(
+    val routeData: GroupedExpensesRouteData,
+    val groupingMode: ExpenseGroupingMode,
+    val showFloatingBottomControls: Boolean,
+    val monthSwipeEnabled: Boolean,
+    val emptyStateText: String,
+    val expenseFallbackTitle: String,
+    val strings: GroupedExpenseStrings,
+    val groupsExpandedByDefault: Boolean,
+    val sectionStyle: GroupedExpenseSectionStyle
+)
+
+private data class GroupedExpensesRouteActions(
+    val onBack: () -> Unit,
+    val onAddExpense: () -> Unit,
+    val onOpenExpense: (String) -> Unit,
+    val onDeleteExpense: ((String) -> Unit)?,
+    val onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
+    val onLoadMoreSearchResults: () -> Unit,
+    val onPreviousMonth: () -> Unit,
+    val onNextMonth: () -> Unit
+)
+
+@Composable
+private fun rememberGroupedExpenseStrings(): GroupedExpenseStrings =
+    GroupedExpenseStrings(
+        addExpense = stringResource(Res.string.add_expense),
+        back = stringResource(Res.string.back),
+        byCategory = stringResource(Res.string.by_category),
+        byDate = stringResource(Res.string.by_date),
+        currencySymbol = stringResource(Res.string.currency_symbol),
+        delete = stringResource(Res.string.delete),
+        deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
+        recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message),
+        unknownCategory = stringResource(Res.string.unknown_category),
+        loadMoreSearchResults = stringResource(Res.string.load_more_search_results)
+    )
 
 abstract class BaseGroupedExpensesScreen(
     private val year: Int,
@@ -138,16 +213,7 @@ abstract class BaseGroupedExpensesScreen(
         val repository: ExpenseRepository = koinInject()
         val isIos = remember { getPlatform().isIos }
         val scope = rememberCoroutineScope()
-        val addExpenseLabel = stringResource(Res.string.add_expense)
-        val backLabel = stringResource(Res.string.back)
-        val byCategoryLabel = stringResource(Res.string.by_category)
-        val byDateLabel = stringResource(Res.string.by_date)
-        val currencySymbol = stringResource(Res.string.currency_symbol)
-        val deleteLabel = stringResource(Res.string.delete)
-        val deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message)
-        val recurringExpenseDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message)
-        val unknownCategoryLabel = stringResource(Res.string.unknown_category)
-        val loadMoreSearchResultsLabel = stringResource(Res.string.load_more_search_results)
+        val strings = rememberGroupedExpenseStrings()
         val fullMonthNames = stringArrayResource(Res.array.full_month_names)
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
         val shortMonthNamesList = remember(shortMonthNames) { shortMonthNames.toList() }
@@ -159,225 +225,92 @@ abstract class BaseGroupedExpensesScreen(
         var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
         var localSearchPageCount by remember(searchQuery) { mutableStateOf(1) }
         var pendingExpenseDelete by remember { mutableStateOf<Expense?>(null) }
-        val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
-            monthBounds(selectedMonth.year, selectedMonth.month)
-        }
-        val searchMode = searchQuery.isNotBlank()
-        val searchPageCount = if (searchMode) {
-            externalSearchPageCount ?: localSearchPageCount
-        } else {
-            1
-        }
-        val loadedSearchCandidateCount = searchPageCount * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-        val loadMoreSearchResults = onLoadMoreSearchResults ?: {
-            localSearchPageCount += 1
-        }
-        val expensesFlow = remember(
-            repository,
-            monthStartMillis,
-            monthEndMillis,
-            searchMode,
-            searchQuery,
-            searchPageCount
-        ) {
-            if (searchMode) {
-                repository.searchExpenseCandidatePages(
-                    query = searchQuery,
-                    pageCount = searchPageCount,
-                    pageSize = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-                )
-            } else {
-                repository.getExpensesBetween(monthStartMillis, monthEndMillis)
-            }
-        }
-        val categoriesFlow = remember(repository) {
-            repository.getAllCategories()
-        }
+        val searchPaging = transactionSearchPaging(
+            searchQuery = searchQuery,
+            externalSearchPageCount = externalSearchPageCount,
+            localSearchPageCount = localSearchPageCount,
+            onLocalSearchPageCountChange = { localSearchPageCount = it },
+            onLoadMoreSearchResults = onLoadMoreSearchResults
+        )
 
         EnsureStarterCategoriesSeeded(repository)
 
-        val groupedExpensesFlow = remember(
-            expensesFlow,
-            categoriesFlow,
+        val routeData = rememberGroupedExpensesRouteData(
+            repository = repository,
+            selectedMonth = selectedMonth,
             groupingMode,
-            resolveCategoryName,
-            unknownCategoryLabel,
-            shortMonthNamesList,
-            searchQuery,
-            currencySymbol
-        ) {
-            combine(expensesFlow, categoriesFlow) { expenses, categories ->
-                val categoriesById = categories.associateBy { it.id }
-                buildGroupedExpensesState(
-                    expenses = expenses,
-                    categoriesById = categoriesById,
-                    groupingMode = groupingMode,
-                    includeExpense = ::includeExpense,
-                    includeCategory = ::includeCategory,
-                    resolveCategoryName = { category ->
-                        resolveCategoryName(category.id, category.name)
-                    },
-                    unknownCategoryLabel = unknownCategoryLabel,
-                    shortMonthNames = shortMonthNamesList,
-                    searchQuery = searchQuery,
-                    currencySymbol = currencySymbol
-                )
-            }
-                .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
-        }
-        val groupedExpensesLoadKey = remember(monthStartMillis, monthEndMillis, searchMode, searchQuery) {
-            "${monthStartMillis}:${monthEndMillis}:${searchMode}:${searchQuery}"
-        }
-        val groupedExpensesLoadState = groupedExpensesFlow.collectAsFlowLoadState(
-            initialValue = emptyGroupedExpensesState(),
-            resetKey = groupedExpensesLoadKey
+            searchPaging = searchPaging,
+            shortMonthNames = shortMonthNamesList,
+            strings = strings,
+            resolveCategoryName = resolveCategoryName
         )
-        val groupedExpensesState = groupedExpensesLoadState.value
-        val groupedExpenses = groupedExpensesState.sections
-        val totalAmount = groupedExpensesState.totalAmount
-        val categoriesById = groupedExpensesState.categoriesById
-        val canLoadMoreSearchResults = searchMode &&
-            groupedExpensesState.candidateCount >= loadedSearchCandidateCount
         val deleteExpenseAction: ((String) -> Unit)? = if (canDeleteExpense()) {
             deleteAction@{ expenseId ->
-                val expense = groupedExpensesState.visibleExpenses.find { it.id == expenseId }
+                val expense = routeData.visibleExpenses.find { it.id == expenseId }
                     ?: return@deleteAction
                 pendingExpenseDelete = expense
             }
         } else {
             null
         }
-        if (showNavigationChrome) {
-            Scaffold(
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                contentWindowInsets = WindowInsets.systemBars,
-                topBar = {
-                    GroupedExpensesTopBar(
-                        selectedMonth = selectedMonth,
-                        title = screenTitle(monthName(selectedMonth.month, fullMonthNames)),
-                        navigationDescriptor = navigationDescriptor,
-                        totalAmount = totalAmount,
-                        currencySymbol = currencySymbol,
-                        isIos = isIos,
-                        canAddExpense = canAddExpense(),
-                        showMonthNavigationControls = showMonthNavigationControls(),
-                        backLabel = backLabel,
-                        addExpenseLabel = addExpenseLabel,
-                        onBack = onBack,
-                        onAddExpense = onAddExpense,
-                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                        onNextMonth = { selectedMonth = selectedMonth.next() }
-                    )
-                }
-            ) { padding ->
-                val showFloatingBottomControls = !isIos
-                val bottomControlClearance = if (showFloatingBottomControls) 88.dp else 0.dp
-                val listContentPadding = edgeToEdgeListContentPadding(
-                    scaffoldPadding = padding,
-                    bottom = 16.dp + bottomControlClearance
-                )
-                val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                        .monthSwipeNavigation(
-                            enabled = showMonthNavigationControls(),
-                            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                            onNextMonth = { selectedMonth = selectedMonth.next() }
-                        )
-                ) {
-                    GroupedExpensesContent(
-                        groupedExpenses = groupedExpenses,
-                        categoriesById = categoriesById,
-                        modifier = Modifier.fillMaxSize(),
-                        groupingMode = groupingMode,
-                        onGroupingModeChange = { groupingMode = it },
-                        onOpenExpense = onOpenExpense,
-                        onDeleteExpense = deleteExpenseAction,
-                        emptyStateText = emptyStateText,
-                        expenseFallbackTitle = expenseFallbackTitle,
-                        currencySymbol = currencySymbol,
-                        unknownCategoryLabel = unknownCategoryLabel,
-                        resolveCategoryName = { category ->
-                            resolveCategoryName(category.id, category.name)
-                        },
-                        byCategoryLabel = byCategoryLabel,
-                        byDateLabel = byDateLabel,
-                        groupsExpandedByDefault = groupsExpandedByDefault(),
-                        sectionStyle = groupedExpenseSectionStyle(),
-                        showGroupingControls = !showFloatingBottomControls,
-                        listContentPadding = listContentPadding,
-                        bottomControlsBottomPadding = bottomControlsPadding,
-                        loadMoreSearchResultsLabel = loadMoreSearchResultsLabel,
-                        canLoadMoreSearchResults = canLoadMoreSearchResults,
-                        onLoadMoreSearchResults = loadMoreSearchResults,
-                        isLoading = groupedExpensesLoadState.isLoading
-                    )
+        val routeActions = GroupedExpensesRouteActions(
+            onBack = onBack,
+            onAddExpense = onAddExpense,
+            onOpenExpense = onOpenExpense,
+            onDeleteExpense = deleteExpenseAction,
+            onGroupingModeChange = { groupingMode = it },
+            onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
+            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
+            onNextMonth = { selectedMonth = selectedMonth.next() }
+        )
+        val scaffoldState = GroupedExpensesScaffoldState(
+            showNavigationChrome = showNavigationChrome,
+            selectedMonth = selectedMonth,
+            screenTitle = screenTitle(monthName(selectedMonth.month, fullMonthNames)),
+            navigationDescriptor = navigationDescriptor,
+            totalAmount = routeData.totalAmount,
+            isIos = isIos,
+            canAddExpense = canAddExpense(),
+            showMonthNavigationControls = showMonthNavigationControls(),
+            strings = strings
+        )
+        val contentState = GroupedExpensesContentState(
+            routeData = routeData,
+            groupingMode = groupingMode,
+            showFloatingBottomControls = showNavigationChrome && !isIos,
+            monthSwipeEnabled = showNavigationChrome && showMonthNavigationControls(),
+            emptyStateText = emptyStateText,
+            expenseFallbackTitle = expenseFallbackTitle,
+            strings = strings,
+            groupsExpandedByDefault = groupsExpandedByDefault(),
+            sectionStyle = groupedExpenseSectionStyle()
+        )
 
-                    if (showFloatingBottomControls) {
-                        GroupingModeButtons(
-                            groupingMode = groupingMode,
-                            onGroupingModeChange = { groupingMode = it },
-                            byCategoryLabel = byCategoryLabel,
-                            byDateLabel = byDateLabel,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = bottomControlsPadding)
-                        )
-                    }
-                }
-            }
-        } else {
-            GroupedExpensesContent(
-                groupedExpenses = groupedExpenses,
-                categoriesById = categoriesById,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
-                groupingMode = groupingMode,
-                onGroupingModeChange = { groupingMode = it },
-                onOpenExpense = onOpenExpense,
-                onDeleteExpense = deleteExpenseAction,
-                emptyStateText = emptyStateText,
-                expenseFallbackTitle = expenseFallbackTitle,
-                currencySymbol = currencySymbol,
-                unknownCategoryLabel = unknownCategoryLabel,
+        GroupedExpensesRouteScaffold(
+            state = scaffoldState,
+            actions = routeActions
+        ) { padding ->
+            GroupedExpensesRouteContent(
+                padding = padding,
+                state = contentState,
+                actions = routeActions,
                 resolveCategoryName = { category ->
                     resolveCategoryName(category.id, category.name)
-                },
-                byCategoryLabel = byCategoryLabel,
-                byDateLabel = byDateLabel,
-                groupsExpandedByDefault = groupsExpandedByDefault(),
-                sectionStyle = groupedExpenseSectionStyle(),
-                listContentPadding = PaddingValues(16.dp),
-                loadMoreSearchResultsLabel = loadMoreSearchResultsLabel,
-                canLoadMoreSearchResults = canLoadMoreSearchResults,
-                onLoadMoreSearchResults = loadMoreSearchResults,
-                isLoading = groupedExpensesLoadState.isLoading
+                }
             )
         }
 
         pendingExpenseDelete?.let { expense ->
-            val expenseDisplayName = groupedExpenseRowPresentation(
+            ExpenseDeleteDialog(
                 expense = expense,
-                categoriesById = categoriesById,
+                categoriesById = routeData.categoriesById,
                 isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
                 expenseFallbackTitle = expenseFallbackTitle,
-                unknownCategoryLabel = unknownCategoryLabel,
+                strings = strings,
                 resolveCategoryName = { category ->
                     resolveCategoryName(category.id, category.name)
-                }
-            ).title
-            TransactionDeleteConfirmationDialog(
-                itemDisplayName = expenseDisplayName,
-                recurringSeriesId = expense.recurringSeriesId,
-                deleteTitle = deleteLabel,
-                deleteItemConfirmationMessageTemplate = deleteItemConfirmationMessageTemplate,
-                recurringDeleteMessageTemplate = recurringExpenseDeleteMessageTemplate,
+                },
                 onDeleteItem = {
                     pendingExpenseDelete = null
                     scope.launch {
@@ -397,11 +330,87 @@ abstract class BaseGroupedExpensesScreen(
         }
     }
 
-    protected fun formatDateGroupTitle(
-        date: kotlinx.datetime.LocalDate,
-        shortMonthNames: List<String>
-    ): String {
-        return formatExpenseDateGroupTitle(date, shortMonthNames)
+    @Composable
+    private fun rememberGroupedExpensesRouteData(
+        repository: ExpenseRepository,
+        selectedMonth: MonthCursor,
+        groupingMode: ExpenseGroupingMode,
+        searchPaging: TransactionSearchPaging,
+        shortMonthNames: List<String>,
+        strings: GroupedExpenseStrings,
+        resolveCategoryName: (String, String) -> String
+    ): GroupedExpensesRouteData {
+        val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
+            monthBounds(selectedMonth.year, selectedMonth.month)
+        }
+        val expensesFlow = remember(
+            repository,
+            monthStartMillis,
+            monthEndMillis,
+            searchPaging.searchMode,
+            searchQuery,
+            searchPaging.pageCount
+        ) {
+            if (searchPaging.searchMode) {
+                repository.searchExpenseCandidatePages(
+                    query = searchQuery,
+                    pageCount = searchPaging.pageCount
+                )
+            } else {
+                repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+            }
+        }
+        val categoriesFlow = remember(repository) {
+            repository.getAllCategories()
+        }
+        val groupedExpensesFlow = remember(
+            expensesFlow,
+            categoriesFlow,
+            groupingMode,
+            resolveCategoryName,
+            strings.unknownCategory,
+            shortMonthNames,
+            searchQuery,
+            strings.currencySymbol
+        ) {
+            combine(expensesFlow, categoriesFlow) { expenses, categories ->
+                val categoriesById = categories.associateBy { it.id }
+                buildGroupedExpensesState(
+                    expenses = expenses,
+                    categoriesById = categoriesById,
+                    groupingMode = groupingMode,
+                    includeExpense = ::includeExpense,
+                    includeCategory = ::includeCategory,
+                    resolveCategoryName = { category ->
+                        resolveCategoryName(category.id, category.name)
+                    },
+                    unknownCategoryLabel = strings.unknownCategory,
+                    shortMonthNames = shortMonthNames,
+                    searchQuery = searchQuery,
+                    currencySymbol = strings.currencySymbol
+                )
+            }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+        val loadKey = remember(monthStartMillis, monthEndMillis, searchPaging.searchMode, searchQuery) {
+            "${monthStartMillis}:${monthEndMillis}:${searchPaging.searchMode}:${searchQuery}"
+        }
+        val loadState = groupedExpensesFlow.collectAsFlowLoadState(
+            initialValue = emptyGroupedExpensesState(),
+            resetKey = loadKey
+        )
+        val groupedState = loadState.value
+
+        return GroupedExpensesRouteData(
+            groupedExpenses = groupedState.sections,
+            visibleExpenses = groupedState.visibleExpenses,
+            totalAmount = groupedState.totalAmount,
+            categoriesById = groupedState.categoriesById,
+            canLoadMoreSearchResults = searchPaging.searchMode &&
+                groupedState.candidateCount >= searchPaging.loadedCandidateCount,
+            isLoading = loadState.isLoading
+        )
     }
 
     @Composable
@@ -419,4 +428,139 @@ abstract class BaseGroupedExpensesScreen(
     protected fun monthName(month: Int, fullMonthNames: List<String>): String {
         return fullMonthNames[month - 1]
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupedExpensesRouteScaffold(
+    state: GroupedExpensesScaffoldState,
+    actions: GroupedExpensesRouteActions,
+    content: @Composable (PaddingValues) -> Unit
+) {
+    if (!state.showNavigationChrome) {
+        content(PaddingValues(0.dp))
+        return
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        contentWindowInsets = WindowInsets.systemBars,
+        topBar = {
+            GroupedExpensesTopBar(
+                selectedMonth = state.selectedMonth,
+                title = state.screenTitle,
+                navigationDescriptor = state.navigationDescriptor,
+                totalAmount = state.totalAmount,
+                currencySymbol = state.strings.currencySymbol,
+                isIos = state.isIos,
+                canAddExpense = state.canAddExpense,
+                showMonthNavigationControls = state.showMonthNavigationControls,
+                backLabel = state.strings.back,
+                addExpenseLabel = state.strings.addExpense,
+                onBack = actions.onBack,
+                onAddExpense = actions.onAddExpense,
+                onPreviousMonth = actions.onPreviousMonth,
+                onNextMonth = actions.onNextMonth
+            )
+        },
+        content = content
+    )
+}
+
+@Composable
+private fun GroupedExpensesRouteContent(
+    padding: PaddingValues,
+    state: GroupedExpensesContentState,
+    actions: GroupedExpensesRouteActions,
+    resolveCategoryName: (Category) -> String,
+) {
+    val bottomControlClearance = if (state.showFloatingBottomControls) 88.dp else 0.dp
+    val listContentPadding = edgeToEdgeListContentPadding(
+        scaffoldPadding = padding,
+        bottom = 16.dp + bottomControlClearance
+    )
+    val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .monthSwipeNavigation(
+                enabled = state.monthSwipeEnabled,
+                onPreviousMonth = actions.onPreviousMonth,
+                onNextMonth = actions.onNextMonth
+            )
+    ) {
+        GroupedExpensesContent(
+            groupedExpenses = state.routeData.groupedExpenses,
+            categoriesById = state.routeData.categoriesById,
+            modifier = Modifier.fillMaxSize(),
+            groupingMode = state.groupingMode,
+            onGroupingModeChange = actions.onGroupingModeChange,
+            onOpenExpense = actions.onOpenExpense,
+            onDeleteExpense = actions.onDeleteExpense,
+            emptyStateText = state.emptyStateText,
+            expenseFallbackTitle = state.expenseFallbackTitle,
+            currencySymbol = state.strings.currencySymbol,
+            unknownCategoryLabel = state.strings.unknownCategory,
+            resolveCategoryName = resolveCategoryName,
+            byCategoryLabel = state.strings.byCategory,
+            byDateLabel = state.strings.byDate,
+            groupsExpandedByDefault = state.groupsExpandedByDefault,
+            sectionStyle = state.sectionStyle,
+            showGroupingControls = !state.showFloatingBottomControls,
+            listContentPadding = listContentPadding,
+            bottomControlsBottomPadding = bottomControlsPadding,
+            loadMoreSearchResultsLabel = state.strings.loadMoreSearchResults,
+            canLoadMoreSearchResults = state.routeData.canLoadMoreSearchResults,
+            onLoadMoreSearchResults = actions.onLoadMoreSearchResults,
+            isLoading = state.routeData.isLoading
+        )
+
+        if (state.showFloatingBottomControls) {
+            GroupingModeButtons(
+                groupingMode = state.groupingMode,
+                onGroupingModeChange = actions.onGroupingModeChange,
+                byCategoryLabel = state.strings.byCategory,
+                byDateLabel = state.strings.byDate,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = bottomControlsPadding)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExpenseDeleteDialog(
+    expense: Expense,
+    categoriesById: Map<String, Category>,
+    isGroupedByDate: Boolean,
+    expenseFallbackTitle: String,
+    strings: GroupedExpenseStrings,
+    resolveCategoryName: (Category) -> String,
+    onDeleteItem: () -> Unit,
+    onDeleteSeries: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val expenseDisplayName = groupedExpenseRowPresentation(
+        expense = expense,
+        categoriesById = categoriesById,
+        isGroupedByDate = isGroupedByDate,
+        expenseFallbackTitle = expenseFallbackTitle,
+        unknownCategoryLabel = strings.unknownCategory,
+        resolveCategoryName = resolveCategoryName
+    ).title
+
+    TransactionDeleteConfirmationDialog(
+        itemDisplayName = expenseDisplayName,
+        recurringSeriesId = expense.recurringSeriesId,
+        deleteTitle = strings.delete,
+        deleteItemConfirmationMessageTemplate = strings.deleteItemConfirmationMessageTemplate,
+        recurringDeleteMessageTemplate = strings.recurringDeleteMessageTemplate,
+        onDeleteItem = onDeleteItem,
+        onDeleteSeries = onDeleteSeries,
+        onDismiss = onDismiss
+    )
 }

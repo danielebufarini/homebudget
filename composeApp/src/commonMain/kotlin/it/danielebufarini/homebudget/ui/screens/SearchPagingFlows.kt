@@ -1,5 +1,6 @@
 package it.danielebufarini.homebudget.ui.screens
 
+import it.danielebufarini.homebudget.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.database.Expense
 import it.danielebufarini.homebudget.database.Income
@@ -9,7 +10,7 @@ import kotlinx.coroutines.flow.combine
 internal fun ExpenseRepository.searchExpenseCandidatePages(
     query: String,
     pageCount: Int,
-    pageSize: Int
+    pageSize: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 ): Flow<List<Expense>> {
     val pages = searchPageOffsets(pageCount = pageCount, pageSize = pageSize).map { offset ->
         searchExpenseCandidates(
@@ -29,7 +30,7 @@ internal fun ExpenseRepository.searchExpenseCandidatePages(
 internal fun ExpenseRepository.searchIncomeCandidatePages(
     query: String,
     pageCount: Int,
-    pageSize: Int
+    pageSize: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 ): Flow<List<Income>> {
     val pages = searchPageOffsets(pageCount = pageCount, pageSize = pageSize).map { offset ->
         searchIncomeCandidates(
@@ -45,6 +46,34 @@ internal fun ExpenseRepository.searchIncomeCandidatePages(
             .distinctBy(Income::id)
     }
 }
+
+internal data class TransactionSearchPaging(
+    val searchMode: Boolean,
+    val pageCount: Int,
+    val loadedCandidateCount: Int,
+    val loadMoreSearchResults: () -> Unit
+)
+
+internal fun transactionSearchPaging(
+    searchQuery: String,
+    externalSearchPageCount: Int?,
+    localSearchPageCount: Int,
+    onLocalSearchPageCountChange: (Int) -> Unit,
+    onLoadMoreSearchResults: (() -> Unit)?,
+    pageSize: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
+) = searchQuery.isNotBlank().let { searchMode ->
+    val pageCount = if (searchMode) externalSearchPageCount ?: localSearchPageCount else 1
+
+    TransactionSearchPaging(
+        searchMode = searchMode,
+        pageCount = pageCount,
+        loadedCandidateCount = pageCount * pageSize,
+        loadMoreSearchResults = onLoadMoreSearchResults ?: {
+            onLocalSearchPageCountChange(localSearchPageCount + 1)
+        }
+    )
+}
+
 
 private fun searchPageOffsets(pageCount: Int, pageSize: Int): List<Int> {
     val safePageCount = pageCount.coerceAtLeast(1)

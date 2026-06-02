@@ -18,7 +18,7 @@ import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import it.homebudget.shared.R
+import it.danielebufarini.homebudget.shared.R
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.security.SecureRandom
 import kotlin.coroutines.resume

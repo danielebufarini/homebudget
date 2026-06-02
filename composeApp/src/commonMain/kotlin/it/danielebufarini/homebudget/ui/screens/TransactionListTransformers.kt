@@ -244,40 +244,6 @@ internal fun buildGroupedIncomesState(
     )
 }
 
-internal fun buildTransactionSearchTotals(
-    expenses: List<Expense>,
-    incomes: List<Income>,
-    categoriesById: Map<String, Category>,
-    resolveCategoryName: (Category) -> String,
-    unknownCategoryLabel: String,
-    currencySymbol: String,
-    searchQuery: String
-): TransactionTotals {
-    val searchTokens = transactionSearchTokens(searchQuery)
-    val expenseAmount = expenses
-        .filter { expense ->
-            val categoryLabel = categoriesById[expense.categoryId]
-                ?.let(resolveCategoryName)
-                ?: unknownCategoryLabel
-            expense.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)
-        }
-        .sumAmountOf(Expense::amount)
-    val incomeAmount = incomes
-        .filter { income ->
-            val categoryLabel = income.categoryId
-                ?.let(categoriesById::get)
-                ?.let(resolveCategoryName)
-                ?: unknownCategoryLabel
-            income.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)
-        }
-        .sumAmountOf(Income::amount)
-
-    return TransactionTotals(
-        expenseAmount = expenseAmount,
-        incomeAmount = incomeAmount
-    )
-}
-
 internal fun transactionSearchTokens(query: String): List<String> =
     query.trim()
         .lowercase()
