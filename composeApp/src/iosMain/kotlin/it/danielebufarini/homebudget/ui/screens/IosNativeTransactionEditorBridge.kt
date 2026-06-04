@@ -6,7 +6,7 @@ import it.danielebufarini.homebudget.data.PendingIncome
 import it.danielebufarini.homebudget.data.buildPendingExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyIncomes
-import it.danielebufarini.homebudget.data.parseAmountInput
+import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
 import it.danielebufarini.homebudget.di.initKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,7 +32,7 @@ class IosNativeTransactionEditorController {
         isRecurringMonthly: Boolean,
         installmentCount: Int
     ): IosNativeTransactionEditorResult {
-        val parsedAmount = parseAmountInput(amountInput)
+        val parsedAmount = evaluateAmountExpressionInput(amountInput)
         if (parsedAmount == null || parsedAmount <= 0L) {
             return IosNativeTransactionEditorResult(false, "Enter a valid amount")
         }
@@ -84,7 +84,7 @@ class IosNativeTransactionEditorController {
         description: String,
         isRecurringMonthly: Boolean
     ): IosNativeTransactionEditorResult {
-        val parsedAmount = parseAmountInput(amountInput)
+        val parsedAmount = evaluateAmountExpressionInput(amountInput)
         if (parsedAmount == null || parsedAmount <= 0L) {
             return IosNativeTransactionEditorResult(false, "Enter a valid amount")
         }

@@ -55,6 +55,7 @@ internal fun AddIncomeEditorContent(
     incomeId: String?,
     isSaving: Boolean,
     amount: String,
+    isAmountValid: Boolean,
     onAmountChange: (String) -> Unit,
     selectedCategoryName: String?,
     selectedCategoryIconKey: String?,
@@ -91,7 +92,7 @@ internal fun AddIncomeEditorContent(
                 SoftActionBar(
                     cancelLabel = labels.cancel,
                     confirmLabel = if (incomeId == null) labels.save else labels.update,
-                    confirmEnabled = !isSaving,
+                    confirmEnabled = !isSaving && isAmountValid,
                     onCancel = onClose,
                     onConfirm = onSave,
                     modifier = Modifier

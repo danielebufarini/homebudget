@@ -79,6 +79,10 @@ final class NativeTransactionEditorViewModel {
         Int(ExpenseInstallmentsKt.RECURRING_MONTHLY_OCCURRENCES / 12)
     }
 
+    var hasValidAmount: Bool {
+        nativeFormattedPositiveAmountResult(amount) != nil
+    }
+
     func setRecurringMonthly(_ enabled: Bool) {
         isRecurringMonthly = enabled
         if enabled {
@@ -408,13 +412,13 @@ struct NativeTransactionEditorScreen: View {
 
             Spacer()
 
-            ExpenseEditorGlassFooter(
-                onCancel: onClose,
-                onConfirm: saveTransaction,
-                confirmLabel: appLocalized("Save"),
-                showsSecondaryAction: true
-            )
-            .disabled(viewModel.isSaving)
+                ExpenseEditorGlassFooter(
+                    onCancel: onClose,
+                    onConfirm: saveTransaction,
+                    confirmLabel: appLocalized("Save"),
+                    showsSecondaryAction: true
+                )
+                .disabled(viewModel.isSaving || !viewModel.hasValidAmount)
         }
     }
 
@@ -468,30 +472,43 @@ struct NativeTransactionEditorScreen: View {
 private struct NativeTransactionAmountCard: View {
     let kind: AddTransactionKind
     @Binding var amount: String
+    @State private var showCalculator = false
 
     var body: some View {
-        AppGlassListCard(verticalPadding: 18) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(appLocalized("Amount"))
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+        let calculatedAmount = nativeFormattedPositiveAmountResult(amount)
+        let isInvalid = !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && calculatedAmount == nil
 
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text("\(kind.amountPrefix) \(appCurrencySymbol())")
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(kind.amountColor)
+        Button {
+            showCalculator = true
+        } label: {
+            AppGlassListCard(verticalPadding: 18) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(appLocalized("Amount"))
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
 
-                    TextField("0.00", text: $amount)
-                        .keyboardType(.decimalPad)
-                        .font(.system(size: 46, weight: .semibold, design: .rounded))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    NativeAmountFieldDisplay(
+                        prefix: kind.amountPrefix,
+                        color: kind.amountColor,
+                        amount: calculatedAmount,
+                        isInvalid: isInvalid
+                    )
                 }
-
-                Divider()
-                    .overlay(Color.white.opacity(0.10))
             }
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showCalculator) {
+            NativeAmountCalculatorSheet(
+                initialExpression: amount,
+                prefix: kind.amountPrefix,
+                color: kind.amountColor,
+                onApply: { result in
+                    amount = result
+                    showCalculator = false
+                }
+            )
+            .appGlassSheetPresentation(detents: [.height(560)])
         }
     }
 }

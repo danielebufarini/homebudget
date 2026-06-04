@@ -69,6 +69,7 @@ internal fun AddExpenseEditorContent(
     expenseId: String?,
     isSaving: Boolean,
     amount: String,
+    isAmountValid: Boolean,
     onAmountChange: (String) -> Unit,
     selectedCategoryName: String?,
     selectedCategoryIconKey: String?,
@@ -111,6 +112,7 @@ internal fun AddExpenseEditorContent(
                 labels = labels,
                 readOnly = readOnly,
                 isSaving = isSaving,
+                isAmountValid = isAmountValid,
                 expenseId = expenseId,
                 onClose = onClose,
                 onSave = onSave,
@@ -141,6 +143,7 @@ internal fun AddExpenseEditorContent(
                     useAndroidFixedActionChrome = useAndroidFixedActionChrome,
                     isSaving = isSaving,
                     amount = amount,
+                    isAmountValid = isAmountValid,
                     onAmountChange = onAmountChange,
                     selectedCategoryName = selectedCategoryName,
                     selectedCategoryIconKey = selectedCategoryIconKey,
@@ -204,6 +207,7 @@ private fun AddExpenseBottomBar(
     labels: AddExpenseRouteLabels,
     readOnly: Boolean,
     isSaving: Boolean,
+    isAmountValid: Boolean,
     expenseId: String?,
     onClose: () -> Unit,
     onSave: () -> Unit,
@@ -223,7 +227,7 @@ private fun AddExpenseBottomBar(
         SoftActionBar(
             cancelLabel = labels.cancel,
             confirmLabel = addExpenseConfirmLabel(labels, isSaving, expenseId),
-            confirmEnabled = !isSaving,
+            confirmEnabled = !isSaving && isAmountValid,
             onCancel = onClose,
             onConfirm = onSave,
             modifier = Modifier
@@ -242,6 +246,7 @@ private fun AddExpenseForm(
     useAndroidFixedActionChrome: Boolean,
     isSaving: Boolean,
     amount: String,
+    isAmountValid: Boolean,
     onAmountChange: (String) -> Unit,
     selectedCategoryName: String?,
     selectedCategoryIconKey: String?,
@@ -317,7 +322,7 @@ private fun AddExpenseForm(
         SoftActionBar(
             cancelLabel = labels.cancel,
             confirmLabel = addExpenseConfirmLabel(labels, isSaving, expenseId),
-            confirmEnabled = !isSaving,
+            confirmEnabled = !isSaving && isAmountValid,
             onCancel = onClose,
             onConfirm = onSave,
         )

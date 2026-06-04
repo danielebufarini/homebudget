@@ -19,8 +19,8 @@ import it.danielebufarini.homebudget.data.PendingExpense
 import it.danielebufarini.homebudget.data.buildPendingExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpensesFromExistingExpense
+import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
 import it.danielebufarini.homebudget.data.formatAmountInput
-import it.danielebufarini.homebudget.data.parseAmountInput
 import it.danielebufarini.homebudget.database.CATEGORY_TYPE_EXPENSE
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
@@ -79,6 +79,8 @@ internal fun AddExpenseRoute(
         }
     }
     val selectedCategory = categories.find { it.id == selectedCategoryId }
+    val evaluatedAmount = remember(amount) { evaluateAmountExpressionInput(amount) }
+    val isAmountValid = evaluatedAmount != null && evaluatedAmount > 0L
 
     EnsureStarterCategoriesSeeded(repository)
 
@@ -178,7 +180,7 @@ internal fun AddExpenseRoute(
 
     fun requestSaveExpense() {
         scope.launch {
-            val parsedAmount = parseAmountInput(amount)
+            val parsedAmount = evaluateAmountExpressionInput(amount)
             val expenseDate = selectedDateMillis
 
             when {
@@ -250,6 +252,7 @@ internal fun AddExpenseRoute(
         expenseId = expenseId,
         isSaving = isSaving,
         amount = amount,
+        isAmountValid = isAmountValid,
         onAmountChange = { amount = it },
         selectedCategoryName = selectedCategory?.let { resolveCategoryName(it.id, it.name) },
         selectedCategoryIconKey = selectedCategory?.icon,

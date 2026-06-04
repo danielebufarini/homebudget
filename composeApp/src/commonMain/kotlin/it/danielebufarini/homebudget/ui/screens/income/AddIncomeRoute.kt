@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.PendingIncome
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyIncomes
+import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
 import it.danielebufarini.homebudget.data.formatAmountInput
-import it.danielebufarini.homebudget.data.parseAmountInput
 import it.danielebufarini.homebudget.database.CATEGORY_TYPE_INCOME
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.expenses.clearActiveIosExpenseEditorSaveHandler
@@ -79,6 +79,8 @@ internal fun AddIncomeRoute(
         }
     }
     val selectedCategory = categories.find { it.id == selectedCategoryId }
+    val evaluatedAmount = remember(amount) { evaluateAmountExpressionInput(amount) }
+    val isAmountValid = evaluatedAmount != null && evaluatedAmount > 0L
 
     LaunchedEffect(incomeId) {
         if (incomeId == null || isInitialized) return@LaunchedEffect
@@ -172,7 +174,7 @@ internal fun AddIncomeRoute(
 
     fun requestSaveIncome() {
         scope.launch {
-            val parsedAmount = parseAmountInput(amount)
+            val parsedAmount = evaluateAmountExpressionInput(amount)
             if (parsedAmount == null || parsedAmount <= 0L) {
                 snackbarHostState.showSnackbar(labels.enterValidAmount)
                 return@launch
@@ -234,6 +236,7 @@ internal fun AddIncomeRoute(
         incomeId = incomeId,
         isSaving = isSaving,
         amount = amount,
+        isAmountValid = isAmountValid,
         onAmountChange = { amount = it },
         selectedCategoryName = selectedCategory?.let { resolveCategoryName(it.id, it.name) },
         selectedCategoryIconKey = selectedCategory?.icon,

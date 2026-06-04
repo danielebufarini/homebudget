@@ -11,6 +11,8 @@
     <string name="add_expense">Aggiungi spesa</string>
     <string name="add_income">Aggiungi entrata</string>
     <string name="amount">Importo</string>
+    <string name="amount_expression">Espressione</string>
+    <string name="calculated_amount">Importo</string>
     <string name="back">Indietro</string>
     <string name="backup">Backup completo cloud</string>
     <string name="backup_to_google_drive">Esegui backup ora</string>
@@ -26,6 +28,7 @@
     <string name="by_category">Per categoria</string>
     <string name="by_date">Per data</string>
     <string name="calendar">Calendario</string>
+    <string name="calculator">Calcolatrice</string>
     <string name="cancel">Annulla</string>
     <string name="cumulative_balance">Saldo cumulativo</string>
     <string name="this_month">Questo mese:</string>
@@ -94,6 +97,7 @@
     <string name="icon_theme_people_and_work">Persone e lavoro</string>
     <string name="icon_theme_general_and_hobbies">Generali e hobby</string>
     <string name="close">Chiudi</string>
+    <string name="clear">Cancella</string>
     <string name="csv">Import/export CSV</string>
     <string name="csv_transfer_title">Import ed export CSV</string>
     <string name="csv_transfer_description">Sposta dati selezionati usando file CSV salvati su questo telefono.</string>
@@ -117,6 +121,7 @@
     <string name="edit_income">Modifica entrata</string>
     <string name="end_date">Data finale</string>
     <string name="enter_valid_amount">Inserisci un importo valido maggiore di 0</string>
+    <string name="invalid_amount_expression">Inserisci un calcolo completo con risultato maggiore di 0</string>
     <string name="expense">Spesa</string>
     <string name="expense_label">Spesa</string>
     <string name="expense_id_missing">Manca l'identificativo della spesa</string>

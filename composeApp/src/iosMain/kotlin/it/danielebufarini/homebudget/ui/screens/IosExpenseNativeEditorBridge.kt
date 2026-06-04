@@ -4,8 +4,8 @@ import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.IdGenerator
 import it.danielebufarini.homebudget.data.PendingExpense
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpensesFromExistingExpense
+import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
 import it.danielebufarini.homebudget.data.formatAmountInput
-import it.danielebufarini.homebudget.data.parseAmountInput
 import it.danielebufarini.homebudget.di.initKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -62,7 +62,7 @@ class IosExpenseEditorController {
         isRecurringMonthly: Boolean,
         updateWholeSeries: Boolean
     ): IosExpenseEditorOperationResult {
-        val parsedAmount = parseAmountInput(amountInput)
+        val parsedAmount = evaluateAmountExpressionInput(amountInput)
         if (parsedAmount == null || parsedAmount <= 0L) {
             return IosExpenseEditorOperationResult(false, "Enter a valid amount")
         }

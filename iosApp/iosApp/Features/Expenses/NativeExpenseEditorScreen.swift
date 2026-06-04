@@ -156,7 +156,12 @@ struct NativeExpenseEditorScreen: View {
                     confirmLabel: confirmLabel,
                     showsSecondaryAction: !readOnly
                 )
-                .disabled(viewModel.isSaving || viewModel.isLoading || viewModel.didFailToLoad)
+                .disabled(
+                    viewModel.isSaving ||
+                        viewModel.isLoading ||
+                        viewModel.didFailToLoad ||
+                        (!readOnly && !viewModel.hasValidAmount)
+                )
             }
         }
         .background(AppGlassBackdrop().ignoresSafeArea())

@@ -11,6 +11,8 @@
     <string name="add_expense">Add Expense</string>
     <string name="add_income">Add Income</string>
     <string name="amount">Amount</string>
+    <string name="amount_expression">Expression</string>
+    <string name="calculated_amount">Amount</string>
     <string name="back">Back</string>
     <string name="backup">Full Cloud Backup</string>
     <string name="backup_to_google_drive">Back Up Now</string>
@@ -26,6 +28,7 @@
     <string name="by_category">By Category</string>
     <string name="by_date">By Date</string>
     <string name="calendar">Calendar</string>
+    <string name="calculator">Calculator</string>
     <string name="cancel">Cancel</string>
     <string name="cumulative_balance">Cumulative balance</string>
     <string name="this_month">This month:</string>
@@ -94,6 +97,7 @@
     <string name="icon_theme_people_and_work">People &amp; Work</string>
     <string name="icon_theme_general_and_hobbies">General &amp; Hobbies</string>
     <string name="close">Close</string>
+    <string name="clear">Clear</string>
     <string name="csv">CSV Import / Export</string>
     <string name="csv_transfer_title">CSV Import &amp; Export</string>
     <string name="csv_transfer_description">Move selected data using CSV files stored on this phone.</string>
@@ -117,6 +121,7 @@
     <string name="edit_income">Edit Income</string>
     <string name="end_date">End Date</string>
     <string name="enter_valid_amount">Enter a valid amount greater than 0</string>
+    <string name="invalid_amount_expression">Enter a complete calculation with a result greater than 0</string>
     <string name="expense">Expense</string>
     <string name="expense_label">Expense</string>
     <string name="expense_id_missing">Expense id is missing</string>

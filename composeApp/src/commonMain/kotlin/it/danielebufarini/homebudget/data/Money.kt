@@ -1,7 +1,11 @@
 package it.danielebufarini.homebudget.data
 
+import kotlin.math.abs
+import kotlin.math.roundToLong
+
 private const val ZERO_AMOUNT = 0L
 private const val MINOR_UNITS_PER_MAJOR = 100L
+private const val MAX_EXPRESSION_LENGTH = 80
 
 fun parseAmountInput(value: String): Long? {
     val normalized = value.trim().replace(',', '.')
@@ -29,6 +33,17 @@ fun parseAmountInput(value: String): Long? {
     val decimals = decimalsRaw.padEnd(2, '0')
     val cents = (whole + decimals).trimStart('0').ifEmpty { "0" }.toLongOrNull() ?: return null
     return if (negative) negateAmountExact(cents) else cents
+}
+
+fun evaluateAmountExpressionInput(value: String): Long? {
+    val normalized = value.trim()
+    if (normalized.isEmpty() || normalized.length > MAX_EXPRESSION_LENGTH) {
+        return null
+    }
+
+    return runCatching {
+        AmountExpressionParser(normalized).parseAmount()
+    }.getOrNull()
 }
 
 fun parseSerializedAmount(value: String): Long? {
@@ -94,4 +109,112 @@ private fun negateAmountExact(value: Long): Long {
         error("Money amount overflowed Long minor-unit storage.")
     }
     return -value
+}
+
+private class AmountExpressionParser(
+    private val expression: String
+) {
+    private var index = 0
+
+    fun parseAmount(): Long? {
+        val result = parseExpression() ?: return null
+        skipWhitespace()
+        if (index != expression.length || !result.isFinite()) {
+            return null
+        }
+
+        val minorUnits = result * MINOR_UNITS_PER_MAJOR
+        if (!minorUnits.isFinite() || abs(minorUnits) > Long.MAX_VALUE.toDouble()) {
+            return null
+        }
+        return minorUnits.roundToLong()
+    }
+
+    private fun parseExpression(): Double? {
+        var value = parseTerm() ?: return null
+        while (true) {
+            skipWhitespace()
+            value = when {
+                consume('+') -> value + (parseTerm() ?: return null)
+                consume('-') -> value - (parseTerm() ?: return null)
+                else -> return value
+            }
+            if (!value.isFinite()) return null
+        }
+    }
+
+    private fun parseTerm(): Double? {
+        var value = parseFactor() ?: return null
+        while (true) {
+            skipWhitespace()
+            value = when {
+                consume('*') || consume('×') -> value * (parseFactor() ?: return null)
+                consume('/') || consume('÷') -> {
+                    val divisor = parseFactor() ?: return null
+                    if (abs(divisor) < 0.000000001) return null
+                    value / divisor
+                }
+                else -> return value
+            }
+            if (!value.isFinite()) return null
+        }
+    }
+
+    private fun parseFactor(): Double? {
+        skipWhitespace()
+        return when {
+            consume('+') -> parseFactor()
+            consume('-') -> parseFactor()?.let { -it }
+            consume('(') -> {
+                val value = parseExpression() ?: return null
+                skipWhitespace()
+                if (!consume(')')) return null
+                value
+            }
+            else -> parseNumber()
+        }
+    }
+
+    private fun parseNumber(): Double? {
+        skipWhitespace()
+        val start = index
+        var sawDigit = false
+        var sawSeparator = false
+
+        while (index < expression.length) {
+            val char = expression[index]
+            when {
+                char.isDigit() -> {
+                    sawDigit = true
+                    index += 1
+                }
+                char == '.' || char == ',' -> {
+                    if (sawSeparator) return null
+                    sawSeparator = true
+                    index += 1
+                }
+                else -> break
+            }
+        }
+
+        if (!sawDigit) return null
+        return expression.substring(start, index)
+            .replace(',', '.')
+            .toDoubleOrNull()
+            ?.takeIf(Double::isFinite)
+    }
+
+    private fun consume(char: Char): Boolean {
+        if (index >= expression.length || expression[index] != char) {
+            return false
+        }
+        index += 1
+        return true
+    }
+
+    private fun skipWhitespace() {
+        while (index < expression.length && expression[index].isWhitespace()) {
+            index += 1
+        }
+    }
 }

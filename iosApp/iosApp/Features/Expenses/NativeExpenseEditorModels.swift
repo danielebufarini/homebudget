@@ -113,6 +113,10 @@ final class NativeExpenseEditorViewModel {
         recurringSeriesId?.isEmpty == false
     }
 
+    var hasValidAmount: Bool {
+        nativeFormattedPositiveAmountResult(amount) != nil
+    }
+
     var recurringMonthlyYears: Int {
         Int(ExpenseInstallmentsKt.RECURRING_MONTHLY_OCCURRENCES / 12)
     }
