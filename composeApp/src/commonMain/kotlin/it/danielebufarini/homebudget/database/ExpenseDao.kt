@@ -260,6 +260,9 @@ interface ExpenseDao {
     @Query("SELECT count(*) FROM expense WHERE categoryId = :categoryId")
     suspend fun countExpensesForCategory(categoryId: String): Long
 
+    @Query("SELECT id FROM expense WHERE categoryId = :categoryId")
+    suspend fun getExpenseIdsForCategory(categoryId: String): List<String>
+
     @Query("UPDATE expense SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId")
     suspend fun moveExpensesToCategory(oldCategoryId: String, newCategoryId: String)
 

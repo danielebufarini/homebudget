@@ -14,7 +14,8 @@ import it.danielebufarini.homebudget.database.CATEGORY_TYPE_INCOME
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.DEFAULT_CATEGORY_COLOR
 import it.danielebufarini.homebudget.database.HomeBudgetDatabase
-import it.danielebufarini.homebudget.database.rebuildAllSearchIndexes
+import it.danielebufarini.homebudget.database.refreshExpenseSearchRows
+import it.danielebufarini.homebudget.database.refreshIncomeSearchRows
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.getString
@@ -72,6 +73,8 @@ class CategoryRepository(
         categoryType: String
     ) {
         transactionRunner.runInTransaction {
+            val affectedExpenseIds = expenseDao.getExpenseIdsForCategory(id)
+            val affectedIncomeIds = incomeDao.getIncomeIdsForCategory(id)
             categoryDao.updateCategory(
                 id = id,
                 name = name,
@@ -79,7 +82,8 @@ class CategoryRepository(
                 color = color,
                 categoryType = categoryType
             )
-            searchIndexDao.rebuildAllSearchIndexes()
+            searchIndexDao.refreshExpenseSearchRows(affectedExpenseIds)
+            searchIndexDao.refreshIncomeSearchRows(affectedIncomeIds)
         }
     }
 
@@ -102,7 +106,6 @@ class CategoryRepository(
             } else {
                 categoryDao.deleteCategory(id)
             }
-            searchIndexDao.rebuildAllSearchIndexes()
         }
     }
 
@@ -121,6 +124,16 @@ class CategoryRepository(
 
             val expenseUsageCount = expenseDao.countExpensesForCategory(sourceCategory.id)
             val incomeUsageCount = incomeDao.countIncomesForCategory(sourceCategory.id)
+            val affectedExpenseIds = if (expenseUsageCount > 0L) {
+                expenseDao.getExpenseIdsForCategory(sourceCategory.id)
+            } else {
+                emptyList()
+            }
+            val affectedIncomeIds = if (incomeUsageCount > 0L) {
+                incomeDao.getIncomeIdsForCategory(sourceCategory.id)
+            } else {
+                emptyList()
+            }
 
             if (expenseUsageCount > 0L) {
                 require(targetCategory.categoryType == CATEGORY_TYPE_EXPENSE) {
@@ -145,7 +158,8 @@ class CategoryRepository(
             if (!isCategoryInUseInternal(sourceCategory.id)) {
                 categoryDao.deleteCategory(sourceCategory.id)
             }
-            searchIndexDao.rebuildAllSearchIndexes()
+            searchIndexDao.refreshExpenseSearchRows(affectedExpenseIds)
+            searchIndexDao.refreshIncomeSearchRows(affectedIncomeIds)
         }
     }
 

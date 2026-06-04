@@ -79,6 +79,10 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
+        named("androidHostTest").dependencies {
+            implementation(libs.androidx.test.core)
+            implementation(libs.robolectric)
+        }
     }
 }
 

@@ -26,6 +26,8 @@ play-services-auth = "21.6.0"
 google-api-client = "2.9.0"
 google-drive-api = "v3-rev20250427-2.0.0"
 googleid = "1.2.0"
+androidx-test-core = "1.7.0"
+robolectric = "4.16.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -64,6 +66,8 @@ google-api-client-android = { module = "com.google.api-client:google-api-client-
 google-api-client-gson = { module = "com.google.api-client:google-api-client-gson", version.ref = "google-api-client" }
 google-api-services-drive = { module = "com.google.apis:google-api-services-drive", version.ref = "google-drive-api" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
