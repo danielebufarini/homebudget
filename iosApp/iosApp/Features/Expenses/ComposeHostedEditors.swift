@@ -196,7 +196,6 @@ struct ExpenseEditorRootView: View {
         }
         .onDisappear {
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
-            deletionViewModel.disposeController()
         }
         .overlay {
             if deletionViewModel.pendingSeriesId != nil, let expenseId {
@@ -314,7 +313,6 @@ struct IncomeEditorRootView: View {
         .iosNativeDatePickerHost()
         .onDisappear {
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
-            deletionViewModel.disposeController()
         }
         .toolbar {
             if let incomeId {

@@ -1,54 +1,49 @@
 @preconcurrency import ComposeApp
 import Foundation
 
-// Async Swift wrapper around the Kotlin iOS voice-expense controller callbacks.
+// Thin Swift mapping around the Kotlin iOS voice-expense async controller.
 
 extension IosVoiceExpenseController {
     func loadSnapshotData() async -> VoiceExpenseSnapshotData? {
-        await withCheckedContinuation { continuation in
-            loadSnapshot { snapshot in
-                continuation.resume(returning: snapshot.map(buildVoiceExpenseSnapshotData(from:)))
-            }
+        guard let snapshot = try? await loadSnapshot() else {
+            return nil
         }
+        return buildVoiceExpenseSnapshotData(from: snapshot)
     }
 
     func persist(draft: VoiceExpenseDraft) async -> (success: Bool, message: String?) {
-        await withCheckedContinuation { continuation in
-            let completion: (KotlinBoolean?, String?) -> Void = { success, message in
-                continuation.resume(returning: (success?.boolValue == true, message))
-            }
-
+        do {
             switch draft.intent {
             case .create:
-                createExpense(
+                let result = try await createExpense(
                     amountInput: draft.amountInput,
                     categoryId: draft.categoryId,
                     description: draft.description,
                     date: Int64(draft.date.timeIntervalSince1970 * 1000.0),
-                    isShared: draft.isShared,
-                    onComplete: completion
+                    isShared: draft.isShared
                 )
+                return (result.isSuccess, result.message)
             case .update:
                 guard let expenseId = draft.expenseId else {
-                    continuation.resume(returning: (false, appLocalized("Expense not found.")))
-                    return
+                    return (false, appLocalized("Expense not found."))
                 }
 
-                updateExpense(
+                let result = try await updateExpense(
                     expenseId: expenseId,
                     amountInput: draft.amountInput,
                     categoryId: draft.categoryId,
                     description: draft.description,
                     date: Int64(draft.date.timeIntervalSince1970 * 1000.0),
-                    isShared: draft.isShared,
-                    onComplete: completion
+                    isShared: draft.isShared
                 )
+                return (result.isSuccess, result.message)
             case .needClarification:
-                continuation.resume(returning: (false, appLocalized("The spoken command still needs clarification.")))
-
+                return (false, appLocalized("The spoken command still needs clarification."))
             case .ignore:
-                continuation.resume(returning: (false, appLocalized("No usable expense command was found.")))
+                return (false, appLocalized("No usable expense command was found."))
             }
+        } catch {
+            return (false, error.localizedDescription)
         }
     }
 }

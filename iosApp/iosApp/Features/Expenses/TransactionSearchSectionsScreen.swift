@@ -21,7 +21,7 @@ private final class TransactionSearchSectionsViewModel {
     @ObservationIgnored private var knownExpenseSectionIDs = Set<String>()
     @ObservationIgnored private var knownIncomeSectionIDs = Set<String>()
     @ObservationIgnored private var hasLoadedInitialExpansionState = false
-    @ObservationIgnored private var isObserving = false
+    @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     init(query: String, groupingMode: ExpenseGroupingMode) {
         observer = IosTransactionSearchObserver(
@@ -31,57 +31,69 @@ private final class TransactionSearchSectionsViewModel {
     }
 
     deinit {
-        observer.dispose()
+        observationTask?.cancel()
     }
 
     func start() {
-        guard !isObserving else {
+        guard observationTask == nil else {
             return
         }
 
-        isObserving = true
-        observer.start { [weak self] snapshot in
-            guard let self else {
+        observationTask = Task { [weak self, observer] in
+            do {
+                try await observer.start()
+            } catch {
                 return
             }
 
-            MainActor.assumeIsolated {
-                self.apply(snapshot: snapshot)
+            for await snapshot in observer.snapshots {
+                guard let self, let snapshot else {
+                    continue
+                }
+                apply(snapshot: snapshot)
             }
         }
     }
 
     func stop() {
-        guard isObserving else {
-            return
-        }
-
-        observer.stop()
-        isObserving = false
+        observationTask?.cancel()
+        observationTask = nil
     }
 
     func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
-        observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+        Task { [observer] in
+            try? await observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+        }
     }
 
     func loadMoreResults() {
-        observer.loadMoreResults()
+        Task { [observer] in
+            try? await observer.loadMoreResults()
+        }
     }
 
     func deleteExpense(_ expenseID: String) {
-        observer.deleteExpense(id: expenseID)
+        Task { [observer] in
+            try? await observer.deleteExpense(id: expenseID)
+        }
     }
 
     func deleteIncome(_ incomeID: String) {
-        observer.deleteIncome(id: incomeID)
+        Task { [observer] in
+            try? await observer.deleteIncome(id: incomeID)
+        }
     }
 
     func deleteRecurringExpenseSeries(_ seriesID: String) {
-        observer.deleteRecurringExpenseSeries(seriesId: seriesID)
+        Task { [observer] in
+            try? await observer.deleteRecurringExpenseSeries(seriesId: seriesID)
+        }
     }
 
     func deleteRecurringIncomeSeries(_ seriesID: String) {
-        observer.deleteRecurringIncomeSeries(seriesId: seriesID)
+        Task { [observer] in
+            try? await observer.deleteRecurringIncomeSeries(seriesId: seriesID)
+        }
     }
 
     private func apply(snapshot: IosTransactionSearchSnapshot) {

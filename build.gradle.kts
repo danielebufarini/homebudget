@@ -9,4 +9,36 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.androidx.room) apply false
+    alias(libs.plugins.skie) apply false
+}
+
+val verifyUnitTests by tasks.registering {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs the shared and Android unit test suite."
+    dependsOn(
+        ":androidApp:test",
+        ":composeApp:testAndroidHostTest"
+    )
+}
+
+val verifyAndroidDebug by tasks.registering {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Builds the Android debug application."
+    dependsOn(":androidApp:assembleDebug")
+}
+
+val verifyIosSimulatorArm64Framework by tasks.registering {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Compiles the iOS simulator ARM64 Kotlin framework."
+    dependsOn(":composeApp:compileKotlinIosSimulatorArm64")
+}
+
+tasks.register("verifyAll") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs the project verification suite used locally and in CI."
+    dependsOn(
+        verifyUnitTests,
+        verifyAndroidDebug,
+        verifyIosSimulatorArm64Framework
+    )
 }

@@ -1,9 +1,13 @@
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package it.danielebufarini.homebudget.data
+
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlin.native.ObjCName
 import kotlin.time.Instant
 
 data class PendingExpense(
@@ -11,6 +15,7 @@ data class PendingExpense(
     val amount: Long,
     val date: Long,
     val categoryId: String,
+    @property:ObjCName(swiftName = "expenseDescription")
     val description: String?,
     val isShared: Boolean,
     val recurringSeriesId: String? = null
@@ -20,6 +25,7 @@ data class PendingIncome(
     val id: String,
     val amount: Long,
     val date: Long,
+    @property:ObjCName(swiftName = "incomeDescription")
     val description: String?,
     val recurringSeriesId: String? = null,
     val categoryId: String? = null

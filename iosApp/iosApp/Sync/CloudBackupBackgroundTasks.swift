@@ -23,6 +23,28 @@ enum CloudBackupBackgroundTasks {
         }
     }
 
+    private final class BackgroundTaskCompletion: @unchecked Sendable {
+        private let lock = NSLock()
+        private let task: BGProcessingTask
+        private var didComplete = false
+
+        init(task: BGProcessingTask) {
+            self.task = task
+        }
+
+        func complete(success: Bool) {
+            lock.lock()
+            guard !didComplete else {
+                lock.unlock()
+                return
+            }
+            didComplete = true
+            lock.unlock()
+
+            task.setTaskCompleted(success: success)
+        }
+    }
+
     static func register() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
             guard let processingTask = task as? BGProcessingTask else {
@@ -50,55 +72,45 @@ enum CloudBackupBackgroundTasks {
     private static func handle(_ task: BGProcessingTask) {
         schedule()
         let cancellationState = CancellationState()
+        let completion = BackgroundTaskCompletion(task: task)
+        let backupTask = Task {
+            let success = await performCloudBackup(cancellationState: cancellationState)
+            guard !Task.isCancelled else {
+                return
+            }
+            completion.complete(success: success)
+        }
 
         task.expirationHandler = {
             cancellationState.cancel()
+            backupTask.cancel()
+            completion.complete(success: false)
         }
-
-        let success = performCloudBackup(cancellationState: cancellationState)
-        task.setTaskCompleted(success: success)
     }
 
-    private static func performCloudBackup(cancellationState: CancellationState) -> Bool {
+    private static func performCloudBackup(cancellationState: CancellationState) async -> Bool {
         guard !cancellationState.isCancelled else {
             return false
         }
 
         let controller = IosBackupExportController()
-        defer {
-            controller.dispose()
+        guard !cancellationState.isCancelled,
+              !Task.isCancelled,
+              let result = try? await controller.exportBackup(),
+              result.errorMessage == nil,
+              let content = result.content else {
+            return false
         }
 
-        let semaphore = DispatchSemaphore(value: 0)
-        var success = false
-
-        controller.exportBackup { _, content, errorMessage in
-            defer {
-                semaphore.signal()
-            }
-
-            guard !cancellationState.isCancelled else {
-                return
-            }
-
-            guard errorMessage == nil, let content else {
-                return
-            }
-
-            do {
-                try ICloudBackupStore.writeBackupSync(text: content)
-                success = true
-            } catch {
-                success = false
-            }
+        guard !cancellationState.isCancelled, !Task.isCancelled else {
+            return false
         }
 
-        while semaphore.wait(timeout: .now() + .milliseconds(250)) == .timedOut {
-            if cancellationState.isCancelled {
-                return false
-            }
+        do {
+            try ICloudBackupStore.writeBackupSync(text: content)
+            return !cancellationState.isCancelled && !Task.isCancelled
+        } catch {
+            return false
         }
-
-        return success
     }
 }

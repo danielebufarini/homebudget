@@ -7,14 +7,15 @@ import it.danielebufarini.homebudget.localization.csvImportFailedMessage
 import it.danielebufarini.homebudget.localization.csvImportNoRowsMessage
 import it.danielebufarini.homebudget.localization.csvImportSuccessMessage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
+class IosMessageResult(
+    val successMessage: String?,
+    val errorMessage: String?
+)
+
 class IosCsvImportController {
-    private val scope = MainScope()
     private val repository: ExpenseRepository by lazy {
         if (KoinPlatformTools.defaultContext().getOrNull() == null) {
             initKoin()
@@ -22,39 +23,30 @@ class IosCsvImportController {
         KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
     }
 
-    fun importCsv(
-        text: String,
-        onComplete: (String?, String?) -> Unit
-    ) {
-        scope.launch {
-            val noRowsMessage = csvImportNoRowsMessage()
-            val failedMessage = csvImportFailedMessage()
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    val importResult = importBudgetItemsFromCsv(
-                        repository = repository,
-                        csvText = text
-                    )
+    suspend fun importCsv(text: String): IosMessageResult {
+        val noRowsMessage = csvImportNoRowsMessage()
+        val failedMessage = csvImportFailedMessage()
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                val importResult = importBudgetItemsFromCsv(
+                    repository = repository,
+                    csvText = text
+                )
 
-                    if (importResult.importedCount == 0 && importResult.skippedCount == 0) {
-                        noRowsMessage
-                    } else {
-                        csvImportSuccessMessage(
-                            importedCount = importResult.importedCount,
-                            skippedCount = importResult.skippedCount
-                        )
-                    }
+                if (importResult.importedCount == 0 && importResult.skippedCount == 0) {
+                    noRowsMessage
+                } else {
+                    csvImportSuccessMessage(
+                        importedCount = importResult.importedCount,
+                        skippedCount = importResult.skippedCount
+                    )
                 }
             }
-
-            onComplete(
-                result.getOrNull(),
-                result.exceptionOrNull()?.message ?: failedMessage
-            )
         }
+        return IosMessageResult(
+            successMessage = result.getOrNull(),
+            errorMessage = result.exceptionOrNull()?.message ?: failedMessage
+        )
     }
 
-    fun dispose() {
-        scope.cancel()
-    }
 }

@@ -183,7 +183,7 @@ func buildVoiceExpenseSnapshotData(from snapshot: IosVoiceExpenseSnapshot) -> Vo
                 amountInput: expense.amountInput,
                 categoryId: expense.categoryId,
                 categoryName: expense.categoryName,
-                description: expense.description,
+                description: expense.expenseDescription,
                 date: Date(timeIntervalSince1970: TimeInterval(expense.date) / 1000.0),
                 isShared: expense.isShared
             )

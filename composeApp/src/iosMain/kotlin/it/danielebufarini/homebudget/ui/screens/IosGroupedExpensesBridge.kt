@@ -2,15 +2,12 @@ package it.danielebufarini.homebudget.ui.screens
 
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.data.monthBounds
-import it.danielebufarini.homebudget.util.IOSCancellable
-import it.danielebufarini.homebudget.util.IOSFlowWrapper
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import org.koin.mp.KoinPlatformTools
 
 class IosGroupedExpensesObserver(
@@ -21,12 +18,7 @@ class IosGroupedExpensesObserver(
     private val dayOfMonth: Int? = null,
     initialGroupingMode: String
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val groupingMode = MutableStateFlow(initialGroupingMode)
-    private var updatesSubscription: IOSCancellable? = null
-    private var updatesWrapper: IOSFlowWrapper<IosGroupedExpensesSnapshot>? = null
-    private var onUpdate: ((IosGroupedExpensesSnapshot) -> Unit)? = null
-    private var isObserving = false
     private val cacheKey = GroupedExpensesCacheKey(
         year = year,
         month = month,
@@ -35,19 +27,13 @@ class IosGroupedExpensesObserver(
         dayOfMonth = dayOfMonth
     )
 
-    fun start(onUpdate: (IosGroupedExpensesSnapshot) -> Unit) {
-        if (isObserving) {
-            return
-        }
-
-        isObserving = true
-        this.onUpdate = onUpdate
-        scope.launch {
-            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-            repository.seedStarterCategoriesIfEmpty()
-            val localization = loadIosGroupedLocalization()
-            val (startMillis, endMillis) = monthBounds(year, month)
-            val snapshotFlow = combine(
+    val snapshots = flow {
+        val repository = repository()
+        repository.seedStarterCategoriesIfEmpty()
+        val localization = loadIosGroupedLocalization()
+        val (startMillis, endMillis) = monthBounds(year, month)
+        emitAll(
+            combine(
                 repository.getExpensesBetween(startMillis, endMillis),
                 repository.getAllCategories(),
                 groupingMode
@@ -66,20 +52,8 @@ class IosGroupedExpensesObserver(
                     localization = localization
                 ).snapshotFor(currentGroupingMode)
             }
-
-            val wrapper = IOSFlowWrapper(snapshotFlow)
-            if (!isObserving) {
-                wrapper.cancel()
-                return@launch
-            }
-            updatesWrapper = wrapper
-            updatesSubscription = wrapper.subscribe(
-                onEach = { snapshot ->
-                    this@IosGroupedExpensesObserver.onUpdate?.invoke(snapshot)
-                }
-            )
-        }
-    }
+        )
+    }.flowOn(Dispatchers.Default)
 
     fun setGroupingMode(groupingMode: String) {
         if (this.groupingMode.value != groupingMode) {
@@ -87,33 +61,16 @@ class IosGroupedExpensesObserver(
         }
     }
 
-    fun deleteExpense(id: String) {
-        scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                .deleteExpense(id)
-        }
+    suspend fun deleteExpense(id: String) {
+        repository().deleteExpense(id)
     }
 
-    fun deleteRecurringExpenseSeries(seriesId: String) {
-        scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                .deleteRecurringExpenseSeries(seriesId)
-        }
+    suspend fun deleteRecurringExpenseSeries(seriesId: String) {
+        repository().deleteRecurringExpenseSeries(seriesId)
     }
 
-    fun stop() {
-        isObserving = false
-        updatesSubscription?.cancel()
-        updatesSubscription = null
-        updatesWrapper?.cancel()
-        updatesWrapper = null
-        onUpdate = null
-    }
-
-    fun dispose() {
-        stop()
-        scope.cancel()
-    }
+    private fun repository(): ExpenseRepository =
+        KoinPlatformTools.defaultContext().get().get()
 }
 
 class IosMonthlyIncomesObserver(
@@ -121,26 +78,15 @@ class IosMonthlyIncomesObserver(
     private val month: Int,
     initialGroupingMode: String
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val groupingMode = MutableStateFlow(initialGroupingMode)
-    private var updatesSubscription: IOSCancellable? = null
-    private var updatesWrapper: IOSFlowWrapper<IosMonthlyIncomesSnapshot>? = null
-    private var onUpdate: ((IosMonthlyIncomesSnapshot) -> Unit)? = null
-    private var isObserving = false
 
-    fun start(onUpdate: (IosMonthlyIncomesSnapshot) -> Unit) {
-        if (isObserving) {
-            return
-        }
-
-        isObserving = true
-        this.onUpdate = onUpdate
-        scope.launch {
-            val repository = KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-            repository.seedStarterCategoriesIfEmpty()
-            val localization = loadIosGroupedLocalization()
-            val (startMillis, endMillis) = monthBounds(year, month)
-            val snapshotFlow = combine(
+    val snapshots = flow {
+        val repository = repository()
+        repository.seedStarterCategoriesIfEmpty()
+        val localization = loadIosGroupedLocalization()
+        val (startMillis, endMillis) = monthBounds(year, month)
+        emitAll(
+            combine(
                 repository.getIncomesBetween(startMillis, endMillis),
                 repository.getAllCategories(),
                 groupingMode
@@ -154,20 +100,8 @@ class IosMonthlyIncomesObserver(
                     localization = localization
                 )
             }
-
-            val wrapper = IOSFlowWrapper(snapshotFlow)
-            if (!isObserving) {
-                wrapper.cancel()
-                return@launch
-            }
-            updatesWrapper = wrapper
-            updatesSubscription = wrapper.subscribe(
-                onEach = { snapshot ->
-                    this@IosMonthlyIncomesObserver.onUpdate?.invoke(snapshot)
-                }
-            )
-        }
-    }
+        )
+    }.flowOn(Dispatchers.Default)
 
     fun setGroupingMode(groupingMode: String) {
         if (this.groupingMode.value != groupingMode) {
@@ -175,31 +109,14 @@ class IosMonthlyIncomesObserver(
         }
     }
 
-    fun deleteIncome(id: String) {
-        scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                .deleteIncome(id)
-        }
+    suspend fun deleteIncome(id: String) {
+        repository().deleteIncome(id)
     }
 
-    fun deleteRecurringIncomeSeries(seriesId: String) {
-        scope.launch {
-            KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
-                .deleteRecurringIncomeSeries(seriesId)
-        }
+    suspend fun deleteRecurringIncomeSeries(seriesId: String) {
+        repository().deleteRecurringIncomeSeries(seriesId)
     }
 
-    fun stop() {
-        isObserving = false
-        updatesSubscription?.cancel()
-        updatesSubscription = null
-        updatesWrapper?.cancel()
-        updatesWrapper = null
-        onUpdate = null
-    }
-
-    fun dispose() {
-        stop()
-        scope.cancel()
-    }
+    private fun repository(): ExpenseRepository =
+        KoinPlatformTools.defaultContext().get().get()
 }

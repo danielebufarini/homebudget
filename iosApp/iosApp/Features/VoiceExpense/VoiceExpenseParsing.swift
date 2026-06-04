@@ -16,15 +16,15 @@ func parseExpenseIntent(
 
     let session = LanguageModelSession(
         model: SystemLanguageModel.default,
-        instructions: VoiceExpensePromptKt.buildVoiceExpensePromptInstructions(
-            outputContract: VoiceExpensePromptKt.buildIosVoiceExpenseOutputContract()
+        instructions: buildVoiceExpensePromptInstructions(
+            outputContract: buildIosVoiceExpenseOutputContract()
         )
     )
 
     let response = try await session.respond(
         generating: VoiceExpenseInterpretation.self
     ) {
-        VoiceExpensePromptKt.buildVoiceExpensePromptContext(
+        buildVoiceExpensePromptContext(
             currentDate: today,
             currentLanguageName: languageName,
             currentLanguageCode: languageCode,

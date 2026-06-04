@@ -18,22 +18,20 @@ final class HomeBudgetWidgetSummaryRefresher {
     private init() {}
 
     func refresh() {
-        controller.loadCurrentMonthSummary { summary, _ in
-            guard let summary else {
-                return
+        Task { [controller] in
+            guard let result = try? await controller.loadCurrentMonthSummary(),
+                  let summary = result.summary,
+                  let defaults = UserDefaults(suiteName: homeBudgetWidgetAppGroupId) else {
+                    return
             }
 
-            Task { @MainActor in
-                guard let defaults = UserDefaults(suiteName: homeBudgetWidgetAppGroupId) else {
-                    return
-                }
+            defaults.set(summary.monthTitle, forKey: homeBudgetWidgetMonthTitleKey)
+            defaults.set(summary.expenseAmountText, forKey: homeBudgetWidgetExpenseAmountKey)
+            defaults.set(summary.incomeAmountText, forKey: homeBudgetWidgetIncomeAmountKey)
+            defaults.set(summary.updatedAtMillis, forKey: homeBudgetWidgetUpdatedAtKey)
+            defaults.synchronize()
 
-                defaults.set(summary.monthTitle, forKey: homeBudgetWidgetMonthTitleKey)
-                defaults.set(summary.expenseAmountText, forKey: homeBudgetWidgetExpenseAmountKey)
-                defaults.set(summary.incomeAmountText, forKey: homeBudgetWidgetIncomeAmountKey)
-                defaults.set(summary.updatedAtMillis, forKey: homeBudgetWidgetUpdatedAtKey)
-                defaults.synchronize()
-
+            await MainActor.run {
                 WidgetCenter.shared.reloadTimelines(ofKind: homeBudgetWidgetKind)
             }
         }

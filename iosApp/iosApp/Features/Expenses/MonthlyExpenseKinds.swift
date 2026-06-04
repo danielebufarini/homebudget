@@ -1,4 +1,5 @@
 @preconcurrency import ComposeApp
+import Foundation
 
 enum GroupedExpensesKind: Hashable {
     case monthly

@@ -254,10 +254,6 @@ struct ContentView: View {
         .appGlassHostedScreenChrome()
         .dismissesKeyboardOnTap()
         .restoresInteractivePopGesture()
-        .onDisappear {
-            csvImportController.dispose()
-            csvExportController.dispose()
-        }
     }
 
     @ToolbarContentBuilder
@@ -361,14 +357,17 @@ struct ContentView: View {
             return
         }
 
-        csvImportController.importCsv(text: text) { successMessage, errorMessage in
-            Task { @MainActor in
-                if let successMessage {
-                    HomeBudgetWidgetSummaryRefresher.shared.refresh()
-                    showCsvFeedback(successMessage, style: .success)
-                } else if let errorMessage {
-                    showCsvFeedback(errorMessage, style: .error)
-                }
+        Task { @MainActor [csvImportController] in
+            guard let result = try? await csvImportController.importCsv(text: text) else {
+                showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)
+                return
+            }
+
+            if let successMessage = result.successMessage {
+                HomeBudgetWidgetSummaryRefresher.shared.refresh()
+                showCsvFeedback(successMessage, style: .success)
+            } else if let errorMessage = result.errorMessage {
+                showCsvFeedback(errorMessage, style: .error)
             }
         }
     }
@@ -382,19 +381,22 @@ struct ContentView: View {
             return
         }
 
-        csvExportController.exportCsv(
-            startDateMillis: Int64(normalizedStartDate.timeIntervalSince1970 * 1000),
-            endDateMillis: Int64(normalizedEndDate.timeIntervalSince1970 * 1000)
-        ) { fileName, content, errorMessage in
-            Task { @MainActor in
-                if let fileName, let content {
-                    csvExportFilename = fileName
-                    csvExportDocument = CsvExportDocument(text: content)
-                    showCsvExportSheet = false
-                    showCsvExporter = true
-                } else {
-                    showCsvFeedback(errorMessage ?? appLocalized("Unable to export the CSV file"), style: .error)
-                }
+        Task { @MainActor [csvExportController] in
+            let result = try? await csvExportController.exportCsv(
+                startDateMillis: Int64(normalizedStartDate.timeIntervalSince1970 * 1000),
+                endDateMillis: Int64(normalizedEndDate.timeIntervalSince1970 * 1000)
+            )
+
+            if let fileName = result?.fileName, let content = result?.content {
+                csvExportFilename = fileName
+                csvExportDocument = CsvExportDocument(text: content)
+                showCsvExportSheet = false
+                showCsvExporter = true
+            } else {
+                showCsvFeedback(
+                    result?.errorMessage ?? appLocalized("Unable to export the CSV file"),
+                    style: .error
+                )
             }
         }
     }

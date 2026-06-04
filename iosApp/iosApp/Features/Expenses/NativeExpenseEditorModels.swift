@@ -33,60 +33,70 @@ final class NativeExpenseEditorViewModel {
     private let editorController = IosExpenseEditorController()
     private let categoriesController = IosCategoriesController()
     @ObservationIgnored private var hasStarted = false
+    @ObservationIgnored private var categoriesTask: Task<Void, Never>?
 
     init(expenseId: String) {
         self.expenseId = expenseId
     }
 
     deinit {
-        editorController.dispose()
-        categoriesController.dispose()
+        categoriesTask?.cancel()
     }
 
     func start() {
-        guard !hasStarted else {
+        if hasStarted {
+            startCategoryObservationIfNeeded()
             return
         }
 
         hasStarted = true
+        startCategoryObservationIfNeeded()
 
-        categoriesController.start { [weak self] snapshot in
+        Task { [weak self, editorController, expenseId] in
             guard let self else {
                 return
             }
 
-            Task { @MainActor in
-                self.categories = snapshot.categories.map { item in
+            guard let snapshot = try? await editorController.loadExpense(id: expenseId) else {
+                self.isLoading = false
+                self.didFailToLoad = true
+                return
+            }
+
+            amount = snapshot.amountInput
+            selectedDate = Date(timeIntervalSince1970: Double(snapshot.dateMillis) / 1000.0)
+            selectedCategoryId = snapshot.categoryId
+            description = snapshot.descriptionText
+            isShared = snapshot.isShared
+            isRecurringMonthly = snapshot.isRecurringMonthly
+            recurringSeriesId = snapshot.recurringSeriesId
+            didFailToLoad = false
+            isLoading = false
+        }
+    }
+
+    func stop() {
+        categoriesTask?.cancel()
+        categoriesTask = nil
+    }
+
+    private func startCategoryObservationIfNeeded() {
+        guard categoriesTask == nil else {
+            return
+        }
+
+        categoriesTask = Task { [weak self, categoriesController] in
+            for await snapshot in categoriesController.snapshots() {
+                guard let self else {
+                    return
+                }
+                categories = snapshot.categories.map { item in
                     NativeExpenseCategory(
                         id: item.id,
                         name: item.name,
                         iconKey: item.iconKey
                     )
                 }
-            }
-        }
-
-        editorController.loadExpense(id: expenseId) { [weak self] snapshot in
-            guard let self else {
-                return
-            }
-
-            Task { @MainActor in
-                guard let snapshot else {
-                    self.isLoading = false
-                    self.didFailToLoad = true
-                    return
-                }
-
-                self.amount = snapshot.amountInput
-                self.selectedDate = Date(timeIntervalSince1970: Double(snapshot.dateMillis) / 1000.0)
-                self.selectedCategoryId = snapshot.categoryId
-                self.description = snapshot.descriptionText
-                self.isShared = snapshot.isShared
-                self.isRecurringMonthly = snapshot.isRecurringMonthly
-                self.recurringSeriesId = snapshot.recurringSeriesId
-                self.didFailToLoad = false
-                self.isLoading = false
             }
         }
     }
@@ -112,24 +122,31 @@ final class NativeExpenseEditorViewModel {
         onComplete: @escaping (String?) -> Void
     ) {
         isSaving = true
-        editorController.saveExpense(
-            expenseId: expenseId,
-            amountInput: amount,
-            dateMillis: Int64(selectedDate.timeIntervalSince1970 * 1000.0),
-            categoryId: selectedCategoryId,
-            description: description,
-            isShared: isShared,
-            isRecurringMonthly: isRecurringMonthly,
-            updateWholeSeries: updateWholeSeries
-        ) { [weak self] result in
+        Task { [weak self, editorController] in
             guard let self else {
                 return
             }
 
-            Task { @MainActor in
-                self.isSaving = false
-                onComplete(result.isSuccess ? nil : result.errorKey)
+            let result: IosExpenseEditorOperationResult
+            do {
+                result = try await editorController.saveExpense(
+                    expenseId: expenseId,
+                    amountInput: amount,
+                    dateMillis: Int64(selectedDate.timeIntervalSince1970 * 1000.0),
+                    categoryId: selectedCategoryId,
+                    description: description,
+                    isShared: isShared,
+                    isRecurringMonthly: isRecurringMonthly,
+                    updateWholeSeries: updateWholeSeries
+                )
+            } catch {
+                isSaving = false
+                onComplete(error.localizedDescription)
+                return
             }
+
+            isSaving = false
+            onComplete(result.isSuccess ? nil : result.errorKey)
         }
     }
 
@@ -138,18 +155,25 @@ final class NativeExpenseEditorViewModel {
         onComplete: @escaping (String?) -> Void
     ) {
         isSaving = true
-        editorController.deleteExpense(
-            expenseId: expenseId,
-            deleteWholeSeries: deleteWholeSeries
-        ) { [weak self] result in
+        Task { [weak self, editorController, expenseId] in
             guard let self else {
                 return
             }
 
-            Task { @MainActor in
-                self.isSaving = false
-                onComplete(result.isSuccess ? nil : result.errorKey)
+            let result: IosExpenseEditorOperationResult
+            do {
+                result = try await editorController.deleteExpense(
+                    expenseId: expenseId,
+                    deleteWholeSeries: deleteWholeSeries
+                )
+            } catch {
+                isSaving = false
+                onComplete(error.localizedDescription)
+                return
             }
+
+            isSaving = false
+            onComplete(result.isSuccess ? nil : result.errorKey)
         }
     }
 
@@ -158,20 +182,24 @@ final class NativeExpenseEditorViewModel {
         iconKey: String,
         onComplete: @escaping (String?) -> Void
     ) {
-        categoriesController.insertCategoryAndReturnId(
-            name: name,
-            iconKey: iconKey
-        ) { [weak self] categoryId in
+        Task { [weak self, categoriesController] in
+            let categoryId: String?
+            do {
+                categoryId = try await categoriesController.insertCategoryAndReturnId(
+                    name: name,
+                    iconKey: iconKey
+                )
+            } catch {
+                categoryId = nil
+            }
             guard let self else {
                 return
             }
 
-            Task { @MainActor in
-                if let categoryId {
-                    self.selectedCategoryId = categoryId
-                }
-                onComplete(categoryId)
+            if let categoryId {
+                selectedCategoryId = categoryId
             }
+            onComplete(categoryId)
         }
     }
 }

@@ -3,9 +3,6 @@ package it.danielebufarini.homebudget.ui.screens
 import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.di.initKoin
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
@@ -20,7 +17,6 @@ class IosIncomeDeletionMetadata(
 )
 
 class IosEditItemDeletionController {
-    private val scope = MainScope()
     private val repository: ExpenseRepository by lazy {
         if (KoinPlatformTools.defaultContext().getOrNull() == null) {
             initKoin()
@@ -28,101 +24,64 @@ class IosEditItemDeletionController {
         KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
     }
 
-    fun loadExpenseMetadata(
-        id: String,
-        onResult: (IosExpenseDeletionMetadata?) -> Unit
-    ) {
-        scope.launch {
-            val expense = withContext(Dispatchers.Default) {
-                repository.getExpenseById(id)
-            }
-            onResult(
-                expense?.let {
-                    IosExpenseDeletionMetadata(
-                        id = it.id,
-                        recurringSeriesId = it.recurringSeriesId
-                    )
-                }
+    suspend fun loadExpenseMetadata(id: String): IosExpenseDeletionMetadata? {
+        val expense = withContext(Dispatchers.Default) {
+            repository.getExpenseById(id)
+        }
+        return expense?.let {
+            IosExpenseDeletionMetadata(
+                id = it.id,
+                recurringSeriesId = it.recurringSeriesId
             )
         }
     }
 
-    fun loadIncomeMetadata(
-        id: String,
-        onResult: (IosIncomeDeletionMetadata?) -> Unit
-    ) {
-        scope.launch {
-            val income = withContext(Dispatchers.Default) {
-                repository.getIncomeById(id)
-            }
-            onResult(
-                income?.let {
-                    IosIncomeDeletionMetadata(
-                        id = it.id,
-                        recurringSeriesId = it.recurringSeriesId
-                    )
-                }
+    suspend fun loadIncomeMetadata(id: String): IosIncomeDeletionMetadata? {
+        val income = withContext(Dispatchers.Default) {
+            repository.getIncomeById(id)
+        }
+        return income?.let {
+            IosIncomeDeletionMetadata(
+                id = it.id,
+                recurringSeriesId = it.recurringSeriesId
             )
         }
     }
 
-    fun deleteExpense(
-        id: String,
-        onComplete: (Boolean) -> Unit
-    ) {
-        scope.launch {
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.deleteExpense(id)
-                }
+    suspend fun deleteExpense(id: String): IosBooleanResult {
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.deleteExpense(id)
             }
-            onComplete(result.isSuccess)
         }
+        return IosBooleanResult(result.isSuccess)
     }
 
-    fun deleteRecurringExpenseSeries(
-        seriesId: String,
-        onComplete: (Boolean) -> Unit
-    ) {
-        scope.launch {
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.deleteRecurringExpenseSeries(seriesId)
-                }
+    suspend fun deleteRecurringExpenseSeries(seriesId: String): IosBooleanResult {
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.deleteRecurringExpenseSeries(seriesId)
             }
-            onComplete(result.isSuccess)
         }
+        return IosBooleanResult(result.isSuccess)
     }
 
-    fun deleteIncome(
-        id: String,
-        onComplete: (Boolean) -> Unit
-    ) {
-        scope.launch {
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.deleteIncome(id)
-                }
+    suspend fun deleteIncome(id: String): IosBooleanResult {
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.deleteIncome(id)
             }
-            onComplete(result.isSuccess)
         }
+        return IosBooleanResult(result.isSuccess)
     }
 
-    fun deleteRecurringIncomeSeries(
-        seriesId: String,
-        onComplete: (Boolean) -> Unit
-    ) {
-        scope.launch {
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.deleteRecurringIncomeSeries(seriesId)
-                }
+    suspend fun deleteRecurringIncomeSeries(seriesId: String): IosBooleanResult {
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.deleteRecurringIncomeSeries(seriesId)
             }
-            onComplete(result.isSuccess)
         }
+        return IosBooleanResult(result.isSuccess)
     }
 
-    fun dispose() {
-        scope.cancel()
-    }
 }

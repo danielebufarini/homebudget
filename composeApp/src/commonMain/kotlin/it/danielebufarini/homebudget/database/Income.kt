@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package it.danielebufarini.homebudget.database
 
 import androidx.room.ColumnInfo
@@ -5,6 +7,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlin.native.ObjCName
 
 @Entity(
     tableName = "income",
@@ -36,6 +39,7 @@ data class Income(
     val localDate: Int = date.toStoredLocalDate(),
     @ColumnInfo(defaultValue = "0")
     val dayOfMonth: Int = date.toStoredDayOfMonth(),
+    @property:ObjCName(swiftName = "incomeDescription")
     val description: String?,
     val recurringSeriesId: String? = null,
     @ColumnInfo(defaultValue = "NULL")

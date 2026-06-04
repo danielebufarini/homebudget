@@ -218,6 +218,18 @@ Voice entry is platform-specific.
 
 - Android implementation lives under [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens)
 - iOS implementation lives under [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
+
+## iOS smoke testing
+
+Run this checklist after changing SKIE, Kotlin/Native bridge APIs, Room KMP persistence, iCloud backup, CSV transfer, or native SwiftUI transaction screens.
+
+1. Category add: open the native add/edit transaction flow, add a new expense category, verify it appears selected, then reopen the category picker and confirm it persists.
+2. Monthly grouped lists: open monthly expenses and monthly incomes, switch grouping between category and date, expand/collapse sections, and delete one non-recurring item.
+3. Transaction search paging: search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
+4. CSV import/export: export a date range, verify the file is offered with CSV content, import that file, and confirm success or skipped-row feedback appears.
+5. Startup restore: on an empty iOS install with an iCloud backup available, launch the app, preview the restore counts, restore, and verify dashboard data appears.
+6. Voice expense save: start voice entry, create or update a draft, save it, and verify the expense appears in the current month.
+7. Widget refresh: trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
 - shared prompt and contract helpers live in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens/VoiceExpensePrompt.kt)
 
 ## Build
@@ -246,11 +258,25 @@ Compile the shared iOS target from Gradle:
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64
 ```
 
-Build the iOS app from the command line:
+Build the iOS app from the command line against a specific installed simulator:
 
 ```sh
-xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'platform=iOS Simulator,name=<installed simulator name>' build
 ```
+
+### Verification
+
+Run the local verification suite used by CI:
+
+```sh
+./gradlew verifyAll
+```
+
+It runs:
+
+- shared and Android unit tests
+- Android debug assembly
+- Kotlin/Native iOS simulator framework compilation
 
 ## Setup notes
 
@@ -267,12 +293,3 @@ Without this setup, local backup still works.
 ### iOS
 
 The iOS target depends on the Xcode project configuration already present in `iosApp`, including iCloud and widget entitlements.
-
-## Verification
-
-Common verification commands:
-
-```sh
-./gradlew :composeApp:compileAndroidMain :composeApp:compileKotlinIosSimulatorArm64
-./gradlew :androidApp:assembleDebug
-```

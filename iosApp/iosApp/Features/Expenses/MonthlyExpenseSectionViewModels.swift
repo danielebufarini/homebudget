@@ -12,7 +12,7 @@ final class GroupedExpensesSectionsViewModel {
 
     private let observer: IosGroupedExpensesObserver
     @ObservationIgnored private var expansionState: GroupedSectionExpansionState
-    @ObservationIgnored private var isObserving = false
+    @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     init(
         year: Int,
@@ -35,41 +35,39 @@ final class GroupedExpensesSectionsViewModel {
     }
 
     deinit {
-        observer.dispose()
+        observationTask?.cancel()
     }
 
     func start() {
-        guard !isObserving else {
+        guard observationTask == nil else {
             return
         }
 
-        isObserving = true
-        observer.start { [weak self] snapshot in
-            guard let self else {
-                return
-            }
-
-            MainActor.assumeIsolated {
-                self.apply(snapshot: snapshot)
+        observationTask = Task { [weak self, observer] in
+            for await snapshot in observer.snapshots {
+                guard let self else {
+                    return
+                }
+                apply(snapshot: snapshot)
             }
         }
     }
 
     func stop() {
-        guard isObserving else {
-            return
-        }
-
-        observer.stop()
-        isObserving = false
+        observationTask?.cancel()
+        observationTask = nil
     }
 
     func deleteExpense(_ expenseID: String) {
-        observer.deleteExpense(id: expenseID)
+        Task { [observer] in
+            try? await observer.deleteExpense(id: expenseID)
+        }
     }
 
     func deleteRecurringExpenseSeries(_ seriesID: String) {
-        observer.deleteRecurringExpenseSeries(seriesId: seriesID)
+        Task { [observer] in
+            try? await observer.deleteRecurringExpenseSeries(seriesId: seriesID)
+        }
     }
 
     func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
@@ -102,7 +100,7 @@ final class MonthlyIncomesSectionsViewModel {
     @ObservationIgnored private var expansionState = GroupedSectionExpansionState(
         strategy: NewSectionsExpansionStrategy(expandsInitially: false)
     )
-    @ObservationIgnored private var isObserving = false
+    @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     init(
         year: Int,
@@ -117,41 +115,39 @@ final class MonthlyIncomesSectionsViewModel {
     }
 
     deinit {
-        observer.dispose()
+        observationTask?.cancel()
     }
 
     func start() {
-        guard !isObserving else {
+        guard observationTask == nil else {
             return
         }
 
-        isObserving = true
-        observer.start { [weak self] snapshot in
-            guard let self else {
-                return
-            }
-
-            MainActor.assumeIsolated {
-                self.apply(snapshot: snapshot)
+        observationTask = Task { [weak self, observer] in
+            for await snapshot in observer.snapshots {
+                guard let self else {
+                    return
+                }
+                apply(snapshot: snapshot)
             }
         }
     }
 
     func stop() {
-        guard isObserving else {
-            return
-        }
-
-        observer.stop()
-        isObserving = false
+        observationTask?.cancel()
+        observationTask = nil
     }
 
     func deleteIncome(_ incomeID: String) {
-        observer.deleteIncome(id: incomeID)
+        Task { [observer] in
+            try? await observer.deleteIncome(id: incomeID)
+        }
     }
 
     func deleteRecurringIncomeSeries(_ seriesID: String) {
-        observer.deleteRecurringIncomeSeries(seriesId: seriesID)
+        Task { [observer] in
+            try? await observer.deleteRecurringIncomeSeries(seriesId: seriesID)
+        }
     }
 
     func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {

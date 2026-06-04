@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package it.danielebufarini.homebudget.database
 
 import androidx.room.ColumnInfo
@@ -5,6 +7,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlin.native.ObjCName
 
 @Entity(
     tableName = "expense",
@@ -38,6 +41,7 @@ data class Expense(
     @ColumnInfo(defaultValue = "0")
     val dayOfMonth: Int = date.toStoredDayOfMonth(),
     val categoryId: String,
+    @property:ObjCName(swiftName = "expenseDescription")
     val description: String?,
     @ColumnInfo(defaultValue = "0")
     val isShared: Long = 0L,

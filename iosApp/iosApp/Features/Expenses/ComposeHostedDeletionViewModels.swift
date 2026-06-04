@@ -9,25 +9,20 @@ final class ExpenseEditorDeletionViewModel {
 
     private let controller = IosEditItemDeletionController()
 
-    func disposeController() {
-        controller.dispose()
-    }
-
     func requestDelete(
         expenseId: String,
         onClose: @escaping () -> Void
     ) {
-        controller.loadExpenseMetadata(id: expenseId) { [weak self] metadata in
-            guard let self, let metadata else {
+        Task { [weak self, controller] in
+            guard let self,
+                  let metadata = try? await controller.loadExpenseMetadata(id: expenseId) else {
                 return
             }
 
-            Task { @MainActor in
-                if let seriesId = metadata.recurringSeriesId, !seriesId.isEmpty {
-                    self.pendingSeriesId = seriesId
-                } else {
-                    self.deleteExpense(expenseId: metadata.id, onClose: onClose)
-                }
+            if let seriesId = metadata.recurringSeriesId, !seriesId.isEmpty {
+                self.pendingSeriesId = seriesId
+            } else {
+                self.deleteExpense(expenseId: metadata.id, onClose: onClose)
             }
         }
     }
@@ -36,14 +31,12 @@ final class ExpenseEditorDeletionViewModel {
         expenseId: String,
         onClose: @escaping () -> Void
     ) {
-        controller.deleteExpense(id: expenseId) { success in
-            guard success.boolValue else {
+        Task { [controller] in
+            guard (try? await controller.deleteExpense(id: expenseId))?.isSuccess == true else {
                 return
             }
 
-            Task { @MainActor in
-                onClose()
-            }
+            onClose()
         }
     }
 
@@ -52,15 +45,14 @@ final class ExpenseEditorDeletionViewModel {
             return
         }
 
-        controller.deleteRecurringExpenseSeries(seriesId: pendingSeriesId) { success in
-            guard success.boolValue else {
+        Task { [weak self, controller, pendingSeriesId] in
+            guard let self,
+                  (try? await controller.deleteRecurringExpenseSeries(seriesId: pendingSeriesId))?.isSuccess == true else {
                 return
             }
 
-            Task { @MainActor in
-                self.pendingSeriesId = nil
-                onClose()
-            }
+            self.pendingSeriesId = nil
+            onClose()
         }
     }
 }
@@ -72,25 +64,20 @@ final class IncomeEditorDeletionViewModel {
 
     private let controller = IosEditItemDeletionController()
 
-    func disposeController() {
-        controller.dispose()
-    }
-
     func requestDelete(
         incomeId: String,
         onClose: @escaping () -> Void
     ) {
-        controller.loadIncomeMetadata(id: incomeId) { [weak self] metadata in
-            guard let self, let metadata else {
+        Task { [weak self, controller] in
+            guard let self,
+                  let metadata = try? await controller.loadIncomeMetadata(id: incomeId) else {
                 return
             }
 
-            Task { @MainActor in
-                if let seriesId = metadata.recurringSeriesId, !seriesId.isEmpty {
-                    self.pendingSeriesId = seriesId
-                } else {
-                    self.deleteIncome(incomeId: metadata.id, onClose: onClose)
-                }
+            if let seriesId = metadata.recurringSeriesId, !seriesId.isEmpty {
+                self.pendingSeriesId = seriesId
+            } else {
+                self.deleteIncome(incomeId: metadata.id, onClose: onClose)
             }
         }
     }
@@ -99,14 +86,12 @@ final class IncomeEditorDeletionViewModel {
         incomeId: String,
         onClose: @escaping () -> Void
     ) {
-        controller.deleteIncome(id: incomeId) { success in
-            guard success.boolValue else {
+        Task { [controller] in
+            guard (try? await controller.deleteIncome(id: incomeId))?.isSuccess == true else {
                 return
             }
 
-            Task { @MainActor in
-                onClose()
-            }
+            onClose()
         }
     }
 
@@ -115,15 +100,14 @@ final class IncomeEditorDeletionViewModel {
             return
         }
 
-        controller.deleteRecurringIncomeSeries(seriesId: pendingSeriesId) { success in
-            guard success.boolValue else {
+        Task { [weak self, controller, pendingSeriesId] in
+            guard let self,
+                  (try? await controller.deleteRecurringIncomeSeries(seriesId: pendingSeriesId))?.isSuccess == true else {
                 return
             }
 
-            Task { @MainActor in
-                self.pendingSeriesId = nil
-                onClose()
-            }
+            self.pendingSeriesId = nil
+            onClose()
         }
     }
 }

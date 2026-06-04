@@ -9,9 +9,6 @@ import it.danielebufarini.homebudget.data.buildRecurringMonthlyIncomes
 import it.danielebufarini.homebudget.data.parseAmountInput
 import it.danielebufarini.homebudget.di.initKoin
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
@@ -21,134 +18,115 @@ class IosNativeTransactionEditorResult(
 )
 
 class IosNativeTransactionEditorController {
-    private val scope = MainScope()
     private val repository: ExpenseRepository by lazy {
         ensureIosNativeTransactionEditorKoinStarted()
         KoinPlatformTools.defaultContext().get().get()
     }
 
-    fun saveExpense(
+    suspend fun saveExpense(
         amountInput: String,
         dateMillis: Long,
         categoryId: String,
         description: String,
         isShared: Boolean,
         isRecurringMonthly: Boolean,
-        installmentCount: Int,
-        onComplete: (IosNativeTransactionEditorResult) -> Unit
-    ) {
+        installmentCount: Int
+    ): IosNativeTransactionEditorResult {
         val parsedAmount = parseAmountInput(amountInput)
         if (parsedAmount == null || parsedAmount <= 0L) {
-            onComplete(IosNativeTransactionEditorResult(false, "Enter a valid amount"))
-            return
+            return IosNativeTransactionEditorResult(false, "Enter a valid amount")
         }
         if (categoryId.isBlank()) {
-            onComplete(IosNativeTransactionEditorResult(false, "Select Category"))
-            return
+            return IosNativeTransactionEditorResult(false, "Select Category")
         }
         if (dateMillis <= 0L) {
-            onComplete(IosNativeTransactionEditorResult(false, "Select a date"))
-            return
+            return IosNativeTransactionEditorResult(false, "Select a date")
         }
 
-        scope.launch {
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    val expenses = if (isRecurringMonthly) {
-                        buildRecurringMonthlyExpenses(
-                            amount = parsedAmount,
-                            firstDate = dateMillis,
-                            categoryId = categoryId,
-                            description = description,
-                            isShared = isShared,
-                            recurringSeriesId = buildIosRecurringExpenseSeriesId(),
-                            idProvider = ::buildIosExpenseId
-                        )
-                    } else {
-                        buildPendingExpenses(
-                            amount = parsedAmount,
-                            firstDate = dateMillis,
-                            installments = installmentCount,
-                            categoryId = categoryId,
-                            description = description,
-                            isShared = isShared,
-                            idProvider = ::buildIosExpenseId
-                        )
-                    }
-                    repository.insertExpenses(expenses)
-                }
-            }
-
-            onComplete(
-                if (result.isSuccess) {
-                    IosNativeTransactionEditorResult(true)
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                val expenses = if (isRecurringMonthly) {
+                    buildRecurringMonthlyExpenses(
+                        amount = parsedAmount,
+                        firstDate = dateMillis,
+                        categoryId = categoryId,
+                        description = description,
+                        isShared = isShared,
+                        recurringSeriesId = buildIosRecurringExpenseSeriesId(),
+                        idProvider = ::buildIosExpenseId
+                    )
                 } else {
-                    IosNativeTransactionEditorResult(false, "Unable to save expense.")
+                    buildPendingExpenses(
+                        amount = parsedAmount,
+                        firstDate = dateMillis,
+                        installments = installmentCount,
+                        categoryId = categoryId,
+                        description = description,
+                        isShared = isShared,
+                        idProvider = ::buildIosExpenseId
+                    )
                 }
-            )
+                repository.insertExpenses(expenses)
+            }
+        }
+
+        return if (result.isSuccess) {
+            IosNativeTransactionEditorResult(true)
+        } else {
+            IosNativeTransactionEditorResult(false, "Unable to save expense.")
         }
     }
 
-    fun saveIncome(
+    suspend fun saveIncome(
         amountInput: String,
         dateMillis: Long,
         categoryId: String?,
         description: String,
-        isRecurringMonthly: Boolean,
-        onComplete: (IosNativeTransactionEditorResult) -> Unit
-    ) {
+        isRecurringMonthly: Boolean
+    ): IosNativeTransactionEditorResult {
         val parsedAmount = parseAmountInput(amountInput)
         if (parsedAmount == null || parsedAmount <= 0L) {
-            onComplete(IosNativeTransactionEditorResult(false, "Enter a valid amount"))
-            return
+            return IosNativeTransactionEditorResult(false, "Enter a valid amount")
         }
         if (dateMillis <= 0L) {
-            onComplete(IosNativeTransactionEditorResult(false, "Select a date"))
-            return
+            return IosNativeTransactionEditorResult(false, "Select a date")
         }
 
-        scope.launch {
-            val normalizedCategoryId = categoryId?.takeIf { it.isNotBlank() }
-            val result = withContext(Dispatchers.Default) {
-                runCatching {
-                    val incomes = if (isRecurringMonthly) {
-                        buildRecurringMonthlyIncomes(
-                            amount = parsedAmount,
-                            firstDate = dateMillis,
-                            description = description,
-                            categoryId = normalizedCategoryId,
-                            recurringSeriesId = buildIosRecurringIncomeSeriesId(),
-                            idProvider = ::buildIosIncomeId
-                        )
-                    } else {
-                        listOf(
-                            PendingIncome(
-                                id = buildIosIncomeId(),
-                                amount = parsedAmount,
-                                date = dateMillis,
-                                description = description.ifBlank { null },
-                                categoryId = normalizedCategoryId,
-                                recurringSeriesId = null
-                            )
-                        )
-                    }
-                    repository.insertIncomes(incomes)
-                }
-            }
-
-            onComplete(
-                if (result.isSuccess) {
-                    IosNativeTransactionEditorResult(true)
+        val normalizedCategoryId = categoryId?.takeIf { it.isNotBlank() }
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                val incomes = if (isRecurringMonthly) {
+                    buildRecurringMonthlyIncomes(
+                        amount = parsedAmount,
+                        firstDate = dateMillis,
+                        description = description,
+                        categoryId = normalizedCategoryId,
+                        recurringSeriesId = buildIosRecurringIncomeSeriesId(),
+                        idProvider = ::buildIosIncomeId
+                    )
                 } else {
-                    IosNativeTransactionEditorResult(false, "Unable to save income.")
+                    listOf(
+                        PendingIncome(
+                            id = buildIosIncomeId(),
+                            amount = parsedAmount,
+                            date = dateMillis,
+                            description = description.ifBlank { null },
+                            categoryId = normalizedCategoryId,
+                            recurringSeriesId = null
+                        )
+                    )
                 }
-            )
+                repository.insertIncomes(incomes)
+            }
+        }
+
+        return if (result.isSuccess) {
+            IosNativeTransactionEditorResult(true)
+        } else {
+            IosNativeTransactionEditorResult(false, "Unable to save income.")
         }
     }
 
-    fun dispose() {
-        scope.cancel()
-    }
 }
 
 private fun ensureIosNativeTransactionEditorKoinStarted() {

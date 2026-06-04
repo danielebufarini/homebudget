@@ -7,13 +7,10 @@ import it.danielebufarini.homebudget.data.sumAmountOf
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.Expense
 import it.danielebufarini.homebudget.database.Income
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
 class IosTransactionSearchSnapshot(
@@ -27,7 +24,7 @@ class IosTransactionSearchObserver(
     private val query: String,
     initialGroupingMode: String
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val snapshotState = MutableStateFlow<IosTransactionSearchSnapshot?>(null)
     private var groupingMode = initialGroupingMode
     private var loadedPageCount = 0
     private var loadedExpenses: List<Expense> = emptyList()
@@ -37,84 +34,60 @@ class IosTransactionSearchObserver(
     private var canLoadMoreExpenseResults = false
     private var canLoadMoreIncomeResults = false
     private var isLoadingPage = false
-    private var isObserving = false
-    private var onUpdate: ((IosTransactionSearchSnapshot) -> Unit)? = null
+    private var hasStarted = false
 
-    fun start(onUpdate: (IosTransactionSearchSnapshot) -> Unit) {
-        if (isObserving) {
+    val snapshots: StateFlow<IosTransactionSearchSnapshot?> = snapshotState.asStateFlow()
+
+    suspend fun start() {
+        if (hasStarted) {
             return
         }
 
-        this.onUpdate = onUpdate
-        isObserving = true
-        scope.launch {
-            val repository = repository()
-            repository.seedStarterCategoriesIfEmpty()
-            localization = loadIosGroupedLocalization()
-            latestCategories = repository.getAllCategories().first()
-            loadNextPage(repository)
-        }
+        hasStarted = true
+        val repository = repository()
+        repository.seedStarterCategoriesIfEmpty()
+        localization = loadIosGroupedLocalization()
+        latestCategories = repository.getAllCategories().first()
+        loadNextPage(repository)
     }
 
-    fun setGroupingMode(groupingMode: String) {
+    suspend fun setGroupingMode(groupingMode: String) {
         if (this.groupingMode != groupingMode) {
             this.groupingMode = groupingMode
-            scope.launch {
-                publishSnapshot()
-            }
-        }
-    }
-
-    fun loadMoreResults() {
-        scope.launch {
-            loadNextPage(repository())
-        }
-    }
-
-    fun deleteExpense(id: String) {
-        scope.launch {
-            repository().deleteExpense(id)
-            loadedExpenses = loadedExpenses.filterNot { it.id == id }
             publishSnapshot()
         }
     }
 
-    fun deleteIncome(id: String) {
-        scope.launch {
-            repository().deleteIncome(id)
-            loadedIncomes = loadedIncomes.filterNot { it.id == id }
-            publishSnapshot()
-        }
+    suspend fun loadMoreResults() {
+        loadNextPage(repository())
     }
 
-    fun deleteRecurringExpenseSeries(seriesId: String) {
-        scope.launch {
-            repository().deleteRecurringExpenseSeries(seriesId)
-            loadedExpenses = loadedExpenses.filterNot { it.recurringSeriesId == seriesId }
-            publishSnapshot()
-        }
+    suspend fun deleteExpense(id: String) {
+        repository().deleteExpense(id)
+        loadedExpenses = loadedExpenses.filterNot { it.id == id }
+        publishSnapshot()
     }
 
-    fun deleteRecurringIncomeSeries(seriesId: String) {
-        scope.launch {
-            repository().deleteRecurringIncomeSeries(seriesId)
-            loadedIncomes = loadedIncomes.filterNot { it.recurringSeriesId == seriesId }
-            publishSnapshot()
-        }
+    suspend fun deleteIncome(id: String) {
+        repository().deleteIncome(id)
+        loadedIncomes = loadedIncomes.filterNot { it.id == id }
+        publishSnapshot()
     }
 
-    fun stop() {
-        isObserving = false
-        onUpdate = null
+    suspend fun deleteRecurringExpenseSeries(seriesId: String) {
+        repository().deleteRecurringExpenseSeries(seriesId)
+        loadedExpenses = loadedExpenses.filterNot { it.recurringSeriesId == seriesId }
+        publishSnapshot()
     }
 
-    fun dispose() {
-        stop()
-        scope.cancel()
+    suspend fun deleteRecurringIncomeSeries(seriesId: String) {
+        repository().deleteRecurringIncomeSeries(seriesId)
+        loadedIncomes = loadedIncomes.filterNot { it.recurringSeriesId == seriesId }
+        publishSnapshot()
     }
 
     private suspend fun loadNextPage(repository: ExpenseRepository) {
-        if (!isObserving || isLoadingPage) {
+        if (!hasStarted || isLoadingPage) {
             return
         }
 
@@ -156,9 +129,7 @@ class IosTransactionSearchObserver(
             canLoadMoreExpenseResults = canLoadMoreExpenseResults,
             canLoadMoreIncomeResults = canLoadMoreIncomeResults
         )
-        withContext(Dispatchers.Main) {
-            onUpdate?.invoke(snapshot)
-        }
+        snapshotState.value = snapshot
     }
 
     private fun repository(): ExpenseRepository =

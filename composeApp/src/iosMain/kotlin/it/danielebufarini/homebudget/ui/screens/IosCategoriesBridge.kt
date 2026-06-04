@@ -6,11 +6,10 @@ import it.danielebufarini.homebudget.di.initKoin
 import it.danielebufarini.homebudget.localization.loadCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.categories.buildCategoryId
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
@@ -24,32 +23,25 @@ class IosCategoriesSnapshot(
     val categories: List<IosCategoryItem>
 )
 
-class IosCategoriesController {
-    private val scope = MainScope()
-    private var updatesJob: Job? = null
+class IosBooleanResult(
+    val isSuccess: Boolean
+)
 
+class IosCategoriesController {
     private val repository: ExpenseRepository by lazy {
         ensureIosCategoriesKoinStarted()
         KoinPlatformTools.defaultContext().get().get()
     }
 
-    fun start(onUpdate: (IosCategoriesSnapshot) -> Unit) {
-        startForCategoryType(CATEGORY_TYPE_EXPENSE, onUpdate)
-    }
+    fun snapshots() = snapshotsForCategoryType(CATEGORY_TYPE_EXPENSE)
 
-    fun startForCategoryType(categoryType: String, onUpdate: (IosCategoriesSnapshot) -> Unit) {
-        if (updatesJob != null) {
-            return
-        }
-
-        updatesJob = scope.launch {
-            withContext(Dispatchers.Default) {
-                repository.seedStarterCategoriesIfEmpty()
-            }
-            repository.getAllCategories().flowOn(Dispatchers.Default).collect { categories ->
-                val resolveCategoryName = loadCategoryNameResolver()
-                val selectableCategories = withContext(Dispatchers.Default) {
-                    categories
+    fun snapshotsForCategoryType(categoryType: String) = flow {
+        repository.seedStarterCategoriesIfEmpty()
+        emitAll(
+            repository.getAllCategories()
+                .map { categories ->
+                    val resolveCategoryName = loadCategoryNameResolver()
+                    val selectableCategories = categories
                         .asSequence()
                         .filter { category ->
                             category.categoryType == categoryType && category.isArchived != 1L
@@ -62,113 +54,71 @@ class IosCategoriesController {
                             )
                         }
                         .toList()
+                    IosCategoriesSnapshot(categories = selectableCategories)
                 }
-                onUpdate(
-                    IosCategoriesSnapshot(
-                        categories = selectableCategories
-                    )
+        )
+    }.flowOn(Dispatchers.Default)
+
+    suspend fun insertCategory(name: String, iconKey: String): IosBooleanResult {
+        return IosBooleanResult(insertCategoryAndReturnId(name, iconKey) != null)
+    }
+
+    suspend fun insertCategoryAndReturnId(
+        name: String,
+        iconKey: String
+    ): String? {
+        return insertCategoryAndReturnIdForCategoryType(name, iconKey, CATEGORY_TYPE_EXPENSE)
+    }
+
+    suspend fun insertCategoryAndReturnIdForCategoryType(
+        name: String,
+        iconKey: String,
+        categoryType: String
+    ): String? {
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) {
+            return null
+        }
+
+        val categoryId = buildCategoryId()
+        val success = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.insertCategory(
+                    id = categoryId,
+                    name = trimmedName,
+                    icon = iconKey,
+                    categoryType = categoryType
                 )
-            }
+            }.isSuccess
         }
+        return if (success) categoryId else null
     }
 
-    fun stop() {
-        updatesJob?.cancel()
-        updatesJob = null
-    }
-
-    fun dispose() {
-        stop()
-        scope.cancel()
-    }
-
-    fun insertCategory(name: String, iconKey: String, onComplete: (Boolean) -> Unit) {
+    suspend fun updateCategory(id: String, name: String, iconKey: String): IosBooleanResult {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            onComplete(false)
-            return
+            return IosBooleanResult(false)
         }
 
-        scope.launch {
-            val success = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.insertCategory(
-                        id = buildCategoryId(),
-                        name = trimmedName,
-                        icon = iconKey
-                    )
-                }.isSuccess
-            }
-            onComplete(success)
+        val success = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.updateCategory(
+                    id = id,
+                    name = trimmedName,
+                    icon = iconKey
+                )
+            }.isSuccess
         }
+        return IosBooleanResult(success)
     }
 
-    fun insertCategoryAndReturnId(
-        name: String,
-        iconKey: String,
-        onComplete: (String?) -> Unit
-    ) {
-        insertCategoryAndReturnIdForCategoryType(name, iconKey, CATEGORY_TYPE_EXPENSE, onComplete)
-    }
-
-    fun insertCategoryAndReturnIdForCategoryType(
-        name: String,
-        iconKey: String,
-        categoryType: String,
-        onComplete: (String?) -> Unit
-    ) {
-        val trimmedName = name.trim()
-        if (trimmedName.isEmpty()) {
-            onComplete(null)
-            return
+    suspend fun deleteCategory(id: String): IosBooleanResult {
+        val success = withContext(Dispatchers.Default) {
+            runCatching {
+                repository.deleteCategory(id)
+            }.isSuccess
         }
-
-        scope.launch {
-            val categoryId = buildCategoryId()
-            val success = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.insertCategory(
-                        id = categoryId,
-                        name = trimmedName,
-                        icon = iconKey,
-                        categoryType = categoryType
-                    )
-                }.isSuccess
-            }
-            onComplete(if (success) categoryId else null)
-        }
-    }
-
-    fun updateCategory(id: String, name: String, iconKey: String, onComplete: (Boolean) -> Unit) {
-        val trimmedName = name.trim()
-        if (trimmedName.isEmpty()) {
-            onComplete(false)
-            return
-        }
-
-        scope.launch {
-            val success = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.updateCategory(
-                        id = id,
-                        name = trimmedName,
-                        icon = iconKey
-                    )
-                }.isSuccess
-            }
-            onComplete(success)
-        }
-    }
-
-    fun deleteCategory(id: String, onComplete: (Boolean) -> Unit) {
-        scope.launch {
-            val success = withContext(Dispatchers.Default) {
-                runCatching {
-                    repository.deleteCategory(id)
-                }.isSuccess
-            }
-            onComplete(success)
-        }
+        return IosBooleanResult(success)
     }
 }
 

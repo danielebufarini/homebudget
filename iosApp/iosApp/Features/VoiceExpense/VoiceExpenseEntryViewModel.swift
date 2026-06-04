@@ -88,7 +88,6 @@ final class VoiceExpenseEntryViewModel {
 
     func dispose() {
         recorder.stop()
-        controller.dispose()
     }
 
     private func loadSnapshot() {

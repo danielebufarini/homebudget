@@ -1,4 +1,8 @@
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package it.danielebufarini.homebudget.database
+
+import kotlin.native.ObjCName
 
 // Raw Room projection: directly read from SQLite.
 data class DashboardCategoryAmountGroupRow(
@@ -41,6 +45,7 @@ data class DashboardRecentTransactionRow(
     val amount: Long,
     val date: Long,
     val categoryId: String?,
+    @property:ObjCName(swiftName = "transactionDescription")
     val description: String?
 )
 

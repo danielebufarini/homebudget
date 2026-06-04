@@ -1,4 +1,8 @@
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package it.danielebufarini.homebudget.data
+
+import kotlin.native.ObjCName
 
 data class DashboardMonthTotal(
     val year: Int,
@@ -41,6 +45,7 @@ data class DashboardRecentTransaction(
     val amount: Long,
     val date: Long,
     val categoryId: String?,
+    @property:ObjCName(swiftName = "transactionDescription")
     val description: String?
 )
 

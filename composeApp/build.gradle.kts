@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.skie)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
 }
@@ -29,7 +30,6 @@ kotlin {
 
     listOf(
         iosArm64(),
-        iosX64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
@@ -85,10 +85,18 @@ kotlin {
 dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
-    add("kspIosX64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
 }
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+skie {
+    analytics {
+        disableUpload.set(true)
+    }
+    features {
+        coroutinesInterop.set(true)
+    }
 }

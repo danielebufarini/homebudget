@@ -95,15 +95,7 @@ struct iOSApp: App {
         }
 
         let controller = IosBackupRestoreController()
-        defer {
-            controller.dispose()
-        }
-
-        let isRestoreTargetEmpty = await withCheckedContinuation { continuation in
-            controller.isRestoreTargetEmpty { isEmpty in
-                continuation.resume(returning: Bool(truncating: isEmpty))
-            }
-        }
+        let isRestoreTargetEmpty = (try? await controller.isRestoreTargetEmpty())?.isSuccess == true
 
         guard isRestoreTargetEmpty else {
             await markStartupRestoreCompleted()
@@ -112,18 +104,13 @@ struct iOSApp: App {
 
         do {
             let text = try await ICloudBackupStore.readBackup()
-            let preview = await withCheckedContinuation { continuation in
-                controller.prepareRestore(text: text) { preview, _ in
-                    continuation.resume(
-                        returning: preview.map {
-                            StartupRestorePreview(
-                                categoriesCount: Int($0.categoriesCount),
-                                expensesCount: Int($0.expensesCount),
-                                incomesCount: Int($0.incomesCount)
-                            )
-                        }
-                    )
-                }
+            let restoreResult = try? await controller.prepareRestore(text: text)
+            let preview = restoreResult?.counters.map {
+                StartupRestorePreview(
+                    categoriesCount: Int($0.categoriesCount),
+                    expensesCount: Int($0.expensesCount),
+                    incomesCount: Int($0.incomesCount)
+                )
             }
 
             if let preview {
@@ -141,15 +128,8 @@ struct iOSApp: App {
     private func confirmStartupRestore(_ pendingRestore: PendingStartupRestore) async {
         pendingStartupRestore = nil
         let controller = IosBackupRestoreController()
-        defer {
-            controller.dispose()
-        }
-
-        let restored = await withCheckedContinuation { continuation in
-            controller.restoreBackup(text: pendingRestore.text) { result, _ in
-                continuation.resume(returning: result != nil)
-            }
-        }
+        let restoreResult = try? await controller.restoreBackup(text: pendingRestore.text)
+        let restored = restoreResult?.counters != nil
 
         if restored {
             await markStartupRestoreCompleted()
