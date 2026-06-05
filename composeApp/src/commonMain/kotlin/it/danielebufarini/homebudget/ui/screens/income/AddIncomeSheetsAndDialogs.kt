@@ -2,7 +2,7 @@ package it.danielebufarini.homebudget.ui.screens.income
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
 import it.danielebufarini.homebudget.database.CATEGORY_TYPE_INCOME
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.ui.screens.categories.AddCategorySheet
@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun AddIncomeSheetsAndDialogs(
     labels: AddIncomeRouteLabels,
-    repository: ExpenseRepository,
+    repository: CategoryManagementRepository,
     scopeLaunch: ((suspend () -> Unit) -> Unit),
     showAddCategorySheet: Boolean,
     onAddCategorySheetChange: (Boolean) -> Unit,

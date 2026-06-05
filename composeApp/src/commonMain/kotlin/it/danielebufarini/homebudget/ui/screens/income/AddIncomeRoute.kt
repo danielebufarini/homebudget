@@ -13,8 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
+import it.danielebufarini.homebudget.data.IncomeReadRepository
 import it.danielebufarini.homebudget.data.PendingIncome
+import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyIncomes
 import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
 import it.danielebufarini.homebudget.data.formatAmountInput
@@ -41,7 +43,9 @@ internal fun AddIncomeRoute(
     onClose: () -> Unit,
     useHostedFloatingChrome: Boolean = false,
 ) {
-    val repository: ExpenseRepository = koinInject()
+    val categoryRepository: CategoryManagementRepository = koinInject()
+    val incomeReadRepository: IncomeReadRepository = koinInject()
+    val transactionWriteRepository: TransactionWriteRepository = koinInject()
     val labels = addIncomeRouteLabels()
     val isIos = rememberIsIosPlatform()
     val useIosHostedFloatingChrome = isIos && useHostedFloatingChrome
@@ -68,8 +72,8 @@ internal fun AddIncomeRoute(
     var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringIncomeUpdate?>(null) }
     var pendingRecurringAction by remember { mutableStateOf<RecurringIncomeAction?>(null) }
 
-    val categoriesFlow = remember(repository) {
-        repository.getAllCategories().flowOn(Dispatchers.Default)
+    val categoriesFlow = remember(categoryRepository) {
+        categoryRepository.getAllCategories().flowOn(Dispatchers.Default)
     }
     val categories by categoriesFlow.collectAsState(initial = emptyList())
     val selectableCategories = remember(categories, selectedCategoryId) {
@@ -86,7 +90,7 @@ internal fun AddIncomeRoute(
         if (incomeId == null || isInitialized) return@LaunchedEffect
 
         val income = withContext(Dispatchers.Default) {
-            repository.getIncomeById(incomeId)
+            incomeReadRepository.getIncomeById(incomeId)
         } ?: return@LaunchedEffect
         amount = formatAmountInput(income.amount)
         description = income.description.orEmpty()
@@ -107,7 +111,7 @@ internal fun AddIncomeRoute(
                 val currentIncomeId = incomeId ?: return@runCatching
                 val seriesId = recurringSeriesId
                 if (updateWholeSeries && !seriesId.isNullOrBlank()) {
-                    repository.updateRecurringIncomeSeries(
+                    transactionWriteRepository.updateRecurringIncomeSeries(
                         anchorIncomeId = currentIncomeId,
                         seriesId = seriesId,
                         amount = payload.amount,
@@ -116,7 +120,7 @@ internal fun AddIncomeRoute(
                         categoryId = payload.categoryId,
                     )
                 } else {
-                    repository.insertIncomes(
+                    transactionWriteRepository.insertIncomes(
                         incomes = listOf(
                             PendingIncome(
                                 id = currentIncomeId,
@@ -146,9 +150,9 @@ internal fun AddIncomeRoute(
                 val currentIncomeId = incomeId ?: return@runCatching
                 val seriesId = recurringSeriesId
                 if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
-                    repository.deleteRecurringIncomeSeries(seriesId)
+                    transactionWriteRepository.deleteRecurringIncomeSeries(seriesId)
                 } else {
-                    repository.deleteIncome(currentIncomeId)
+                    transactionWriteRepository.deleteIncome(currentIncomeId)
                 }
             }
         }
@@ -195,7 +199,7 @@ internal fun AddIncomeRoute(
 
             isSaving = true
             saveIncome(
-                repository = repository,
+                repository = transactionWriteRepository,
                 incomeId = incomeId,
                 amount = parsedAmount,
                 date = selectedDateMillis,
@@ -260,7 +264,7 @@ internal fun AddIncomeRoute(
 
     AddIncomeSheetsAndDialogs(
         labels = labels,
-        repository = repository,
+        repository = categoryRepository,
         scopeLaunch = { block -> scope.launch { block() } },
         showAddCategorySheet = showAddCategorySheet,
         onAddCategorySheetChange = { showAddCategorySheet = it },
@@ -286,7 +290,7 @@ internal fun AddIncomeRoute(
 }
 
 private suspend fun saveIncome(
-    repository: ExpenseRepository,
+    repository: TransactionWriteRepository,
     incomeId: String?,
     amount: Long,
     date: Long,

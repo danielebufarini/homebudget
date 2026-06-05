@@ -26,7 +26,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.categories
 import homebudget.composeapp.generated.resources.categories_add_content_description
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
+import it.danielebufarini.homebudget.data.ExpenseReadRepository
+import it.danielebufarini.homebudget.data.IncomeReadRepository
 import it.danielebufarini.homebudget.ui.screens.EdgeToEdgeTopBarOverlay
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
 import kotlinx.coroutines.Dispatchers
@@ -49,21 +51,23 @@ object CategoriesManagementScreen : Screen {
 @Suppress("UNUSED_VALUE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoriesManagementRoute(
-    repository: ExpenseRepository = koinInject(),
+internal fun CategoriesManagementRoute(
+    categoryRepository: CategoryManagementRepository = koinInject(),
+    expenseReadRepository: ExpenseReadRepository = koinInject(),
+    incomeReadRepository: IncomeReadRepository = koinInject(),
     onBack: (() -> Unit)? = null,
 ) {
-    LaunchedEffect(repository) {
+    LaunchedEffect(categoryRepository) {
         withContext(Dispatchers.Default) {
-            repository.seedStarterCategoriesIfEmpty()
+            categoryRepository.seedStarterCategoriesIfEmpty()
         }
     }
 
-    val categoryCardsFlow = remember(repository) {
+    val categoryCardsFlow = remember(categoryRepository, expenseReadRepository, incomeReadRepository) {
         combine(
-            repository.getAllCategories(),
-            repository.getExpenseCategoryUsageCounts(),
-            repository.getIncomeCategoryUsageCounts(),
+            categoryRepository.getAllCategories(),
+            expenseReadRepository.getExpenseCategoryUsageCounts(),
+            incomeReadRepository.getIncomeCategoryUsageCounts(),
         ) { categories, expenseUsageCounts, incomeUsageCounts ->
             buildCategoryUiModels(
                 categories = categories,
@@ -170,7 +174,7 @@ fun CategoriesManagementRoute(
                 editorTarget = null
                 scope.launch {
                     if (edited.id.isBlank()) {
-                        repository.insertCategory(
+                        categoryRepository.insertCategory(
                             id = buildCategoryId(),
                             name = edited.name.trim(),
                             icon = edited.iconKey,
@@ -179,7 +183,7 @@ fun CategoriesManagementRoute(
                             isArchived = false,
                         )
                     } else {
-                        repository.updateCategory(
+                        categoryRepository.updateCategory(
                             id = edited.id,
                             name = edited.name.trim(),
                             icon = edited.iconKey,
@@ -206,7 +210,7 @@ fun CategoriesManagementRoute(
                 onArchive = {
                     deleteTarget = null
                     scope.launch {
-                        repository.setCategoryArchived(target.id, true)
+                        categoryRepository.setCategoryArchived(target.id, true)
                     }
                 },
                 onMoveTransactions = {
@@ -221,7 +225,7 @@ fun CategoriesManagementRoute(
                 onConfirm = {
                     deleteTarget = null
                     scope.launch {
-                        repository.deleteCategory(target.id)
+                        categoryRepository.deleteCategory(target.id)
                     }
                 },
             )
@@ -240,7 +244,7 @@ fun CategoriesManagementRoute(
             onConfirm = { targetCategoryId ->
                 moveTarget = null
                 scope.launch {
-                    repository.reassignCategoryTransactions(
+                    categoryRepository.reassignCategoryTransactions(
                         sourceCategoryId = sourceCategory.id,
                         targetCategoryId = targetCategoryId,
                     )

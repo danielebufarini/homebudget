@@ -13,9 +13,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
+import it.danielebufarini.homebudget.data.ExpenseReadRepository
 import it.danielebufarini.homebudget.data.MAX_EXPENSE_INSTALLMENTS
 import it.danielebufarini.homebudget.data.PendingExpense
+import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.buildPendingExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpensesFromExistingExpense
@@ -42,7 +44,9 @@ internal fun AddExpenseRoute(
     onClose: () -> Unit,
     useHostedFloatingChrome: Boolean = false,
 ) {
-    val repository: ExpenseRepository = koinInject()
+    val categoryRepository: CategoryManagementRepository = koinInject()
+    val expenseReadRepository: ExpenseReadRepository = koinInject()
+    val transactionWriteRepository: TransactionWriteRepository = koinInject()
     val labels = addExpenseRouteLabels()
     val isIos = rememberIsIosPlatform()
     val useIosTransactionFloatingChrome = isIos && useHostedFloatingChrome
@@ -68,8 +72,8 @@ internal fun AddExpenseRoute(
     var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringExpenseUpdate?>(null) }
     var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
 
-    val categoriesFlow = remember(repository) {
-        repository.getAllCategories().flowOn(Dispatchers.Default)
+    val categoriesFlow = remember(categoryRepository) {
+        categoryRepository.getAllCategories().flowOn(Dispatchers.Default)
     }
     val categories by categoriesFlow.collectAsState(initial = emptyList())
     val selectableCategories = remember(categories, selectedCategoryId) {
@@ -82,13 +86,13 @@ internal fun AddExpenseRoute(
     val evaluatedAmount = remember(amount) { evaluateAmountExpressionInput(amount) }
     val isAmountValid = evaluatedAmount != null && evaluatedAmount > 0L
 
-    EnsureStarterCategoriesSeeded(repository)
+    EnsureStarterCategoriesSeeded(categoryRepository)
 
     LaunchedEffect(expenseId, categories) {
         if (expenseId == null || isInitialized) return@LaunchedEffect
 
         val expense = withContext(Dispatchers.Default) {
-            repository.getExpenseById(expenseId)
+            expenseReadRepository.getExpenseById(expenseId)
         } ?: return@LaunchedEffect
         amount = formatAmountInput(expense.amount)
         description = expense.description.orEmpty()
@@ -111,7 +115,7 @@ internal fun AddExpenseRoute(
                 val currentExpenseId = expenseId ?: return@runCatching
                 val seriesId = recurringSeriesId
                 if (updateWholeSeries && !seriesId.isNullOrBlank()) {
-                    repository.updateRecurringExpenseSeries(
+                    transactionWriteRepository.updateRecurringExpenseSeries(
                         anchorExpenseId = currentExpenseId,
                         seriesId = seriesId,
                         amount = payload.amount,
@@ -121,7 +125,7 @@ internal fun AddExpenseRoute(
                         isShared = payload.isShared,
                     )
                 } else {
-                    repository.insertExpenses(
+                    transactionWriteRepository.insertExpenses(
                         expenses = listOf(
                             PendingExpense(
                                 id = currentExpenseId,
@@ -152,9 +156,9 @@ internal fun AddExpenseRoute(
                 val currentExpenseId = expenseId ?: return@runCatching
                 val seriesId = recurringSeriesId
                 if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
-                    repository.deleteRecurringExpenseSeries(seriesId)
+                    transactionWriteRepository.deleteRecurringExpenseSeries(seriesId)
                 } else {
-                    repository.deleteExpense(currentExpenseId)
+                    transactionWriteRepository.deleteExpense(currentExpenseId)
                 }
             }
         }
@@ -200,7 +204,7 @@ internal fun AddExpenseRoute(
                 else -> {
                     isSaving = true
                     saveExpense(
-                        repository = repository,
+                        repository = transactionWriteRepository,
                         expenseId = expenseId,
                         amount = parsedAmount,
                         date = expenseDate,
@@ -289,7 +293,7 @@ internal fun AddExpenseRoute(
 
     AddExpenseSheetsAndDialogs(
         labels = labels,
-        repository = repository,
+        repository = categoryRepository,
         scopeLaunch = { block -> scope.launch { block() } },
         showAddCategorySheet = showAddCategorySheet,
         onAddCategorySheetChange = { showAddCategorySheet = it },
@@ -315,7 +319,7 @@ internal fun AddExpenseRoute(
 }
 
 private suspend fun saveExpense(
-    repository: ExpenseRepository,
+    repository: TransactionWriteRepository,
     expenseId: String?,
     amount: Long,
     date: Long,

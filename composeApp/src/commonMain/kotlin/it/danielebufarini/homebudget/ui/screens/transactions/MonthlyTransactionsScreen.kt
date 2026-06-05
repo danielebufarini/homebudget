@@ -32,7 +32,7 @@ import homebudget.composeapp.generated.resources.expense
 import homebudget.composeapp.generated.resources.expenses
 import homebudget.composeapp.generated.resources.income
 import homebudget.composeapp.generated.resources.search_results
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.DashboardReadRepository
 import it.danielebufarini.homebudget.data.formatAmount
 import it.danielebufarini.homebudget.ui.screens.TransactionTotals
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
@@ -92,7 +92,7 @@ class MonthlyTransactionsScreen(
         onOpenExpense: (String) -> Unit,
         onOpenIncome: (String) -> Unit,
     ) {
-        val repository: ExpenseRepository = koinInject()
+        val dashboardReadRepository: DashboardReadRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val addExpenseLabel = stringResource(Res.string.add_expense)
         val addIncomeLabel = stringResource(Res.string.add_income)
@@ -116,8 +116,8 @@ class MonthlyTransactionsScreen(
                 flowOf(TransactionTotals())
             }
         } else {
-            remember(repository, selectedMonth) {
-                repository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
+            remember(dashboardReadRepository, selectedMonth) {
+                dashboardReadRepository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
                     .map { summary ->
                         TransactionTotals(
                             expenseAmount = summary.totalAmount,

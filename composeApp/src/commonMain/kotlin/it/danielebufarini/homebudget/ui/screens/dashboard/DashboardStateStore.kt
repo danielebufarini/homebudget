@@ -1,8 +1,8 @@
 package it.danielebufarini.homebudget.ui.screens.dashboard
 
 import it.danielebufarini.homebudget.data.DashboardBalanceTrend
+import it.danielebufarini.homebudget.data.DashboardReadRepository
 import it.danielebufarini.homebudget.data.DashboardRecentTransaction
-import it.danielebufarini.homebudget.data.ExpenseRepository
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DashboardStateStore(
-    private val repository: ExpenseRepository,
+    private val repository: DashboardReadRepository,
     initialMonth: MonthCursor,
     scope: CoroutineScope
 ) {

@@ -51,7 +51,7 @@ import homebudget.composeapp.generated.resources.edit_category
 import homebudget.composeapp.generated.resources.unable_to_delete_category
 import homebudget.composeapp.generated.resources.unable_to_save_category
 import homebudget.composeapp.generated.resources.update
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.localization.formatResourceArgs
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
@@ -79,7 +79,7 @@ class CategoriesScreen : Screen {
         showNavigationChrome: Boolean,
         onClose: () -> Unit
     ) {
-        val repository: ExpenseRepository = koinInject()
+        val repository: CategoryManagementRepository = koinInject()
         val isIos = rememberIsIosPlatform()
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }

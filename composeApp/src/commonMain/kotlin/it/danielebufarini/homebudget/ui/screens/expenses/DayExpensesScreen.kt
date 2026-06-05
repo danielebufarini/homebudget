@@ -31,7 +31,8 @@ import homebudget.composeapp.generated.resources.expense
 import homebudget.composeapp.generated.resources.no_expenses_for_day
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unknown_category
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
+import it.danielebufarini.homebudget.data.ExpenseReadRepository
 import it.danielebufarini.homebudget.data.formatAmount
 import it.danielebufarini.homebudget.data.sumAmountOf
 import it.danielebufarini.homebudget.database.Category
@@ -86,7 +87,8 @@ class DayExpensesScreen(
         onBack: () -> Unit,
         onOpenExpense: (String) -> Unit
     ) {
-        val repository: ExpenseRepository = koinInject()
+        val categoryRepository: CategoryManagementRepository = koinInject()
+        val expenseReadRepository: ExpenseReadRepository = koinInject()
         val isIos = remember { getPlatform().isIos }
         val backLabel = stringResource(Res.string.back)
         val currencySymbol = stringResource(Res.string.currency_symbol)
@@ -105,10 +107,10 @@ class DayExpensesScreen(
             targetDate.atStartOfDayIn(timeZone).toEpochMilliseconds() to
                 targetDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone).toEpochMilliseconds()
         }
-        val dayExpensesStateFlow = remember(repository, dayStartMillis, dayEndMillis) {
+        val dayExpensesStateFlow = remember(categoryRepository, expenseReadRepository, dayStartMillis, dayEndMillis) {
             combine(
-                repository.getExpensesBetween(dayStartMillis, dayEndMillis),
-                repository.getAllCategories()
+                expenseReadRepository.getExpensesBetween(dayStartMillis, dayEndMillis),
+                categoryRepository.getAllCategories()
             ) { expenses, categories ->
                 DayExpensesState(
                     expenses = expenses,
@@ -128,7 +130,7 @@ class DayExpensesScreen(
         )
         val dayExpensesState = dayExpensesLoadState.value
 
-        EnsureStarterCategoriesSeeded(repository)
+        EnsureStarterCategoriesSeeded(categoryRepository)
 
         val content: @Composable (PaddingValues) -> Unit = { padding ->
             DayExpensesList(

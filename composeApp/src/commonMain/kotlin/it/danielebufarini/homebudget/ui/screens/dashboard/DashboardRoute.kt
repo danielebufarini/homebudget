@@ -19,8 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
 import it.danielebufarini.homebudget.data.DashboardPreferencesStore
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.DashboardReadRepository
 import it.danielebufarini.homebudget.data.subtractAmountsExact
 import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
@@ -43,13 +44,14 @@ fun DashboardRoute(
     onOpenCategoryExpenses: (Int, Int, String) -> Unit,
     onOpenTransactionSearch: (Int, Int, String) -> Unit = { _, _, _ -> }
 ) {
-    val repository: ExpenseRepository = koinInject()
+    val dashboardRepository: DashboardReadRepository = koinInject()
+    val categoryRepository: CategoryManagementRepository = koinInject()
     val dashboardPreferencesStore: DashboardPreferencesStore = koinInject()
     val strings = rememberDashboardStrings()
     val pinnedDashboardCard by dashboardPreferencesStore.pinnedDashboardCard.collectAsState()
 
-    val categoriesFlow = remember(repository) {
-        repository.getAllCategories()
+    val categoriesFlow = remember(categoryRepository) {
+        categoryRepository.getAllCategories()
     }
     val categories by categoriesFlow.collectAsState(initial = emptyList())
     val categoriesById = remember(categories) {
@@ -60,9 +62,9 @@ fun DashboardRoute(
         currentMonthCursor()
     }
     val dashboardScope = rememberCoroutineScope()
-    val dashboardStore = remember(repository, dashboardScope, currentMonth) {
+    val dashboardStore = remember(dashboardRepository, dashboardScope, currentMonth) {
         DashboardStateStore(
-            repository = repository,
+            repository = dashboardRepository,
             initialMonth = currentMonth,
             scope = dashboardScope
         )
@@ -79,7 +81,7 @@ fun DashboardRoute(
         }
     }
 
-    EnsureStarterCategoriesSeeded(repository)
+    EnsureStarterCategoriesSeeded(categoryRepository)
 
     val summary by dashboardStore.summary.collectAsState()
     val chartState by dashboardStore.chartState.collectAsState()

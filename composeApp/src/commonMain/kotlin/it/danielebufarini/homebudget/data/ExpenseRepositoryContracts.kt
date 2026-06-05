@@ -1,7 +1,9 @@
 package it.danielebufarini.homebudget.data
 
+import it.danielebufarini.homebudget.database.CATEGORY_TYPE_EXPENSE
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.CategoryUsageCountRow
+import it.danielebufarini.homebudget.database.DEFAULT_CATEGORY_COLOR
 import it.danielebufarini.homebudget.database.Expense
 import it.danielebufarini.homebudget.database.Income
 import kotlinx.coroutines.flow.Flow
@@ -15,10 +17,10 @@ internal interface CategoryManagementRepository {
         id: String,
         name: String,
         icon: String,
-        color: String,
-        categoryType: String,
-        isArchived: Boolean,
-        sortOrder: Long?
+        color: String = DEFAULT_CATEGORY_COLOR,
+        categoryType: String = CATEGORY_TYPE_EXPENSE,
+        isArchived: Boolean = false,
+        sortOrder: Long? = null
     )
 
     suspend fun updateCategory(

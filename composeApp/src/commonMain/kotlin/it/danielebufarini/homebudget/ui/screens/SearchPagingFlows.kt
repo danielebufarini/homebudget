@@ -1,13 +1,14 @@
 package it.danielebufarini.homebudget.ui.screens
 
 import it.danielebufarini.homebudget.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.ExpenseReadRepository
+import it.danielebufarini.homebudget.data.IncomeReadRepository
 import it.danielebufarini.homebudget.database.Expense
 import it.danielebufarini.homebudget.database.Income
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
-internal fun ExpenseRepository.searchExpenseCandidatePages(
+internal fun ExpenseReadRepository.searchExpenseCandidatePages(
     query: String,
     pageCount: Int,
     pageSize: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
@@ -27,7 +28,7 @@ internal fun ExpenseRepository.searchExpenseCandidatePages(
     }
 }
 
-internal fun ExpenseRepository.searchIncomeCandidatePages(
+internal fun IncomeReadRepository.searchIncomeCandidatePages(
     query: String,
     pageCount: Int,
     pageSize: Int = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE

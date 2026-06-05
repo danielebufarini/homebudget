@@ -39,8 +39,10 @@ import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unable_to_delete_expense
 import homebudget.composeapp.generated.resources.unknown_category
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
+import it.danielebufarini.homebudget.data.ExpenseReadRepository
 import it.danielebufarini.homebudget.data.PersistentWriteScope
+import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.monthBounds
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.Expense
@@ -217,7 +219,9 @@ abstract class BaseGroupedExpensesScreen(
         onAddExpense: () -> Unit,
         onOpenExpense: (String) -> Unit
     ) {
-        val repository: ExpenseRepository = koinInject()
+        val categoryRepository: CategoryManagementRepository = koinInject()
+        val expenseReadRepository: ExpenseReadRepository = koinInject()
+        val transactionWriteRepository: TransactionWriteRepository = koinInject()
         val writeScope: PersistentWriteScope = koinInject()
         val notificationScope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -242,10 +246,11 @@ abstract class BaseGroupedExpensesScreen(
             onLoadMoreSearchResults = onLoadMoreSearchResults
         )
 
-        EnsureStarterCategoriesSeeded(repository)
+        EnsureStarterCategoriesSeeded(categoryRepository)
 
         val routeData = rememberGroupedExpensesRouteData(
-            repository = repository,
+            categoryRepository = categoryRepository,
+            expenseReadRepository = expenseReadRepository,
             selectedMonth = selectedMonth,
             groupingMode,
             searchPaging = searchPaging,
@@ -332,7 +337,7 @@ abstract class BaseGroupedExpensesScreen(
                     writeScope.launchWrite(
                         onFailure = { showDeleteFailure() }
                     ) {
-                        repository.deleteExpense(expense.id)
+                        transactionWriteRepository.deleteExpense(expense.id)
                     }
                 },
                 onDeleteSeries = { seriesId ->
@@ -340,7 +345,7 @@ abstract class BaseGroupedExpensesScreen(
                     writeScope.launchWrite(
                         onFailure = { showDeleteFailure() }
                     ) {
-                        repository.deleteRecurringExpenseSeries(seriesId)
+                        transactionWriteRepository.deleteRecurringExpenseSeries(seriesId)
                     }
                 },
                 onDismiss = {
@@ -352,7 +357,8 @@ abstract class BaseGroupedExpensesScreen(
 
     @Composable
     private fun rememberGroupedExpensesRouteData(
-        repository: ExpenseRepository,
+        categoryRepository: CategoryManagementRepository,
+        expenseReadRepository: ExpenseReadRepository,
         selectedMonth: MonthCursor,
         groupingMode: ExpenseGroupingMode,
         searchPaging: TransactionSearchPaging,
@@ -364,7 +370,7 @@ abstract class BaseGroupedExpensesScreen(
             monthBounds(selectedMonth.year, selectedMonth.month)
         }
         val expensesFlow = remember(
-            repository,
+            expenseReadRepository,
             monthStartMillis,
             monthEndMillis,
             searchPaging.searchMode,
@@ -372,16 +378,16 @@ abstract class BaseGroupedExpensesScreen(
             searchPaging.pageCount
         ) {
             if (searchPaging.searchMode) {
-                repository.searchExpenseCandidatePages(
+                expenseReadRepository.searchExpenseCandidatePages(
                     query = searchQuery,
                     pageCount = searchPaging.pageCount
                 )
             } else {
-                repository.getExpensesBetween(monthStartMillis, monthEndMillis)
+                expenseReadRepository.getExpensesBetween(monthStartMillis, monthEndMillis)
             }
         }
-        val categoriesFlow = remember(repository) {
-            repository.getAllCategories()
+        val categoriesFlow = remember(categoryRepository) {
+            categoryRepository.getAllCategories()
         }
         val groupedExpensesFlow = remember(
             expensesFlow,

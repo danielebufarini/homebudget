@@ -45,8 +45,10 @@ import homebudget.composeapp.generated.resources.no_income_for_month
 import homebudget.composeapp.generated.resources.short_month_names
 import homebudget.composeapp.generated.resources.unable_to_delete_income
 import homebudget.composeapp.generated.resources.unknown_category
-import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.CategoryManagementRepository
+import it.danielebufarini.homebudget.data.IncomeReadRepository
 import it.danielebufarini.homebudget.data.PersistentWriteScope
+import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.formatAmount
 import it.danielebufarini.homebudget.data.monthBounds
 import it.danielebufarini.homebudget.database.Category
@@ -154,7 +156,9 @@ class MonthlyIncomesScreen(
         onAddIncome: (Int, Int) -> Unit,
         onOpenIncome: (String) -> Unit
     ) {
-        val repository: ExpenseRepository = koinInject()
+        val categoryRepository: CategoryManagementRepository = koinInject()
+        val incomeReadRepository: IncomeReadRepository = koinInject()
+        val transactionWriteRepository: TransactionWriteRepository = koinInject()
         val writeScope: PersistentWriteScope = koinInject()
         val notificationScope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -179,7 +183,7 @@ class MonthlyIncomesScreen(
             onLoadMoreSearchResults = onLoadMoreSearchResults
         )
         val incomesFlow = remember(
-            repository,
+            incomeReadRepository,
             monthStartMillis,
             monthEndMillis,
             searchPaging.searchMode,
@@ -187,16 +191,16 @@ class MonthlyIncomesScreen(
             searchPaging.pageCount
         ) {
             if (searchPaging.searchMode) {
-                repository.searchIncomeCandidatePages(
+                incomeReadRepository.searchIncomeCandidatePages(
                     query = searchQuery,
                     pageCount = searchPaging.pageCount
                 )
             } else {
-                repository.getIncomesBetween(monthStartMillis, monthEndMillis)
+                incomeReadRepository.getIncomesBetween(monthStartMillis, monthEndMillis)
             }
         }
-        val categoriesFlow = remember(repository) {
-            repository.getAllCategories()
+        val categoriesFlow = remember(categoryRepository) {
+            categoryRepository.getAllCategories()
         }
         val groupedIncomesFlow = remember(
             incomesFlow,
@@ -329,7 +333,7 @@ class MonthlyIncomesScreen(
                     writeScope.launchWrite(
                         onFailure = { showDeleteFailure() }
                     ) {
-                        repository.deleteIncome(income.id)
+                        transactionWriteRepository.deleteIncome(income.id)
                     }
                 },
                 onDeleteSeries = { seriesId ->
@@ -337,7 +341,7 @@ class MonthlyIncomesScreen(
                     writeScope.launchWrite(
                         onFailure = { showDeleteFailure() }
                     ) {
-                        repository.deleteRecurringIncomeSeries(seriesId)
+                        transactionWriteRepository.deleteRecurringIncomeSeries(seriesId)
                     }
                 },
                 onDismiss = dismiss
