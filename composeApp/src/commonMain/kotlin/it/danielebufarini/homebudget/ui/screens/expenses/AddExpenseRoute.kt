@@ -15,19 +15,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.homebudget.data.CategoryManagementRepository
 import it.danielebufarini.homebudget.data.ExpenseReadRepository
-import it.danielebufarini.homebudget.data.MAX_EXPENSE_INSTALLMENTS
 import it.danielebufarini.homebudget.data.PendingExpense
 import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.buildPendingExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpenses
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyExpensesFromExistingExpense
 import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
-import it.danielebufarini.homebudget.data.formatAmountInput
 import it.danielebufarini.homebudget.database.CATEGORY_TYPE_EXPENSE
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
 import it.danielebufarini.homebudget.ui.screens.platform.rememberPlatformDatePicker
+import it.danielebufarini.homebudget.ui.screens.transactions.rememberTransactionEditorFormState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
@@ -56,19 +55,15 @@ internal fun AddExpenseRoute(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val resolveCategoryName = rememberCategoryNameResolver()
+    val initialDateMillis = remember(expenseId) {
+        Clock.System.now().toEpochMilliseconds()
+    }
 
-    var amount by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedCategoryId by remember { mutableStateOf("") }
-    var selectedDateMillis by remember { mutableStateOf<Long?>(Clock.System.now().toEpochMilliseconds()) }
-    var installmentCount by remember { mutableStateOf(1) }
-    var isRecurringMonthly by remember { mutableStateOf(false) }
-    var recurringSeriesId by remember { mutableStateOf<String?>(null) }
-    var isShared by remember { mutableStateOf(false) }
-    var isSaving by remember { mutableStateOf(false) }
-    var showAddCategorySheet by remember { mutableStateOf(false) }
-    var showCategoryPickerSheet by remember { mutableStateOf(false) }
-    var isInitialized by remember(expenseId) { mutableStateOf(expenseId == null) }
+    val editorState = rememberTransactionEditorFormState(
+        resetKey = expenseId,
+        initialDateMillis = initialDateMillis,
+        initiallyInitialized = expenseId == null,
+    )
     var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringExpenseUpdate?>(null) }
     var pendingRecurringAction by remember { mutableStateOf<RecurringExpenseAction?>(null) }
 
@@ -76,6 +71,7 @@ internal fun AddExpenseRoute(
         categoryRepository.getAllCategories().flowOn(Dispatchers.Default)
     }
     val categories by categoriesFlow.collectAsState(initial = emptyList())
+    val selectedCategoryId = editorState.selectedCategoryId.orEmpty()
     val selectableCategories = remember(categories, selectedCategoryId) {
         categories.filter { category ->
             category.categoryType == CATEGORY_TYPE_EXPENSE &&
@@ -83,25 +79,18 @@ internal fun AddExpenseRoute(
         }
     }
     val selectedCategory = categories.find { it.id == selectedCategoryId }
-    val evaluatedAmount = remember(amount) { evaluateAmountExpressionInput(amount) }
+    val evaluatedAmount = remember(editorState.amount) { evaluateAmountExpressionInput(editorState.amount) }
     val isAmountValid = evaluatedAmount != null && evaluatedAmount > 0L
 
     EnsureStarterCategoriesSeeded(categoryRepository)
 
     LaunchedEffect(expenseId, categories) {
-        if (expenseId == null || isInitialized) return@LaunchedEffect
+        if (expenseId == null || editorState.isInitialized) return@LaunchedEffect
 
         val expense = withContext(Dispatchers.Default) {
             expenseReadRepository.getExpenseById(expenseId)
         } ?: return@LaunchedEffect
-        amount = formatAmountInput(expense.amount)
-        description = expense.description.orEmpty()
-        selectedCategoryId = expense.categoryId
-        selectedDateMillis = expense.date
-        isRecurringMonthly = expense.recurringSeriesId != null
-        recurringSeriesId = expense.recurringSeriesId
-        isShared = expense.isShared == 1L
-        isInitialized = true
+        editorState.initializeFromExpense(expense)
     }
 
     fun dismissRecurringDialog() {
@@ -113,7 +102,7 @@ internal fun AddExpenseRoute(
         val result = withContext(Dispatchers.Default) {
             runCatching {
                 val currentExpenseId = expenseId ?: return@runCatching
-                val seriesId = recurringSeriesId
+                val seriesId = editorState.recurringSeriesId
                 if (updateWholeSeries && !seriesId.isNullOrBlank()) {
                     transactionWriteRepository.updateRecurringExpenseSeries(
                         anchorExpenseId = currentExpenseId,
@@ -134,7 +123,7 @@ internal fun AddExpenseRoute(
                                 categoryId = payload.categoryId,
                                 description = payload.description,
                                 isShared = payload.isShared,
-                                recurringSeriesId = recurringSeriesId,
+                                recurringSeriesId = editorState.recurringSeriesId,
                             ),
                         ),
                     )
@@ -147,14 +136,14 @@ internal fun AddExpenseRoute(
         }.onFailure {
             snackbarHostState.showSnackbar(labels.unableToSaveExpense)
         }
-        isSaving = false
+        editorState.isSaving = false
     }
 
     suspend fun deleteExpense(deleteWholeSeries: Boolean) {
         val result = withContext(Dispatchers.Default) {
             runCatching {
                 val currentExpenseId = expenseId ?: return@runCatching
-                val seriesId = recurringSeriesId
+                val seriesId = editorState.recurringSeriesId
                 if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
                     transactionWriteRepository.deleteRecurringExpenseSeries(seriesId)
                 } else {
@@ -168,15 +157,15 @@ internal fun AddExpenseRoute(
         }.onFailure {
             snackbarHostState.showSnackbar(labels.unableToDeleteExpense)
         }
-        isSaving = false
+        editorState.isSaving = false
     }
 
     fun requestDeleteExpense() {
-        if (recurringSeriesId != null) {
+        if (editorState.recurringSeriesId != null) {
             pendingRecurringAction = RecurringExpenseAction.Delete
         } else {
             scope.launch {
-                isSaving = true
+                editorState.isSaving = true
                 deleteExpense(deleteWholeSeries = false)
             }
         }
@@ -184,41 +173,41 @@ internal fun AddExpenseRoute(
 
     fun requestSaveExpense() {
         scope.launch {
-            val parsedAmount = evaluateAmountExpressionInput(amount)
-            val expenseDate = selectedDateMillis
+            val parsedAmount = evaluateAmountExpressionInput(editorState.amount)
+            val expenseDate = editorState.selectedDateMillis
 
             when {
                 parsedAmount == null || parsedAmount <= 0L -> snackbarHostState.showSnackbar(labels.enterValidAmount)
                 selectedCategoryId.isBlank() -> snackbarHostState.showSnackbar(labels.selectCategory)
                 expenseDate == null -> snackbarHostState.showSnackbar(labels.selectDate)
-                expenseId != null && recurringSeriesId != null -> {
+                expenseId != null && editorState.recurringSeriesId != null -> {
                     pendingRecurringUpdate = PendingRecurringExpenseUpdate(
                         amount = parsedAmount,
                         date = expenseDate,
                         categoryId = selectedCategoryId,
-                        description = description.ifBlank { null },
-                        isShared = isShared,
+                        description = editorState.description.ifBlank { null },
+                        isShared = editorState.isShared,
                     )
                     pendingRecurringAction = RecurringExpenseAction.Update
                 }
                 else -> {
-                    isSaving = true
+                    editorState.isSaving = true
                     saveExpense(
                         repository = transactionWriteRepository,
                         expenseId = expenseId,
                         amount = parsedAmount,
                         date = expenseDate,
                         categoryId = selectedCategoryId,
-                        description = description,
-                        isShared = isShared,
-                        isRecurringMonthly = isRecurringMonthly,
-                        installmentCount = installmentCount,
-                        recurringSeriesId = recurringSeriesId,
+                        description = editorState.description,
+                        isShared = editorState.isShared,
+                        isRecurringMonthly = editorState.isRecurringMonthly,
+                        installmentCount = editorState.installmentCount,
+                        recurringSeriesId = editorState.recurringSeriesId,
                         onClose = onClose,
                         snackbarHostState = snackbarHostState,
                         unableToSaveExpenseLabel = labels.unableToSaveExpense,
                     )
-                    isSaving = false
+                    editorState.isSaving = false
                 }
             }
         }
@@ -251,41 +240,32 @@ internal fun AddExpenseRoute(
         useAndroidFixedActionChrome = useAndroidFixedActionChrome,
         contentTopPadding = if (useIosTransactionFloatingChrome) 220.dp else 16.dp,
         contentBottomPadding = if (useIosTransactionFloatingChrome) 132.dp else 16.dp,
-        isInitialized = isInitialized,
+        isInitialized = editorState.isInitialized,
         readOnly = readOnly,
         expenseId = expenseId,
-        isSaving = isSaving,
-        amount = amount,
+        isSaving = editorState.isSaving,
+        amount = editorState.amount,
         isAmountValid = isAmountValid,
-        onAmountChange = { amount = it },
+        onAmountChange = { editorState.amount = it },
         selectedCategoryName = selectedCategory?.let { resolveCategoryName(it.id, it.name) },
         selectedCategoryIconKey = selectedCategory?.icon,
         selectedCategoryId = selectedCategoryId,
-        onSelectCategory = { showCategoryPickerSheet = true },
-        selectedDateMillis = selectedDateMillis,
+        onSelectCategory = { editorState.showCategoryPickerSheet = true },
+        selectedDateMillis = editorState.selectedDateMillis,
         onSelectDate = {
-            platformDatePicker.show(selectedDateMillis) { pickedDate ->
-                selectedDateMillis = pickedDate
+            platformDatePicker.show(editorState.selectedDateMillis) { pickedDate ->
+                editorState.selectedDateMillis = pickedDate
             }
         },
-        description = description,
-        onDescriptionChange = { description = it },
-        installmentCount = installmentCount,
-        onInstallmentCountChange = {
-            val normalizedInstallmentCount = it.coerceIn(1, MAX_EXPENSE_INSTALLMENTS)
-            installmentCount = normalizedInstallmentCount
-            if (normalizedInstallmentCount > 1) {
-                isRecurringMonthly = false
-            }
-        },
-        isRecurringMonthly = isRecurringMonthly,
-        onRecurringMonthlyChange = {
-            isRecurringMonthly = it
-            if (it) installmentCount = 1
-        },
-        recurringSeriesId = recurringSeriesId,
-        isShared = isShared,
-        onSharedChange = { isShared = it },
+        description = editorState.description,
+        onDescriptionChange = { editorState.description = it },
+        installmentCount = editorState.installmentCount,
+        onInstallmentCountChange = editorState::updateInstallmentCount,
+        isRecurringMonthly = editorState.isRecurringMonthly,
+        onRecurringMonthlyChange = editorState::updateExpenseRecurringMonthly,
+        recurringSeriesId = editorState.recurringSeriesId,
+        isShared = editorState.isShared,
+        onSharedChange = { editorState.isShared = it },
         onClose = onClose,
         onSave = ::requestSaveExpense,
         onDelete = ::requestDeleteExpense,
@@ -295,21 +275,21 @@ internal fun AddExpenseRoute(
         labels = labels,
         repository = categoryRepository,
         scopeLaunch = { block -> scope.launch { block() } },
-        showAddCategorySheet = showAddCategorySheet,
-        onAddCategorySheetChange = { showAddCategorySheet = it },
-        showCategoryPickerSheet = showCategoryPickerSheet,
-        onCategoryPickerSheetChange = { showCategoryPickerSheet = it },
+        showAddCategorySheet = editorState.showAddCategorySheet,
+        onAddCategorySheetChange = { editorState.showAddCategorySheet = it },
+        showCategoryPickerSheet = editorState.showCategoryPickerSheet,
+        onCategoryPickerSheetChange = { editorState.showCategoryPickerSheet = it },
         selectableCategories = selectableCategories,
         selectedCategoryId = selectedCategoryId,
-        onCategorySelected = { selectedCategoryId = it },
+        onCategorySelected = { editorState.selectedCategoryId = it },
         resolveCategoryName = { category -> resolveCategoryName(category.id, category.name) },
         pendingRecurringAction = pendingRecurringAction,
         pendingRecurringUpdate = pendingRecurringUpdate,
         onDismissRecurringDialog = {
             dismissRecurringDialog()
-            isSaving = false
+            editorState.isSaving = false
         },
-        onSavingChange = { isSaving = it },
+        onSavingChange = { editorState.isSaving = it },
         saveExpenseUpdate = ::saveExpenseUpdate,
         deleteExpense = ::deleteExpense,
         snackbarHostState = snackbarHostState,

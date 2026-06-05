@@ -15,9 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -43,6 +41,7 @@ import it.danielebufarini.homebudget.ui.screens.income.AddIncomeScreen
 import it.danielebufarini.homebudget.ui.screens.income.MonthlyIncomesScreen
 import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
+import it.danielebufarini.homebudget.ui.screens.rememberMonthlyTransactionsRouteState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -104,20 +103,21 @@ class MonthlyTransactionsScreen(
         val searchResultsLabel = stringResource(Res.string.search_results)
         val searchQuery = remember(initialSearchQuery) { initialSearchQuery.trim() }
         val searchMode = searchQuery.isNotBlank()
-
-        var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
-        var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
-        var searchPageCount by remember(searchQuery, selectedKind) { mutableStateOf(1) }
-        val loadMoreSearchResults = {
-            searchPageCount += 1
-        }
+        val routeState = rememberMonthlyTransactionsRouteState(
+            initialMonth = MonthCursor(year, month),
+            initialKind = initialKind,
+            searchQuery = searchQuery,
+        )
         val totals by if (searchMode) {
             remember(searchQuery) {
                 flowOf(TransactionTotals())
             }
         } else {
-            remember(dashboardReadRepository, selectedMonth) {
-                dashboardReadRepository.getDashboardMonthSummary(selectedMonth.year, selectedMonth.month)
+            remember(dashboardReadRepository, routeState.selectedMonth) {
+                dashboardReadRepository.getDashboardMonthSummary(
+                    routeState.selectedMonth.year,
+                    routeState.selectedMonth.month,
+                )
                     .map { summary ->
                         TransactionTotals(
                             expenseAmount = summary.totalAmount,
@@ -127,15 +127,15 @@ class MonthlyTransactionsScreen(
                     .distinctUntilChanged()
             }
         }.collectAsState(initial = TransactionTotals())
-        val totalAmount = when (selectedKind) {
+        val totalAmount = when (routeState.selectedKind) {
             TransactionEditorKind.Expense -> totals.expenseAmount
             TransactionEditorKind.Income -> totals.incomeAmount
         }
-        val descriptor = when (selectedKind) {
+        val descriptor = when (routeState.selectedKind) {
             TransactionEditorKind.Expense -> expensesLabel
             TransactionEditorKind.Income -> incomeLabel
         }
-        val addContentDescription = when (selectedKind) {
+        val addContentDescription = when (routeState.selectedKind) {
             TransactionEditorKind.Expense -> addExpenseLabel
             TransactionEditorKind.Income -> addIncomeLabel
         }
@@ -159,10 +159,10 @@ class MonthlyTransactionsScreen(
                                 }
                             } else {
                                 MonthNavigationTitle(
-                                    selectedMonth = selectedMonth,
+                                    selectedMonth = routeState.selectedMonth,
                                     subtitle = "$descriptor • ${formatAmount(totalAmount, currencySymbol)}",
-                                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                                    onNextMonth = { selectedMonth = selectedMonth.next() },
+                                    onPreviousMonth = routeState::previousMonth,
+                                    onNextMonth = routeState::nextMonth,
                                 )
                             }
                         },
@@ -178,10 +178,13 @@ class MonthlyTransactionsScreen(
                                 BottomTransactionQuickActions(
                                     addContentDescription = addContentDescription,
                                     onAddTransaction = {
-                                        when (selectedKind) {
+                                        when (routeState.selectedKind) {
                                             TransactionEditorKind.Expense -> onAddExpense()
                                             TransactionEditorKind.Income -> {
-                                                onAddIncome(selectedMonth.year, selectedMonth.month)
+                                                onAddIncome(
+                                                    routeState.selectedMonth.year,
+                                                    routeState.selectedMonth.month,
+                                                )
                                             }
                                         }
                                     },
@@ -199,10 +202,10 @@ class MonthlyTransactionsScreen(
                     .padding(padding),
             ) {
                 TransactionKindSelector(
-                    selectedKind = selectedKind,
+                    selectedKind = routeState.selectedKind,
                     expenseLabel = expenseLabel,
                     incomeLabel = incomeLabel,
-                    onKindSelected = { selectedKind = it },
+                    onKindSelected = routeState::selectKind,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -215,17 +218,17 @@ class MonthlyTransactionsScreen(
                         .weight(1f)
                         .monthSwipeNavigation(
                             enabled = !searchMode,
-                            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                            onNextMonth = { selectedMonth = selectedMonth.next() }
+                            onPreviousMonth = routeState::previousMonth,
+                            onNextMonth = routeState::nextMonth
                         ),
                 ) {
-                    when (selectedKind) {
+                    when (routeState.selectedKind) {
                         TransactionEditorKind.Expense -> MonthlyExpensesScreen(
-                            year = selectedMonth.year,
-                            month = selectedMonth.month,
+                            year = routeState.selectedMonth.year,
+                            month = routeState.selectedMonth.month,
                             searchQuery = searchQuery,
-                            searchPageCount = searchPageCount,
-                            onLoadMoreSearchResults = loadMoreSearchResults,
+                            searchPageCount = routeState.searchPageCount,
+                            onLoadMoreSearchResults = routeState::loadNextSearchPage,
                         ).RouteContent(
                             showNavigationChrome = false,
                             onBack = onBack,
@@ -234,13 +237,13 @@ class MonthlyTransactionsScreen(
                         )
 
                         TransactionEditorKind.Income -> MonthlyIncomesScreen(
-                            year = selectedMonth.year,
-                            month = selectedMonth.month,
+                            year = routeState.selectedMonth.year,
+                            month = routeState.selectedMonth.month,
                             searchQuery = searchQuery,
-                            externalSearchPageCount = searchPageCount,
-                            onLoadMoreSearchResults = loadMoreSearchResults,
+                            externalSearchPageCount = routeState.searchPageCount,
+                            onLoadMoreSearchResults = routeState::loadNextSearchPage,
                         ).RouteContent(
-                            initialMonth = selectedMonth,
+                            initialMonth = routeState.selectedMonth,
                             showNavigationChrome = false,
                             onBack = onBack,
                             onAddIncome = onAddIncome,

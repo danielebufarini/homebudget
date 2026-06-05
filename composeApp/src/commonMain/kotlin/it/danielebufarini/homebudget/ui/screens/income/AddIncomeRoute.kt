@@ -19,13 +19,13 @@ import it.danielebufarini.homebudget.data.PendingIncome
 import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.buildRecurringMonthlyIncomes
 import it.danielebufarini.homebudget.data.evaluateAmountExpressionInput
-import it.danielebufarini.homebudget.data.formatAmountInput
 import it.danielebufarini.homebudget.database.CATEGORY_TYPE_INCOME
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.expenses.clearActiveIosExpenseEditorSaveHandler
 import it.danielebufarini.homebudget.ui.screens.expenses.setActiveIosExpenseEditorSaveHandler
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
 import it.danielebufarini.homebudget.ui.screens.platform.rememberPlatformDatePicker
+import it.danielebufarini.homebudget.ui.screens.transactions.rememberTransactionEditorFormState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
@@ -56,19 +56,15 @@ internal fun AddIncomeRoute(
     val defaultDateMillis = remember(incomeId, initialYear, initialMonth) {
         if (incomeId == null) buildInitialIncomeDateMillis(initialYear, initialMonth) else null
     }
-
-    var amount by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedCategoryId by remember { mutableStateOf<String?>(null) }
-    var selectedDateMillis by remember(incomeId, defaultDateMillis) {
-        mutableStateOf(defaultDateMillis ?: Clock.System.now().toEpochMilliseconds())
+    val fallbackDateMillis = remember(incomeId) {
+        Clock.System.now().toEpochMilliseconds()
     }
-    var isRecurringMonthly by remember { mutableStateOf(false) }
-    var recurringSeriesId by remember { mutableStateOf<String?>(null) }
-    var isSaving by remember { mutableStateOf(false) }
-    var isInitialized by remember(incomeId) { mutableStateOf(incomeId == null) }
-    var showAddCategorySheet by remember { mutableStateOf(false) }
-    var showCategoryPickerSheet by remember { mutableStateOf(false) }
+
+    val editorState = rememberTransactionEditorFormState(
+        resetKey = incomeId,
+        initialDateMillis = defaultDateMillis ?: fallbackDateMillis,
+        initiallyInitialized = incomeId == null,
+    )
     var pendingRecurringUpdate by remember { mutableStateOf<PendingRecurringIncomeUpdate?>(null) }
     var pendingRecurringAction by remember { mutableStateOf<RecurringIncomeAction?>(null) }
 
@@ -76,28 +72,23 @@ internal fun AddIncomeRoute(
         categoryRepository.getAllCategories().flowOn(Dispatchers.Default)
     }
     val categories by categoriesFlow.collectAsState(initial = emptyList())
-    val selectableCategories = remember(categories, selectedCategoryId) {
+    val selectableCategories = remember(categories, editorState.selectedCategoryId) {
         categories.filter { category ->
             category.categoryType == CATEGORY_TYPE_INCOME &&
-                (category.isArchived != 1L || category.id == selectedCategoryId)
+                (category.isArchived != 1L || category.id == editorState.selectedCategoryId)
         }
     }
-    val selectedCategory = categories.find { it.id == selectedCategoryId }
-    val evaluatedAmount = remember(amount) { evaluateAmountExpressionInput(amount) }
+    val selectedCategory = categories.find { it.id == editorState.selectedCategoryId }
+    val evaluatedAmount = remember(editorState.amount) { evaluateAmountExpressionInput(editorState.amount) }
     val isAmountValid = evaluatedAmount != null && evaluatedAmount > 0L
 
     LaunchedEffect(incomeId) {
-        if (incomeId == null || isInitialized) return@LaunchedEffect
+        if (incomeId == null || editorState.isInitialized) return@LaunchedEffect
 
         val income = withContext(Dispatchers.Default) {
             incomeReadRepository.getIncomeById(incomeId)
         } ?: return@LaunchedEffect
-        amount = formatAmountInput(income.amount)
-        description = income.description.orEmpty()
-        selectedCategoryId = income.categoryId
-        selectedDateMillis = income.date
-        recurringSeriesId = income.recurringSeriesId
-        isInitialized = true
+        editorState.initializeFromIncome(income)
     }
 
     fun dismissRecurringDialog() {
@@ -109,7 +100,7 @@ internal fun AddIncomeRoute(
         val result = withContext(Dispatchers.Default) {
             runCatching {
                 val currentIncomeId = incomeId ?: return@runCatching
-                val seriesId = recurringSeriesId
+                val seriesId = editorState.recurringSeriesId
                 if (updateWholeSeries && !seriesId.isNullOrBlank()) {
                     transactionWriteRepository.updateRecurringIncomeSeries(
                         anchorIncomeId = currentIncomeId,
@@ -128,7 +119,7 @@ internal fun AddIncomeRoute(
                                 date = payload.date,
                                 description = payload.description,
                                 categoryId = payload.categoryId,
-                                recurringSeriesId = recurringSeriesId,
+                                recurringSeriesId = editorState.recurringSeriesId,
                             ),
                         ),
                     )
@@ -141,14 +132,14 @@ internal fun AddIncomeRoute(
         }.onFailure {
             snackbarHostState.showSnackbar(labels.unableToSaveIncome)
         }
-        isSaving = false
+        editorState.isSaving = false
     }
 
     suspend fun deleteIncome(deleteWholeSeries: Boolean) {
         val result = withContext(Dispatchers.Default) {
             runCatching {
                 val currentIncomeId = incomeId ?: return@runCatching
-                val seriesId = recurringSeriesId
+                val seriesId = editorState.recurringSeriesId
                 if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
                     transactionWriteRepository.deleteRecurringIncomeSeries(seriesId)
                 } else {
@@ -162,15 +153,15 @@ internal fun AddIncomeRoute(
         }.onFailure {
             snackbarHostState.showSnackbar(labels.unableToDeleteIncome)
         }
-        isSaving = false
+        editorState.isSaving = false
     }
 
     fun requestDeleteIncome() {
-        if (recurringSeriesId != null) {
+        if (editorState.recurringSeriesId != null) {
             pendingRecurringAction = RecurringIncomeAction.Delete
         } else {
             scope.launch {
-                isSaving = true
+                editorState.isSaving = true
                 deleteIncome(deleteWholeSeries = false)
             }
         }
@@ -178,18 +169,18 @@ internal fun AddIncomeRoute(
 
     fun requestSaveIncome() {
         scope.launch {
-            val parsedAmount = evaluateAmountExpressionInput(amount)
+            val parsedAmount = evaluateAmountExpressionInput(editorState.amount)
             if (parsedAmount == null || parsedAmount <= 0L) {
                 snackbarHostState.showSnackbar(labels.enterValidAmount)
                 return@launch
             }
 
-            val normalizedDescription = description.trim().ifBlank { null }
-            val normalizedCategoryId = selectedCategoryId?.takeIf { it.isNotBlank() }
-            if (incomeId != null && recurringSeriesId != null) {
+            val normalizedDescription = editorState.description.trim().ifBlank { null }
+            val normalizedCategoryId = editorState.selectedCategoryId?.takeIf { it.isNotBlank() }
+            if (incomeId != null && editorState.recurringSeriesId != null) {
                 pendingRecurringUpdate = PendingRecurringIncomeUpdate(
                     amount = parsedAmount,
-                    date = selectedDateMillis,
+                    date = editorState.selectedDateMillis ?: fallbackDateMillis,
                     description = normalizedDescription,
                     categoryId = normalizedCategoryId,
                 )
@@ -197,20 +188,20 @@ internal fun AddIncomeRoute(
                 return@launch
             }
 
-            isSaving = true
+            editorState.isSaving = true
             saveIncome(
                 repository = transactionWriteRepository,
                 incomeId = incomeId,
                 amount = parsedAmount,
-                date = selectedDateMillis,
-                description = description,
+                date = editorState.selectedDateMillis ?: fallbackDateMillis,
+                description = editorState.description,
                 categoryId = normalizedCategoryId,
-                isRecurringMonthly = isRecurringMonthly,
+                isRecurringMonthly = editorState.isRecurringMonthly,
                 onClose = onClose,
                 snackbarHostState = snackbarHostState,
                 unableToSaveIncomeLabel = labels.unableToSaveIncome,
             )
-            isSaving = false
+            editorState.isSaving = false
         }
     }
 
@@ -236,27 +227,27 @@ internal fun AddIncomeRoute(
         useIosHostedFloatingChrome = useIosHostedFloatingChrome,
         contentTopPadding = if (useIosHostedFloatingChrome) 220.dp else 16.dp,
         contentBottomPadding = if (useIosHostedFloatingChrome) 132.dp else 16.dp,
-        isInitialized = isInitialized,
+        isInitialized = editorState.isInitialized,
         incomeId = incomeId,
-        isSaving = isSaving,
-        amount = amount,
+        isSaving = editorState.isSaving,
+        amount = editorState.amount,
         isAmountValid = isAmountValid,
-        onAmountChange = { amount = it },
+        onAmountChange = { editorState.amount = it },
         selectedCategoryName = selectedCategory?.let { resolveCategoryName(it.id, it.name) },
         selectedCategoryIconKey = selectedCategory?.icon,
-        selectedCategoryId = selectedCategoryId,
-        onSelectCategory = { showCategoryPickerSheet = true },
-        selectedDateMillis = selectedDateMillis,
+        selectedCategoryId = editorState.selectedCategoryId,
+        onSelectCategory = { editorState.showCategoryPickerSheet = true },
+        selectedDateMillis = editorState.selectedDateMillis ?: fallbackDateMillis,
         onSelectDate = {
-            platformDatePicker.show(selectedDateMillis) { pickedDate ->
-                selectedDateMillis = pickedDate
+            platformDatePicker.show(editorState.selectedDateMillis ?: fallbackDateMillis) { pickedDate ->
+                editorState.selectedDateMillis = pickedDate
             }
         },
-        description = description,
-        onDescriptionChange = { description = it },
-        isRecurringMonthly = isRecurringMonthly,
-        onRecurringMonthlyChange = { isRecurringMonthly = it },
-        recurringSeriesId = recurringSeriesId,
+        description = editorState.description,
+        onDescriptionChange = { editorState.description = it },
+        isRecurringMonthly = editorState.isRecurringMonthly,
+        onRecurringMonthlyChange = { editorState.isRecurringMonthly = it },
+        recurringSeriesId = editorState.recurringSeriesId,
         onClose = onClose,
         onSave = ::requestSaveIncome,
         onDelete = ::requestDeleteIncome,
@@ -266,21 +257,21 @@ internal fun AddIncomeRoute(
         labels = labels,
         repository = categoryRepository,
         scopeLaunch = { block -> scope.launch { block() } },
-        showAddCategorySheet = showAddCategorySheet,
-        onAddCategorySheetChange = { showAddCategorySheet = it },
-        showCategoryPickerSheet = showCategoryPickerSheet,
-        onCategoryPickerSheetChange = { showCategoryPickerSheet = it },
+        showAddCategorySheet = editorState.showAddCategorySheet,
+        onAddCategorySheetChange = { editorState.showAddCategorySheet = it },
+        showCategoryPickerSheet = editorState.showCategoryPickerSheet,
+        onCategoryPickerSheetChange = { editorState.showCategoryPickerSheet = it },
         selectableCategories = selectableCategories,
-        selectedCategoryId = selectedCategoryId,
-        onCategorySelected = { selectedCategoryId = it },
+        selectedCategoryId = editorState.selectedCategoryId,
+        onCategorySelected = { editorState.selectedCategoryId = it },
         resolveCategoryName = { category -> resolveCategoryName(category.id, category.name) },
         pendingRecurringAction = pendingRecurringAction,
         pendingRecurringUpdate = pendingRecurringUpdate,
         onDismissRecurringDialog = {
             dismissRecurringDialog()
-            isSaving = false
+            editorState.isSaving = false
         },
-        onSavingChange = { isSaving = it },
+        onSavingChange = { editorState.isSaving = it },
         saveIncomeUpdate = ::saveIncomeUpdate,
         deleteIncome = ::deleteIncome,
         snackbarHostState = snackbarHostState,

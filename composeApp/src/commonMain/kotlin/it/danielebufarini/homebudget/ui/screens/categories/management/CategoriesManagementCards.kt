@@ -57,6 +57,7 @@ internal fun LazyGridScope.categoryCardItems(
     items(
         items = categories,
         key = { it.id },
+        contentType = { category -> "category-card:${category.categoryType}:${category.isArchived}" },
     ) { category ->
         CategoryOverviewCard(
             category = category,

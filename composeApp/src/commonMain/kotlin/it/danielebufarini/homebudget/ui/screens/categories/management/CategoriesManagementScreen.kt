@@ -15,11 +15,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -80,18 +77,13 @@ internal fun CategoriesManagementRoute(
     }
     val categoryCards by categoryCardsFlow.collectAsState(initial = emptyList())
 
-    var query by rememberSaveable { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf(CategoryFilter.All.name) }
-    var sortAscending by rememberSaveable { mutableStateOf(true) }
-    var editorTarget by remember { mutableStateOf<CategoryUiModel?>(null) }
-    var deleteTarget by remember { mutableStateOf<CategoryUiModel?>(null) }
-    var moveTarget by remember { mutableStateOf<CategoryUiModel?>(null) }
+    val routeState = rememberCategoriesManagementStateStore()
 
     val scope = rememberCoroutineScope()
     val isIos = rememberIsIosPlatform()
     val categoriesLabel = stringResource(Res.string.categories)
     val addCategoryContentDescription = stringResource(Res.string.categories_add_content_description)
-    val addCategory = { editorTarget = CategoryUiModel.newEmpty() }
+    val addCategory = routeState::startAdd
 
     if (!isIos && onBack != null) {
         EdgeToEdgeTopBarOverlay(
@@ -124,32 +116,32 @@ internal fun CategoriesManagementRoute(
         ) { padding ->
             CategoriesManagementContent(
                 categories = categoryCards,
-                query = query,
-                selectedFilter = CategoryFilter.valueOf(filter),
-                sortAscending = sortAscending,
-                onQueryChange = { query = it },
-                onSortToggle = { sortAscending = !sortAscending },
-                onFilterChange = { filter = it.name },
+                query = routeState.query,
+                selectedFilter = routeState.selectedFilter,
+                sortAscending = routeState.sortAscending,
+                onQueryChange = routeState::updateQuery,
+                onSortToggle = routeState::toggleSort,
+                onFilterChange = routeState::selectFilter,
                 onBack = null,
                 onAdd = addCategory,
-                onEdit = { category -> editorTarget = category },
-                onDelete = { category -> deleteTarget = category },
+                onEdit = routeState::startEdit,
+                onDelete = routeState::requestDelete,
                 externalHeaderOffset = padding.calculateTopPadding(),
             )
         }
     } else {
         CategoriesManagementContent(
             categories = categoryCards,
-            query = query,
-            selectedFilter = CategoryFilter.valueOf(filter),
-            sortAscending = sortAscending,
-            onQueryChange = { query = it },
-            onSortToggle = { sortAscending = !sortAscending },
-            onFilterChange = { filter = it.name },
+            query = routeState.query,
+            selectedFilter = routeState.selectedFilter,
+            sortAscending = routeState.sortAscending,
+            onQueryChange = routeState::updateQuery,
+            onSortToggle = routeState::toggleSort,
+            onFilterChange = routeState::selectFilter,
             onBack = onBack,
             onAdd = addCategory,
-            onEdit = { category -> editorTarget = category },
-            onDelete = { category -> deleteTarget = category },
+            onEdit = routeState::startEdit,
+            onDelete = routeState::requestDelete,
         )
     }
 
@@ -166,12 +158,12 @@ internal fun CategoriesManagementRoute(
         }
     }
 
-    editorTarget?.let { target ->
+    routeState.editorTarget?.let { target ->
         CategoryEditorSheet(
             category = target,
-            onDismiss = { editorTarget = null },
+            onDismiss = routeState::dismissEditor,
             onSave = { edited ->
-                editorTarget = null
+                routeState.clearAfterSave()
                 scope.launch {
                     if (edited.id.isBlank()) {
                         categoryRepository.insertCategory(
@@ -194,36 +186,32 @@ internal fun CategoriesManagementRoute(
                 }
             },
             onDelete = {
-                if (target.id.isNotBlank()) {
-                    deleteTarget = target
-                    editorTarget = null
-                }
+                routeState.requestDeleteFromEditor(target)
             },
         )
     }
 
-    deleteTarget?.let { target ->
+    routeState.deleteTarget?.let { target ->
         if (target.transactionCount > 0) {
             UsedCategoryDeleteDialog(
                 category = target,
-                onDismiss = { deleteTarget = null },
+                onDismiss = routeState::dismissDelete,
                 onArchive = {
-                    deleteTarget = null
+                    routeState.dismissDelete()
                     scope.launch {
                         categoryRepository.setCategoryArchived(target.id, true)
                     }
                 },
                 onMoveTransactions = {
-                    moveTarget = target
-                    deleteTarget = null
+                    routeState.startMoveFromDelete(target)
                 },
             )
         } else {
             DeleteCategoryDialog(
                 category = target,
-                onDismiss = { deleteTarget = null },
+                onDismiss = routeState::dismissDelete,
                 onConfirm = {
-                    deleteTarget = null
+                    routeState.dismissDelete()
                     scope.launch {
                         categoryRepository.deleteCategory(target.id)
                     }
@@ -232,7 +220,7 @@ internal fun CategoriesManagementRoute(
         }
     }
 
-    moveTarget?.let { sourceCategory ->
+    routeState.moveTarget?.let { sourceCategory ->
         MoveCategoryTransactionsSheet(
             sourceCategory = sourceCategory,
             availableCategories = categoryCards.filter { candidate ->
@@ -240,9 +228,9 @@ internal fun CategoriesManagementRoute(
                     candidate.categoryType == sourceCategory.categoryType &&
                     !candidate.isArchived
             },
-            onDismiss = { moveTarget = null },
+            onDismiss = routeState::dismissMove,
             onConfirm = { targetCategoryId ->
-                moveTarget = null
+                routeState.dismissMove()
                 scope.launch {
                     categoryRepository.reassignCategoryTransactions(
                         sourceCategoryId = sourceCategory.id,

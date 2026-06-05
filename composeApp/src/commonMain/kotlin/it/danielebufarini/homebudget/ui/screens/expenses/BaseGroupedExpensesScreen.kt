@@ -58,6 +58,7 @@ import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
 import it.danielebufarini.homebudget.ui.screens.edgeToEdgeListContentPadding
 import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
+import it.danielebufarini.homebudget.ui.screens.rememberGroupedTransactionRouteState
 import it.danielebufarini.homebudget.ui.screens.searchExpenseCandidatePages
 import it.danielebufarini.homebudget.ui.screens.transactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.transactions.AddTransactionScreen
@@ -235,15 +236,16 @@ abstract class BaseGroupedExpensesScreen(
         val emptyStateText = emptyStateText()
         val expenseFallbackTitle = expenseFallbackTitle()
         val navigationDescriptor = monthNavigationDescriptor()
-        var selectedMonth by remember(year, month) { mutableStateOf(MonthCursor(year, month)) }
-        var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
-        var localSearchPageCount by remember(searchQuery) { mutableStateOf(1) }
+        val routeState = rememberGroupedTransactionRouteState(
+            initialMonth = MonthCursor(year, month),
+            searchQuery = searchQuery,
+        )
         var pendingExpenseDelete by remember { mutableStateOf<Expense?>(null) }
         val searchPaging = transactionSearchPaging(
             searchQuery = searchQuery,
             externalSearchPageCount = externalSearchPageCount,
-            localSearchPageCount = localSearchPageCount,
-            onLocalSearchPageCountChange = { localSearchPageCount = it },
+            localSearchPageCount = routeState.localSearchPageCount,
+            onLocalSearchPageCountChange = routeState::updateLocalSearchPageCount,
             onLoadMoreSearchResults = onLoadMoreSearchResults
         )
 
@@ -252,8 +254,8 @@ abstract class BaseGroupedExpensesScreen(
         val routeData = rememberGroupedExpensesRouteData(
             categoryRepository = categoryRepository,
             expenseReadRepository = expenseReadRepository,
-            selectedMonth = selectedMonth,
-            groupingMode,
+            selectedMonth = routeState.selectedMonth,
+            groupingMode = routeState.groupingMode,
             searchPaging = searchPaging,
             shortMonthNames = shortMonthNamesList,
             strings = strings,
@@ -274,15 +276,15 @@ abstract class BaseGroupedExpensesScreen(
             onAddExpense = onAddExpense,
             onOpenExpense = onOpenExpense,
             onDeleteExpense = deleteExpenseAction,
-            onGroupingModeChange = { groupingMode = it },
+            onGroupingModeChange = routeState::selectGroupingMode,
             onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
-            onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-            onNextMonth = { selectedMonth = selectedMonth.next() }
+            onPreviousMonth = routeState::previousMonth,
+            onNextMonth = routeState::nextMonth
         )
         val scaffoldState = GroupedExpensesScaffoldState(
             showNavigationChrome = showNavigationChrome,
-            selectedMonth = selectedMonth,
-            screenTitle = screenTitle(monthName(selectedMonth.month, fullMonthNames)),
+            selectedMonth = routeState.selectedMonth,
+            screenTitle = screenTitle(monthName(routeState.selectedMonth.month, fullMonthNames)),
             navigationDescriptor = navigationDescriptor,
             totalAmount = routeData.totalAmount,
             isIos = isIos,
@@ -293,7 +295,7 @@ abstract class BaseGroupedExpensesScreen(
         )
         val contentState = GroupedExpensesContentState(
             routeData = routeData,
-            groupingMode = groupingMode,
+            groupingMode = routeState.groupingMode,
             showFloatingBottomControls = showNavigationChrome && !isIos,
             monthSwipeEnabled = showNavigationChrome && showMonthNavigationControls(),
             emptyStateText = emptyStateText,
@@ -327,7 +329,7 @@ abstract class BaseGroupedExpensesScreen(
             ExpenseDeleteDialog(
                 expense = expense,
                 categoriesById = routeData.categoriesById,
-                isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
+                isGroupedByDate = routeState.groupingMode == ExpenseGroupingMode.ByDate,
                 expenseFallbackTitle = expenseFallbackTitle,
                 strings = strings,
                 resolveCategoryName = { category ->

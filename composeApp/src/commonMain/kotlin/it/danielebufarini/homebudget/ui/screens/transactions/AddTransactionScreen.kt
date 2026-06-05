@@ -12,10 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
@@ -29,6 +25,7 @@ import homebudget.composeapp.generated.resources.income
 import it.danielebufarini.homebudget.ui.screens.expenses.AddExpenseScreen
 import it.danielebufarini.homebudget.ui.screens.income.AddIncomeScreen
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
+import it.danielebufarini.homebudget.ui.screens.rememberAddTransactionRouteState
 import org.jetbrains.compose.resources.stringResource
 
 class AddTransactionScreen(
@@ -54,7 +51,7 @@ class AddTransactionScreen(
         val backLabel = stringResource(Res.string.back)
         val expenseLabel = stringResource(Res.string.expense)
         val incomeLabel = stringResource(Res.string.income)
-        var selectedKind by remember(initialKind) { mutableStateOf(initialKind) }
+        val routeState = rememberAddTransactionRouteState(initialKind)
 
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -63,7 +60,7 @@ class AddTransactionScreen(
                     TopAppBar(
                         title = {
                             Text(
-                                text = when (selectedKind) {
+                                text = when (routeState.selectedKind) {
                                     TransactionEditorKind.Expense -> addExpenseLabel
                                     TransactionEditorKind.Income -> addIncomeLabel
                                 }
@@ -86,10 +83,10 @@ class AddTransactionScreen(
                     .padding(padding)
             ) {
                 TransactionKindSelector(
-                    selectedKind = selectedKind,
+                    selectedKind = routeState.selectedKind,
                     expenseLabel = expenseLabel,
                     incomeLabel = incomeLabel,
-                    onKindSelected = { selectedKind = it },
+                    onKindSelected = routeState::selectKind,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -101,7 +98,7 @@ class AddTransactionScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    when (selectedKind) {
+                    when (routeState.selectedKind) {
                         TransactionEditorKind.Expense -> AddExpenseScreen().RouteContent(
                             showNavigationChrome = false,
                             onClose = onClose

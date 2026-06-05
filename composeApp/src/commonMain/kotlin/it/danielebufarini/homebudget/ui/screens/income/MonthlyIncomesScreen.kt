@@ -72,6 +72,7 @@ import it.danielebufarini.homebudget.ui.screens.expenses.epochMillisToLocalDate
 import it.danielebufarini.homebudget.ui.screens.expenses.formatExpenseDateGroupTitle
 import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
 import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
+import it.danielebufarini.homebudget.ui.screens.rememberGroupedTransactionRouteState
 import it.danielebufarini.homebudget.ui.screens.searchIncomeCandidatePages
 import it.danielebufarini.homebudget.ui.screens.transactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.transactions.AddTransactionScreen
@@ -170,18 +171,19 @@ class MonthlyIncomesScreen(
         val shortMonthNames = stringArrayResource(Res.array.short_month_names)
         val shortMonthNamesList = remember(shortMonthNames) { shortMonthNames.toList() }
         val resolveCategoryName = rememberCategoryNameResolver()
-        var selectedMonth by remember(initialMonth) { mutableStateOf(initialMonth) }
-        var groupingMode by remember { mutableStateOf(ExpenseGroupingMode.ByCategory) }
-        var localSearchPageCount by remember(searchQuery) { mutableStateOf(1) }
+        val routeState = rememberGroupedTransactionRouteState(
+            initialMonth = initialMonth,
+            searchQuery = searchQuery,
+        )
         var pendingIncomeDelete by remember { mutableStateOf<Income?>(null) }
-        val (monthStartMillis, monthEndMillis) = remember(selectedMonth) {
-            monthBounds(selectedMonth.year, selectedMonth.month)
+        val (monthStartMillis, monthEndMillis) = remember(routeState.selectedMonth) {
+            monthBounds(routeState.selectedMonth.year, routeState.selectedMonth.month)
         }
         val searchPaging = transactionSearchPaging(
             searchQuery = searchQuery,
             externalSearchPageCount = externalSearchPageCount,
-            localSearchPageCount = localSearchPageCount,
-            onLocalSearchPageCountChange = { localSearchPageCount = it },
+            localSearchPageCount = routeState.localSearchPageCount,
+            onLocalSearchPageCountChange = routeState::updateLocalSearchPageCount,
             onLoadMoreSearchResults = onLoadMoreSearchResults
         )
         val incomesFlow = remember(
@@ -213,7 +215,7 @@ class MonthlyIncomesScreen(
         val groupedIncomesFlow = remember(
             incomesFlow,
             categoriesFlow,
-            groupingMode,
+            routeState.groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
             shortMonthNamesList,
@@ -225,7 +227,7 @@ class MonthlyIncomesScreen(
                 val groupedState = buildGroupedIncomesState(
                     incomes = incomeResults.items,
                     categoriesById = categoriesById,
-                    groupingMode = groupingMode,
+                    groupingMode = routeState.groupingMode,
                     resolveCategoryName = { category: Category ->
                         resolveCategoryName(category.id, category.name)
                     },
@@ -270,14 +272,19 @@ class MonthlyIncomesScreen(
                 },
                 topBar = {
                     MonthlyIncomeTopBar(
-                        selectedMonth = selectedMonth,
+                        selectedMonth = routeState.selectedMonth,
                         totalAmount = totalAmount,
                         strings = strings,
                         isIos = isIos,
                         onBack = onBack,
-                        onAddIncome = { onAddIncome(selectedMonth.year, selectedMonth.month) },
-                        onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                        onNextMonth = { selectedMonth = selectedMonth.next() }
+                        onAddIncome = {
+                            onAddIncome(
+                                routeState.selectedMonth.year,
+                                routeState.selectedMonth.month,
+                            )
+                        },
+                        onPreviousMonth = routeState::previousMonth,
+                        onNextMonth = routeState::nextMonth
                     )
                 }
             ) { padding ->
@@ -285,8 +292,8 @@ class MonthlyIncomesScreen(
                     padding = padding,
                     sections = incomeSections,
                     categoriesById = categoriesById,
-                    groupingMode = groupingMode,
-                    onGroupingModeChange = { groupingMode = it },
+                    groupingMode = routeState.groupingMode,
+                    onGroupingModeChange = routeState::selectGroupingMode,
                     showNavigationChrome = showNavigationChrome,
                     isIos = isIos,
                     strings = strings,
@@ -295,8 +302,8 @@ class MonthlyIncomesScreen(
                     isLoading = groupedIncomesLoadState.isLoading,
                     onOpenIncome = onOpenIncome,
                     onDeleteIncome = deleteIncomeAction,
-                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                    onNextMonth = { selectedMonth = selectedMonth.next() }
+                    onPreviousMonth = routeState::previousMonth,
+                    onNextMonth = routeState::nextMonth
                 )
             }
         } else {
@@ -305,8 +312,8 @@ class MonthlyIncomesScreen(
                     padding = PaddingValues(0.dp),
                     sections = incomeSections,
                     categoriesById = categoriesById,
-                    groupingMode = groupingMode,
-                    onGroupingModeChange = { groupingMode = it },
+                    groupingMode = routeState.groupingMode,
+                    onGroupingModeChange = routeState::selectGroupingMode,
                     showNavigationChrome = showNavigationChrome,
                     isIos = isIos,
                     strings = strings,
@@ -315,8 +322,8 @@ class MonthlyIncomesScreen(
                     isLoading = groupedIncomesLoadState.isLoading,
                     onOpenIncome = onOpenIncome,
                     onDeleteIncome = deleteIncomeAction,
-                    onPreviousMonth = { selectedMonth = selectedMonth.previous() },
-                    onNextMonth = { selectedMonth = selectedMonth.next() }
+                    onPreviousMonth = routeState::previousMonth,
+                    onNextMonth = routeState::nextMonth
                 )
                 SnackbarHost(
                     hostState = snackbarHostState,
