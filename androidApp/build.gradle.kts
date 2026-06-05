@@ -7,7 +7,6 @@ plugins {
 android {
     namespace = "it.danielebufarini.homebudget"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
-    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "it.danielebufarini.homebudget"

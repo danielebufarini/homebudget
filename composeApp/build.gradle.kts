@@ -36,6 +36,7 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
             binaryOption("bundleId", "it.danielebufarini.homebudget.composeapp")
+            binaryOption("smallBinary", "true")
         }
     }
 

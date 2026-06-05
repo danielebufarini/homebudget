@@ -2,9 +2,6 @@
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="file" path="Data/homebudget-backup.json" />
-        <exclude domain="database" path="homebudget-room.db-wal" />
-        <exclude domain="database" path="homebudget-room.db-shm" />
-        <exclude domain="database" path="homebudget-room.db-journal" />
     </cloud-backup>
 
     <device-transfer>
