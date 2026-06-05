@@ -60,7 +60,7 @@ interface IncomeDao {
         SELECT * FROM income
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         """
     )
     fun getIncomesBetween(
@@ -73,7 +73,7 @@ interface IncomeDao {
         SELECT * FROM income
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY income.date DESC
+        ORDER BY income.date DESC, income.id ASC
         LIMIT :limit OFFSET :offset
         """
     )
@@ -90,7 +90,7 @@ interface IncomeDao {
         FROM income
         JOIN income_search_fts ON income_search_fts.transactionId = income.id
         WHERE income_search_fts MATCH :ftsQuery
-        ORDER BY income.date DESC
+        ORDER BY income.date DESC, income.id ASC
         LIMIT :limit OFFSET :offset
         """
     )
@@ -102,10 +102,31 @@ interface IncomeDao {
 
     @Query(
         """
+        SELECT income.*
+        FROM income
+        JOIN income_search_fts ON income_search_fts.transactionId = income.id
+        WHERE income_search_fts MATCH :ftsQuery
+          AND (
+            income.date < :cursorDate
+            OR (income.date = :cursorDate AND income.id > :cursorId)
+          )
+        ORDER BY income.date DESC, income.id ASC
+        LIMIT :limit
+        """
+    )
+    fun searchIncomesAfter(
+        ftsQuery: String,
+        limit: Int,
+        cursorDate: Long,
+        cursorId: String
+    ): Flow<List<Income>>
+
+    @Query(
+        """
         SELECT * FROM income
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         """
     )
     suspend fun getIncomesSnapshotBetween(

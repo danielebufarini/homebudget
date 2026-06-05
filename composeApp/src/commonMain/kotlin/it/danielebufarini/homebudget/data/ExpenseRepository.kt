@@ -92,6 +92,13 @@ class ExpenseRepository(
         offset: Int = 0
     ): Flow<List<Expense>> = expenseEntryRepository.searchExpenseCandidates(query, limit, offset)
 
+    fun searchExpenseCandidatePage(
+        query: String,
+        limit: Int = DEFAULT_SEARCH_CANDIDATE_LIMIT,
+        cursor: TransactionPageCursor? = null
+    ): Flow<TransactionSearchPage<Expense>> =
+        expenseEntryRepository.searchExpenseCandidatePage(query, limit, cursor)
+
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseEntryRepository.getAllExpensesSnapshot()
 
     suspend fun getRecentExpensesSnapshot(limit: Int): List<Expense> =
@@ -127,6 +134,13 @@ class ExpenseRepository(
         limit: Int = DEFAULT_SEARCH_CANDIDATE_LIMIT,
         offset: Int = 0
     ): Flow<List<Income>> = incomeRepository.searchIncomeCandidates(query, limit, offset)
+
+    fun searchIncomeCandidatePage(
+        query: String,
+        limit: Int = DEFAULT_SEARCH_CANDIDATE_LIMIT,
+        cursor: TransactionPageCursor? = null
+    ): Flow<TransactionSearchPage<Income>> =
+        incomeRepository.searchIncomeCandidatePage(query, limit, cursor)
 
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeRepository.getAllIncomesSnapshot()
 

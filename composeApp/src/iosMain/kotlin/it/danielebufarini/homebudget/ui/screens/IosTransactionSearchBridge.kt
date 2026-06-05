@@ -2,6 +2,7 @@ package it.danielebufarini.homebudget.ui.screens
 
 import it.danielebufarini.homebudget.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
 import it.danielebufarini.homebudget.data.ExpenseRepository
+import it.danielebufarini.homebudget.data.TransactionPageCursor
 import it.danielebufarini.homebudget.data.formatAmount
 import it.danielebufarini.homebudget.data.sumAmountOf
 import it.danielebufarini.homebudget.database.Category
@@ -26,7 +27,10 @@ class IosTransactionSearchObserver(
 ) {
     private val snapshotState = MutableStateFlow<IosTransactionSearchSnapshot?>(null)
     private var groupingMode = initialGroupingMode
-    private var loadedPageCount = 0
+    private var expenseCursor: TransactionPageCursor? = null
+    private var incomeCursor: TransactionPageCursor? = null
+    private var hasLoadedExpensePage = false
+    private var hasLoadedIncomePage = false
     private var loadedExpenses: List<Expense> = emptyList()
     private var loadedIncomes: List<Income> = emptyList()
     private var latestCategories: List<Category> = emptyList()
@@ -93,24 +97,37 @@ class IosTransactionSearchObserver(
 
         isLoadingPage = true
         try {
-            val pageIndex = loadedPageCount
-            val offset = pageIndex * DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-            val nextExpenses = repository.searchExpenseCandidates(
-                query = query,
-                limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
-                offset = offset
-            ).first()
-            val nextIncomes = repository.searchIncomeCandidates(
-                query = query,
-                limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
-                offset = offset
-            ).first()
+            val shouldLoadExpenses = !hasLoadedExpensePage || canLoadMoreExpenseResults
+            val shouldLoadIncomes = !hasLoadedIncomePage || canLoadMoreIncomeResults
 
-            loadedExpenses = (loadedExpenses + nextExpenses).distinctBy(Expense::id)
-            loadedIncomes = (loadedIncomes + nextIncomes).distinctBy(Income::id)
-            canLoadMoreExpenseResults = nextExpenses.size >= DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-            canLoadMoreIncomeResults = nextIncomes.size >= DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-            loadedPageCount += 1
+            if (!shouldLoadExpenses && !shouldLoadIncomes) {
+                return
+            }
+
+            if (shouldLoadExpenses) {
+                val nextExpensePage = repository.searchExpenseCandidatePage(
+                    query = query,
+                    limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
+                    cursor = expenseCursor
+                ).first()
+                loadedExpenses = (loadedExpenses + nextExpensePage.items).distinctBy(Expense::id)
+                expenseCursor = nextExpensePage.nextCursor
+                canLoadMoreExpenseResults = nextExpensePage.canLoadMore
+                hasLoadedExpensePage = true
+            }
+
+            if (shouldLoadIncomes) {
+                val nextIncomePage = repository.searchIncomeCandidatePage(
+                    query = query,
+                    limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
+                    cursor = incomeCursor
+                ).first()
+                loadedIncomes = (loadedIncomes + nextIncomePage.items).distinctBy(Income::id)
+                incomeCursor = nextIncomePage.nextCursor
+                canLoadMoreIncomeResults = nextIncomePage.canLoadMore
+                hasLoadedIncomePage = true
+            }
+
             publishSnapshot()
         } finally {
             isLoadingPage = false

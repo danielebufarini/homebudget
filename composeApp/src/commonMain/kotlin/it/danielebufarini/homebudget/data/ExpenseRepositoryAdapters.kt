@@ -104,6 +104,13 @@ internal class ExpenseRepositoryReadAdapter(
     override fun searchExpenseCandidates(query: String, limit: Int, offset: Int): Flow<List<Expense>> =
         repository.searchExpenseCandidates(query = query, limit = limit, offset = offset)
 
+    override fun searchExpenseCandidatePage(
+        query: String,
+        limit: Int,
+        cursor: TransactionPageCursor?
+    ): Flow<TransactionSearchPage<Expense>> =
+        repository.searchExpenseCandidatePage(query = query, limit = limit, cursor = cursor)
+
     override suspend fun getAllExpensesSnapshot(): List<Expense> =
         repository.getAllExpensesSnapshot()
 
@@ -143,6 +150,13 @@ internal class ExpenseRepositoryIncomeReadAdapter(
 
     override fun searchIncomeCandidates(query: String, limit: Int, offset: Int): Flow<List<Income>> =
         repository.searchIncomeCandidates(query = query, limit = limit, offset = offset)
+
+    override fun searchIncomeCandidatePage(
+        query: String,
+        limit: Int,
+        cursor: TransactionPageCursor?
+    ): Flow<TransactionSearchPage<Income>> =
+        repository.searchIncomeCandidatePage(query = query, limit = limit, cursor = cursor)
 
     override suspend fun getAllIncomesSnapshot(): List<Income> =
         repository.getAllIncomesSnapshot()

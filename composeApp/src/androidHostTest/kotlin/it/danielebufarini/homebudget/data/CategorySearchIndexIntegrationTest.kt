@@ -210,6 +210,101 @@ class CategorySearchIndexIntegrationTest {
         }
     }
 
+    @Test
+    fun expenseSearchCandidatePage_usesStableKeysetPaginationWithoutOverlap() = runTest {
+        withFixture {
+            insertCategory("expense_keyset_category", "KeysetExpenseCategory", CATEGORY_TYPE_EXPENSE)
+            insertExpense(
+                id = "expense_b",
+                categoryId = "expense_keyset_category",
+                description = "keyset expense shared token",
+                date = millisForDate(2026, 1, 3)
+            )
+            insertExpense(
+                id = "expense_a",
+                categoryId = "expense_keyset_category",
+                description = "keyset expense shared token",
+                date = millisForDate(2026, 1, 3)
+            )
+            insertExpense(
+                id = "expense_c",
+                categoryId = "expense_keyset_category",
+                description = "keyset expense shared token",
+                date = millisForDate(2026, 1, 2)
+            )
+            insertExpense(
+                id = "expense_d",
+                categoryId = "expense_keyset_category",
+                description = "keyset expense shared token",
+                date = millisForDate(2026, 1, 1)
+            )
+
+            val firstPage = expenseEntryRepository.searchExpenseCandidatePage(
+                query = "keyset",
+                limit = 2,
+                cursor = null
+            ).first()
+            val secondPage = expenseEntryRepository.searchExpenseCandidatePage(
+                query = "keyset",
+                limit = 2,
+                cursor = firstPage.nextCursor
+            ).first()
+
+            assertEquals(listOf("expense_a", "expense_b"), firstPage.items.map(Expense::id))
+            assertTrue(firstPage.canLoadMore)
+            assertEquals(listOf("expense_c", "expense_d"), secondPage.items.map(Expense::id))
+            assertFalse(secondPage.canLoadMore)
+            assertEquals(
+                4,
+                (firstPage.items + secondPage.items)
+                    .map(Expense::id)
+                    .distinct()
+                    .size
+            )
+        }
+    }
+
+    @Test
+    fun incomeSearchCandidatePage_usesStableKeysetPaginationWithoutOverlap() = runTest {
+        withFixture {
+            insertCategory("income_keyset_category", "KeysetIncomeCategory", CATEGORY_TYPE_INCOME)
+            insertIncome(
+                id = "income_b",
+                categoryId = "income_keyset_category",
+                description = "keyset income shared token",
+                date = millisForDate(2026, 2, 3)
+            )
+            insertIncome(
+                id = "income_a",
+                categoryId = "income_keyset_category",
+                description = "keyset income shared token",
+                date = millisForDate(2026, 2, 3)
+            )
+            insertIncome(
+                id = "income_c",
+                categoryId = "income_keyset_category",
+                description = "keyset income shared token",
+                date = millisForDate(2026, 2, 2)
+            )
+
+            val firstPage = incomeRepository.searchIncomeCandidatePage(
+                query = "keyset",
+                limit = 2,
+                cursor = null
+            ).first()
+            val secondPage = incomeRepository.searchIncomeCandidatePage(
+                query = "keyset",
+                limit = 2,
+                cursor = firstPage.nextCursor
+            ).first()
+
+            assertEquals(listOf("income_a", "income_b"), firstPage.items.map(Income::id))
+            assertTrue(firstPage.canLoadMore)
+            assertEquals(listOf("income_c"), secondPage.items.map(Income::id))
+            assertFalse(secondPage.canLoadMore)
+        }
+    }
+
     private suspend fun TestScope.withFixture(block: suspend Fixture.() -> Unit) {
         val fixture = Fixture(this)
         try {
@@ -258,25 +353,37 @@ class CategorySearchIndexIntegrationTest {
             )
         }
 
-        suspend fun insertExpense(id: String, categoryId: String, description: String) {
+        suspend fun insertExpense(
+            id: String,
+            categoryId: String,
+            description: String,
+            date: Long = testDate
+        ) {
             expenseEntryRepository.insertExpenses(
                 listOf(
                     pendingExpense(
                         id = id,
                         categoryId = categoryId,
-                        description = description
+                        description = description,
+                        date = date
                     )
                 )
             )
         }
 
-        suspend fun insertIncome(id: String, categoryId: String, description: String) {
+        suspend fun insertIncome(
+            id: String,
+            categoryId: String,
+            description: String,
+            date: Long = testDate
+        ) {
             incomeRepository.insertIncomes(
                 listOf(
                     pendingIncome(
                         id = id,
                         categoryId = categoryId,
-                        description = description
+                        description = description,
+                        date = date
                     )
                 )
             )
@@ -366,11 +473,12 @@ class CategorySearchIndexIntegrationTest {
         fun pendingExpense(
             id: String,
             categoryId: String,
-            description: String
+            description: String,
+            date: Long = testDate
         ): PendingExpense = PendingExpense(
             id = id,
             amount = 1234L,
-            date = testDate,
+            date = date,
             categoryId = categoryId,
             description = description,
             isShared = false
@@ -379,13 +487,19 @@ class CategorySearchIndexIntegrationTest {
         fun pendingIncome(
             id: String,
             categoryId: String,
-            description: String
+            description: String,
+            date: Long = testDate
         ): PendingIncome = PendingIncome(
             id = id,
             amount = 5678L,
-            date = testDate,
+            date = date,
             description = description,
             categoryId = categoryId
         )
+
+        fun millisForDate(year: Int, month: Int, day: Int): Long =
+            LocalDate(year, month, day)
+                .atStartOfDayIn(TimeZone.of("UTC"))
+                .toEpochMilliseconds()
     }
 }

@@ -7,6 +7,7 @@ import it.danielebufarini.homebudget.database.refreshExpenseSearchRows
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 class ExpenseEntryRepository(
     database: HomeBudgetDatabase,
@@ -45,6 +46,42 @@ class ExpenseEntryRepository(
             limit = limit.coerceAtLeast(1),
             offset = offset.coerceAtLeast(0)
         ).distinctUntilChanged()
+    }
+
+    fun searchExpenseCandidatePage(
+        query: String,
+        limit: Int,
+        cursor: TransactionPageCursor?
+    ): Flow<TransactionSearchPage<Expense>> {
+        val ftsQuery = ftsSearchQuery(query) ?: return flowOf(
+            TransactionSearchPage(
+                items = emptyList(),
+                nextCursor = null,
+                canLoadMore = false
+            )
+        )
+        val safeLimit = limit.coerceAtLeast(1)
+        val pageFlow = if (cursor == null) {
+            expenseDao.searchExpenses(
+                ftsQuery = ftsQuery,
+                limit = safeLimit + 1,
+                offset = 0
+            )
+        } else {
+            expenseDao.searchExpensesAfter(
+                ftsQuery = ftsQuery,
+                limit = safeLimit + 1,
+                cursorDate = cursor.date,
+                cursorId = cursor.id
+            )
+        }
+        return pageFlow.map { expenses ->
+            expenses.toTransactionSearchPage(
+                limit = safeLimit,
+                itemDate = Expense::date,
+                itemId = Expense::id
+            )
+        }
     }
 
     suspend fun getAllExpensesSnapshot(): List<Expense> = expenseDao.getAllExpensesSnapshot()

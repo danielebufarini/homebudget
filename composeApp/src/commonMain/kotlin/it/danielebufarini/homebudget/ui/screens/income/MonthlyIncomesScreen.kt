@@ -59,6 +59,7 @@ import it.danielebufarini.homebudget.ui.screens.GroupedTransactionListContent
 import it.danielebufarini.homebudget.ui.screens.GroupedTransactionSection
 import it.danielebufarini.homebudget.ui.screens.GroupedTransactionSectionStyle
 import it.danielebufarini.homebudget.ui.screens.IncomeSection
+import it.danielebufarini.homebudget.ui.screens.TransactionSearchResults
 import it.danielebufarini.homebudget.ui.screens.buildGroupedIncomesState
 import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
@@ -81,6 +82,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -197,6 +199,12 @@ class MonthlyIncomesScreen(
                 )
             } else {
                 incomeReadRepository.getIncomesBetween(monthStartMillis, monthEndMillis)
+                    .map { incomes ->
+                        TransactionSearchResults(
+                            items = incomes,
+                            canLoadMore = false
+                        )
+                    }
             }
         }
         val categoriesFlow = remember(categoryRepository) {
@@ -212,10 +220,10 @@ class MonthlyIncomesScreen(
             searchQuery,
             strings.currencySymbol
         ) {
-            combine(incomesFlow, categoriesFlow) { incomes, categories ->
+            combine(incomesFlow, categoriesFlow) { incomeResults, categories ->
                 val categoriesById = categories.associateBy { it.id }
-                buildGroupedIncomesState(
-                    incomes = incomes,
+                val groupedState = buildGroupedIncomesState(
+                    incomes = incomeResults.items,
                     categoriesById = categoriesById,
                     groupingMode = groupingMode,
                     resolveCategoryName = { category: Category ->
@@ -226,6 +234,7 @@ class MonthlyIncomesScreen(
                     searchQuery = searchQuery,
                     currencySymbol = strings.currencySymbol
                 )
+                groupedState to incomeResults.canLoadMore
             }
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
@@ -234,15 +243,14 @@ class MonthlyIncomesScreen(
             "${monthStartMillis}:${monthEndMillis}:${searchPaging.searchMode}:${searchQuery}"
         }
         val groupedIncomesLoadState = groupedIncomesFlow.collectAsFlowLoadState(
-            initialValue = emptyGroupedIncomesState(),
+            initialValue = emptyGroupedIncomesState() to false,
             resetKey = groupedIncomesLoadKey
         )
-        val groupedIncomesState = groupedIncomesLoadState.value
+        val (groupedIncomesState, canLoadMoreIncomeResults) = groupedIncomesLoadState.value
         val groupedIncomes = groupedIncomesState.sections
         val totalAmount = groupedIncomesState.totalAmount
         val categoriesById = groupedIncomesState.categoriesById
-        val canLoadMoreSearchResults = searchPaging.searchMode &&
-            groupedIncomesState.candidateCount >= searchPaging.loadedCandidateCount
+        val canLoadMoreSearchResults = searchPaging.searchMode && canLoadMoreIncomeResults
         val incomeSections = remember(groupedIncomes, categoriesById) {
             groupedIncomes.toTransactionSections(categoriesById)
         }

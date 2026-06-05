@@ -7,6 +7,7 @@ import it.danielebufarini.homebudget.database.refreshIncomeSearchRows
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 class IncomeRepository(
     database: HomeBudgetDatabase,
@@ -45,6 +46,42 @@ class IncomeRepository(
             limit = limit.coerceAtLeast(1),
             offset = offset.coerceAtLeast(0)
         ).distinctUntilChanged()
+    }
+
+    fun searchIncomeCandidatePage(
+        query: String,
+        limit: Int,
+        cursor: TransactionPageCursor?
+    ): Flow<TransactionSearchPage<Income>> {
+        val ftsQuery = ftsSearchQuery(query) ?: return flowOf(
+            TransactionSearchPage(
+                items = emptyList(),
+                nextCursor = null,
+                canLoadMore = false
+            )
+        )
+        val safeLimit = limit.coerceAtLeast(1)
+        val pageFlow = if (cursor == null) {
+            incomeDao.searchIncomes(
+                ftsQuery = ftsQuery,
+                limit = safeLimit + 1,
+                offset = 0
+            )
+        } else {
+            incomeDao.searchIncomesAfter(
+                ftsQuery = ftsQuery,
+                limit = safeLimit + 1,
+                cursorDate = cursor.date,
+                cursorId = cursor.id
+            )
+        }
+        return pageFlow.map { incomes ->
+            incomes.toTransactionSearchPage(
+                limit = safeLimit,
+                itemDate = Income::date,
+                itemId = Income::id
+            )
+        }
     }
 
     suspend fun getAllIncomesSnapshot(): List<Income> = incomeDao.getAllIncomesSnapshot()

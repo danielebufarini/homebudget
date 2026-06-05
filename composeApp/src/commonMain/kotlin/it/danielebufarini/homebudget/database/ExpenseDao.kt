@@ -161,7 +161,7 @@ interface ExpenseDao {
         SELECT * FROM expense
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         """
     )
     fun getExpensesBetween(
@@ -174,7 +174,7 @@ interface ExpenseDao {
         SELECT * FROM expense
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         LIMIT :limit OFFSET :offset
         """
     )
@@ -190,7 +190,7 @@ interface ExpenseDao {
         SELECT * FROM expense
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         LIMIT :limit OFFSET :offset
         """
     )
@@ -207,7 +207,7 @@ interface ExpenseDao {
         FROM expense
         JOIN expense_search_fts ON expense_search_fts.transactionId = expense.id
         WHERE expense_search_fts MATCH :ftsQuery
-        ORDER BY expense.date DESC
+        ORDER BY expense.date DESC, expense.id ASC
         LIMIT :limit OFFSET :offset
         """
     )
@@ -219,9 +219,30 @@ interface ExpenseDao {
 
     @Query(
         """
+        SELECT expense.*
+        FROM expense
+        JOIN expense_search_fts ON expense_search_fts.transactionId = expense.id
+        WHERE expense_search_fts MATCH :ftsQuery
+          AND (
+            expense.date < :cursorDate
+            OR (expense.date = :cursorDate AND expense.id > :cursorId)
+          )
+        ORDER BY expense.date DESC, expense.id ASC
+        LIMIT :limit
+        """
+    )
+    fun searchExpensesAfter(
+        ftsQuery: String,
+        limit: Int,
+        cursorDate: Long,
+        cursorId: String
+    ): Flow<List<Expense>>
+
+    @Query(
+        """
         SELECT * FROM expense
         WHERE id IN (:ids)
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         """
     )
     fun getExpensesByIds(ids: List<String>): Flow<List<Expense>>
@@ -231,7 +252,7 @@ interface ExpenseDao {
         SELECT * FROM expense
         WHERE date >= :startMillis
           AND date < :endMillis
-        ORDER BY date DESC
+        ORDER BY date DESC, id ASC
         """
     )
     suspend fun getExpensesSnapshotBetween(

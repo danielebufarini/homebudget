@@ -51,12 +51,12 @@ import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.ExpenseGroupingMode
 import it.danielebufarini.homebudget.ui.screens.ExpenseSection
 import it.danielebufarini.homebudget.ui.screens.TransactionSearchPaging
+import it.danielebufarini.homebudget.ui.screens.TransactionSearchResults
 import it.danielebufarini.homebudget.ui.screens.buildGroupedExpensesState
 import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
 import it.danielebufarini.homebudget.ui.screens.edgeToEdgeListContentPadding
-import it.danielebufarini.homebudget.ui.screens.emptyGroupedExpensesState
 import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
 import it.danielebufarini.homebudget.ui.screens.searchExpenseCandidatePages
 import it.danielebufarini.homebudget.ui.screens.transactionSearchPaging
@@ -67,6 +67,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -384,6 +385,12 @@ abstract class BaseGroupedExpensesScreen(
                 )
             } else {
                 expenseReadRepository.getExpensesBetween(monthStartMillis, monthEndMillis)
+                    .map { expenses ->
+                        TransactionSearchResults(
+                            items = expenses,
+                            canLoadMore = false
+                        )
+                    }
             }
         }
         val categoriesFlow = remember(categoryRepository) {
@@ -399,10 +406,10 @@ abstract class BaseGroupedExpensesScreen(
             searchQuery,
             strings.currencySymbol
         ) {
-            combine(expensesFlow, categoriesFlow) { expenses, categories ->
+            combine(expensesFlow, categoriesFlow) { expenseResults, categories ->
                 val categoriesById = categories.associateBy { it.id }
-                buildGroupedExpensesState(
-                    expenses = expenses,
+                val groupedState = buildGroupedExpensesState(
+                    expenses = expenseResults.items,
                     categoriesById = categoriesById,
                     groupingMode = groupingMode,
                     includeExpense = ::includeExpense,
@@ -415,6 +422,14 @@ abstract class BaseGroupedExpensesScreen(
                     searchQuery = searchQuery,
                     currencySymbol = strings.currencySymbol
                 )
+                GroupedExpensesRouteData(
+                    groupedExpenses = groupedState.sections,
+                    visibleExpenses = groupedState.visibleExpenses,
+                    totalAmount = groupedState.totalAmount,
+                    categoriesById = groupedState.categoriesById,
+                    canLoadMoreSearchResults = searchPaging.searchMode && expenseResults.canLoadMore,
+                    isLoading = false
+                )
             }
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
@@ -423,20 +438,17 @@ abstract class BaseGroupedExpensesScreen(
             "${monthStartMillis}:${monthEndMillis}:${searchPaging.searchMode}:${searchQuery}"
         }
         val loadState = groupedExpensesFlow.collectAsFlowLoadState(
-            initialValue = emptyGroupedExpensesState(),
+            initialValue = GroupedExpensesRouteData(
+                groupedExpenses = emptyList(),
+                visibleExpenses = emptyList(),
+                totalAmount = 0L,
+                categoriesById = emptyMap(),
+                canLoadMoreSearchResults = false,
+                isLoading = true
+            ),
             resetKey = loadKey
         )
-        val groupedState = loadState.value
-
-        return GroupedExpensesRouteData(
-            groupedExpenses = groupedState.sections,
-            visibleExpenses = groupedState.visibleExpenses,
-            totalAmount = groupedState.totalAmount,
-            categoriesById = groupedState.categoriesById,
-            canLoadMoreSearchResults = searchPaging.searchMode &&
-                groupedState.candidateCount >= searchPaging.loadedCandidateCount,
-            isLoading = loadState.isLoading
-        )
+        return loadState.value.copy(isLoading = loadState.isLoading)
     }
 
     @Composable

@@ -64,6 +64,12 @@ internal interface ExpenseReadRepository {
         offset: Int
     ): Flow<List<Expense>>
 
+    fun searchExpenseCandidatePage(
+        query: String,
+        limit: Int,
+        cursor: TransactionPageCursor?
+    ): Flow<TransactionSearchPage<Expense>>
+
     suspend fun getAllExpensesSnapshot(): List<Expense>
 
     suspend fun getRecentExpensesSnapshot(limit: Int): List<Expense>
@@ -92,6 +98,12 @@ internal interface IncomeReadRepository {
         limit: Int,
         offset: Int
     ): Flow<List<Income>>
+
+    fun searchIncomeCandidatePage(
+        query: String,
+        limit: Int,
+        cursor: TransactionPageCursor?
+    ): Flow<TransactionSearchPage<Income>>
 
     suspend fun getAllIncomesSnapshot(): List<Income>
 
