@@ -117,8 +117,11 @@ internal suspend fun importBudgetItemsFromCsv(
         return CsvImportResult(importedCount = 0, skippedCount = 0)
     }
 
+    val importTimeZone = TimeZone.currentSystemDefault()
     val categoriesById = repository.getAllCategoriesSnapshot()
         .associateByTo(mutableMapOf(), Category::id)
+    val existingExpenses = repository.getAllExpensesSnapshot()
+    val existingIncomes = repository.getAllIncomesSnapshot()
 
     val categoriesByNormalizedName = mutableMapOf<String, Category>()
     categoriesById.values.forEach { category ->
@@ -130,13 +133,13 @@ internal suspend fun importBudgetItemsFromCsv(
         resolveCategoryName = resolveCategoryName,
         categoriesById = categoriesById,
         categoriesByNormalizedName = categoriesByNormalizedName,
-        existingExpenseKeys = repository.getAllExpensesSnapshot()
+        existingExpenseKeys = existingExpenses
             .mapTo(mutableSetOf()) { expense -> expense.asImportKey() },
-        existingExpenseRecurringOccurrenceKeys = repository.getAllExpensesSnapshot()
+        existingExpenseRecurringOccurrenceKeys = existingExpenses
             .mapNotNullTo(mutableSetOf()) { expense -> expense.asRecurringOccurrenceKey() },
-        existingIncomeKeys = repository.getAllIncomesSnapshot()
+        existingIncomeKeys = existingIncomes
             .mapTo(mutableSetOf()) { income -> income.asImportKey() },
-        existingIncomeRecurringOccurrenceKeys = repository.getAllIncomesSnapshot()
+        existingIncomeRecurringOccurrenceKeys = existingIncomes
             .mapNotNullTo(mutableSetOf()) { income -> income.asRecurringOccurrenceKey() }
     )
 
@@ -147,7 +150,7 @@ internal suspend fun importBudgetItemsFromCsv(
             return@forEachIndexed
         }
         val itemDate = row.date
-            .atStartOfDayIn(TimeZone.currentSystemDefault())
+            .atStartOfDayIn(importTimeZone)
             .toEpochMilliseconds()
         val imported = CsvRowImportHandlerFactory
             .create(row.type)

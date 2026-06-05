@@ -39,7 +39,8 @@ suspend fun exportBudgetItemsToCsv(
 ): CsvExportFile {
     require(startDate <= endDate) { "startDate must be on or before endDate" }
     val resolveCategoryName = loadCategoryNameResolver()
-    val (startMillis, endExclusiveMillis) = csvExportBounds(startDate, endDate)
+    val exportTimeZone = TimeZone.currentSystemDefault()
+    val (startMillis, endExclusiveMillis) = csvExportBounds(startDate, endDate, exportTimeZone)
     val expenses = repository.getExpensesSnapshotBetween(startMillis, endExclusiveMillis)
     val incomes = repository.getIncomesSnapshotBetween(startMillis, endExclusiveMillis)
     val categories = repository.getAllCategoriesSnapshot()
@@ -54,7 +55,8 @@ suspend fun exportBudgetItemsToCsv(
             localizeCategoryName = { category ->
                 resolveCategoryName(category.id, category.name)
             },
-            unknownCategory = getString(Res.string.unknown_category)
+            unknownCategory = getString(Res.string.unknown_category),
+            timeZone = exportTimeZone
         )
     }
 }
@@ -65,17 +67,18 @@ internal fun buildExpensesCsvExport(
     startDate: LocalDate,
     endDate: LocalDate,
     localizeCategoryName: (Category) -> String,
-    unknownCategory: String
+    unknownCategory: String,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): CsvExportFile {
     val categoriesById = categories.associateBy(Category::id)
     val rows = expenses
         .asSequence()
-        .filterByDateRange(startDate, endDate) { it.date }
+        .filterByDateRange(startDate, endDate, timeZone) { it.date }
         .sortedBy(Expense::date)
         .map { expense ->
             listOf(
                 "expense",
-                expense.date.toCsvDate(),
+                expense.date.toCsvDate(timeZone),
                 categoriesById[expense.categoryId]
                     ?.let(localizeCategoryName)
                     ?: unknownCategory,
@@ -111,17 +114,18 @@ internal fun buildIncomesCsvExport(
     categories: List<Category>,
     startDate: LocalDate,
     endDate: LocalDate,
-    localizeCategoryName: (Category) -> String
+    localizeCategoryName: (Category) -> String,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): CsvExportFile {
     val categoriesById = categories.associateBy(Category::id)
     val rows = incomes
         .asSequence()
-        .filterByDateRange(startDate, endDate) { it.date }
+        .filterByDateRange(startDate, endDate, timeZone) { it.date }
         .sortedBy(Income::date)
         .map { income ->
             listOf(
                 "income",
-                income.date.toCsvDate(),
+                income.date.toCsvDate(timeZone),
                 income.categoryId
                     ?.let(categoriesById::get)
                     ?.let(localizeCategoryName)
@@ -160,18 +164,19 @@ internal fun buildFullDatabaseCsvExport(
     startDate: LocalDate,
     endDate: LocalDate,
     localizeCategoryName: (Category) -> String,
-    unknownCategory: String
+    unknownCategory: String,
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): CsvExportFile {
     val categoriesById = categories.associateBy(Category::id)
     val expenseRows = expenses
         .asSequence()
-        .filterByDateRange(startDate, endDate) { it.date }
+        .filterByDateRange(startDate, endDate, timeZone) { it.date }
         .map { expense ->
             CsvExportRow(
                 date = expense.date,
                 values = listOf(
                     "expense",
-                    expense.date.toCsvDate(),
+                    expense.date.toCsvDate(timeZone),
                     categoriesById[expense.categoryId]
                         ?.let(localizeCategoryName)
                         ?: unknownCategory,
@@ -185,13 +190,13 @@ internal fun buildFullDatabaseCsvExport(
         }
     val incomeRows = incomes
         .asSequence()
-        .filterByDateRange(startDate, endDate) { it.date }
+        .filterByDateRange(startDate, endDate, timeZone) { it.date }
         .map { income ->
             CsvExportRow(
                 date = income.date,
                 values = listOf(
                     "income",
-                    income.date.toCsvDate(),
+                    income.date.toCsvDate(timeZone),
                     income.categoryId
                         ?.let(categoriesById::get)
                         ?.let(localizeCategoryName)
@@ -258,8 +263,11 @@ private fun String.escapeSpreadsheetFormula(): String {
     }
 }
 
-private fun csvExportBounds(startDate: LocalDate, endDate: LocalDate): Pair<Long, Long> {
-    val timeZone = TimeZone.currentSystemDefault()
+private fun csvExportBounds(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    timeZone: TimeZone
+): Pair<Long, Long> {
     val startMillis = startDate.atStartOfDayIn(timeZone).toEpochMilliseconds()
     val endExclusiveMillis = endDate
         .plus(1, DateTimeUnit.DAY)
@@ -273,21 +281,22 @@ private fun Boolean.toCsvFlag(): String = toString()
 private fun <T> Sequence<T>.filterByDateRange(
     startDate: LocalDate,
     endDate: LocalDate,
+    timeZone: TimeZone,
     dateSelector: (T) -> Long
 ): Sequence<T> {
     return filter { item ->
-        val date = dateSelector(item).toLocalDate()
+        val date = dateSelector(item).toLocalDate(timeZone)
         date in startDate..endDate
     }
 }
 
-private fun Long.toLocalDate(): LocalDate {
+private fun Long.toLocalDate(timeZone: TimeZone): LocalDate {
     return Instant.fromEpochMilliseconds(this)
-        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .toLocalDateTime(timeZone)
         .date
 }
 
-private fun Long.toCsvDate(): String = toLocalDate().toString()
+private fun Long.toCsvDate(timeZone: TimeZone): String = toLocalDate(timeZone).toString()
 
 private data class CsvExportRow(
     val date: Long,
