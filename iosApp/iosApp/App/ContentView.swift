@@ -2,34 +2,24 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private enum CsvImportReadError: LocalizedError {
-    case fileTooLarge
-
-    var errorDescription: String? {
-        switch self {
-        case .fileTooLarge:
-            return appLocalized("Unable to import the CSV file")
-        }
-    }
-}
 
 struct ContentView: View {
-    nonisolated private static let maxCsvImportBytes = 5 * 1024 * 1024
+    nonisolated static let maxCsvImportBytes = 5 * 1024 * 1024
 
-    @State private var path = NavigationPath()
-    @State private var showVoiceExpenseSheet = false
-    @State private var voiceExpenseAutoStartRequest = 0
-    @State private var showCsvTransferSheet = false
-    @State private var showCsvExportSheet = false
-    @State private var showCsvExporter = false
-    @State private var activeImportPicker: ImportPickerKind?
-    @State private var bannerPresenter = AppGlassBannerPresenter()
-    @State private var csvExportDocument = CsvExportDocument()
-    @State private var csvExportFilename = "budget.csv"
-    @State private var csvExportStartDate = Calendar.current.date(byAdding: .day, value: -29, to: Date()) ?? Date()
-    @State private var csvExportEndDate = Date()
-    @State private var csvImportController = IosCsvImportController()
-    @State private var csvExportController = IosCsvExportController()
+    @State var path = NavigationPath()
+    @State var showVoiceExpenseSheet = false
+    @State var voiceExpenseAutoStartRequest = 0
+    @State var showCsvTransferSheet = false
+    @State var showCsvExportSheet = false
+    @State var showCsvExporter = false
+    @State var activeImportPicker: ImportPickerKind?
+    @State var bannerPresenter = AppGlassBannerPresenter()
+    @State var csvExportDocument = CsvExportDocument()
+    @State var csvExportFilename = "budget.csv"
+    @State var csvExportStartDate = Calendar.current.date(byAdding: .day, value: -29, to: Date()) ?? Date()
+    @State var csvExportEndDate = Date()
+    @State var csvImportController = IosCsvImportController()
+    @State var csvExportController = IosCsvExportController()
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -270,7 +260,7 @@ struct ContentView: View {
         }
     }
 
-    private func startVoiceExpense() {
+    func startVoiceExpense() {
         voiceExpenseAutoStartRequest += 1
         showVoiceExpenseSheet = true
     }
@@ -292,143 +282,4 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func handleIncomingURL(_ url: URL) {
-        guard url.scheme == "homebudget" else {
-            return
-        }
-
-        switch url.host {
-        case "add-expense":
-            path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
-        case "voice-expense":
-            startVoiceExpense()
-        default:
-            break
-        }
-    }
-
-    private func handleCsvSelection(result: Result<URL, Error>) {
-        switch result {
-        case let .success(url):
-            Task {
-                do {
-                    let text = try await readCsvText(from: url)
-                    await MainActor.run {
-                        importCsv(text: text)
-                    }
-                } catch {
-                    await MainActor.run {
-                        showCsvFeedback(error.localizedDescription, style: .error)
-                    }
-                }
-            }
-        case let .failure(error):
-            showCsvFeedback(error.localizedDescription, style: .error)
-        }
-    }
-
-    private func readCsvText(from url: URL) async throws -> String {
-        try await Task.detached(priority: .userInitiated) {
-            let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            if let fileSize = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-               fileSize > Self.maxCsvImportBytes {
-                throw CsvImportReadError.fileTooLarge
-            }
-
-            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
-            guard data.count <= Self.maxCsvImportBytes else {
-                throw CsvImportReadError.fileTooLarge
-            }
-
-            return String(decoding: data, as: UTF8.self)
-        }.value
-    }
-
-    @MainActor
-    private func importCsv(text: String) {
-        guard !text.isEmpty else {
-            showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)
-            return
-        }
-
-        Task { @MainActor [csvImportController] in
-            guard let result = try? await csvImportController.importCsv(text: text) else {
-                showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)
-                return
-            }
-
-            if let successMessage = result.successMessage {
-                HomeBudgetWidgetSummaryRefresher.shared.refresh()
-                showCsvFeedback(successMessage, style: .success)
-            } else if let errorMessage = result.errorMessage {
-                showCsvFeedback(errorMessage, style: .error)
-            }
-        }
-    }
-
-    private func exportCsv(startDate: Date, endDate: Date) {
-        let normalizedStartDate = Calendar.current.startOfDay(for: startDate)
-        let normalizedEndDate = Calendar.current.startOfDay(for: endDate)
-
-        guard normalizedStartDate <= normalizedEndDate else {
-            showCsvFeedback(appLocalized("Start date must be on or before end date"), style: .error)
-            return
-        }
-
-        Task { @MainActor [csvExportController] in
-            let result = try? await csvExportController.exportCsv(
-                startDateMillis: Int64(normalizedStartDate.timeIntervalSince1970 * 1000),
-                endDateMillis: Int64(normalizedEndDate.timeIntervalSince1970 * 1000)
-            )
-
-            if let fileName = result?.fileName, let content = result?.content {
-                csvExportFilename = fileName
-                csvExportDocument = CsvExportDocument(text: content)
-                showCsvExportSheet = false
-                showCsvExporter = true
-            } else {
-                showCsvFeedback(
-                    result?.errorMessage ?? appLocalized("Unable to export the CSV file"),
-                    style: .error
-                )
-            }
-        }
-    }
-
-    private func handleCsvExport(result: Result<URL, Error>) {
-        switch result {
-        case .success:
-            showCsvFeedback(appLocalized("CSV file exported"), style: .success)
-        case let .failure(error):
-            showCsvFeedback(error.localizedDescription, style: .error)
-        }
-    }
-
-    @MainActor
-    private func showCsvFeedback(_ message: String, style: AppGlassBannerStyle) {
-        bannerPresenter.show(message, style: style)
-    }
-
-    private var activeImportAllowedContentTypes: [UTType] {
-        [.commaSeparatedText, .plainText, .text]
-    }
-
-    private func handleImportSelection(result: Result<URL, Error>) {
-        activeImportPicker = nil
-        handleCsvSelection(result: result)
-    }
-
-    private func presentAfterMenuDismiss(_ action: @escaping @MainActor () -> Void) {
-        DispatchQueue.main.async {
-            Task { @MainActor in
-                action()
-            }
-        }
-    }
 }

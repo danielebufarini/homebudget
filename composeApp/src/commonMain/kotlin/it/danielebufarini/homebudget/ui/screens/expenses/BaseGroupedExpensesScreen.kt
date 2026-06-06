@@ -1,16 +1,7 @@
 package it.danielebufarini.homebudget.ui.screens.expenses
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,51 +9,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import homebudget.composeapp.generated.resources.Res
-import homebudget.composeapp.generated.resources.add_expense
-import homebudget.composeapp.generated.resources.back
-import homebudget.composeapp.generated.resources.by_category
-import homebudget.composeapp.generated.resources.by_date
-import homebudget.composeapp.generated.resources.currency_symbol
-import homebudget.composeapp.generated.resources.delete
-import homebudget.composeapp.generated.resources.delete_item_confirmation_message
-import homebudget.composeapp.generated.resources.delete_recurring_item_confirmation_message
 import homebudget.composeapp.generated.resources.full_month_names
-import homebudget.composeapp.generated.resources.load_more_search_results
 import homebudget.composeapp.generated.resources.short_month_names
-import homebudget.composeapp.generated.resources.unable_to_delete_expense
-import homebudget.composeapp.generated.resources.unknown_category
 import it.danielebufarini.homebudget.data.CategoryManagementRepository
 import it.danielebufarini.homebudget.data.ExpenseReadRepository
 import it.danielebufarini.homebudget.data.PersistentWriteScope
 import it.danielebufarini.homebudget.data.TransactionWriteRepository
 import it.danielebufarini.homebudget.data.monthBounds
-import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.Expense
 import it.danielebufarini.homebudget.getPlatform
 import it.danielebufarini.homebudget.localization.rememberCategoryNameResolver
 import it.danielebufarini.homebudget.ui.screens.ExpenseGroupingMode
-import it.danielebufarini.homebudget.ui.screens.ExpenseSection
 import it.danielebufarini.homebudget.ui.screens.TransactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.TransactionSearchResults
 import it.danielebufarini.homebudget.ui.screens.buildGroupedExpensesState
 import it.danielebufarini.homebudget.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.homebudget.ui.screens.collectAsFlowLoadState
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
-import it.danielebufarini.homebudget.ui.screens.edgeToEdgeListContentPadding
-import it.danielebufarini.homebudget.ui.screens.monthSwipeNavigation
 import it.danielebufarini.homebudget.ui.screens.rememberGroupedTransactionRouteState
 import it.danielebufarini.homebudget.ui.screens.searchExpenseCandidatePages
 import it.danielebufarini.homebudget.ui.screens.transactionSearchPaging
 import it.danielebufarini.homebudget.ui.screens.transactions.AddTransactionScreen
-import it.danielebufarini.homebudget.ui.screens.transactions.TransactionDeleteConfirmationDialog
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionEditorKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -71,83 +43,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
-import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
-private data class GroupedExpenseStrings(
-    val addExpense: String,
-    val back: String,
-    val byCategory: String,
-    val byDate: String,
-    val currencySymbol: String,
-    val delete: String,
-    val deleteItemConfirmationMessageTemplate: String,
-    val recurringDeleteMessageTemplate: String,
-    val unknownCategory: String,
-    val loadMoreSearchResults: String,
-    val unableToDeleteExpense: String
-)
-
-private data class GroupedExpensesRouteData(
-    val groupedExpenses: List<ExpenseSection>,
-    val visibleExpenses: List<Expense>,
-    val totalAmount: Long,
-    val categoriesById: Map<String, Category>,
-    val canLoadMoreSearchResults: Boolean,
-    val isLoading: Boolean
-)
-
-private data class GroupedExpensesScaffoldState(
-    val showNavigationChrome: Boolean,
-    val selectedMonth: MonthCursor,
-    val screenTitle: String,
-    val navigationDescriptor: String?,
-    val totalAmount: Long,
-    val isIos: Boolean,
-    val canAddExpense: Boolean,
-    val showMonthNavigationControls: Boolean,
-    val strings: GroupedExpenseStrings,
-    val snackbarHostState: SnackbarHostState
-)
-
-private data class GroupedExpensesContentState(
-    val routeData: GroupedExpensesRouteData,
-    val groupingMode: ExpenseGroupingMode,
-    val showFloatingBottomControls: Boolean,
-    val monthSwipeEnabled: Boolean,
-    val emptyStateText: String,
-    val expenseFallbackTitle: String,
-    val strings: GroupedExpenseStrings,
-    val groupsExpandedByDefault: Boolean,
-    val sectionStyle: GroupedExpenseSectionStyle
-)
-
-private data class GroupedExpensesRouteActions(
-    val onBack: () -> Unit,
-    val onAddExpense: () -> Unit,
-    val onOpenExpense: (String) -> Unit,
-    val onDeleteExpense: ((String) -> Unit)?,
-    val onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
-    val onLoadMoreSearchResults: () -> Unit,
-    val onPreviousMonth: () -> Unit,
-    val onNextMonth: () -> Unit
-)
-
-@Composable
-private fun rememberGroupedExpenseStrings(): GroupedExpenseStrings =
-    GroupedExpenseStrings(
-        addExpense = stringResource(Res.string.add_expense),
-        back = stringResource(Res.string.back),
-        byCategory = stringResource(Res.string.by_category),
-        byDate = stringResource(Res.string.by_date),
-        currencySymbol = stringResource(Res.string.currency_symbol),
-        delete = stringResource(Res.string.delete),
-        deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
-        recurringDeleteMessageTemplate = stringResource(Res.string.delete_recurring_item_confirmation_message),
-        unknownCategory = stringResource(Res.string.unknown_category),
-        loadMoreSearchResults = stringResource(Res.string.load_more_search_results),
-        unableToDeleteExpense = stringResource(Res.string.unable_to_delete_expense)
-    )
 
 abstract class BaseGroupedExpensesScreen(
     private val year: Int,
@@ -468,148 +365,4 @@ abstract class BaseGroupedExpensesScreen(
     protected fun monthName(month: Int, fullMonthNames: List<String>): String {
         return fullMonthNames[month - 1]
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GroupedExpensesRouteScaffold(
-    state: GroupedExpensesScaffoldState,
-    actions: GroupedExpensesRouteActions,
-    content: @Composable (PaddingValues) -> Unit
-) {
-    if (!state.showNavigationChrome) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            content(PaddingValues(0.dp))
-            SnackbarHost(
-                hostState = state.snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
-        }
-        return
-    }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        contentWindowInsets = WindowInsets.systemBars,
-        snackbarHost = {
-            SnackbarHost(hostState = state.snackbarHostState)
-        },
-        topBar = {
-            GroupedExpensesTopBar(
-                selectedMonth = state.selectedMonth,
-                title = state.screenTitle,
-                navigationDescriptor = state.navigationDescriptor,
-                totalAmount = state.totalAmount,
-                currencySymbol = state.strings.currencySymbol,
-                isIos = state.isIos,
-                canAddExpense = state.canAddExpense,
-                showMonthNavigationControls = state.showMonthNavigationControls,
-                backLabel = state.strings.back,
-                addExpenseLabel = state.strings.addExpense,
-                onBack = actions.onBack,
-                onAddExpense = actions.onAddExpense,
-                onPreviousMonth = actions.onPreviousMonth,
-                onNextMonth = actions.onNextMonth
-            )
-        },
-        content = content
-    )
-}
-
-@Composable
-private fun GroupedExpensesRouteContent(
-    padding: PaddingValues,
-    state: GroupedExpensesContentState,
-    actions: GroupedExpensesRouteActions,
-    resolveCategoryName: (Category) -> String,
-) {
-    val bottomControlClearance = if (state.showFloatingBottomControls) 88.dp else 0.dp
-    val listContentPadding = edgeToEdgeListContentPadding(
-        scaffoldPadding = padding,
-        bottom = 16.dp + bottomControlClearance
-    )
-    val bottomControlsPadding = padding.calculateBottomPadding() + 16.dp
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .monthSwipeNavigation(
-                enabled = state.monthSwipeEnabled,
-                onPreviousMonth = actions.onPreviousMonth,
-                onNextMonth = actions.onNextMonth
-            )
-    ) {
-        GroupedExpensesContent(
-            groupedExpenses = state.routeData.groupedExpenses,
-            categoriesById = state.routeData.categoriesById,
-            modifier = Modifier.fillMaxSize(),
-            groupingMode = state.groupingMode,
-            onGroupingModeChange = actions.onGroupingModeChange,
-            onOpenExpense = actions.onOpenExpense,
-            onDeleteExpense = actions.onDeleteExpense,
-            emptyStateText = state.emptyStateText,
-            expenseFallbackTitle = state.expenseFallbackTitle,
-            currencySymbol = state.strings.currencySymbol,
-            unknownCategoryLabel = state.strings.unknownCategory,
-            resolveCategoryName = resolveCategoryName,
-            byCategoryLabel = state.strings.byCategory,
-            byDateLabel = state.strings.byDate,
-            groupsExpandedByDefault = state.groupsExpandedByDefault,
-            sectionStyle = state.sectionStyle,
-            showGroupingControls = !state.showFloatingBottomControls,
-            listContentPadding = listContentPadding,
-            bottomControlsBottomPadding = bottomControlsPadding,
-            loadMoreSearchResultsLabel = state.strings.loadMoreSearchResults,
-            canLoadMoreSearchResults = state.routeData.canLoadMoreSearchResults,
-            onLoadMoreSearchResults = actions.onLoadMoreSearchResults,
-            isLoading = state.routeData.isLoading
-        )
-
-        if (state.showFloatingBottomControls) {
-            GroupingModeButtons(
-                groupingMode = state.groupingMode,
-                onGroupingModeChange = actions.onGroupingModeChange,
-                byCategoryLabel = state.strings.byCategory,
-                byDateLabel = state.strings.byDate,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = bottomControlsPadding)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExpenseDeleteDialog(
-    expense: Expense,
-    categoriesById: Map<String, Category>,
-    isGroupedByDate: Boolean,
-    expenseFallbackTitle: String,
-    strings: GroupedExpenseStrings,
-    resolveCategoryName: (Category) -> String,
-    onDeleteItem: () -> Unit,
-    onDeleteSeries: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val expenseDisplayName = groupedExpenseRowPresentation(
-        expense = expense,
-        categoriesById = categoriesById,
-        isGroupedByDate = isGroupedByDate,
-        expenseFallbackTitle = expenseFallbackTitle,
-        unknownCategoryLabel = strings.unknownCategory,
-        resolveCategoryName = resolveCategoryName
-    ).title
-
-    TransactionDeleteConfirmationDialog(
-        itemDisplayName = expenseDisplayName,
-        recurringSeriesId = expense.recurringSeriesId,
-        deleteTitle = strings.delete,
-        deleteItemConfirmationMessageTemplate = strings.deleteItemConfirmationMessageTemplate,
-        recurringDeleteMessageTemplate = strings.recurringDeleteMessageTemplate,
-        onDeleteItem = onDeleteItem,
-        onDeleteSeries = onDeleteSeries,
-        onDismiss = onDismiss
-    )
 }

@@ -9,16 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,12 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,7 +37,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -330,53 +323,23 @@ internal fun CategoryEditorSheet(
                 }
             }
 
-            if (category.id.isNotBlank()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    color = DeleteRed.copy(alpha = 0.12f),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = null,
-                            tint = DeleteRed,
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isUsedCategory) {
-                                    archiveCategorySheetTitle
-                                } else {
-                                    deleteCategorySheetTitle
-                                },
-                                color = DeleteRed,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = if (isUsedCategory) {
-                                    archiveCategorySheetDescription
-                                } else {
-                                    deleteCategorySheetDescription
-                                },
-                                color = palette.textSecondary,
-                                fontSize = 13.sp,
-                            )
-                        }
-                        TextButton(onClick = onDelete) {
-                            Text(
-                                text = if (isUsedCategory) archiveLabel else deleteLabel,
-                                color = DeleteRed,
-                            )
-                        }
-                    }
-                }
-            }
+            CategoryEditorDeleteSection(
+                visible = category.id.isNotBlank(),
+                isUsedCategory = isUsedCategory,
+                palette = palette,
+                archiveCategorySheetTitle = archiveCategorySheetTitle,
+                archiveCategorySheetDescription = archiveCategorySheetDescription,
+                deleteCategorySheetTitle = deleteCategorySheetTitle,
+                deleteCategorySheetDescription = deleteCategorySheetDescription,
+                archiveLabel = archiveLabel,
+                deleteLabel = deleteLabel,
+                onDelete = onDelete,
+            )
 
-            Button(
+            CategoryEditorSaveButton(
+                label = saveChangesLabel,
+                enabled = canSave,
+                color = CategoryAccentPalette[selectedColorIndex],
                 onClick = {
                     focusManager.clearFocus(force = true)
                     keyboardController?.hide()
@@ -390,22 +353,7 @@ internal fun CategoryEditorSheet(
                         ),
                     )
                 },
-                enabled = canSave,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp),
-                shape = RoundedCornerShape(22.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = CategoryAccentPalette[selectedColorIndex],
-                    contentColor = Color.White,
-                ),
-            ) {
-                Text(
-                    text = saveChangesLabel,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            )
         }
     }
 }
