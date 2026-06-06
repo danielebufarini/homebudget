@@ -24,20 +24,14 @@ internal data class ParsedUnifiedCsvRow(
 }
 
 internal fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
-    val lines = csvText
-        .removePrefix("\uFEFF")
-        .replace("\r\n", "\n")
-        .replace('\r', '\n')
-        .split('\n')
-        .filter(String::isNotBlank)
+    val records = splitCsvRecords(csvText)
+    if (records.isEmpty()) return emptyList()
 
-    if (lines.isEmpty()) return emptyList()
-
-    val headerColumns = parseSemicolonSeparatedRow(lines.first())
+    val headerColumns = parseSemicolonSeparatedRow(records.first()) ?: return emptyList()
     val indices = UnifiedCsvColumnIndices.fromHeader(headerColumns) ?: return emptyList()
 
-    return lines.subList(1, lines.size).mapNotNull { line ->
-        val columns = parseSemicolonSeparatedRow(line)
+    return records.subList(1, records.size).mapNotNull { record ->
+        val columns = parseSemicolonSeparatedRow(record) ?: return@mapNotNull null
         val type = columns.getOrNull(indices.typeIndex)?.trim()?.lowercase()?.toCsvRowType()
             ?: return@mapNotNull null
         val date = parseCsvDate(columns.getOrNull(indices.dateIndex)?.trim().orEmpty())
@@ -48,9 +42,15 @@ internal fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
         ParsedUnifiedCsvRow(
             type = type,
             date = date,
-            categoryName = columns.getOrNull(indices.categoryIndex)?.trim()?.takeIf { it.isNotEmpty() },
+            categoryName = columns.getOrNull(indices.categoryIndex)
+                ?.unescapeSpreadsheetFormulaEscape()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() },
             amountText = amountText,
-            description = columns.getOrNull(indices.descriptionIndex)?.trim()?.takeIf { it.isNotEmpty() },
+            description = columns.getOrNull(indices.descriptionIndex)
+                ?.unescapeSpreadsheetFormulaEscape()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() },
             isShared = columns.getOrNull(indices.sharedIndex)?.trim().orEmpty().toCsvBoolean(),
             isRecurring = columns.getOrNull(indices.recurringIndex)?.trim().orEmpty().toCsvBoolean(),
             recurringSeriesId = columns.getOrNull(indices.recurringSeriesIdIndex)?.trim()?.takeIf { it.isNotEmpty() }
@@ -58,7 +58,49 @@ internal fun parseUnifiedCsvRows(csvText: String): List<ParsedUnifiedCsvRow> {
     }
 }
 
-private fun parseSemicolonSeparatedRow(line: String): List<String> {
+private fun splitCsvRecords(csvText: String): List<String> {
+    val normalized = csvText
+        .removePrefix("\uFEFF")
+        .replace("\r\n", "\n")
+        .replace('\r', '\n')
+    if (normalized.isBlank()) return emptyList()
+
+    val records = mutableListOf<String>()
+    val current = StringBuilder()
+    var inQuotes = false
+    var index = 0
+
+    while (index < normalized.length) {
+        val char = normalized[index]
+        when {
+            char == '"' && inQuotes && index + 1 < normalized.length && normalized[index + 1] == '"' -> {
+                current.append(char)
+                current.append(normalized[index + 1])
+                index += 1
+            }
+            char == '"' -> {
+                inQuotes = !inQuotes
+                current.append(char)
+            }
+            char == '\n' && !inQuotes -> {
+                current.toString()
+                    .takeIf(String::isNotBlank)
+                    ?.let(records::add)
+                current.clear()
+            }
+            else -> current.append(char)
+        }
+        index += 1
+    }
+
+    current.toString()
+        .takeIf(String::isNotBlank)
+        ?.let(records::add)
+
+    return records
+}
+
+private fun parseSemicolonSeparatedRow(line: String): List<String>? {
     if (line.isEmpty()) return emptyList()
 
     val columns = mutableListOf<String>()
@@ -83,7 +125,7 @@ private fun parseSemicolonSeparatedRow(line: String): List<String> {
     }
 
     columns += current.toString()
-    return columns
+    return columns.takeUnless { inQuotes }
 }
 
 private fun parseCsvDate(value: String): LocalDate? {
@@ -108,6 +150,17 @@ private fun String.toCsvBoolean(): Boolean =
         "true", "yes", "1" -> true
         else -> false
     }
+
+private fun String.unescapeSpreadsheetFormulaEscape(): String {
+    if (!startsWith("'")) return this
+
+    val firstNonWhitespace = drop(1).firstOrNull { !it.isWhitespace() }
+    return if (firstNonWhitespace in setOf('=', '+', '-', '@')) {
+        drop(1)
+    } else {
+        this
+    }
+}
 
 private fun String.toCsvRowType(): CsvRowType? =
     when (this) {

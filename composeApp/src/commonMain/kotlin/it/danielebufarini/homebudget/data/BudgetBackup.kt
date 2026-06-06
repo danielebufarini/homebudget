@@ -1,6 +1,7 @@
 package it.danielebufarini.homebudget.data
 
 import it.danielebufarini.homebudget.database.CATEGORY_TYPE_EXPENSE
+import it.danielebufarini.homebudget.database.CATEGORY_TYPE_INCOME
 import it.danielebufarini.homebudget.database.Category
 import it.danielebufarini.homebudget.database.DEFAULT_CATEGORY_COLOR
 import it.danielebufarini.homebudget.database.Expense
@@ -207,6 +208,7 @@ private fun decodeBudgetBackupSnapshot(jsonText: String): BudgetBackupSnapshot {
     ensureUniqueIds(snapshot.categories, "category") { it.id }
     ensureUniqueIds(snapshot.expenses, "expense") { it.id }
     ensureUniqueIds(snapshot.incomes, "income") { it.id }
+    validateBackupRows(snapshot)
 
     val categoryIds = snapshot.categories.mapTo(linkedSetOf(), BudgetBackupCategory::id)
     snapshot.expenses.forEach { expense ->
@@ -221,6 +223,32 @@ private fun decodeBudgetBackupSnapshot(jsonText: String): BudgetBackupSnapshot {
     }
 
     return snapshot
+}
+
+private fun validateBackupRows(snapshot: BudgetBackupSnapshot) {
+    snapshot.categories.forEach { category ->
+        require(category.id.isNotBlank()) { "Backup category id is blank." }
+        require(category.name.isNotBlank()) { "Backup category ${category.id} name is blank." }
+        require(category.icon.isNotBlank()) { "Backup category ${category.id} icon is blank." }
+        require(category.categoryType in setOf(CATEGORY_TYPE_EXPENSE, CATEGORY_TYPE_INCOME)) {
+            "Backup category ${category.id} has unsupported type ${category.categoryType}."
+        }
+    }
+
+    snapshot.expenses.forEach { expense ->
+        require(expense.id.isNotBlank()) { "Backup expense id is blank." }
+        require(expense.categoryId.isNotBlank()) { "Backup expense ${expense.id} category id is blank." }
+        require(parseSerializedAmount(expense.amount) != null) {
+            "Backup expense ${expense.id} amount is out of Long range."
+        }
+    }
+
+    snapshot.incomes.forEach { income ->
+        require(income.id.isNotBlank()) { "Backup income id is blank." }
+        require(parseSerializedAmount(income.amount) != null) {
+            "Backup income ${income.id} amount is out of Long range."
+        }
+    }
 }
 
 private fun verifyChecksumIfPresent(snapshot: BudgetBackupSnapshot) {

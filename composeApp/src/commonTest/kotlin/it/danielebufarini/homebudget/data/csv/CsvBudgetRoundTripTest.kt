@@ -91,6 +91,84 @@ class CsvBudgetRoundTripTest {
                 .all { income -> income.recurringSeriesId?.startsWith("recurring-income-") == true }
         )
     }
+
+    @Test
+    fun exportedCsvWithNewlinesAndSpreadsheetEscapedTextImportsBackToEquivalentRows() = runTest {
+        val categories = listOf(
+            category("expense_formula", "=Formula Food", CATEGORY_TYPE_EXPENSE),
+            category("income_formula", "+Formula Salary", CATEGORY_TYPE_INCOME)
+        )
+        val expenses = listOf(
+            Expense(
+                id = "formula-expense",
+                amount = 1299L,
+                date = importDate(2026, 3, 4),
+                categoryId = "expense_formula",
+                description = "=Lunch\nsecond line",
+                isShared = 1L,
+                recurringSeriesId = null
+            )
+        )
+        val incomes = listOf(
+            Income(
+                id = "formula-income",
+                amount = 250000L,
+                date = importDate(2026, 3, 5),
+                categoryId = "income_formula",
+                description = "@Salary\nsecond line",
+                recurringSeriesId = null
+            )
+        )
+        val exportedCsv = buildFullDatabaseCsvExport(
+            expenses = expenses,
+            incomes = incomes,
+            categories = categories,
+            startDate = LocalDate(2026, 3, 1),
+            endDate = LocalDate(2026, 3, 31),
+            localizeCategoryName = Category::name,
+            unknownCategory = "Unknown"
+        )
+
+        assertTrue("'=Formula Food" in exportedCsv.content)
+        assertTrue("'=Lunch\nsecond line" in exportedCsv.content)
+        assertTrue("'+Formula Salary" in exportedCsv.content)
+        assertTrue("'@Salary\nsecond line" in exportedCsv.content)
+
+        val importStore = InMemoryCsvImportStore()
+        val importResult = importBudgetItemsFromCsv(
+            repository = importStore,
+            csvText = exportedCsv.content
+        )
+
+        assertEquals(CsvImportResult(importedCount = 2, skippedCount = 0), importResult)
+        assertEquals(
+            comparableRows(
+                expenses = expenses,
+                incomes = incomes,
+                categories = categories
+            ),
+            importStore.toComparableRows()
+        )
+    }
+
+    @Test
+    fun malformedQuotedCsvRowsAreSkippedWithoutCrashingImport() = runTest {
+        val csvText = """
+            "type";"date";"category";"amount";"description";"shared";"recurring";"recurring_series_id"
+            "expense";"2026-01-01";"Food";"12.34";"valid row";"FALSE";"FALSE";""
+            "income";"2026-01-02";"Salary";"56.78";"unterminated description;"FALSE";"FALSE";""
+        """.trimIndent()
+
+        val importStore = InMemoryCsvImportStore()
+        val importResult = importBudgetItemsFromCsv(
+            repository = importStore,
+            csvText = csvText
+        )
+
+        assertEquals(CsvImportResult(importedCount = 1, skippedCount = 0), importResult)
+        assertEquals(1, importStore.getAllExpensesSnapshotBlocking().size)
+        assertEquals(0, importStore.getAllIncomesSnapshotBlocking().size)
+    }
 }
 
 private data class RoundTripFixture(
