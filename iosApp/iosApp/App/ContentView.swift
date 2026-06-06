@@ -143,21 +143,31 @@ struct ContentView: View {
                             }
                         }
                     case let .addIncome(incomeId, year, month):
-                        IncomeEditorRootView(
-                            incomeId: incomeId,
-                            initialYear: year,
-                            initialMonth: month
-                        ) {
-                            if !path.isEmpty {
-                                path.removeLast()
+                        if let incomeId, !incomeId.isEmpty {
+                            NativeTransactionEditorScreen(incomeId: incomeId) {
+                                if !path.isEmpty {
+                                    path.removeLast()
+                                }
                             }
-                        }
-                        .appGlassHostedScreenChrome()
-                        .navigationTitle(incomeId == nil ? appLocalized("Add Income") : appLocalized("Edit Income"))
-                        .navigationBarTitleDisplayMode(.inline)
-                        .navigationBarBackButtonHidden()
-                        .toolbar {
-                            backToolbar
+                            .appGlassHostedScreenChrome()
+                            .toolbar(.hidden, for: .navigationBar)
+                        } else {
+                            IncomeEditorRootView(
+                                incomeId: incomeId,
+                                initialYear: year,
+                                initialMonth: month
+                            ) {
+                                if !path.isEmpty {
+                                    path.removeLast()
+                                }
+                            }
+                            .appGlassHostedScreenChrome()
+                            .navigationTitle(appLocalized("Add Income"))
+                            .navigationBarTitleDisplayMode(.inline)
+                            .navigationBarBackButtonHidden()
+                            .toolbar {
+                                backToolbar
+                            }
                         }
                     case let .dayExpenses(year, month, day):
                         GroupedExpensesSectionsScreen(

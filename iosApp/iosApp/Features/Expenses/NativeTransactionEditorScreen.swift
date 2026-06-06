@@ -11,6 +11,8 @@ struct NativeTransactionEditorScreen: View {
     @State private var showDatePicker = false
     @State private var showCategoryPicker = false
     @State private var showAddCategorySheet = false
+    @State private var showRecurringDeleteDialog = false
+    @State private var showRecurringSaveDialog = false
 
     init(
         initialKind: AddTransactionKind,
@@ -28,6 +30,14 @@ struct NativeTransactionEditorScreen: View {
         )
     }
 
+    init(
+        incomeId: String,
+        onClose: @escaping () -> Void
+    ) {
+        self.onClose = onClose
+        _viewModel = State(initialValue: NativeTransactionEditorViewModel(incomeId: incomeId))
+    }
+
     var body: some View {
         ZStack {
             ScrollView {
@@ -37,7 +47,7 @@ struct NativeTransactionEditorScreen: View {
                     .padding(.bottom, 24)
             }
             .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear.frame(height: NativeTransactionEditorChromeLayout.reservedTopInset)
+                Color.clear.frame(height: reservedTopInset)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 Color.clear.frame(height: ExpenseEditorChromeLayout.reservedBottomInset)
@@ -91,6 +101,42 @@ struct NativeTransactionEditorScreen: View {
         .overlay(alignment: .top) {
             AppGlassBannerOverlay(presenter: bannerPresenter)
         }
+        .overlay {
+            if showRecurringDeleteDialog {
+                AppGlassDialogOverlay {
+                    AppGlassRecurringDeleteConfirmationDialog(
+                        message: appLocalized("Choose whether to delete only this instance or the whole series."),
+                        onDeleteInstance: {
+                            showRecurringDeleteDialog = false
+                            deleteIncome(deleteWholeSeries: false)
+                        },
+                        onDeleteSeries: {
+                            showRecurringDeleteDialog = false
+                            deleteIncome(deleteWholeSeries: true)
+                        },
+                        onCancel: {
+                            showRecurringDeleteDialog = false
+                        }
+                    )
+                }
+            } else if showRecurringSaveDialog {
+                AppGlassDialogOverlay {
+                    NativeRecurringSaveConfirmationDialog(
+                        onUpdateInstance: {
+                            showRecurringSaveDialog = false
+                            saveIncome(updateWholeSeries: false)
+                        },
+                        onUpdateSeries: {
+                            showRecurringSaveDialog = false
+                            saveIncome(updateWholeSeries: true)
+                        },
+                        onCancel: {
+                            showRecurringSaveDialog = false
+                        }
+                    )
+                }
+            }
+        }
         .onAppear {
             viewModel.start()
         }
@@ -103,81 +149,97 @@ struct NativeTransactionEditorScreen: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 18) {
-            NativeTransactionAmountCard(
-                kind: viewModel.selectedKind,
-                amount: $viewModel.amount
-            )
-
-            AppGlassSheetSection(title: detailsTitle, spacing: 14) {
-                NativeExpensePickerRow(
-                    label: appLocalized("Category"),
-                    value: viewModel.categoryValue,
-                    iconKey: viewModel.selectedCategory?.iconKey ?? "category",
-                    colorKey: viewModel.selectedCategoryId,
-                    enabled: true,
-                    action: { showCategoryPicker = true }
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, minHeight: 220)
+            } else if viewModel.didFailToLoad {
+                AppGlassListCard {
+                    Text(appLocalized("Income not found."))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                NativeTransactionAmountCard(
+                    kind: viewModel.selectedKind,
+                    amount: $viewModel.amount
                 )
 
-                NativeExpensePickerRow(
-                    label: appLocalized("Date"),
-                    value: nativeExpenseEditorDateString(viewModel.selectedDate),
-                    systemImageName: "calendar",
-                    enabled: true,
-                    action: { showDatePicker = true }
-                )
+                AppGlassSheetSection(title: detailsTitle, spacing: 14) {
+                    NativeExpensePickerRow(
+                        label: appLocalized("Category"),
+                        value: viewModel.categoryValue,
+                        iconKey: viewModel.selectedCategory?.iconKey ?? "category",
+                        colorKey: viewModel.selectedCategoryId,
+                        enabled: true,
+                        action: { showCategoryPicker = true }
+                    )
 
-                NativeExpenseDescriptionField(
-                    descriptionText: $viewModel.description,
-                    readOnly: false
-                )
-            }
+                    NativeExpensePickerRow(
+                        label: appLocalized("Date"),
+                        value: nativeExpenseEditorDateString(viewModel.selectedDate),
+                        systemImageName: "calendar",
+                        enabled: true,
+                        action: { showDatePicker = true }
+                    )
 
-            AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {
-                if viewModel.selectedKind == .expense {
-                    NativeInstallmentRulerPicker(
-                        label: appLocalized("Installments"),
-                        systemImageName: "calendar.badge.clock",
-                        value: installmentCountBinding,
-                        enabled: !viewModel.isRecurringMonthly,
-                        range: 1 ... 30,
-                        singlePaymentLabel: appLocalized("Single Payment"),
-                        installmentsLabel: appLocalized("Installments")
+                    NativeExpenseDescriptionField(
+                        descriptionText: $viewModel.description,
+                        readOnly: false
                     )
                 }
 
-                if shouldShowRecurringMonthlyToggle {
-                    VStack(spacing: 0) {
-                        NativeExpenseToggleRow(
-                            label: appLocalized("Recurring Monthly"),
+                AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {
+                    if viewModel.selectedKind == .expense {
+                        NativeInstallmentRulerPicker(
+                            label: appLocalized("Installments"),
+                            systemImageName: "calendar.badge.clock",
+                            value: installmentCountBinding,
+                            enabled: !viewModel.isRecurringMonthly,
+                            range: 1 ... 30,
+                            singlePaymentLabel: appLocalized("Single Payment"),
+                            installmentsLabel: appLocalized("Installments")
+                        )
+                    }
+
+                    if viewModel.hasRecurringSeries {
+                        NativeExpenseInfoCard(
                             systemImageName: "arrow.triangle.2.circlepath",
-                            isOn: recurringMonthlyBinding,
+                            text: appLocalized("This income belongs to a recurring monthly series.")
+                        )
+                    } else if shouldShowRecurringMonthlyToggle {
+                        VStack(spacing: 0) {
+                            NativeExpenseToggleRow(
+                                label: appLocalized("Recurring Monthly"),
+                                systemImageName: "arrow.triangle.2.circlepath",
+                                isOn: recurringMonthlyBinding,
+                                enabled: true
+                            )
+
+                            if viewModel.isRecurringMonthly {
+                                NativeExpenseInfoCard(
+                                    systemImageName: "arrow.triangle.2.circlepath",
+                                    text: appLocalized(
+                                        "Creates the same expense every month on this day for the next %lld years.",
+                                        viewModel.recurringMonthlyYears
+                                    )
+                                )
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .top)),
+                            removal: .opacity.combined(with: .move(edge: .top))
+                        ))
+                    }
+
+                    if viewModel.selectedKind == .expense {
+                        NativeExpenseToggleRow(
+                            label: appLocalized("Shared Expense"),
+                            systemImageName: "person.2.fill",
+                            isOn: $viewModel.isShared,
                             enabled: true
                         )
-
-                        if viewModel.isRecurringMonthly {
-                            NativeExpenseInfoCard(
-                                systemImageName: "arrow.triangle.2.circlepath",
-                                text: appLocalized(
-                                    "Creates the same expense every month on this day for the next %lld years.",
-                                    viewModel.recurringMonthlyYears
-                                )
-                            )
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
                     }
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .move(edge: .top))
-                    ))
-                }
-
-                if viewModel.selectedKind == .expense {
-                    NativeExpenseToggleRow(
-                        label: appLocalized("Shared Expense"),
-                        systemImageName: "person.2.fill",
-                        isOn: $viewModel.isShared,
-                        enabled: true
-                    )
                 }
             }
         }
@@ -187,27 +249,41 @@ struct NativeTransactionEditorScreen: View {
         VStack(spacing: 0) {
             ExpenseEditorGlassHeader(
                 title: viewModel.title,
-                showsDeleteAction: false,
+                showsDeleteAction: viewModel.isEditingIncome && viewModel.canEdit,
                 onBack: onClose,
-                onDelete: {}
+                onDelete: {
+                    if viewModel.hasRecurringSeries {
+                        showRecurringDeleteDialog = true
+                    } else {
+                        deleteIncome(deleteWholeSeries: false)
+                    }
+                }
             )
             .padding(.horizontal, ExpenseEditorChromeLayout.horizontalPadding)
             .padding(.top, ExpenseEditorChromeLayout.topPadding)
 
-            MonthlyTransactionKindGlassControl(selection: $viewModel.selectedKind)
-                .padding(.horizontal, 22)
-                .padding(.top, NativeTransactionEditorChromeLayout.selectorTopSpacing)
+            if viewModel.editableKindSelection {
+                MonthlyTransactionKindGlassControl(selection: $viewModel.selectedKind)
+                    .padding(.horizontal, 22)
+                    .padding(.top, NativeTransactionEditorChromeLayout.selectorTopSpacing)
+            }
 
             Spacer()
 
-                ExpenseEditorGlassFooter(
-                    onCancel: onClose,
-                    onConfirm: saveTransaction,
-                    confirmLabel: appLocalized("Save"),
-                    showsSecondaryAction: true
-                )
-                .disabled(viewModel.isSaving || !viewModel.hasValidAmount)
+            ExpenseEditorGlassFooter(
+                onCancel: onClose,
+                onConfirm: saveTransaction,
+                confirmLabel: viewModel.isEditingIncome ? appLocalized("Update") : appLocalized("Save"),
+                showsSecondaryAction: true
+            )
+            .disabled(viewModel.isSaving || viewModel.isLoading || viewModel.didFailToLoad || !viewModel.hasValidAmount)
         }
+    }
+
+    private var reservedTopInset: CGFloat {
+        viewModel.editableKindSelection
+            ? NativeTransactionEditorChromeLayout.reservedTopInset
+            : ExpenseEditorChromeLayout.reservedTopInset
     }
 
     private var detailsTitle: String {
@@ -247,7 +323,36 @@ struct NativeTransactionEditorScreen: View {
 
     private func saveTransaction() {
         appDismissKeyboard()
+        if viewModel.isEditingIncome, viewModel.hasRecurringSeries {
+            showRecurringSaveDialog = true
+            return
+        }
+        if viewModel.isEditingIncome {
+            saveIncome(updateWholeSeries: false)
+            return
+        }
         viewModel.save { errorKey in
+            if let errorKey {
+                bannerPresenter.show(appLocalized(errorKey), style: .error)
+            } else {
+                onClose()
+            }
+        }
+    }
+
+    private func saveIncome(updateWholeSeries: Bool) {
+        appDismissKeyboard()
+        viewModel.saveIncome(updateWholeSeries: updateWholeSeries) { errorKey in
+            if let errorKey {
+                bannerPresenter.show(appLocalized(errorKey), style: .error)
+            } else {
+                onClose()
+            }
+        }
+    }
+
+    private func deleteIncome(deleteWholeSeries: Bool) {
+        viewModel.deleteIncome(deleteWholeSeries: deleteWholeSeries) { errorKey in
             if let errorKey {
                 bannerPresenter.show(appLocalized(errorKey), style: .error)
             } else {

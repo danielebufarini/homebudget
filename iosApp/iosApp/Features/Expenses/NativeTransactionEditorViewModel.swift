@@ -7,7 +7,7 @@ import Observation
 final class NativeTransactionEditorViewModel {
     var selectedKind: AddTransactionKind {
         didSet {
-            guard oldValue != selectedKind, hasStarted else {
+            guard editableKindSelection, oldValue != selectedKind, hasStarted else {
                 return
             }
 
@@ -27,15 +27,28 @@ final class NativeTransactionEditorViewModel {
     var installmentCount = 1
     var categories: [NativeExpenseCategory] = []
     var isSaving = false
+    var isLoading: Bool
+    var didFailToLoad = false
+    var recurringSeriesId: String?
 
+    private let incomeId: String?
     private let editorController = IosNativeTransactionEditorController()
     private let categoriesController = IosCategoriesController()
     @ObservationIgnored private var hasStarted = false
     @ObservationIgnored private var categoriesTask: Task<Void, Never>?
 
     init(initialKind: AddTransactionKind, initialYear: Int?, initialMonth: Int?) {
+        incomeId = nil
         selectedKind = initialKind
         selectedDate = Self.initialDate(year: initialYear, month: initialMonth)
+        isLoading = false
+    }
+
+    init(incomeId: String) {
+        self.incomeId = incomeId
+        selectedKind = .income
+        selectedDate = Date()
+        isLoading = true
     }
 
     deinit {
@@ -52,6 +65,7 @@ final class NativeTransactionEditorViewModel {
 
         hasStarted = true
         reloadCategories()
+        loadIncomeIfNeeded()
     }
 
     func stop() {
@@ -64,7 +78,10 @@ final class NativeTransactionEditorViewModel {
     }
 
     var title: String {
-        selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense")
+        if isEditingIncome {
+            return appLocalized("Edit Income")
+        }
+        return selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense")
     }
 
     var categoryValue: String {
@@ -73,6 +90,22 @@ final class NativeTransactionEditorViewModel {
 
     var isIncome: Bool {
         selectedKind == .income
+    }
+
+    var isEditingIncome: Bool {
+        incomeId?.isEmpty == false
+    }
+
+    var editableKindSelection: Bool {
+        !isEditingIncome
+    }
+
+    var canEdit: Bool {
+        !isLoading && !didFailToLoad
+    }
+
+    var hasRecurringSeries: Bool {
+        recurringSeriesId?.isEmpty == false
     }
 
     var recurringMonthlyYears: Int {
@@ -132,18 +165,87 @@ final class NativeTransactionEditorViewModel {
                 }
 
                 do {
-                    let result = try await editorController.saveIncome(
-                        amountInput: amount,
-                        dateMillis: dateMillis,
-                        categoryId: selectedCategoryId.isEmpty ? nil : selectedCategoryId,
-                        description: description,
-                        isRecurringMonthly: isRecurringMonthly
-                    )
+                    let categoryId = selectedCategoryId.isEmpty ? nil : selectedCategoryId
+                    let result: IosNativeTransactionEditorResult
+                    if let incomeId {
+                        result = try await editorController.saveExistingIncome(
+                            incomeId: incomeId,
+                            amountInput: amount,
+                            dateMillis: dateMillis,
+                            categoryId: categoryId,
+                            description: description,
+                            isRecurringMonthly: isRecurringMonthly,
+                            updateWholeSeries: false
+                        )
+                    } else {
+                        result = try await editorController.saveIncome(
+                            amountInput: amount,
+                            dateMillis: dateMillis,
+                            categoryId: categoryId,
+                            description: description,
+                            isRecurringMonthly: isRecurringMonthly
+                        )
+                    }
                     completeSave(result: result, onComplete: onComplete)
                 } catch {
                     isSaving = false
                     onComplete(error.localizedDescription)
                 }
+            }
+        }
+    }
+
+    func saveIncome(updateWholeSeries: Bool, onComplete: @escaping (String?) -> Void) {
+        guard let incomeId else {
+            save(onComplete: onComplete)
+            return
+        }
+
+        isSaving = true
+        let dateMillis = Int64(selectedDate.timeIntervalSince1970 * 1000.0)
+        Task { [weak self, editorController] in
+            guard let self else {
+                return
+            }
+
+            do {
+                let result = try await editorController.saveExistingIncome(
+                    incomeId: incomeId,
+                    amountInput: amount,
+                    dateMillis: dateMillis,
+                    categoryId: selectedCategoryId.isEmpty ? nil : selectedCategoryId,
+                    description: description,
+                    isRecurringMonthly: isRecurringMonthly,
+                    updateWholeSeries: updateWholeSeries
+                )
+                completeSave(result: result, onComplete: onComplete)
+            } catch {
+                isSaving = false
+                onComplete(error.localizedDescription)
+            }
+        }
+    }
+
+    func deleteIncome(deleteWholeSeries: Bool, onComplete: @escaping (String?) -> Void) {
+        guard let incomeId else {
+            return
+        }
+
+        isSaving = true
+        Task { [weak self, editorController] in
+            guard let self else {
+                return
+            }
+
+            do {
+                let result = try await editorController.deleteIncome(
+                    incomeId: incomeId,
+                    deleteWholeSeries: deleteWholeSeries
+                )
+                completeSave(result: result, onComplete: onComplete)
+            } catch {
+                isSaving = false
+                onComplete(error.localizedDescription)
             }
         }
     }
@@ -184,6 +286,33 @@ final class NativeTransactionEditorViewModel {
                     NativeExpenseCategory(id: $0.id, name: $0.name, iconKey: $0.iconKey)
                 }
             }
+        }
+    }
+
+    private func loadIncomeIfNeeded() {
+        guard let incomeId else {
+            return
+        }
+
+        Task { [weak self, editorController] in
+            guard let self else {
+                return
+            }
+
+            guard let snapshot = try? await editorController.loadIncome(id: incomeId) else {
+                isLoading = false
+                didFailToLoad = true
+                return
+            }
+
+            amount = snapshot.amountInput
+            selectedDate = Date(timeIntervalSince1970: Double(snapshot.dateMillis) / 1000.0)
+            selectedCategoryId = snapshot.categoryId ?? ""
+            description = snapshot.descriptionText
+            isRecurringMonthly = snapshot.isRecurringMonthly
+            recurringSeriesId = snapshot.recurringSeriesId
+            didFailToLoad = false
+            isLoading = false
         }
     }
 
