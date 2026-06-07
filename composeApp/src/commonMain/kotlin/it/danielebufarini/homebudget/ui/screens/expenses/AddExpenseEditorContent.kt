@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -23,6 +25,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.homebudget.ui.screens.transactions.DateIcon
@@ -36,6 +39,8 @@ import it.danielebufarini.homebudget.ui.screens.transactions.SoftTextField
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionAmountHeader
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionEditorKind
 import it.danielebufarini.homebudget.ui.screens.transactions.TransactionEditorSkeleton
+import it.danielebufarini.homebudget.ui.screens.transactions.dismissKeyboardOnOutsideTap
+import it.danielebufarini.homebudget.ui.screens.transactions.rememberKeyboardDismissAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +80,8 @@ internal fun AddExpenseEditorContent(
     onSave: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val dismissKeyboard = rememberKeyboardDismissAction()
+
     Scaffold(
         containerColor = if (useIosHostedFloatingChrome) Color.Transparent else MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -107,6 +114,7 @@ internal fun AddExpenseEditorContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .dismissKeyboardOnOutsideTap(dismissKeyboard)
                 .padding(padding)
                 .padding(
                     start = 16.dp,
@@ -138,6 +146,7 @@ internal fun AddExpenseEditorContent(
                     onSelectDate = onSelectDate,
                     description = description,
                     onDescriptionChange = onDescriptionChange,
+                    onDismissKeyboard = dismissKeyboard,
                     installmentCount = installmentCount,
                     onInstallmentCountChange = onInstallmentCountChange,
                     isRecurringMonthly = isRecurringMonthly,
@@ -241,6 +250,7 @@ private fun AddExpenseForm(
     onSelectDate: () -> Unit,
     description: String,
     onDescriptionChange: (String) -> Unit,
+    onDismissKeyboard: () -> Unit,
     installmentCount: Int,
     onInstallmentCountChange: (Int) -> Unit,
     isRecurringMonthly: Boolean,
@@ -285,6 +295,8 @@ private fun AddExpenseForm(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onDismissKeyboard() }),
         )
     }
 
