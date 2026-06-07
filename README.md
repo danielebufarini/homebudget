@@ -2,28 +2,24 @@
 
 HomeBudget is a Kotlin Multiplatform personal finance app for Android and iOS.
 
-- `composeApp` contains the shared domain layer, persistence, resources, and most UI.
-- `androidApp` is the Android host app.
-- `iosApp` is the SwiftUI iOS app shell plus widgets and iCloud integration.
+The shared module contains the domain model, persistence, repositories, resources, and most Compose UI. Android uses the shared Compose app directly. iOS uses a SwiftUI shell that hosts shared Compose screens and keeps selected native SwiftUI flows for platform-specific UX.
 
-The shared iOS framework is built as `ComposeApp.framework` and embedded by the Xcode project.
+## Features
 
-## Feature set
-
-- expense and income tracking
-- recurring expenses and recurring incomes
-- category management with archive, reassignment, color, and per-type support
-- monthly transaction views with expense/income switching and grouping
-- grouped views by category or by date
+- Expense and income tracking
+- Recurring expenses and recurring incomes
+- Typed categories for expenses and incomes, with archive, reassignment, color, and icon support
+- Monthly views grouped by category or date
+- Transaction search
 - CSV import/export
 - JSON backup/restore
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
-- voice-assisted expense entry
+- Voice-assisted expense entry
 - Android and iOS home screen widgets
 - English and Italian localization
 
-## Stack
+## Tech Stack
 
 - Kotlin Multiplatform
 - Compose Multiplatform
@@ -31,265 +27,169 @@ The shared iOS framework is built as `ComposeApp.framework` and embedded by the 
 - Room KMP with bundled SQLite
 - Koin
 - Voyager
+- SKIE
 - kotlinx.serialization
 - kotlinx.datetime
 
 Current baseline:
 
 - JDK 21
-- Kotlin 2.3.21
-- Compose Multiplatform 1.10.3
-- AGP 9.2.1
+- Kotlin 2.3.10
+- Compose Multiplatform 1.11.1
+- Android Gradle Plugin 9.2.1
 - Android min SDK 26
-- Android target/compile SDK 37
+- Android compile/target SDK 37
 
-Versions are defined in [gradle/libs.versions.toml](./gradle/libs.versions.toml).
+Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.versions.toml).
 
-## Project layout
+## Project Layout
 
-### `composeApp`
+- [composeApp](./composeApp): shared Kotlin Multiplatform module.
+- [androidApp](./androidApp): Android host application, manifest, widgets, and platform wiring.
+- [iosApp](./iosApp): Xcode project, SwiftUI app shell, iCloud integration, native iOS screens, and widget extension.
 
-Shared KMP module.
+Key shared source sets:
 
-- `src/commonMain`
-  - app entry point
-  - shared Compose screens
-  - repositories and services
-  - Room entities and DAOs
-  - Compose resources and shared localization
-- `src/androidMain`
-  - Android DI
-  - Drive backup integration
-  - Android voice-entry implementation
-  - Android-specific platform bridges
-- `src/iosMain`
-  - `ComposeUIViewController` factories
-  - iOS DI
-  - bridge classes used by SwiftUI hosts
+- [composeApp/src/commonMain](./composeApp/src/commonMain): shared app entry point, Compose UI, repositories, Room schema, resources, and localization.
+- [composeApp/src/androidMain](./composeApp/src/androidMain): Android DI, platform bridges, Google Drive backup, and Android voice entry.
+- [composeApp/src/iosMain](./composeApp/src/iosMain): iOS DI, `ComposeUIViewController` factories, and Kotlin bridges used by SwiftUI.
 
-Relevant directories:
+Key iOS areas:
 
-- [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data)
-- [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database)
-- [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens)
-- [composeApp/src/commonMain/composeResources](./composeApp/src/commonMain/composeResources)
-- [composeApp/schemas](./composeApp/schemas)
-
-### `androidApp`
-
-Android application module.
-
-- launcher activity
-- manifest and resources
-- widget providers
-- WorkManager integration
-
-### `iosApp`
-
-Native iOS application.
-
-- SwiftUI app shell and navigation
-- hosted Compose screens
-- native SwiftUI screens where platform-native UX is preferable
-- iCloud sync helpers
-- widget extension
-
-Relevant directories:
-
-- [iosApp/iosApp](./iosApp/iosApp)
-- [iosApp/HomeBudgetWidget](./iosApp/HomeBudgetWidget)
-
-Important iOS feature areas:
-
-- [iosApp/iosApp/App](./iosApp/iosApp/App): app entry point, navigation, localization helpers, and shared shell concerns.
-- [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native SwiftUI transaction, grouped expense, income, and search screens.
+- [iosApp/iosApp/App](./iosApp/iosApp/App): SwiftUI app entry point, navigation, shell actions, and localization helpers.
+- [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native transaction, monthly, grouped, income, and search screens.
 - [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense): native voice expense flow.
-- [iosApp/iosApp/Sync](./iosApp/iosApp/Sync): iCloud backup and widget summary stores.
-- [iosApp/iosApp/UI](./iosApp/iosApp/UI): shared SwiftUI glass surfaces, hosting helpers, and reusable controls.
+- [iosApp/iosApp/Sync](./iosApp/iosApp/Sync): iCloud backup and widget summary storage.
+- [iosApp/HomeBudgetWidget](./iosApp/HomeBudgetWidget): iOS widget extension.
+
+The shared iOS framework is built as `ComposeApp.framework` and embedded by the Xcode project. The Xcode project uses file-system synchronized groups, so new Swift files under `iosApp/iosApp` are picked up without manual `project.pbxproj` edits.
 
 ## Architecture
 
 ### Persistence
 
-Persistence is built on Room KMP over bundled SQLite.
+Room KMP is the persistence layer, backed by bundled SQLite.
 
-- database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database/HomeBudgetDatabase.kt)
-- entities and DAOs: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database)
-- database builders:
-  - [DatabaseBuilderFactory.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.kt)
-  - [DatabaseBuilderFactory.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.android.kt)
-  - [DatabaseBuilderFactory.ios.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.ios.kt)
+- Database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database/HomeBudgetDatabase.kt)
+- Entities and DAOs: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database)
+- Database builders: [common](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.kt), [Android](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.android.kt), [iOS](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.ios.kt)
+- Room schemas: [composeApp/schemas](./composeApp/schemas)
 
-The main application boundary is [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/ExpenseRepository.kt), with category-specific operations in [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CategoryRepository.kt).
+Repositories define the main application data boundary:
 
-Categories are typed (`expense` / `income`), can be archived, and are seeded when the category table is empty.
+- [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/ExpenseRepository.kt)
+- [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CategoryRepository.kt)
 
-### Dependency injection
+Categories are typed as expense or income, can be archived, and are seeded when the category table is empty.
+
+### Dependency Injection
 
 Koin is the composition root.
 
-- shared graph: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di)
+- Shared graph: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di)
 - Android graph: [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/di)
 - iOS graph: [composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/di)
 
-### UI split
+### UI and Navigation
 
-Android runs primarily on shared Compose screens.
+- Shared Compose navigation uses Voyager.
+- Android starts from [MainActivity.kt](./androidApp/src/main/kotlin/it/danielebufarini/homebudget/MainActivity.kt) and runs the shared Compose app.
+- iOS starts from [ContentView.swift](./iosApp/iosApp/App/ContentView.swift), uses SwiftUI `NavigationStack`, and hosts shared Compose through [MainViewController.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/MainViewController.kt).
+- Native iOS expense screens use observer-backed SwiftUI view models and Kotlin bridge classes under [composeApp/src/iosMain](./composeApp/src/iosMain).
 
-iOS uses a mixed model:
-
-- SwiftUI owns the root shell and top-level navigation
-- Compose screens are hosted through `ComposeUIViewController`
-- native SwiftUI remains in place for iOS-specific flows and presentation
-
-Entry points:
-
-- shared app: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/App.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/App.kt)
-- Android host: [androidApp/src/main/kotlin/it/danielebufarini/homebudget/MainActivity.kt](./androidApp/src/main/kotlin/it/danielebufarini/homebudget/MainActivity.kt)
-- iOS root view: [iosApp/iosApp/App/ContentView.swift](./iosApp/iosApp/App/ContentView.swift)
-- iOS shared screen host: [composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/MainViewController.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/MainViewController.kt)
-
-Native iOS expense screens are split by responsibility:
-
-- [MonthlyExpensesSectionsScreen.swift](./iosApp/iosApp/Features/Expenses/MonthlyExpensesSectionsScreen.swift): orchestration for grouped expense routes and monthly expense/income switching.
-- [GroupedExpensesSectionsList.swift](./iosApp/iosApp/Features/Expenses/GroupedExpensesSectionsList.swift): reusable grouped expense list rendering.
-- [MonthlyIncomesSectionsScreen.swift](./iosApp/iosApp/Features/Expenses/MonthlyIncomesSectionsScreen.swift): monthly income list rendering.
-- [MonthlyExpenseSectionViewModels.swift](./iosApp/iosApp/Features/Expenses/MonthlyExpenseSectionViewModels.swift): observer-backed SwiftUI view models for grouped expenses and incomes.
-- [MonthNavigationSupport.swift](./iosApp/iosApp/Features/Expenses/MonthNavigationSupport.swift): month cursor, swipe navigation, and month header support.
-- [MonthlyExpenseControls.swift](./iosApp/iosApp/Features/Expenses/MonthlyExpenseControls.swift): expense/income and grouping glass controls.
-- [GroupedExpenseRows.swift](./iosApp/iosApp/Features/Expenses/GroupedExpenseRows.swift): grouped section headers, rows, category icons, and recurring badges.
-- [TransactionSearchSectionsScreen.swift](./iosApp/iosApp/Features/Expenses/TransactionSearchSectionsScreen.swift): native full-text search results for expenses and income.
-
-The iOS Xcode project uses file-system synchronized groups, so new Swift files under `iosApp/iosApp` are picked up by the app target without manual `project.pbxproj` edits.
-
-### Navigation
-
-- shared Compose navigation uses Voyager
-- iOS top-level navigation uses SwiftUI `NavigationStack`
-
-### Design patterns
-
-The codebase uses classic GoF patterns where they reduce coupling without obscuring platform idioms:
-
-- Strategy: [GroupedSectionExpansionStrategy.swift](./iosApp/iosApp/Features/Expenses/GroupedSectionExpansionStrategy.swift) encapsulates section expansion behavior shared by expense and income lists.
-- Factory: `CategoryIconSymbolFactory` in [GroupedExpenseRows.swift](./iosApp/iosApp/Features/Expenses/GroupedExpenseRows.swift) centralizes the mapping from persisted category icon keys to SF Symbols.
-- Bridge: iOS-specific Kotlin bridge classes under [composeApp/src/iosMain](./composeApp/src/iosMain) expose shared data snapshots to native SwiftUI screens.
-- Repository: shared data access is concentrated in [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/ExpenseRepository.kt) and [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CategoryRepository.kt).
-
-## Localization
-
-Shared strings:
-
-- [composeApp/src/commonMain/composeResources/values/strings.xml](./composeApp/src/commonMain/composeResources/values/strings.xml)
-- [composeApp/src/commonMain/composeResources/values-it/strings.xml](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
-
-Native iOS strings:
-
-- [iosApp/iosApp/Localizable.xcstrings](./iosApp/iosApp/Localizable.xcstrings)
-
-## Backup and transfer
-
-### JSON backup
+### Backup and Transfer
 
 Full backup is JSON-based.
 
-- format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/BudgetBackup.kt)
-- orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CloudSyncService.kt)
-
-Android stores the canonical backup locally and can mirror it to Google Drive AppData.
-
-- [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/AndroidCloudBackupStore.android.kt)
-- [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/GoogleDriveAuthorizationManager.android.kt)
-
-iOS stores the canonical backup in the app ubiquity container.
-
-- [ICloudBackupStore.swift](./iosApp/iosApp/Sync/ICloudBackupStore.swift)
-
-### CSV
+- Backup format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/BudgetBackup.kt)
+- Backup orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CloudSyncService.kt)
+- Android Google Drive store: [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/AndroidCloudBackupStore.android.kt)
+- Android authorization: [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/GoogleDriveAuthorizationManager.android.kt)
+- iOS iCloud store: [ICloudBackupStore.swift](./iosApp/iosApp/Sync/ICloudBackupStore.swift)
 
 CSV import/export is separate from full backup.
 
 - [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/csv/CsvBudgetExport.kt)
 - [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/csv/CsvBudgetImport.kt)
 
-## Voice entry
+### Voice Entry
 
-Voice entry is platform-specific.
+Voice entry is platform-specific, with shared prompt and contract helpers in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens/VoiceExpensePrompt.kt).
 
-- Android implementation lives under [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens)
-- iOS implementation lives under [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
+- Android implementation: [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens)
+- iOS implementation: [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
 
-## iOS smoke testing
+## Localization
 
-Run this checklist after changing SKIE, Kotlin/Native bridge APIs, Room KMP persistence, iCloud backup, CSV transfer, or native SwiftUI transaction screens.
-
-1. Category add: open the native add/edit transaction flow, add a new expense category, verify it appears selected, then reopen the category picker and confirm it persists.
-2. Monthly grouped lists: open monthly expenses and monthly incomes, switch grouping between category and date, expand/collapse sections, and delete one non-recurring item.
-3. Transaction search paging: search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
-4. CSV import/export: export a date range, verify the file is offered with CSV content, import that file, and confirm success or skipped-row feedback appears.
-5. Startup restore: on an empty iOS install with an iCloud backup available, launch the app, preview the restore counts, restore, and verify dashboard data appears.
-6. Voice expense save: start voice entry, create or update a draft, save it, and verify the expense appears in the current month.
-7. Widget refresh: trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
-- shared prompt and contract helpers live in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens/VoiceExpensePrompt.kt)
+- Shared Compose strings: [values](./composeApp/src/commonMain/composeResources/values/strings.xml), [values-it](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
+- Native iOS strings: [Localizable.xcstrings](./iosApp/iosApp/Localizable.xcstrings)
+- iOS widget strings: [en](./iosApp/HomeBudgetWidget/en.lproj/Localizable.strings), [it](./iosApp/HomeBudgetWidget/it.lproj/Localizable.strings)
 
 ## Build
 
-### Android
-
-Build the debug APK:
+Build the Android debug APK:
 
 ```sh
 ./gradlew :androidApp:assembleDebug
 ```
 
-Compile shared Android code only:
+Compile shared Android code:
 
 ```sh
 ./gradlew :composeApp:compileAndroidMain
 ```
 
-### iOS
-
-Open [iosApp/iosApp.xcodeproj](./iosApp/iosApp.xcodeproj) in Xcode and run the `iosApp` scheme.
-
-Compile the shared iOS target from Gradle:
+Compile the shared iOS simulator framework:
 
 ```sh
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64
 ```
 
-Build the iOS app from the command line against a specific installed simulator:
+Build the iOS app from Xcode by opening [iosApp/iosApp.xcodeproj](./iosApp/iosApp.xcodeproj) and running the `iosApp` scheme.
+
+Command-line iOS build:
 
 ```sh
 xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'platform=iOS Simulator,name=<installed simulator name>' build
 ```
 
-### Verification
+## Verification
 
-Run the local verification suite used by CI:
+Run the local verification suite:
 
 ```sh
 ./gradlew verifyAll
 ```
 
-It runs:
+`verifyAll` runs:
 
-- shared and Android unit tests
-- Android debug assembly
-- Kotlin/Native iOS simulator framework compilation
+- `:androidApp:test`
+- `:composeApp:testAndroidHostTest`
+- `:androidApp:assembleDebug`
+- `:composeApp:compileKotlinIosSimulatorArm64`
 
-## Setup notes
+Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 
-### Android Google Drive backup
+1. Add an expense category in the native add/edit transaction flow, verify it is selected, then reopen the category picker and confirm it persists.
+2. Open monthly expenses and monthly incomes, switch grouping between category and date, expand/collapse sections, and delete one non-recurring item.
+3. Search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
+4. Export a CSV date range, verify the file content, import the file, and confirm success or skipped-row feedback.
+5. Launch an empty iOS install with an iCloud backup available, preview restore counts, restore, and verify dashboard data.
+6. Use voice entry to create or update a draft, save it, and verify the expense appears in the current month.
+7. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
+
+## Setup Notes
+
+### Android Google Drive Backup
 
 Drive backup requires Android OAuth configuration.
 
 1. Create an Android OAuth client for the package name and signing certificate in use.
 2. If Credential Manager sign-in is enabled, create a Web OAuth client as well.
-3. Put the Web client ID in [composeApp/src/androidMain/res/values/google_identity.xml](./composeApp/src/androidMain/res/values/google_identity.xml).
+3. Put the Web client ID in [google_identity.xml](./composeApp/src/androidMain/res/values/google_identity.xml).
 
 Without this setup, local backup still works.
 
 ### iOS
 
-The iOS target depends on the Xcode project configuration already present in `iosApp`, including iCloud and widget entitlements.
+The iOS target depends on the Xcode project configuration in [iosApp](./iosApp), including iCloud and widget entitlements.
