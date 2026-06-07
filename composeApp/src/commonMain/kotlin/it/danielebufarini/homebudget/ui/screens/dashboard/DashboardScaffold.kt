@@ -2,7 +2,9 @@ package it.danielebufarini.homebudget.ui.screens.dashboard
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.homebudget.ui.screens.common.MonthCursor
@@ -35,6 +38,7 @@ internal fun DashboardScreenScaffold(
     selectedMonth: MonthCursor,
     totalAmount: Long,
     showFab: Boolean,
+    showQuickActions: Boolean = true,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
     onOpenVoiceExpense: () -> Unit,
@@ -57,38 +61,53 @@ internal fun DashboardScreenScaffold(
 
         Scaffold(
             topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        DashboardMonthHeader(
-                            selectedMonth = selectedMonth,
-                            totalAmount = totalAmount,
-                            currencySymbol = strings.currencySymbol,
-                            onPreviousMonth = onPreviousMonth,
-                            onNextMonth = onNextMonth
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { showNavigationRail = true },
-                            modifier = Modifier.padding(start = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Menu,
-                                contentDescription = strings.dashboard
+                if (isIos) {
+                    IosDashboardTopBar(
+                        strings = strings,
+                        openVoiceExpenseRequest = openVoiceExpenseRequest,
+                        selectedMonth = selectedMonth,
+                        totalAmount = totalAmount,
+                        onOpenMenu = { showNavigationRail = true },
+                        onOpenAddExpense = onOpenAddExpense,
+                        onOpenVoiceExpense = onOpenVoiceExpense,
+                        showQuickActions = showQuickActions,
+                        onPreviousMonth = onPreviousMonth,
+                        onNextMonth = onNextMonth
+                    )
+                } else {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            DashboardMonthHeader(
+                                selectedMonth = selectedMonth,
+                                totalAmount = totalAmount,
+                                currencySymbol = strings.currencySymbol,
+                                onPreviousMonth = onPreviousMonth,
+                                onNextMonth = onNextMonth
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = { showNavigationRail = true },
+                                modifier = Modifier.padding(start = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Menu,
+                                    contentDescription = strings.dashboard
+                                )
+                            }
+                        },
+                        actions = {
+                            BottomTransactionQuickActions(
+                                addContentDescription = strings.addExpense,
+                                onAddTransaction = onOpenAddExpense,
+                                modifier = Modifier.padding(end = 12.dp),
+                                openVoiceExpenseRequest = openVoiceExpenseRequest,
+                                voiceContentDescription = strings.voiceExpense,
+                                onVoiceExpense = null
                             )
                         }
-                    },
-                    actions = {
-                        BottomTransactionQuickActions(
-                            addContentDescription = strings.addExpense,
-                            onAddTransaction = onOpenAddExpense,
-                            modifier = Modifier.padding(end = 12.dp),
-                            openVoiceExpenseRequest = openVoiceExpenseRequest,
-                            voiceContentDescription = strings.voiceExpense,
-                            onVoiceExpense = if (isIos) onOpenVoiceExpense else null
-                        )
-                    }
-                )
+                    )
+                }
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { padding ->
@@ -106,6 +125,61 @@ internal fun DashboardScreenScaffold(
                 onDismiss = { showNavigationRail = false },
                 onOpenCategories = onOpenCategories,
                 onOpenCsvTransfer = openCsvTransfer
+            )
+        }
+    }
+}
+
+@Composable
+private fun IosDashboardTopBar(
+    strings: DashboardStrings,
+    openVoiceExpenseRequest: Int,
+    selectedMonth: MonthCursor,
+    totalAmount: Long,
+    onOpenMenu: () -> Unit,
+    onOpenAddExpense: () -> Unit,
+    onOpenVoiceExpense: () -> Unit,
+    showQuickActions: Boolean,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        IconButton(
+            onClick = onOpenMenu,
+            modifier = Modifier.align(Alignment.CenterStart)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Menu,
+                contentDescription = strings.dashboard
+            )
+        }
+
+        DashboardMonthHeader(
+            selectedMonth = selectedMonth,
+            totalAmount = totalAmount,
+            currencySymbol = strings.currencySymbol,
+            onPreviousMonth = onPreviousMonth,
+            onNextMonth = onNextMonth,
+            useIosGlassStyle = true,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .padding(horizontal = 72.dp)
+        )
+
+        if (showQuickActions) {
+            BottomTransactionQuickActions(
+                addContentDescription = strings.addExpense,
+                onAddTransaction = onOpenAddExpense,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                openVoiceExpenseRequest = openVoiceExpenseRequest,
+                voiceContentDescription = strings.voiceExpense,
+                onVoiceExpense = onOpenVoiceExpense
             )
         }
     }

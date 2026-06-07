@@ -2,6 +2,7 @@ package it.danielebufarini.homebudget.ui.screens.categories.management
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AttachMoney
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Coffee
 import androidx.compose.material.icons.rounded.DirectionsCar
@@ -72,6 +73,7 @@ internal data class EditorIconOption(
 )
 
 internal val EditorIconOptions = listOf(
+    EditorIconOption("attach_money", Icons.Rounded.AttachMoney),
     EditorIconOption("shopping_cart", Icons.Rounded.ShoppingCart),
     EditorIconOption("restaurant", Icons.Rounded.Restaurant),
     EditorIconOption("flight", Icons.Rounded.Flight),
@@ -134,6 +136,7 @@ internal fun iconForKey(iconKey: String): ImageVector {
         "pets" -> Icons.Rounded.Pets
         "local_hospital" -> Icons.Rounded.LocalHospital
         "health" -> Icons.Rounded.HealthAndSafety
+        "attach_money" -> Icons.Rounded.AttachMoney
         "home" -> Icons.Rounded.Home
         "directions_car" -> Icons.Rounded.DirectionsCar
         "work" -> Icons.Rounded.Work

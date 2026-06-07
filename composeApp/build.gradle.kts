@@ -1,4 +1,3 @@
-import co.touchlab.skie.configuration.DefaultArgumentInterop
 import co.touchlab.skie.configuration.EnumInterop
 import co.touchlab.skie.configuration.FlowInterop
 import co.touchlab.skie.configuration.FunctionInterop
@@ -116,9 +115,6 @@ skie {
 
             SealedInterop.Enabled(true)
             SealedInterop.ExportEntireHierarchy(true)
-
-            DefaultArgumentInterop.Enabled(true)
-            DefaultArgumentInterop.MaximumDefaultArgumentCount(5)
 
             FunctionInterop.FileScopeConversion.Enabled(true)
             FunctionInterop.LegacyName(false)

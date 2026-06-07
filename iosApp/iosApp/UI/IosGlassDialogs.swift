@@ -142,7 +142,7 @@ struct AppGlassBottomQuickActionsBar: View {
     let onVoice: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Button(action: onAdd) {
                 AppGlassBottomQuickActionIcon(systemName: "plus")
             }
@@ -150,18 +150,19 @@ struct AppGlassBottomQuickActionsBar: View {
             .accessibilityLabel(addAccessibilityLabel)
 
             Rectangle()
-                .fill(.primary.opacity(0.16))
+                .fill(AppThemePalette.onSurface.opacity(0.18))
                 .frame(width: 1, height: 22)
 
             Button(action: onVoice) {
-                AppGlassBottomQuickActionIcon(systemName: "mic.fill")
+                AppGlassBottomQuickActionIcon(systemName: "mic")
             }
             .buttonStyle(.plain)
             .accessibilityLabel(voiceAccessibilityLabel)
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 3)
-        .appGlassSurface(cornerRadius: 24)
+        .foregroundStyle(AppThemePalette.onSurface)
+        .appDashboardChromeSurface(cornerRadius: 24)
     }
 }
 
@@ -169,9 +170,6 @@ private struct AppGlassBottomQuickActionIcon: View {
     let systemName: String
 
     var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
-            .frame(width: 32, height: 32)
-            .contentShape(Circle())
+        AppGlassToolbarIcon(systemName: systemName)
     }
 }

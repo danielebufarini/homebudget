@@ -37,6 +37,7 @@ fun DashboardContentViewController(
     DashboardRoute(
         showNavigationChrome = true,
         showFab = false,
+        showQuickActions = false,
         onOpenCategories = onOpenCategories,
         onOpenAddExpense = onOpenAddExpense,
         onOpenVoiceExpense = onOpenVoiceExpense,

@@ -42,12 +42,16 @@ internal fun DashboardMonthHeader(
     totalAmount: Long,
     currencySymbol: String,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    modifier: Modifier = Modifier,
+    useIosGlassStyle: Boolean = false
 ) {
     MonthNavigationTitle(
         selectedMonth = selectedMonth,
         subtitle = formatAmount(totalAmount, currencySymbol),
         onPreviousMonth = onPreviousMonth,
-        onNextMonth = onNextMonth
+        onNextMonth = onNextMonth,
+        modifier = modifier,
+        useIosGlassStyle = useIosGlassStyle
     )
 }

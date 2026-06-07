@@ -89,6 +89,9 @@ struct ContentView: View {
                     handleCsvExport(result: result)
                 }
                 .overlay(alignment: .top) {
+                    dashboardQuickActionsChrome
+                }
+                .overlay(alignment: .top) {
                     AppGlassBannerOverlay(presenter: bannerPresenter)
                 }
                 .navigationDestination(for: Route.self) { route in
@@ -254,6 +257,28 @@ struct ContentView: View {
         .appGlassHostedScreenChrome()
         .dismissesKeyboardOnTap()
         .restoresInteractivePopGesture()
+    }
+
+    @ViewBuilder
+    private var dashboardQuickActionsChrome: some View {
+        if path.isEmpty {
+            HStack {
+                Spacer(minLength: 0)
+
+                AppGlassBottomQuickActionsBar(
+                    addAccessibilityLabel: appLocalized("Add Expense"),
+                    voiceAccessibilityLabel: appLocalized("Voice Expense"),
+                    onAdd: {
+                        path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
+                    },
+                    onVoice: startVoiceExpense
+                )
+            }
+            .frame(height: MonthNavigationHeaderLayout.minHeight)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.top, MonthNavigationHeaderLayout.topPadding)
+        }
     }
 
     @ToolbarContentBuilder

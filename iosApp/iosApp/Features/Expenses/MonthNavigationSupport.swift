@@ -87,7 +87,7 @@ func monthlyHeaderAmountText(descriptor: String?, amountText: String) -> String 
 
 enum MonthNavigationHeaderLayout {
     static let horizontalPadding: CGFloat = 22
-    static let topPadding: CGFloat = 16
+    static let topPadding: CGFloat = 5
     static let bottomSpacing: CGFloat = 22
     static let minHeight: CGFloat = 76
     static var reservedTopInset: CGFloat { topPadding + minHeight + bottomSpacing }
@@ -115,12 +115,11 @@ struct DashboardStyleMonthNavigationHeader: View {
     }
 
     var body: some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 2) {
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
                 if let onPreviousMonth {
                     Button(action: onPreviousMonth) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 15, weight: .bold))
+                        DashboardMonthChevron(direction: .left)
                             .frame(width: 24, height: 24)
                             .contentShape(Rectangle())
                     }
@@ -130,14 +129,14 @@ struct DashboardStyleMonthNavigationHeader: View {
                 }
 
                 Text(titleText ?? selectedMonth.label)
-                    .font(.system(size: 22, weight: .regular))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.84)
 
                 if let onNextMonth {
                     Button(action: onNextMonth) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 15, weight: .bold))
+                        DashboardMonthChevron(direction: .right)
                             .frame(width: 24, height: 24)
                             .contentShape(Rectangle())
                     }
@@ -146,6 +145,9 @@ struct DashboardStyleMonthNavigationHeader: View {
                     .accessibilityLabel(appLocalized("Next month"))
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .appDashboardMonthHeaderSurface(cornerRadius: 22)
 
             Text(amountText)
                 .font(.system(size: 15, weight: .semibold))
@@ -155,5 +157,38 @@ struct DashboardStyleMonthNavigationHeader: View {
         .frame(maxWidth: .infinity)
         .frame(minHeight: MonthNavigationHeaderLayout.minHeight)
         .padding(.horizontal, 16)
+    }
+}
+
+private struct DashboardMonthChevron: View {
+    enum Direction {
+        case left
+        case right
+    }
+
+    let direction: Direction
+
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            switch direction {
+            case .left:
+                path.move(to: CGPoint(x: size.width * 0.75, y: size.height * 0.15))
+                path.addLine(to: CGPoint(x: size.width * 0.30, y: size.height * 0.50))
+                path.addLine(to: CGPoint(x: size.width * 0.75, y: size.height * 0.85))
+            case .right:
+                path.move(to: CGPoint(x: size.width * 0.25, y: size.height * 0.15))
+                path.addLine(to: CGPoint(x: size.width * 0.70, y: size.height * 0.50))
+                path.addLine(to: CGPoint(x: size.width * 0.25, y: size.height * 0.85))
+            }
+
+            context.stroke(
+                path,
+                with: .color(AppThemePalette.onSurface),
+                style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+            )
+        }
+        .frame(width: 10, height: 10)
+        .frame(width: 24, height: 24)
     }
 }

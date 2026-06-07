@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.BeachAccess
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Cake
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Spa
@@ -102,7 +104,7 @@ private val categoryIconSections = listOf(
     ),
     CategoryIconSection(
         titleRes = Res.string.icon_theme_general_and_hobbies,
-        iconKeys = listOf("pets", "category")
+        iconKeys = listOf("attach_money", "savings", "pets", "category")
     )
 )
 
@@ -169,6 +171,8 @@ private fun categoryImageVector(iconKey: String?): ImageVector {
         "person" -> Icons.Filled.Person
         "work" -> Icons.Filled.Work
         "school" -> Icons.Filled.School
+        "attach_money" -> Icons.Filled.AttachMoney
+        "savings" -> Icons.Filled.Savings
         "pets" -> Icons.Filled.Pets
         else -> Icons.Filled.Category
     }

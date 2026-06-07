@@ -3,18 +3,55 @@ import Observation
 
 // Shared SwiftUI chrome helpers for the iOS-native shell and sheets.
 
+enum AppThemePalette {
+    static var background: Color {
+        Color(uiColor: UIColor { traits in
+            switch traits.userInterfaceStyle {
+            case .dark:
+                UIColor(red: 16.0 / 255.0, green: 24.0 / 255.0, blue: 32.0 / 255.0, alpha: 1.0)
+            default:
+                UIColor(red: 247.0 / 255.0, green: 250.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0)
+            }
+        })
+    }
+
+    static var chromeSurface: Color {
+        Color(uiColor: UIColor { traits in
+            switch traits.userInterfaceStyle {
+            case .dark:
+                UIColor(red: 36.0 / 255.0, green: 38.0 / 255.0, blue: 47.0 / 255.0, alpha: 0.68)
+            default:
+                UIColor(red: 232.0 / 255.0, green: 239.0 / 255.0, blue: 248.0 / 255.0, alpha: 0.86)
+            }
+        })
+    }
+
+    static var chromeStroke: Color {
+        Color(uiColor: UIColor { traits in
+            switch traits.userInterfaceStyle {
+            case .dark:
+                UIColor(red: 225.0 / 255.0, green: 232.0 / 255.0, blue: 240.0 / 255.0, alpha: 0.12)
+            default:
+                UIColor(red: 21.0 / 255.0, green: 28.0 / 255.0, blue: 36.0 / 255.0, alpha: 0.12)
+            }
+        })
+    }
+
+    static var onSurface: Color {
+        Color(uiColor: UIColor { traits in
+            switch traits.userInterfaceStyle {
+            case .dark:
+                UIColor(red: 225.0 / 255.0, green: 232.0 / 255.0, blue: 240.0 / 255.0, alpha: 1.0)
+            default:
+                UIColor(red: 21.0 / 255.0, green: 28.0 / 255.0, blue: 36.0 / 255.0, alpha: 1.0)
+            }
+        })
+    }
+}
+
 struct AppGlassBackdrop: View {
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color(uiColor: .systemGroupedBackground),
-                Color(uiColor: .secondarySystemGroupedBackground),
-                Color(uiColor: .systemBackground)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        AppThemePalette.background.ignoresSafeArea()
     }
 }
 
@@ -27,9 +64,51 @@ private struct AppGlassSurfaceModifier: ViewModifier {
     }
 }
 
+private struct AppDashboardChromeSurfaceModifier: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                AppThemePalette.chromeSurface,
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AppThemePalette.chromeStroke, lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.16), radius: 16, x: 0, y: 8)
+    }
+}
+
+private struct AppDashboardMonthHeaderSurfaceModifier: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                AppThemePalette.background.opacity(0.72),
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AppThemePalette.chromeStroke, lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 8)
+    }
+}
+
 extension View {
     func appGlassSurface(cornerRadius: CGFloat = 20) -> some View {
         modifier(AppGlassSurfaceModifier(cornerRadius: cornerRadius))
+    }
+
+    func appDashboardChromeSurface(cornerRadius: CGFloat = 20) -> some View {
+        modifier(AppDashboardChromeSurfaceModifier(cornerRadius: cornerRadius))
+    }
+
+    func appDashboardMonthHeaderSurface(cornerRadius: CGFloat = 22) -> some View {
+        modifier(AppDashboardMonthHeaderSurfaceModifier(cornerRadius: cornerRadius))
     }
 
     func appGlassHostedScreenChrome() -> some View {
@@ -69,6 +148,17 @@ struct AppGlassToolbarIcon: View {
 struct AppGlassBackButton: View {
     var body: some View {
         AppGlassToolbarIcon(systemName: "chevron.left")
+    }
+}
+
+struct AppDashboardToolbarIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 28, weight: .semibold))
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
     }
 }
 

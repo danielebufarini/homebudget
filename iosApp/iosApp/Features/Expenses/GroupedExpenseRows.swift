@@ -132,6 +132,10 @@ private enum CategoryIconSymbolFactory {
             return "briefcase.fill"
         case "school":
             return "graduationcap.fill"
+        case "attach_money":
+            return "dollarsign.circle.fill"
+        case "savings":
+            return "banknote.fill"
         case "pets":
             return "pawprint.fill"
         case "fitness_center":

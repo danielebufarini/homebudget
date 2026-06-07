@@ -54,6 +54,7 @@ struct NativeExpensePickerRow: View {
 struct NativeExpenseDescriptionField: View {
     @Binding var descriptionText: String
     let readOnly: Bool
+    @FocusState private var isDescriptionFocused: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -74,10 +75,20 @@ struct NativeExpenseDescriptionField: View {
                         .font(.title3.weight(.medium))
                         .textInputAutocapitalization(.sentences)
                         .autocorrectionDisabled(false)
+                        .focused($isDescriptionFocused)
+                        .submitLabel(.done)
                         .lineLimit(3, reservesSpace: false)
+                        .onSubmit {
+                            dismissDescriptionKeyboard()
+                        }
                 }
             }
         }
+    }
+
+    private func dismissDescriptionKeyboard() {
+        isDescriptionFocused = false
+        appDismissKeyboard()
     }
 }
 

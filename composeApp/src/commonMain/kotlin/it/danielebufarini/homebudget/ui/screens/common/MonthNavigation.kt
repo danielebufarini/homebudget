@@ -1,12 +1,16 @@
 package it.danielebufarini.homebudget.ui.screens.common
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,10 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import homebudget.composeapp.generated.resources.Res
 import homebudget.composeapp.generated.resources.full_month_names
 import homebudget.composeapp.generated.resources.short_month_names
+import it.danielebufarini.homebudget.ui.screens.platform.rememberIsIosPlatform
 import org.jetbrains.compose.resources.stringArrayResource
 
 data class MonthCursor(
@@ -65,9 +72,23 @@ fun MonthNavigationTitle(
     selectedMonth: MonthCursor,
     subtitle: String,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    modifier: Modifier = Modifier,
+    useIosGlassStyle: Boolean = false
 ) {
+    if (useIosGlassStyle && rememberIsIosPlatform()) {
+        IosMonthNavigationTitle(
+            selectedMonth = selectedMonth,
+            subtitle = subtitle,
+            onPreviousMonth = onPreviousMonth,
+            onNextMonth = onNextMonth,
+            modifier = modifier
+        )
+        return
+    }
+
     Column(
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -86,6 +107,56 @@ fun MonthNavigationTitle(
             text = subtitle,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun IosMonthNavigationTitle(
+    selectedMonth: MonthCursor,
+    subtitle: String,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 0.dp,
+            shadowElevation = 12.dp,
+            border = BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MonthArrowButton(direction = ArrowDirection.Left, onClick = onPreviousMonth)
+                Text(
+                    text = selectedMonth.label(),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    maxLines = 1
+                )
+                MonthArrowButton(direction = ArrowDirection.Right, onClick = onNextMonth)
+            }
+        }
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }

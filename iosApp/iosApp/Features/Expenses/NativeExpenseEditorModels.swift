@@ -214,7 +214,7 @@ let nativeExpenseEditorIconSections: [NativeExpenseEditorIconSection] = [
     NativeExpenseEditorIconSection(id: "travel", title: appLocalized("Transport & Travel"), iconKeys: ["directions_car", "directions_bus", "train", "local_taxi", "flight", "hotel", "beach_access"]),
     NativeExpenseEditorIconSection(id: "health", title: appLocalized("Health & Wellness"), iconKeys: ["local_hospital", "healing", "fitness_center", "spa"]),
     NativeExpenseEditorIconSection(id: "people", title: appLocalized("People & Work"), iconKeys: ["person", "work", "school"]),
-    NativeExpenseEditorIconSection(id: "general", title: appLocalized("General & Hobbies"), iconKeys: ["pets", "category"])
+    NativeExpenseEditorIconSection(id: "general", title: appLocalized("General & Hobbies"), iconKeys: ["attach_money", "savings", "pets", "category"])
 ]
 
 func nativeExpenseEditorDateString(_ date: Date) -> String {
@@ -267,6 +267,10 @@ func nativeExpenseCategorySystemImageName(_ iconKey: String?) -> String {
         return "briefcase.fill"
     case "school":
         return "graduationcap.fill"
+    case "attach_money":
+        return "dollarsign.circle.fill"
+    case "savings":
+        return "banknote.fill"
     case "pets":
         return "pawprint.fill"
     default:

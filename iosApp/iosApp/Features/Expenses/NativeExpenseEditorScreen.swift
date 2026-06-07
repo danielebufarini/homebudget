@@ -123,13 +123,15 @@ struct NativeExpenseEditorScreen: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 Color.clear.frame(height: ExpenseEditorChromeLayout.reservedBottomInset)
             }
+            .scrollDismissesKeyboard(.interactively)
 
             VStack {
                 ExpenseEditorGlassHeader(
                     title: title,
                     showsDeleteAction: !readOnly && viewModel.canEdit,
-                    onBack: onClose,
+                    onBack: closeEditor,
                     onDelete: {
+                        appDismissKeyboard()
                         if viewModel.hasRecurringSeries {
                             showRecurringDeleteDialog = true
                         } else {
@@ -143,8 +145,9 @@ struct NativeExpenseEditorScreen: View {
                 Spacer()
 
                 ExpenseEditorGlassFooter(
-                    onCancel: onClose,
+                    onCancel: closeEditor,
                     onConfirm: {
+                        appDismissKeyboard()
                         if readOnly {
                             onClose()
                         } else if viewModel.hasRecurringSeries {
@@ -163,6 +166,7 @@ struct NativeExpenseEditorScreen: View {
                         (!readOnly && !viewModel.hasValidAmount)
                 )
             }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
         .sheet(isPresented: $showDatePicker) {
@@ -253,9 +257,16 @@ struct NativeExpenseEditorScreen: View {
             viewModel.stop()
             HomeBudgetWidgetSummaryRefresher.shared.refresh()
         }
+        .dismissesKeyboardOnTap()
+    }
+
+    private func closeEditor() {
+        appDismissKeyboard()
+        onClose()
     }
 
     private func saveExpense(updateWholeSeries: Bool) {
+        appDismissKeyboard()
         viewModel.save(updateWholeSeries: updateWholeSeries) { errorKey in
             if let errorKey {
                 bannerPresenter.show(appLocalized(errorKey), style: .error)
@@ -266,6 +277,7 @@ struct NativeExpenseEditorScreen: View {
     }
 
     private func deleteExpense(deleteWholeSeries: Bool) {
+        appDismissKeyboard()
         viewModel.delete(deleteWholeSeries: deleteWholeSeries) { errorKey in
             if let errorKey {
                 bannerPresenter.show(appLocalized(errorKey), style: .error)

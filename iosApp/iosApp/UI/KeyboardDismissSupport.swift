@@ -97,14 +97,17 @@ final class KeyboardDismissOnTapCoordinator: NSObject, UIGestureRecognizerDelega
         _ gestureRecognizer: UIGestureRecognizer,
         shouldReceive touch: UITouch
     ) -> Bool {
-        guard installedWindow?.currentFirstResponder != nil else {
+        guard let firstResponder = installedWindow?.currentFirstResponder else {
             return false
         }
         guard let touchedView = touch.view else {
             return true
         }
+        if firstResponder.isDescendantOfComposeBackedView || touchedView.isDescendantOfComposeBackedView {
+            return false
+        }
 
-        return !touchedView.isDescendantOfTextInput
+        return !touchedView.isDescendantOfKeyboardProtectedView
     }
 
     func gestureRecognizer(
@@ -130,7 +133,7 @@ private extension UIView {
         return nil
     }
 
-    var isDescendantOfTextInput: Bool {
+    var isDescendantOfKeyboardProtectedView: Bool {
         var view: UIView? = self
         while let current = view {
             if current is UITextField || current is UITextView || current is UISearchTextField {
@@ -152,5 +155,22 @@ private extension UIView {
             className.contains("InputSet") ||
             className.contains("InputAssistant") ||
             className.contains("Keyboard")
+    }
+
+    var isDescendantOfComposeBackedView: Bool {
+        var view: UIView? = self
+        while let current = view {
+            if current.isComposeBackedView {
+                return true
+            }
+            view = current.superview
+        }
+        return false
+    }
+
+    private var isComposeBackedView: Bool {
+        let className = NSStringFromClass(type(of: self))
+        return className.contains("Compose") ||
+            className.contains("Skiko")
     }
 }

@@ -132,7 +132,8 @@ struct MonthlyTransactionsRootView: View {
             } label: {
                 AppGlassBackButton()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
+            .accessibilityLabel(appLocalized("Back"))
 
             Spacer(minLength: 0)
 

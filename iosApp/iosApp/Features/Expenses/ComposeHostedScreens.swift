@@ -1,5 +1,6 @@
 @preconcurrency import ComposeApp
 import SwiftUI
+import UIKit
 
 struct DashboardRootView: View {
     @Binding var path: NavigationPath

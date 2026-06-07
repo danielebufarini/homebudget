@@ -278,6 +278,7 @@ struct NativeTransactionEditorScreen: View {
             )
             .disabled(viewModel.isSaving || viewModel.isLoading || viewModel.didFailToLoad || !viewModel.hasValidAmount)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     private var reservedTopInset: CGFloat {
