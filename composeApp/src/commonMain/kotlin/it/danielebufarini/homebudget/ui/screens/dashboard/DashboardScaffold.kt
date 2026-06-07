@@ -43,6 +43,7 @@ internal fun DashboardScreenScaffold(
     onOpenAddExpense: () -> Unit,
     onOpenVoiceExpense: () -> Unit,
     onOpenCsvTransfer: (() -> Unit)?,
+    onNavigationDrawerVisibilityChange: (Boolean) -> Unit = {},
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     content: @Composable (Modifier) -> Unit
@@ -67,7 +68,10 @@ internal fun DashboardScreenScaffold(
                         openVoiceExpenseRequest = openVoiceExpenseRequest,
                         selectedMonth = selectedMonth,
                         totalAmount = totalAmount,
-                        onOpenMenu = { showNavigationRail = true },
+                        onOpenMenu = {
+                            showNavigationRail = true
+                            onNavigationDrawerVisibilityChange(true)
+                        },
                         onOpenAddExpense = onOpenAddExpense,
                         onOpenVoiceExpense = onOpenVoiceExpense,
                         showQuickActions = showQuickActions,
@@ -122,9 +126,18 @@ internal fun DashboardScreenScaffold(
         if (showNavigationRail) {
             AndroidNavigationRailOverlay(
                 selectedDestination = AndroidNavigationDestination.Dashboard,
-                onDismiss = { showNavigationRail = false },
-                onOpenCategories = onOpenCategories,
-                onOpenCsvTransfer = openCsvTransfer
+                onDismiss = {
+                    showNavigationRail = false
+                    onNavigationDrawerVisibilityChange(false)
+                },
+                onOpenCategories = {
+                    onNavigationDrawerVisibilityChange(false)
+                    onOpenCategories()
+                },
+                onOpenCsvTransfer = {
+                    onNavigationDrawerVisibilityChange(false)
+                    openCsvTransfer()
+                }
             )
         }
     }

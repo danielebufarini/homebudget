@@ -20,6 +20,7 @@ struct ContentView: View {
     @State var csvExportEndDate = Date()
     @State var csvImportController = IosCsvImportController()
     @State var csvExportController = IosCsvExportController()
+    @State private var dashboardNavigationDrawerOpen = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -30,6 +31,9 @@ struct ContentView: View {
                     presentAfterMenuDismiss {
                         showCsvTransferSheet = true
                     }
+                },
+                onNavigationDrawerVisibilityChange: { isOpen in
+                    dashboardNavigationDrawerOpen = isOpen
                 }
             )
                 .appGlassHostedScreenChrome()
@@ -261,7 +265,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var dashboardQuickActionsChrome: some View {
-        if path.isEmpty {
+        if path.isEmpty && !dashboardNavigationDrawerOpen {
             HStack {
                 Spacer(minLength: 0)
 

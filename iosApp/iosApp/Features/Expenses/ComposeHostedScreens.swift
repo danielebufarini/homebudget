@@ -6,6 +6,7 @@ struct DashboardRootView: View {
     @Binding var path: NavigationPath
     let onStartVoiceExpense: () -> Void
     let onOpenCsvTransfer: () -> Void
+    let onNavigationDrawerVisibilityChange: (Bool) -> Void
 
     var body: some View {
         KotlinViewControllerHost(constrainToSafeArea: false) {
@@ -18,6 +19,9 @@ struct DashboardRootView: View {
                 },
                 onOpenVoiceExpense: onStartVoiceExpense,
                 onOpenCsvTransfer: onOpenCsvTransfer,
+                onNavigationDrawerVisibilityChange: { isOpen in
+                    onNavigationDrawerVisibilityChange(isOpen.boolValue)
+                },
                 onOpenDayExpenses: { year, month, day in
                     path.append(
                         Route.dayExpenses(
