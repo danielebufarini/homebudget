@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
-        <include domain="file" path="Data/homebudget-backup.json" />
+        <include domain="file" path="Data/spesify-backup.json" />
     </cloud-backup>
 
     <device-transfer>
-        <include domain="file" path="Data/homebudget-backup.json" />
+        <include domain="file" path="Data/spesify-backup.json" />
     </device-transfer>
 
     <cross-platform-transfer platform="ios">
-        <include domain="file" path="Data/homebudget-backup.json" />
+        <include domain="file" path="Data/spesify-backup.json" />
         <platform-specific-params
-            bundleId="it.danielebufarini.homebudget.daniele"
+            bundleId="it.danielebufarini.spesify.daniele"
             teamId="264H653993"
             contentVersion="json-v1" />
     </cross-platform-transfer>

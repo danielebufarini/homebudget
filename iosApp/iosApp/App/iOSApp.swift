@@ -72,7 +72,7 @@ struct iOSApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background {
                 CloudBackupBackgroundTasks.schedule()
-                HomeBudgetWidgetSummaryRefresher.shared.refresh()
+                SpesifyWidgetSummaryRefresher.shared.refresh()
             }
         }
     }
@@ -133,7 +133,7 @@ struct iOSApp: App {
 
         if restored {
             await markStartupRestoreCompleted()
-            HomeBudgetWidgetSummaryRefresher.shared.refresh()
+            SpesifyWidgetSummaryRefresher.shared.refresh()
         }
         isStartupReady = true
     }

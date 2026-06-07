@@ -48,7 +48,7 @@ struct TransactionEditorRootView: View {
         .appGlassHostedScreenChrome()
         .iosNativeDatePickerHost()
         .onDisappear {
-            HomeBudgetWidgetSummaryRefresher.shared.refresh()
+            SpesifyWidgetSummaryRefresher.shared.refresh()
         }
     }
 
@@ -195,7 +195,7 @@ struct ExpenseEditorRootView: View {
             }
         }
         .onDisappear {
-            HomeBudgetWidgetSummaryRefresher.shared.refresh()
+            SpesifyWidgetSummaryRefresher.shared.refresh()
         }
         .overlay {
             if deletionViewModel.pendingSeriesId != nil, let expenseId {
@@ -312,7 +312,7 @@ struct IncomeEditorRootView: View {
         .appGlassHostedScreenChrome()
         .iosNativeDatePickerHost()
         .onDisappear {
-            HomeBudgetWidgetSummaryRefresher.shared.refresh()
+            SpesifyWidgetSummaryRefresher.shared.refresh()
         }
         .toolbar {
             if let incomeId {

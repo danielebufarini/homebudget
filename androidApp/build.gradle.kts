@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "it.danielebufarini.homebudget"
+    namespace = "it.danielebufarini.spesify"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "it.danielebufarini.homebudget"
+        applicationId = "it.danielebufarini.spesify"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

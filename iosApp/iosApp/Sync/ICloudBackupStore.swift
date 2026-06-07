@@ -18,7 +18,7 @@ enum ICloudBackupStoreError: LocalizedError {
 }
 
 enum ICloudBackupStore {
-    private static let backupFileName = "homebudget-backup.json"
+    private static let backupFileName = "spesify-backup.json"
     private static let backupDirectoryName = "Data"
 
     static func writeBackupSync(text: String) throws {

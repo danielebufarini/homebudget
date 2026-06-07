@@ -21,7 +21,7 @@
     <string name="backup_restore_failed">Unable to restore the full app backup.</string>
     <string name="backup_restore_invalid">Unable to read the full app backup file.</string>
     <string name="auto_backup_title">Full Cloud Backup</string>
-    <string name="auto_backup_description">HomeBudget stages a full JSON backup file for cloud sync. System backup can restore that file during device setup or app reinstall.</string>
+    <string name="auto_backup_description">Spesify stages a full JSON backup file for cloud sync. System backup can restore that file during device setup or app reinstall.</string>
     <string name="auto_backup_note">When a Google account already granted Drive access, background sync also uploads the same JSON file to the app\'s private Drive storage.</string>
     <string name="cloud_backup_unavailable">Cloud backup is unavailable on this device or account.</string>
     <string name="cloud_backup_not_found">No cloud backup file was found.</string>

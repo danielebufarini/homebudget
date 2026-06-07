@@ -255,7 +255,7 @@ struct ContentView: View {
                     handleIncomingURL(url)
                 }
                 .task {
-                    HomeBudgetWidgetSummaryRefresher.shared.refresh()
+                    SpesifyWidgetSummaryRefresher.shared.refresh()
                 }
         }
         .appGlassHostedScreenChrome()

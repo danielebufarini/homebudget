@@ -1,7 +1,7 @@
 @preconcurrency import ComposeApp
 import SwiftUI
 
-private let iosNativeDatePickerRequestNotification = "HomeBudget.IosNativeDatePicker.Request"
+private let iosNativeDatePickerRequestNotification = "Spesify.IosNativeDatePicker.Request"
 
 private struct NativeDatePickerRequest: Identifiable {
     let id: String

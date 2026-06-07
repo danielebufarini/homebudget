@@ -3,7 +3,7 @@ import BackgroundTasks
 import Foundation
 
 enum CloudBackupBackgroundTasks {
-    static let identifier = "it.danielebufarini.homebudget.cloudsync"
+    static let identifier = "it.danielebufarini.spesify.cloudsync"
 
     private final class CancellationState: @unchecked Sendable {
         private let lock = NSLock()

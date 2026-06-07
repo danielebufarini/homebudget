@@ -1,0 +1,83 @@
+package it.danielebufarini.spesify.data.csv.import
+import it.danielebufarini.spesify.data.PendingIncome
+import it.danielebufarini.spesify.data.csv.CsvImportedIncomeKey
+import it.danielebufarini.spesify.data.csv.CsvImportedRecurringOccurrenceKey
+import it.danielebufarini.spesify.data.csv.ParsedUnifiedCsvRow
+import it.danielebufarini.spesify.data.csv.buildImportedIncomeId
+import it.danielebufarini.spesify.data.csv.normalizeDescription
+import it.danielebufarini.spesify.data.csv.registerCategoryNames
+import it.danielebufarini.spesify.data.csv.resolveImportCategory
+import it.danielebufarini.spesify.database.CATEGORY_TYPE_INCOME
+
+internal object IncomeCsvRowImportHandler : CsvRowImportHandler {
+    override suspend fun importRow(
+        row: ParsedUnifiedCsvRow,
+        rowIndex: Int,
+        amount: Long,
+        itemDate: Long,
+        state: CsvImportState
+    ): Boolean {
+        val categoryId = row.categoryName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { rawCategoryName ->
+                val category = resolveImportCategory(
+                    rawCategoryName = rawCategoryName,
+                    categoriesByNormalizedName = state.categoriesByNormalizedName,
+                    categoryType = CATEGORY_TYPE_INCOME
+                )
+                if (state.categoriesById[category.id] == null) {
+                    state.repository.insertCategory(
+                        id = category.id,
+                        name = category.name,
+                        icon = category.icon,
+                        color = category.color,
+                        categoryType = category.categoryType,
+                        isArchived = category.isArchived == 1L,
+                        sortOrder = category.sortOrder
+                    )
+                    state.categoriesById[category.id] = category
+                    registerCategoryNames(
+                        category = category,
+                        map = state.categoriesByNormalizedName,
+                        resolveCategoryName = state.resolveCategoryName
+                    )
+                }
+                category.id
+            }
+        val recurringSeriesId = row.buildRecurringSeriesId(rowIndex)
+        val recurringOccurrenceKey = recurringSeriesId?.let { seriesId ->
+            CsvImportedRecurringOccurrenceKey(
+                recurringSeriesId = seriesId,
+                date = itemDate
+            )
+        }
+        if (
+            recurringOccurrenceKey != null &&
+            !state.existingIncomeRecurringOccurrenceKeys.add(recurringOccurrenceKey)
+        ) {
+            return false
+        }
+
+        val incomeKey = CsvImportedIncomeKey(
+            date = itemDate,
+            categoryId = categoryId,
+            amount = amount,
+            description = normalizeDescription(row.description)
+        )
+        if (!state.existingIncomeKeys.add(incomeKey)) {
+            recurringOccurrenceKey?.let(state.existingIncomeRecurringOccurrenceKeys::remove)
+            return false
+        }
+
+        state.incomesToInsert += PendingIncome(
+            id = buildImportedIncomeId(),
+            amount = amount,
+            date = itemDate,
+            categoryId = categoryId,
+            description = row.description?.takeIf { it.isNotBlank() },
+            recurringSeriesId = recurringSeriesId
+        )
+
+        return true
+    }
+}

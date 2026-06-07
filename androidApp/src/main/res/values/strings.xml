@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HomeBudget</string>
+    <string name="app_name">Spesify</string>
     <string name="widget_description">Current month budget summary</string>
     <string name="widget_expenses">Expenses</string>
     <string name="widget_income">Income</string>

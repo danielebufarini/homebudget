@@ -15,7 +15,7 @@ private enum CsvImportReadError: LocalizedError {
 
 extension ContentView {
     func handleIncomingURL(_ url: URL) {
-        guard url.scheme == "homebudget" else {
+        guard url.scheme == "spesify" else {
             return
         }
 
@@ -86,7 +86,7 @@ extension ContentView {
             }
 
             if let successMessage = result.successMessage {
-                HomeBudgetWidgetSummaryRefresher.shared.refresh()
+                SpesifyWidgetSummaryRefresher.shared.refresh()
                 showCsvFeedback(successMessage, style: .success)
             } else if let errorMessage = result.errorMessage {
                 showCsvFeedback(errorMessage, style: .error)

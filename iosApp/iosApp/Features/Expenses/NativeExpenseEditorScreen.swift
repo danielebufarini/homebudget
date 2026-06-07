@@ -255,7 +255,7 @@ struct NativeExpenseEditorScreen: View {
         }
         .onDisappear {
             viewModel.stop()
-            HomeBudgetWidgetSummaryRefresher.shared.refresh()
+            SpesifyWidgetSummaryRefresher.shared.refresh()
         }
         .dismissesKeyboardOnTap()
     }

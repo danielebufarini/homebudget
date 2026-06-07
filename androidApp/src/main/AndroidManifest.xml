@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
-            android:name=".HomeBudgetApplication"
+            android:name=".SpesifyApplication"
             android:allowBackup="true"
             android:dataExtractionRules="@xml/data_extraction_rules"
             android:fullBackupContent="@xml/backup_rules"
@@ -16,27 +16,27 @@
             android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <receiver
-                android:name=".HomeBudgetWidgetProvider"
+                android:name=".SpesifyWidgetProvider"
                 android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="it.danielebufarini.homebudget.action.REFRESH_HOME_BUDGET_WIDGETS" />
+                <action android:name="it.danielebufarini.spesify.action.REFRESH_SPESIFY_WIDGETS" />
             </intent-filter>
             <meta-data
                     android:name="android.appwidget.provider"
-                    android:resource="@xml/home_budget_widget_info" />
+                    android:resource="@xml/spesify_widget_info" />
         </receiver>
 
         <receiver
-                android:name=".HomeBudgetWideWidgetProvider"
+                android:name=".SpesifyWideWidgetProvider"
                 android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="it.danielebufarini.homebudget.action.REFRESH_HOME_BUDGET_WIDGETS" />
+                <action android:name="it.danielebufarini.spesify.action.REFRESH_SPESIFY_WIDGETS" />
             </intent-filter>
             <meta-data
                     android:name="android.appwidget.provider"
-                    android:resource="@xml/home_budget_widget_wide_info" />
+                    android:resource="@xml/spesify_widget_wide_info" />
         </receiver>
         <activity
                 android:exported="true"

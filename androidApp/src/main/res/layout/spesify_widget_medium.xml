@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/spesify_widget_medium_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingLeft="18dp"
+    android:paddingTop="2dp"
+    android:paddingRight="18dp"
+    android:paddingBottom="2dp">
+
+    <TextView
+        android:id="@+id/widget_month_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:autoSizeMaxTextSize="22sp"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeStepGranularity="1sp"
+        android:autoSizeTextType="uniform"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="@string/widget_month_title_placeholder_short"
+        android:textColor="@color/widget_on_surface"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/widget_expenses_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_expenses"
+            android:textColor="@color/widget_on_surface_variant"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/widget_expenses_amount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:ellipsize="end"
+            android:gravity="start"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_amount_placeholder"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_income_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/widget_income" />
+
+        <TextView
+            android:id="@+id/widget_income_amount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_amount_placeholder" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_add_expense_button"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="22dp"
+        android:autoSizeMaxTextSize="16sp"
+        android:autoSizeMinTextSize="11sp"
+        android:autoSizeStepGranularity="1sp"
+        android:autoSizeTextType="uniform"
+        android:background="@drawable/spesify_widget_medium_button_background"
+        android:drawableStart="@drawable/spesify_widget_mic"
+        android:drawablePadding="6dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:text="@string/widget_add_expense"
+        android:textColor="@color/widget_on_primary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+</LinearLayout>

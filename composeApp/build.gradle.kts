@@ -21,7 +21,7 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     android {
-        namespace = "it.danielebufarini.homebudget.shared"
+        namespace = "it.danielebufarini.spesify.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         androidResources {
@@ -40,7 +40,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            binaryOption("bundleId", "it.danielebufarini.homebudget.composeapp")
+            binaryOption("bundleId", "it.danielebufarini.spesify.composeapp")
             binaryOption("smallBinary", "true")
         }
     }
@@ -89,6 +89,12 @@ kotlin {
             implementation(libs.androidx.test.core)
             implementation(libs.robolectric)
         }
+    }
+}
+
+compose {
+    resources {
+        packageOfResClass = "spesify.composeapp.generated.resources"
     }
 }
 

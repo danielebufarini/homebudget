@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">HomeBudget</string>
+    <string name="app_name">Spesify</string>
     <string name="widget_description">Riepilogo budget del mese corrente</string>
     <string name="widget_expenses">Spese</string>
     <string name="widget_income">Entrate</string>

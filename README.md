@@ -1,6 +1,6 @@
-# HomeBudget
+# Spesify
 
-HomeBudget is a Kotlin Multiplatform personal finance app for Android and iOS.
+Spesify is a Kotlin Multiplatform personal finance app for Android and iOS.
 
 The shared module contains the domain model, persistence, repositories, resources, and most Compose UI. Android uses the shared Compose app directly. iOS uses a SwiftUI shell that hosts shared Compose screens and keeps selected native SwiftUI flows for platform-specific UX.
 
@@ -60,7 +60,7 @@ Key iOS areas:
 - [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native transaction, monthly, grouped, income, and search screens.
 - [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense): native voice expense flow.
 - [iosApp/iosApp/Sync](./iosApp/iosApp/Sync): iCloud backup and widget summary storage.
-- [iosApp/HomeBudgetWidget](./iosApp/HomeBudgetWidget): iOS widget extension.
+- [iosApp/SpesifyWidget](./iosApp/SpesifyWidget): iOS widget extension.
 
 The shared iOS framework is built as `ComposeApp.framework` and embedded by the Xcode project. The Xcode project uses file-system synchronized groups, so new Swift files under `iosApp/iosApp` are picked up without manual `project.pbxproj` edits.
 
@@ -70,15 +70,15 @@ The shared iOS framework is built as `ComposeApp.framework` and embedded by the 
 
 Room KMP is the persistence layer, backed by bundled SQLite.
 
-- Database: [HomeBudgetDatabase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database/HomeBudgetDatabase.kt)
-- Entities and DAOs: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/database)
-- Database builders: [common](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.kt), [Android](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.android.kt), [iOS](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/data/DatabaseBuilderFactory.ios.kt)
+- Database: [SpesifyDatabase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/database/SpesifyDatabase.kt)
+- Entities and DAOs: [composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/database](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/database)
+- Database builders: [common](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/DatabaseBuilderFactory.kt), [Android](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/DatabaseBuilderFactory.android.kt), [iOS](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/data/DatabaseBuilderFactory.ios.kt)
 - Room schemas: [composeApp/schemas](./composeApp/schemas)
 
 Repositories define the main application data boundary:
 
-- [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/ExpenseRepository.kt)
-- [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CategoryRepository.kt)
+- [ExpenseRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/ExpenseRepository.kt)
+- [CategoryRepository.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/CategoryRepository.kt)
 
 Categories are typed as expense or income, can be archived, and are seeded when the category table is empty.
 
@@ -86,44 +86,44 @@ Categories are typed as expense or income, can be archived, and are seeded when 
 
 Koin is the composition root.
 
-- Shared graph: [composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/di)
-- Android graph: [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/di)
-- iOS graph: [composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/di](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/di)
+- Shared graph: [composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/di](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/di)
+- Android graph: [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/di](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/di)
+- iOS graph: [composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/di](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/di)
 
 ### UI and Navigation
 
 - Shared Compose navigation uses Voyager.
-- Android starts from [MainActivity.kt](./androidApp/src/main/kotlin/it/danielebufarini/homebudget/MainActivity.kt) and runs the shared Compose app.
-- iOS starts from [ContentView.swift](./iosApp/iosApp/App/ContentView.swift), uses SwiftUI `NavigationStack`, and hosts shared Compose through [MainViewController.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/homebudget/MainViewController.kt).
+- Android starts from [MainActivity.kt](./androidApp/src/main/kotlin/it/danielebufarini/spesify/MainActivity.kt) and runs the shared Compose app.
+- iOS starts from [ContentView.swift](./iosApp/iosApp/App/ContentView.swift), uses SwiftUI `NavigationStack`, and hosts shared Compose through [MainViewController.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/MainViewController.kt).
 - Native iOS expense screens use observer-backed SwiftUI view models and Kotlin bridge classes under [composeApp/src/iosMain](./composeApp/src/iosMain).
 
 ### Backup and Transfer
 
 Full backup is JSON-based.
 
-- Backup format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/BudgetBackup.kt)
-- Backup orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/CloudSyncService.kt)
-- Android Google Drive store: [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/AndroidCloudBackupStore.android.kt)
-- Android authorization: [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/data/GoogleDriveAuthorizationManager.android.kt)
+- Backup format and restore logic: [BudgetBackup.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/BudgetBackup.kt)
+- Backup orchestration: [CloudSyncService.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/CloudSyncService.kt)
+- Android Google Drive store: [AndroidCloudBackupStore.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/AndroidCloudBackupStore.android.kt)
+- Android authorization: [GoogleDriveAuthorizationManager.android.kt](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/GoogleDriveAuthorizationManager.android.kt)
 - iOS iCloud store: [ICloudBackupStore.swift](./iosApp/iosApp/Sync/ICloudBackupStore.swift)
 
 CSV import/export is separate from full backup.
 
-- [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/csv/CsvBudgetExport.kt)
-- [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/data/csv/CsvBudgetImport.kt)
+- [CsvBudgetExport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/csv/CsvBudgetExport.kt)
+- [CsvBudgetImport.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/csv/CsvBudgetImport.kt)
 
 ### Voice Entry
 
-Voice entry is platform-specific, with shared prompt and contract helpers in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/homebudget/ui/screens/VoiceExpensePrompt.kt).
+Voice entry is platform-specific, with shared prompt and contract helpers in [VoiceExpensePrompt.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/ui/screens/VoiceExpensePrompt.kt).
 
-- Android implementation: [composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/homebudget/ui/screens)
+- Android implementation: [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/ui/screens)
 - iOS implementation: [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
 
 ## Localization
 
 - Shared Compose strings: [values](./composeApp/src/commonMain/composeResources/values/strings.xml), [values-it](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
 - Native iOS strings: [Localizable.xcstrings](./iosApp/iosApp/Localizable.xcstrings)
-- iOS widget strings: [en](./iosApp/HomeBudgetWidget/en.lproj/Localizable.strings), [it](./iosApp/HomeBudgetWidget/it.lproj/Localizable.strings)
+- iOS widget strings: [en](./iosApp/SpesifyWidget/en.lproj/Localizable.strings), [it](./iosApp/SpesifyWidget/it.lproj/Localizable.strings)
 
 ## Build
 
