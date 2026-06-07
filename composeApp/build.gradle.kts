@@ -1,3 +1,9 @@
+import co.touchlab.skie.configuration.DefaultArgumentInterop
+import co.touchlab.skie.configuration.EnumInterop
+import co.touchlab.skie.configuration.FlowInterop
+import co.touchlab.skie.configuration.FunctionInterop
+import co.touchlab.skie.configuration.SealedInterop
+import co.touchlab.skie.configuration.SuspendInterop
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -103,5 +109,22 @@ skie {
     }
     features {
         coroutinesInterop.set(true)
+        defaultArgumentsInExternalLibraries.set(false)
+        group {
+            EnumInterop.Enabled(true)
+            EnumInterop.LegacyCaseName(false)
+
+            SealedInterop.Enabled(true)
+            SealedInterop.ExportEntireHierarchy(true)
+
+            DefaultArgumentInterop.Enabled(true)
+            DefaultArgumentInterop.MaximumDefaultArgumentCount(5)
+
+            FunctionInterop.FileScopeConversion.Enabled(true)
+            FunctionInterop.LegacyName(false)
+
+            SuspendInterop.Enabled(true)
+            FlowInterop.Enabled(true)
+        }
     }
 }
