@@ -82,6 +82,8 @@ Repositories define the main application data boundary:
 
 Categories are typed as expense or income, can be archived, and are seeded when the category table is empty.
 
+Recurring transactions are stored as rules and materialized into expense or income rows for a rolling future window. This keeps the rule as the source of truth while preserving direct monthly queries, search, backup, export, and widget updates.
+
 ### Dependency Injection
 
 Koin is the composition root.
@@ -168,15 +170,16 @@ Run the local verification suite:
 - `:androidApp:assembleDebug`
 - `:composeApp:compileKotlinIosSimulatorArm64`
 
-Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
+Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, recurring transaction generation, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 
 1. Add an expense category in the native add/edit transaction flow, verify it is selected, then reopen the category picker and confirm it persists.
 2. Open monthly expenses and monthly incomes, switch grouping between category and date, expand/collapse sections, and delete one non-recurring item.
-3. Search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
-4. Export a CSV date range, verify the file content, import the file, and confirm success or skipped-row feedback.
-5. Launch an empty iOS install with an iCloud backup available, preview restore counts, restore, and verify dashboard data.
-6. Use voice entry to create or update a draft, save it, and verify the expense appears in the current month.
-7. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
+3. Create or edit one recurring expense or income, navigate to a future month, then delete the series and verify the generated rows update consistently.
+4. Search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
+5. Export a CSV date range, verify the file content, import the file, and confirm success or skipped-row feedback.
+6. Launch an empty iOS install with an iCloud backup available, preview restore counts, restore, and verify dashboard data.
+7. Use voice entry to create or update a draft, save it, and verify the expense appears in the current month.
+8. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
 
 ## Setup Notes
 
