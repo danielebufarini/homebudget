@@ -41,7 +41,7 @@ data class ExistingRecurringIncomeItem(
     val date: Long
 )
 
-const val RECURRING_MONTHLY_OCCURRENCES = 36
+const val RECURRING_MONTHLY_OCCURRENCES = RECURRING_MATERIALIZATION_FORWARD_MONTHS + 1
 const val MAX_EXPENSE_INSTALLMENTS = 30
 
 fun buildPendingExpenses(
@@ -224,7 +224,7 @@ fun splitAmountIntoInstallments(amount: Long, installments: Int): List<Long> {
     }
 }
 
-private fun monthlyOccurrenceDate(
+internal fun monthlyOccurrenceDate(
     firstDate: Long,
     monthOffset: Int,
     timeZone: TimeZone
@@ -239,7 +239,7 @@ private fun monthlyOccurrenceDate(
         .toEpochMilliseconds()
 }
 
-private fun monthDifference(
+internal fun monthDifference(
     firstDate: Long,
     secondDate: Long,
     timeZone: TimeZone

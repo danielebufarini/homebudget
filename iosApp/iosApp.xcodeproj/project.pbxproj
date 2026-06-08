@@ -257,7 +257,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nif [ \"${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-}\" = \"YES\" ]; then\n  echo \"Skipping Kotlin framework Gradle build because Android Studio/IntelliJ already built it.\"\n  exit 0\nfi\n\ncd \"$SRCROOT/..\"\nexport GRADLE_USER_HOME=\"$PWD/.gradle\"\n\necho \"Building Kotlin framework for $CONFIGURATION/$PLATFORM_NAME ($ARCHS)\"\n./gradlew \\\n  --console=plain \\\n  -Pcompose.ios.resources.platform=\"$PLATFORM_NAME\" \\\n  -Pcompose.ios.resources.archs=\"$ARCHS\" \\\n  :composeApp:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "set -euo pipefail\n\nFRAMEWORK_NAME=\"ComposeApp\"\nFRAMEWORK_PATH=\"$BUILT_PRODUCTS_DIR/${FRAMEWORK_NAME}.framework\"\n\nif [ \"${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-}\" = \"YES\" ] && [ -d \"$FRAMEWORK_PATH\" ]; then\n  echo \"Skipping Kotlin framework Gradle build because Android Studio/IntelliJ already built $FRAMEWORK_NAME.\"\n  exit 0\nfi\n\nif [ \"${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-}\" = \"YES\" ]; then\n  echo \"Android Studio/IntelliJ requested Kotlin build override, but $FRAMEWORK_PATH was not found.\"\n  echo \"Falling back to Gradle build to make $FRAMEWORK_NAME available to Swift.\"\nfi\n\ncd \"$SRCROOT/..\"\nexport GRADLE_USER_HOME=\"$PWD/.gradle\"\n\necho \"Building Kotlin framework for $CONFIGURATION/$PLATFORM_NAME ($ARCHS)\"\n./gradlew \\\n  --console=plain \\\n  -Pcompose.ios.resources.platform=\"$PLATFORM_NAME\" \\\n  -Pcompose.ios.resources.archs=\"$ARCHS\" \\\n  :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

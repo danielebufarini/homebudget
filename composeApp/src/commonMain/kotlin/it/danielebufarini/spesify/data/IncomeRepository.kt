@@ -15,6 +15,7 @@ class IncomeRepository(
     private val widgetRefreshCoordinator: WidgetRefreshCoordinator
 ) {
     private val incomeDao = database.incomeDao()
+    private val recurringRuleDao = database.recurringTransactionRuleDao()
     private val searchIndexDao = database.searchIndexDao()
 
     fun getAllIncomes(): Flow<List<Income>> = incomeDao.getAllIncomes().distinctUntilChanged()
@@ -122,6 +123,10 @@ class IncomeRepository(
 
         transactionRunner.runInTransaction {
             val ids = incomes.map(PendingIncome::id)
+            val recurringRules = incomes.toRecurringIncomeRules()
+            if (recurringRules.isNotEmpty()) {
+                recurringRuleDao.upsertRules(recurringRules)
+            }
             incomeDao.insertIncomes(
                 incomes.map(PendingIncome::toEntity)
             )
@@ -144,6 +149,7 @@ class IncomeRepository(
             if (ids.isNotEmpty()) {
                 searchIndexDao.deleteIncomeSearchRows(ids)
             }
+            recurringRuleDao.deleteRule(seriesId)
             incomeDao.deleteRecurringIncomeSeries(seriesId)
         }
         widgetRefreshCoordinator.requestRefresh()

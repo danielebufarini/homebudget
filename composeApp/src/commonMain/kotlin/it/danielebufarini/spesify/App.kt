@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
+import it.danielebufarini.spesify.data.RecurringTransactionService
 import it.danielebufarini.spesify.ui.screens.dashboard.DashboardScreen
 import it.danielebufarini.spesify.ui.theme.AppTheme
 import kotlinx.coroutines.launch
@@ -43,6 +44,7 @@ private sealed interface AppStartupUiState {
 @Composable
 fun App(openVoiceExpenseRequest: Int = 0) {
     val startupRestore: PlatformStartupRestore = koinInject()
+    val recurringTransactionService: RecurringTransactionService = koinInject()
     val scope = rememberCoroutineScope()
     var startupUiState by remember { mutableStateOf<AppStartupUiState>(AppStartupUiState.Loading) }
     val restoreTitle = stringResource(Res.string.restore_backup)
@@ -50,10 +52,13 @@ fun App(openVoiceExpenseRequest: Int = 0) {
     val skipLabel = stringResource(Res.string.skip)
     val restoreFailedMessage = stringResource(Res.string.backup_restore_failed)
 
-    LaunchedEffect(startupRestore) {
+    LaunchedEffect(startupRestore, recurringTransactionService) {
         startupUiState = runCatching {
             when (val state = startupRestore.prepare()) {
-                StartupRestoreState.Ready -> AppStartupUiState.Ready
+                StartupRestoreState.Ready -> {
+                    recurringTransactionService.ensureRecurringTransactionsGeneratedThroughDefaultWindow()
+                    AppStartupUiState.Ready
+                }
                 is StartupRestoreState.Pending -> AppStartupUiState.Prompt(state.prompt)
             }
         }.getOrElse {
@@ -126,6 +131,7 @@ fun App(openVoiceExpenseRequest: Int = 0) {
                                     startupUiState = AppStartupUiState.Loading
                                     startupUiState = runCatching {
                                         startupRestore.restorePending()
+                                        recurringTransactionService.ensureRecurringTransactionsGeneratedThroughDefaultWindow()
                                         AppStartupUiState.Ready
                                     }.getOrElse {
                                         AppStartupUiState.Prompt(
@@ -145,6 +151,7 @@ fun App(openVoiceExpenseRequest: Int = 0) {
                                 scope.launch {
                                     runCatching {
                                         startupRestore.skipPending()
+                                        recurringTransactionService.ensureRecurringTransactionsGeneratedThroughDefaultWindow()
                                     }
                                     startupUiState = AppStartupUiState.Ready
                                 }

@@ -12,6 +12,7 @@ class DataReplacementService(
     private val expenseDao = database.expenseDao()
     private val incomeDao = database.incomeDao()
     private val categoryDao = database.categoryDao()
+    private val recurringRuleDao = database.recurringTransactionRuleDao()
     private val searchIndexDao = database.searchIndexDao()
 
     suspend fun replaceAllData(
@@ -20,6 +21,7 @@ class DataReplacementService(
         incomes: List<PendingIncome>
     ) {
         transactionRunner.runInTransaction {
+            recurringRuleDao.deleteAllRules()
             expenseDao.deleteAllExpenses()
             incomeDao.deleteAllIncomes()
             categoryDao.deleteAllCategories()
@@ -45,6 +47,11 @@ class DataReplacementService(
             incomeDao.insertIncomes(
                 incomes.map(PendingIncome::toEntity)
             )
+
+            val recurringRules = expenses.toRecurringExpenseRules() + incomes.toRecurringIncomeRules()
+            if (recurringRules.isNotEmpty()) {
+                recurringRuleDao.upsertRules(recurringRules)
+            }
 
             searchIndexDao.rebuildAllSearchIndexes()
         }

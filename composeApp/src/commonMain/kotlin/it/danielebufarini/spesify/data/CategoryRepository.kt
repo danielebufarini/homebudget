@@ -34,6 +34,7 @@ class CategoryRepository(
     private val categoryDao = database.categoryDao()
     private val expenseDao = database.expenseDao()
     private val incomeDao = database.incomeDao()
+    private val recurringRuleDao = database.recurringTransactionRuleDao()
     private val searchIndexDao = database.searchIndexDao()
 
     fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories().distinctUntilChanged()
@@ -124,6 +125,8 @@ class CategoryRepository(
 
             val expenseUsageCount = expenseDao.countExpensesForCategory(sourceCategory.id)
             val incomeUsageCount = incomeDao.countIncomesForCategory(sourceCategory.id)
+            val expenseRuleUsageCount = recurringRuleDao.countExpenseRulesForCategory(sourceCategory.id)
+            val incomeRuleUsageCount = recurringRuleDao.countIncomeRulesForCategory(sourceCategory.id)
             val affectedExpenseIds = if (expenseUsageCount > 0L) {
                 expenseDao.getExpenseIdsForCategory(sourceCategory.id)
             } else {
@@ -135,21 +138,32 @@ class CategoryRepository(
                 emptyList()
             }
 
-            if (expenseUsageCount > 0L) {
+            if (expenseUsageCount > 0L || expenseRuleUsageCount > 0L) {
                 require(targetCategory.categoryType == CATEGORY_TYPE_EXPENSE) {
                     "Expense transactions can only be reassigned to an expense category."
                 }
-                expenseDao.moveExpensesToCategory(
-                    oldCategoryId = sourceCategory.id,
-                    newCategoryId = targetCategory.id
-                )
+                if (expenseUsageCount > 0L) {
+                    expenseDao.moveExpensesToCategory(
+                        oldCategoryId = sourceCategory.id,
+                        newCategoryId = targetCategory.id
+                    )
+                }
             }
 
-            if (incomeUsageCount > 0L) {
+            if (incomeUsageCount > 0L || incomeRuleUsageCount > 0L) {
                 require(targetCategory.categoryType == CATEGORY_TYPE_INCOME) {
                     "Income transactions can only be reassigned to a compatible category."
                 }
-                incomeDao.moveIncomesToCategory(
+                if (incomeUsageCount > 0L) {
+                    incomeDao.moveIncomesToCategory(
+                        oldCategoryId = sourceCategory.id,
+                        newCategoryId = targetCategory.id
+                    )
+                }
+            }
+
+            if (expenseRuleUsageCount > 0L || incomeRuleUsageCount > 0L) {
+                recurringRuleDao.moveRulesToCategory(
                     oldCategoryId = sourceCategory.id,
                     newCategoryId = targetCategory.id
                 )
@@ -186,7 +200,9 @@ class CategoryRepository(
     private suspend fun nextSortOrder(): Long = (categoryDao.getMaxSortOrder() ?: -1L) + 1L
 
     private suspend fun isCategoryInUseInternal(id: String): Boolean {
-        return expenseDao.countExpensesForCategory(id) > 0L || incomeDao.countIncomesForCategory(id) > 0L
+        return expenseDao.countExpensesForCategory(id) > 0L ||
+            incomeDao.countIncomesForCategory(id) > 0L ||
+            recurringRuleDao.countRulesForCategory(id) > 0L
     }
 
     private suspend fun loadStarterCategories(): List<StarterCategorySeed> {

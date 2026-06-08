@@ -163,8 +163,8 @@ class ComposeAppCommonTest {
     }
 
     @Test
-    fun recurringMonthlyOccurrences_defaultMatchesTwentyYears() {
-        assertEquals(36, RECURRING_MONTHLY_OCCURRENCES)
+    fun recurringMonthlyOccurrences_defaultMatchesRollingMaterializationWindow() {
+        assertEquals(13, RECURRING_MONTHLY_OCCURRENCES)
     }
 
     @Test

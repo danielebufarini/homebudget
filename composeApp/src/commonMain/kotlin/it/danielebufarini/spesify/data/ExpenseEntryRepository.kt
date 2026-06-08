@@ -15,6 +15,7 @@ class ExpenseEntryRepository(
     private val widgetRefreshCoordinator: WidgetRefreshCoordinator
 ) {
     private val expenseDao = database.expenseDao()
+    private val recurringRuleDao = database.recurringTransactionRuleDao()
     private val searchIndexDao = database.searchIndexDao()
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses().distinctUntilChanged()
@@ -103,6 +104,10 @@ class ExpenseEntryRepository(
 
         transactionRunner.runInTransaction {
             val ids = expenses.map(PendingExpense::id)
+            val recurringRules = expenses.toRecurringExpenseRules()
+            if (recurringRules.isNotEmpty()) {
+                recurringRuleDao.upsertRules(recurringRules)
+            }
             expenseDao.insertExpenses(
                 expenses.map(PendingExpense::toEntity)
             )
@@ -125,6 +130,7 @@ class ExpenseEntryRepository(
             if (ids.isNotEmpty()) {
                 searchIndexDao.deleteExpenseSearchRows(ids)
             }
+            recurringRuleDao.deleteRule(seriesId)
             expenseDao.deleteRecurringExpenseSeries(seriesId)
         }
         widgetRefreshCoordinator.requestRefresh()

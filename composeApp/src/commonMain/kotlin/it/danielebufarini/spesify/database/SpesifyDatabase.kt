@@ -10,10 +10,11 @@ import androidx.room.RoomDatabaseConstructor
         Category::class,
         Expense::class,
         Income::class,
+        RecurringTransactionRule::class,
         ExpenseSearchFts::class,
         IncomeSearchFts::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @ConstructedBy(SpesifyDatabaseConstructor::class)
@@ -21,6 +22,7 @@ abstract class SpesifyDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun incomeDao(): IncomeDao
+    abstract fun recurringTransactionRuleDao(): RecurringTransactionRuleDao
     abstract fun searchIndexDao(): SearchIndexDao
 }
 
