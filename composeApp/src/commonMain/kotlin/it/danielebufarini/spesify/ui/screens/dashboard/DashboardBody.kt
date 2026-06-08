@@ -36,7 +36,8 @@ internal fun DashboardBody(
     onOpenMonthlyExpenses: () -> Unit,
     onOpenDayExpenses: (Int) -> Unit,
     onOpenSharedExpenses: () -> Unit,
-    onOpenCategoryExpenses: (String) -> Unit
+    onOpenCategoryExpenses: (String) -> Unit,
+    onOpenRecentTransaction: (DashboardRecentTransaction) -> Unit
 ) {
     val resolveCategoryName = rememberCategoryNameResolver()
 
@@ -97,7 +98,8 @@ internal fun DashboardBody(
             recentTransactions = recentTransactions,
             pinnedDashboardCard = pinnedDashboardCard,
             onPinDashboardCard = onPinDashboardCard,
-            categoriesById = categoriesById
+            categoriesById = categoriesById,
+            onOpenRecentTransaction = onOpenRecentTransaction
         )
     }
 }

@@ -3,6 +3,7 @@ package it.danielebufarini.spesify.ui.screens.dashboard
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,7 +51,8 @@ import it.danielebufarini.spesify.ui.screens.expenses.formatExpenseDateGroupTitl
 internal fun RecentTransactionsPage(
     strings: DashboardStrings,
     transactions: List<DashboardRecentTransaction>,
-    categoriesById: Map<String, Category>
+    categoriesById: Map<String, Category>,
+    onOpenTransaction: (DashboardRecentTransaction) -> Unit
 ) {
     if (transactions.isEmpty()) {
         Box(
@@ -82,7 +84,8 @@ internal fun RecentTransactionsPage(
             RecentTransactionCard(
                 transaction = transaction,
                 strings = strings,
-                category = transaction.categoryId?.let(categoriesById::get)
+                category = transaction.categoryId?.let(categoriesById::get),
+                onOpenTransaction = onOpenTransaction
             )
         }
     }
@@ -92,7 +95,8 @@ internal fun RecentTransactionsPage(
 private fun RecentTransactionCard(
     transaction: DashboardRecentTransaction,
     strings: DashboardStrings,
-    category: Category?
+    category: Category?,
+    onOpenTransaction: (DashboardRecentTransaction) -> Unit
 ) {
     val isIncome = transaction.type == DashboardRecentTransactionType.Income
     val accent = if (isIncome) Color(0xFF22A06B) else Color(0xFFD65A5A)
@@ -116,6 +120,7 @@ private fun RecentTransactionCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onOpenTransaction(transaction) }
             .border(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
                 shape = RoundedCornerShape(22.dp)

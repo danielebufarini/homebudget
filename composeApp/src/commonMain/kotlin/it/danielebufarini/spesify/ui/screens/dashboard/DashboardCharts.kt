@@ -48,7 +48,8 @@ internal fun DashboardCharts(
     recentTransactions: List<DashboardRecentTransaction>,
     pinnedDashboardCard: DashboardCardPage?,
     onPinDashboardCard: (DashboardCardPage?) -> Unit,
-    categoriesById: Map<String, Category>
+    categoriesById: Map<String, Category>,
+    onOpenRecentTransaction: (DashboardRecentTransaction) -> Unit
 ) {
     val pages = remember(strings.balanceChart, strings.expensesByCategory, strings.recentTransactions) {
         listOf(
@@ -149,7 +150,8 @@ internal fun DashboardCharts(
                     DashboardCardPage.RecentTransactions -> RecentTransactionsPage(
                         strings = strings,
                         transactions = recentTransactions,
-                        categoriesById = categoriesById
+                        categoriesById = categoriesById,
+                        onOpenTransaction = onOpenRecentTransaction
                     )
                 }
             }

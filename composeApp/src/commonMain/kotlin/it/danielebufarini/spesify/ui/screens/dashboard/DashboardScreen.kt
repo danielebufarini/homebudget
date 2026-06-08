@@ -6,7 +6,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import it.danielebufarini.spesify.ui.screens.categories.CategoryExpensesScreen
 import it.danielebufarini.spesify.ui.screens.categories.management.CategoriesManagementScreen
 import it.danielebufarini.spesify.ui.screens.expenses.DayExpensesScreen
+import it.danielebufarini.spesify.ui.screens.expenses.AddExpenseScreen
 import it.danielebufarini.spesify.ui.screens.expenses.SharedExpensesScreen
+import it.danielebufarini.spesify.ui.screens.income.AddIncomeScreen
 import it.danielebufarini.spesify.ui.screens.transactions.AddTransactionScreen
 import it.danielebufarini.spesify.ui.screens.transactions.MonthlyTransactionsScreen
 import it.danielebufarini.spesify.ui.screens.transactions.TransactionEditorKind
@@ -56,6 +58,12 @@ class DashboardScreen(
                         categoryName = categoryName
                     )
                 )
+            },
+            onOpenExpenseDetails = { expenseId ->
+                navigator?.push(AddExpenseScreen(expenseId = expenseId, readOnly = true))
+            },
+            onOpenIncomeDetails = { incomeId ->
+                navigator?.push(AddIncomeScreen(incomeId = incomeId))
             },
             onOpenTransactionSearch = { year, month, query ->
                 navigator?.push(

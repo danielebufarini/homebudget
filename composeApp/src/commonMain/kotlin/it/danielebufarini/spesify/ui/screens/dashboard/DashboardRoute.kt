@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.CategoryManagementRepository
 import it.danielebufarini.spesify.data.DashboardPreferencesStore
+import it.danielebufarini.spesify.data.DashboardRecentTransactionType
 import it.danielebufarini.spesify.data.DashboardReadRepository
 import it.danielebufarini.spesify.data.subtractAmountsExact
 import it.danielebufarini.spesify.ui.screens.categories.EnsureStarterCategoriesSeeded
@@ -44,6 +45,8 @@ fun DashboardRoute(
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
     onOpenCategoryExpenses: (Int, Int, String) -> Unit,
+    onOpenExpenseDetails: (String) -> Unit = {},
+    onOpenIncomeDetails: (String) -> Unit = {},
     onOpenTransactionSearch: (Int, Int, String) -> Unit = { _, _, _ -> }
 ) {
     val dashboardRepository: DashboardReadRepository = koinInject()
@@ -126,6 +129,12 @@ fun DashboardRoute(
             },
             onOpenCategoryExpenses = { categoryName ->
                 onOpenCategoryExpenses(selectedMonth.year, selectedMonth.month, categoryName)
+            },
+            onOpenRecentTransaction = { transaction ->
+                when (transaction.type) {
+                    DashboardRecentTransactionType.Expense -> onOpenExpenseDetails(transaction.id)
+                    DashboardRecentTransactionType.Income -> onOpenIncomeDetails(transaction.id)
+                }
             }
         )
     }

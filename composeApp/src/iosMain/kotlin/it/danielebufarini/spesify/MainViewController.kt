@@ -32,6 +32,7 @@ fun DashboardContentViewController(
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
     onOpenExpenseDetails: (String, Boolean) -> Unit,
+    onOpenIncomeDetails: (String) -> Unit,
     onOpenCategoryExpenses: (Int, Int, String) -> Unit,
     onOpenTransactionSearch: (Int, Int, String) -> Unit
 ) = themedSpesifyComposeViewController {
@@ -49,6 +50,8 @@ fun DashboardContentViewController(
         onOpenMonthlyExpenses = onOpenMonthlyExpenses,
         onOpenSharedExpenses = onOpenSharedExpenses,
         onOpenCategoryExpenses = onOpenCategoryExpenses,
+        onOpenExpenseDetails = { expenseId -> onOpenExpenseDetails(expenseId, true) },
+        onOpenIncomeDetails = onOpenIncomeDetails,
         onOpenTransactionSearch = onOpenTransactionSearch
     )
 }

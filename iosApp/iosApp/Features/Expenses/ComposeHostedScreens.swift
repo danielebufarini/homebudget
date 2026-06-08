@@ -43,6 +43,9 @@ struct DashboardRootView: View {
                 onOpenExpenseDetails: { expenseId, readOnly in
                     path.append(Route.addExpense(expenseId: expenseId, readOnly: readOnly.boolValue))
                 },
+                onOpenIncomeDetails: { incomeId in
+                    path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
+                },
                 onOpenCategoryExpenses: { year, month, categoryName in
                     path.append(
                         Route.categoryExpenses(

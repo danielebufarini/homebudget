@@ -257,7 +257,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd \"$SRCROOT/..\"\n./gradlew \\\n  -Pcompose.ios.resources.platform=\"$PLATFORM_NAME\" \\\n  -Pcompose.ios.resources.archs=\"$ARCHS\" \\\n  :composeApp:embedAndSignAppleFrameworkForXcode";
+			shellScript = "set -euo pipefail\n\nif [ \"${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-}\" = \"YES\" ]; then\n  echo \"Skipping Kotlin framework Gradle build because Android Studio/IntelliJ already built it.\"\n  exit 0\nfi\n\ncd \"$SRCROOT/..\"\nexport GRADLE_USER_HOME=\"$PWD/.gradle\"\n\necho \"Building Kotlin framework for $CONFIGURATION/$PLATFORM_NAME ($ARCHS)\"\n./gradlew \\\n  --console=plain \\\n  -Pcompose.ios.resources.platform=\"$PLATFORM_NAME\" \\\n  -Pcompose.ios.resources.archs=\"$ARCHS\" \\\n  :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -324,7 +324,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 264H653993;
+				DEVELOPMENT_TEAM = GJDF7BKBVD;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -377,9 +377,13 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -477,7 +481,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 264H653993;
+				DEVELOPMENT_TEAM = GJDF7BKBVD;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -537,9 +541,13 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
