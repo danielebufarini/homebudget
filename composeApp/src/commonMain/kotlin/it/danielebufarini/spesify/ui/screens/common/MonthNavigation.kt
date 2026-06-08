@@ -2,11 +2,15 @@ package it.danielebufarini.spesify.ui.screens.common
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -15,10 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
@@ -125,6 +132,7 @@ private fun IosMonthNavigationTitle(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Surface(
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
             contentColor = MaterialTheme.colorScheme.onSurface,
@@ -135,18 +143,41 @@ private fun IosMonthNavigationTitle(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
             )
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            val monthLabel = selectedMonth.label()
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                MonthArrowButton(direction = ArrowDirection.Left, onClick = onPreviousMonth)
                 Text(
-                    text = selectedMonth.label(),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 1
+                    text = monthLabel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 30.dp),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = iosMonthHeaderFontSize(monthLabel),
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
                 )
-                MonthArrowButton(direction = ArrowDirection.Right, onClick = onNextMonth)
+
+                MonthArrowButton(
+                    direction = ArrowDirection.Left,
+                    onClick = onPreviousMonth,
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    useCompactHitArea = true
+                )
+                MonthArrowButton(
+                    direction = ArrowDirection.Right,
+                    onClick = onNextMonth,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    useCompactHitArea = true
+                )
             }
         }
         Text(
@@ -162,15 +193,26 @@ private fun IosMonthNavigationTitle(
 }
 
 @Composable
+private fun iosMonthHeaderFontSize(label: String) = when {
+    // This iOS header can be narrower than the screen because the Swift-hosted
+    // dashboard overlays the menu button and quick-actions pill outside Compose.
+    // Keep the full month + year visible by stepping down only for long labels.
+    label.length >= 13 -> 15.sp
+    label.length >= 12 -> 18.sp
+    label.length >= 9 -> 20.sp
+    label.length >= 8 -> 22.sp
+    else -> MaterialTheme.typography.titleLarge.fontSize
+}
+
+@Composable
 private fun MonthArrowButton(
     direction: ArrowDirection,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    useCompactHitArea: Boolean = false
 ) {
     val arrowColor = MaterialTheme.colorScheme.onSurface
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(24.dp)
-    ) {
+    val arrowContent: @Composable () -> Unit = {
         Canvas(modifier = Modifier.size(10.dp)) {
             val path = Path().apply {
                 if (direction == ArrowDirection.Left) {
@@ -188,6 +230,25 @@ private fun MonthArrowButton(
                 color = arrowColor,
                 style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
             )
+        }
+    }
+
+    if (useCompactHitArea) {
+        Box(
+            modifier = modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            arrowContent()
+        }
+    } else {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier.size(24.dp)
+        ) {
+            arrowContent()
         }
     }
 }

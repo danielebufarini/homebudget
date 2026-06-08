@@ -39,6 +39,7 @@ internal fun DashboardScreenScaffold(
     totalAmount: Long,
     showFab: Boolean,
     showQuickActions: Boolean = true,
+    reserveQuickActionsSpace: Boolean = showQuickActions,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
     onOpenVoiceExpense: () -> Unit,
@@ -75,6 +76,7 @@ internal fun DashboardScreenScaffold(
                         onOpenAddExpense = onOpenAddExpense,
                         onOpenVoiceExpense = onOpenVoiceExpense,
                         showQuickActions = showQuickActions,
+                        reserveQuickActionsSpace = reserveQuickActionsSpace,
                         onPreviousMonth = onPreviousMonth,
                         onNextMonth = onNextMonth
                     )
@@ -153,6 +155,7 @@ private fun IosDashboardTopBar(
     onOpenAddExpense: () -> Unit,
     onOpenVoiceExpense: () -> Unit,
     showQuickActions: Boolean,
+    reserveQuickActionsSpace: Boolean,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
@@ -172,18 +175,26 @@ private fun IosDashboardTopBar(
             )
         }
 
-        DashboardMonthHeader(
-            selectedMonth = selectedMonth,
-            totalAmount = totalAmount,
-            currencySymbol = strings.currencySymbol,
-            onPreviousMonth = onPreviousMonth,
-            onNextMonth = onNextMonth,
-            useIosGlassStyle = true,
+        val menuReservedWidth = 56.dp
+        val quickActionsReservedWidth = if (reserveQuickActionsSpace) 116.dp else menuReservedWidth
+
+        Box(
             modifier = Modifier
-                .align(Alignment.Center)
+                .align(Alignment.CenterStart)
                 .fillMaxWidth()
-                .padding(horizontal = 72.dp)
-        )
+                .padding(start = menuReservedWidth, end = quickActionsReservedWidth),
+            contentAlignment = Alignment.Center
+        ) {
+            DashboardMonthHeader(
+                selectedMonth = selectedMonth,
+                totalAmount = totalAmount,
+                currencySymbol = strings.currencySymbol,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                useIosGlassStyle = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         if (showQuickActions) {
             BottomTransactionQuickActions(

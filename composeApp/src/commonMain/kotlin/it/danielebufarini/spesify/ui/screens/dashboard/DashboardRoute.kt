@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.CategoryManagementRepository
 import it.danielebufarini.spesify.data.DashboardPreferencesStore
-import it.danielebufarini.spesify.data.DashboardRecentTransactionType
 import it.danielebufarini.spesify.data.DashboardReadRepository
+import it.danielebufarini.spesify.data.DashboardRecentTransactionType
 import it.danielebufarini.spesify.data.subtractAmountsExact
 import it.danielebufarini.spesify.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
@@ -34,6 +34,7 @@ fun DashboardRoute(
     openVoiceExpenseRequest: Int = 0,
     showFab: Boolean,
     showQuickActions: Boolean = true,
+    reserveQuickActionsSpace: Boolean = showQuickActions,
     showTransactionSearch: Boolean = true,
     onOpenCategories: () -> Unit,
     onOpenAddExpense: () -> Unit,
@@ -147,6 +148,7 @@ fun DashboardRoute(
             totalAmount = summary.totalAmount,
             showFab = showFab,
             showQuickActions = showQuickActions,
+            reserveQuickActionsSpace = reserveQuickActionsSpace,
             onOpenCategories = onOpenCategories,
             onOpenAddExpense = onOpenAddExpense,
             onOpenVoiceExpense = onOpenVoiceExpense,
