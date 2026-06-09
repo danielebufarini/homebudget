@@ -184,24 +184,32 @@ class AddTransactionUseCase internal constructor(
     ): CategoryResolution? {
         val categoryQuery = rawCategory?.trim()?.takeIf(String::isNotEmpty)
             ?: return missingMessage?.let(CategoryResolution::NeedsConfirmation)
-        val activeCategories = categories.filter { category ->
-            category.categoryType == categoryType && category.isArchived != 1L
-        }
+        val activeCategories = categories.filter { category -> category.isArchived != 1L }
+        val scopedCategories = activeCategories.filter { category -> category.categoryType == categoryType }
 
-        val idMatches = activeCategories.filter { it.id == categoryQuery }
-        if (idMatches.size == 1) return CategoryResolution.Resolved(idMatches.first())
-        if (idMatches.size > 1) {
-            return CategoryResolution.NeedsConfirmation("Category '$categoryQuery' is ambiguous.")
+        val matches = scopedCategories.filter { category ->
+            category.id == categoryQuery || category.name.matchesCategoryQuery(categoryQuery)
         }
-
-        val normalizedQuery = categoryQuery.normalizedCategoryLookupKey()
-        val nameMatches = activeCategories.filter { category ->
-            category.name.normalizedCategoryLookupKey() == normalizedQuery
-        }
-        return when (nameMatches.size) {
-            0 -> CategoryResolution.NeedsConfirmation("Category '$categoryQuery' was not found.")
-            1 -> CategoryResolution.Resolved(nameMatches.first())
-            else -> CategoryResolution.NeedsConfirmation("Category '$categoryQuery' is ambiguous.")
+        return when (matches.size) {
+            1 -> CategoryResolution.Resolved(matches.first())
+            in 2..Int.MAX_VALUE -> CategoryResolution.NeedsConfirmation("Category '$categoryQuery' is ambiguous.")
+            else -> {
+                val wrongTypeMatches = activeCategories.filter { category ->
+                    category.id == categoryQuery || category.name.matchesCategoryQuery(categoryQuery)
+                }
+                if (wrongTypeMatches.isNotEmpty()) {
+                    val expectedType = when (categoryType) {
+                        CATEGORY_TYPE_EXPENSE -> "expense"
+                        CATEGORY_TYPE_INCOME -> "income"
+                        else -> "matching"
+                    }
+                    CategoryResolution.NeedsConfirmation(
+                        "Category '$categoryQuery' exists, but it is not an $expectedType category."
+                    )
+                } else {
+                    CategoryResolution.NeedsConfirmation("Category '$categoryQuery' was not found.")
+                }
+            }
         }
     }
 
@@ -237,8 +245,3 @@ class AddTransactionUseCase internal constructor(
     }
 }
 
-private fun String.normalizedCategoryLookupKey(): String =
-    trim()
-        .lowercase()
-        .split(Regex("\\s+"))
-        .joinToString(" ")

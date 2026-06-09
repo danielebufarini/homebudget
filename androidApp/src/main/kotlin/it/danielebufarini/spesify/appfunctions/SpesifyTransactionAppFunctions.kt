@@ -6,6 +6,9 @@ import androidx.appfunctions.service.AppFunction
 import it.danielebufarini.spesify.data.AddTransactionCommand
 import it.danielebufarini.spesify.data.AddTransactionResult
 import it.danielebufarini.spesify.data.AddTransactionUseCase
+import it.danielebufarini.spesify.data.CategoryAgentUseCase
+import it.danielebufarini.spesify.data.CategoryCommandResult
+import it.danielebufarini.spesify.data.CategoryListResult
 import it.danielebufarini.spesify.data.FinancialQueryResult
 import it.danielebufarini.spesify.data.FinancialQueryUseCase
 import it.danielebufarini.spesify.data.TransactionCreationSource
@@ -30,6 +33,9 @@ class SpesifyTransactionAppFunctions {
     private val financialQueryUseCase: FinancialQueryUseCase by lazy {
         GlobalContext.get().get<FinancialQueryUseCase>()
     }
+    private val categoryAgentUseCase: CategoryAgentUseCase by lazy {
+        GlobalContext.get().get<CategoryAgentUseCase>()
+    }
 
     /**
      * Adds a non-recurring expense or income transaction to Spesify.
@@ -42,21 +48,31 @@ class SpesifyTransactionAppFunctions {
      * provide a category name or category ID so Spesify can attach the required category.
      *
      * @param appFunctionContext The execution context supplied by Android.
-     * @param request The transaction creation request.
+     * @param kind Transaction type. Use "expense" for spending and "income" for money received.
+     * @param amount Standard user-facing amount, such as "$55.56", "55.56", or "55,56".
+     * @param categoryName Optional category name or category ID. Required for expenses because Spesify expenses need a category.
+     * @param description Optional human-readable note to save with the transaction.
+     * @param dateIso Optional ISO local date in yyyy-MM-dd format. Omit it to use today's date.
+     * @param dateEpochMillis Optional epoch milliseconds date. If supplied, this takes precedence over dateIso.
      * @return A structured result describing whether the transaction was created or needs user confirmation.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun addTransaction(
         appFunctionContext: AppFunctionContext,
-        request: AddTransactionRequest
+        kind: String,
+        amount: String,
+        categoryName: String? = null,
+        description: String? = null,
+        dateIso: String? = null,
+        dateEpochMillis: Long? = null
     ): AddTransactionResponse = withContext(Dispatchers.IO) {
-        val transactionKind = TransactionKind.fromExternalValue(request.kind)
+        val transactionKind = TransactionKind.fromExternalValue(kind)
             ?: return@withContext AddTransactionResponse.needsConfirmation("Please choose expense or income.")
-        val amountMinorUnits = parseAmountMinorUnits(request.amount)
+        val amountMinorUnits = parseAmountMinorUnits(amount)
             ?: return@withContext AddTransactionResponse.needsConfirmation(
                 "Please provide a valid amount, for example 55.56."
             )
-        val dateMillis = parseDateMillis(request)
+        val dateMillis = parseDateMillis(dateIso = dateIso, dateEpochMillis = dateEpochMillis)
             ?: return@withContext AddTransactionResponse.needsConfirmation(
                 "The date was not valid. Use ISO format yyyy-MM-dd or omit it to use today."
             )
@@ -65,8 +81,8 @@ class SpesifyTransactionAppFunctions {
             AddTransactionCommand(
                 kind = transactionKind,
                 amount = amountMinorUnits,
-                categoryName = request.categoryName,
-                description = request.description,
+                categoryName = categoryName,
+                description = description,
                 dateMillis = dateMillis,
                 source = TransactionCreationSource.AndroidAppFunction
             )
@@ -98,19 +114,21 @@ class SpesifyTransactionAppFunctions {
      * Use this when the user asks for expenses in a month such as May 2026. Month must be 1 to 12.
      *
      * @param appFunctionContext The execution context supplied by Android.
-     * @param request The year and month to query.
+     * @param year Four-digit year to query, for example 2026.
+     * @param month Calendar month to query. January is 1 and December is 12.
      * @return The expense total for the requested month.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun getExpenseTotalForMonth(
         appFunctionContext: AppFunctionContext,
-        request: MonthTotalRequest
+        year: Int,
+        month: Int
     ): FinancialAmountResponse = withContext(Dispatchers.IO) {
         financialQueryUseCase.getExpensesTotalForMonth(
-            year = request.year,
-            month = request.month
+            year = year,
+            month = month
         ).toFinancialAmountResponse(
-            successMessagePrefix = "Expenses for ${request.year}-${request.month.toString().padStart(2, '0')}"
+            successMessagePrefix = "Expenses for ${year}-${month.toString().padStart(2, '0')}"
         )
     }
 
@@ -121,15 +139,17 @@ class SpesifyTransactionAppFunctions {
      * Both the start and end dates are included in the total.
      *
      * @param appFunctionContext The execution context supplied by Android.
-     * @param request The inclusive start and end dates to query.
+     * @param startDateIso Inclusive start date in ISO yyyy-MM-dd format.
+     * @param endDateIso Inclusive end date in ISO yyyy-MM-dd format.
      * @return The expense total for the requested period.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun getExpenseTotalForPeriod(
         appFunctionContext: AppFunctionContext,
-        request: PeriodTotalRequest
+        startDateIso: String,
+        endDateIso: String
     ): FinancialAmountResponse = withContext(Dispatchers.IO) {
-        val bounds = parsePeriodMillis(request)
+        val bounds = parsePeriodMillis(startDateIso = startDateIso, endDateIso = endDateIso)
             ?: return@withContext FinancialAmountResponse.failed(
                 "Please provide valid ISO dates in yyyy-MM-dd format and make sure the end date is not before the start date."
             )
@@ -137,7 +157,7 @@ class SpesifyTransactionAppFunctions {
             startDateMillis = bounds.first,
             endDateMillis = bounds.second
         ).toFinancialAmountResponse(
-            successMessagePrefix = "Expenses from ${request.startDateIso} to ${request.endDateIso}"
+            successMessagePrefix = "Expenses from ${startDateIso} to ${endDateIso}"
         )
     }
 
@@ -164,19 +184,21 @@ class SpesifyTransactionAppFunctions {
      * Use this when the user asks for income in a month such as May 2026. Month must be 1 to 12.
      *
      * @param appFunctionContext The execution context supplied by Android.
-     * @param request The year and month to query.
+     * @param year Four-digit year to query, for example 2026.
+     * @param month Calendar month to query. January is 1 and December is 12.
      * @return The income total for the requested month.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun getIncomeTotalForMonth(
         appFunctionContext: AppFunctionContext,
-        request: MonthTotalRequest
+        year: Int,
+        month: Int
     ): FinancialAmountResponse = withContext(Dispatchers.IO) {
         financialQueryUseCase.getIncomeTotalForMonth(
-            year = request.year,
-            month = request.month
+            year = year,
+            month = month
         ).toFinancialAmountResponse(
-            successMessagePrefix = "Income for ${request.year}-${request.month.toString().padStart(2, '0')}"
+            successMessagePrefix = "Income for ${year}-${month.toString().padStart(2, '0')}"
         )
     }
 
@@ -187,15 +209,17 @@ class SpesifyTransactionAppFunctions {
      * Both the start and end dates are included in the total.
      *
      * @param appFunctionContext The execution context supplied by Android.
-     * @param request The inclusive start and end dates to query.
+     * @param startDateIso Inclusive start date in ISO yyyy-MM-dd format.
+     * @param endDateIso Inclusive end date in ISO yyyy-MM-dd format.
      * @return The income total for the requested period.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun getIncomeTotalForPeriod(
         appFunctionContext: AppFunctionContext,
-        request: PeriodTotalRequest
+        startDateIso: String,
+        endDateIso: String
     ): FinancialAmountResponse = withContext(Dispatchers.IO) {
-        val bounds = parsePeriodMillis(request)
+        val bounds = parsePeriodMillis(startDateIso = startDateIso, endDateIso = endDateIso)
             ?: return@withContext FinancialAmountResponse.failed(
                 "Please provide valid ISO dates in yyyy-MM-dd format and make sure the end date is not before the start date."
             )
@@ -203,7 +227,7 @@ class SpesifyTransactionAppFunctions {
             startDateMillis = bounds.first,
             endDateMillis = bounds.second
         ).toFinancialAmountResponse(
-            successMessagePrefix = "Income from ${request.startDateIso} to ${request.endDateIso}"
+            successMessagePrefix = "Income from ${startDateIso} to ${endDateIso}"
         )
     }
 
@@ -224,15 +248,104 @@ class SpesifyTransactionAppFunctions {
         )
     }
 
-    private fun parseDateMillis(request: AddTransactionRequest): Long? {
-        request.dateEpochMillis?.takeIf { it > 0L }?.let { return it }
-        val dateIso = request.dateIso?.trim()?.takeIf(String::isNotEmpty) ?: return 0L
-        return parseIsoDateMillis(dateIso)
+    /**
+     * Lists existing Spesify categories for agents and assistants.
+     *
+     * Use this before adding a transaction when the user refers to a category and the caller needs
+     * an exact category name or ID. The optional kind parameter filters categories to "expense"
+     * or "income". Archived categories are intentionally hidden from this agent-facing list.
+     *
+     * @param appFunctionContext The execution context supplied by Android.
+     * @param kind Optional category type filter. Use "expense" or "income". Omit to list all active categories.
+     * @return Active categories matching the requested filter.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun listCategories(
+        appFunctionContext: AppFunctionContext,
+        kind: String? = null
+    ): CategoryListResponse = withContext(Dispatchers.IO) {
+        val transactionKind = kind
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let(TransactionKind::fromExternalValue)
+            ?: if (kind.isNullOrBlank()) null else return@withContext CategoryListResponse.failed(
+                "Please choose expense or income, or omit the category type."
+            )
+
+        categoryAgentUseCase.listCategories(kind = transactionKind).toCategoryListResponse()
     }
 
-    private fun parsePeriodMillis(request: PeriodTotalRequest): Pair<Long, Long>? {
-        val startMillis = parseIsoDateMillis(request.startDateIso) ?: return null
-        val endMillis = parseIsoDateMillis(request.endDateIso) ?: return null
+    /**
+     * Adds a new category explicitly requested by the user.
+     *
+     * This is the safe way for agents to create categories. The addTransaction function does not
+     * create categories implicitly, because agents can infer or hallucinate category names.
+     *
+     * @param appFunctionContext The execution context supplied by Android.
+     * @param kind Category type. Use "expense" for expense categories and "income" for income categories.
+     * @param name Category name to create.
+     * @param iconKey Optional Spesify icon key. Omit to use a sensible default.
+     * @param color Optional color hex value. Omit to use the default category color.
+     * @return A structured result describing whether the category was created or needs user confirmation.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun addCategory(
+        appFunctionContext: AppFunctionContext,
+        kind: String,
+        name: String,
+        iconKey: String? = null,
+        color: String? = null
+    ): CategoryMutationResponse = withContext(Dispatchers.IO) {
+        val transactionKind = TransactionKind.fromExternalValue(kind)
+            ?: return@withContext CategoryMutationResponse.needsConfirmation("Please choose expense or income.")
+
+        categoryAgentUseCase.addCategory(
+            kind = transactionKind,
+            name = name,
+            iconKey = iconKey,
+            color = color
+        ).toCategoryMutationResponse()
+    }
+
+    /**
+     * Deletes a category after moving existing transactions to another category.
+     *
+     * The replacement category is always required for the agent-facing delete operation so user
+     * data is never orphaned. The replacement must have the same category type as the deleted
+     * category.
+     *
+     * @param appFunctionContext The execution context supplied by Android.
+     * @param kind Category type. Use "expense" or "income".
+     * @param categoryName Category name or ID to delete.
+     * @param moveToCategoryName Category name or ID that should receive transactions using the deleted category.
+     * @return A structured result describing whether the category was deleted or needs user confirmation.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun deleteCategory(
+        appFunctionContext: AppFunctionContext,
+        kind: String,
+        categoryName: String,
+        moveToCategoryName: String
+    ): CategoryMutationResponse = withContext(Dispatchers.IO) {
+        val transactionKind = TransactionKind.fromExternalValue(kind)
+            ?: return@withContext CategoryMutationResponse.needsConfirmation("Please choose expense or income.")
+
+        categoryAgentUseCase.deleteCategory(
+            kind = transactionKind,
+            categoryNameOrId = categoryName,
+            moveToCategoryNameOrId = moveToCategoryName
+        ).toCategoryMutationResponse()
+    }
+
+    private fun parseDateMillis(dateIso: String?, dateEpochMillis: Long?): Long? {
+        dateEpochMillis?.takeIf { it > 0L }?.let { return it }
+        val date = dateIso?.trim()?.takeIf(String::isNotEmpty) ?: return 0L
+        return parseIsoDateMillis(date)
+    }
+
+    private fun parsePeriodMillis(startDateIso: String, endDateIso: String): Pair<Long, Long>? {
+        val startMillis = parseIsoDateMillis(startDateIso) ?: return null
+        val endMillis = parseIsoDateMillis(endDateIso) ?: return null
         if (endMillis < startMillis) return null
         return startMillis to endMillis
     }
@@ -313,45 +426,55 @@ class SpesifyTransactionAppFunctions {
 }
 
 /**
- * Input used to create a transaction from an Android agent or assistant.
+ * Categories returned for agent-facing category discovery.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
-data class AddTransactionRequest(
-    /** Transaction type. Use "expense" for spending and "income" for money received. */
-    val kind: String,
-    /** Standard user-facing amount, such as "$55.56", "55.56", or "55,56". */
-    val amount: String,
-    /** Optional category name or category ID. Required for expenses because Spesify expenses need a category. */
-    val categoryName: String? = null,
-    /** Optional human-readable note to save with the transaction. */
-    val description: String? = null,
-    /** Optional ISO local date in yyyy-MM-dd format. Omit it to use today's date. */
-    val dateIso: String? = null,
-    /** Optional epoch milliseconds date. If supplied, this takes precedence over dateIso. */
-    val dateEpochMillis: Long? = null
-)
+data class CategoryListResponse(
+    /** Result status: success or failed. */
+    val status: String,
+    /** Human-readable category list summary. */
+    val message: String,
+    /** Machine-readable JSON array string with id, name, kind, icon, color, isArchived, and isInUse fields. */
+    val categoriesJson: String
+) {
+    companion object {
+        fun failed(message: String): CategoryListResponse = CategoryListResponse(
+            status = STATUS_FAILED,
+            message = message,
+            categoriesJson = "[]"
+        )
+
+        const val STATUS_SUCCESS = "success"
+        const val STATUS_FAILED = "failed"
+    }
+}
 
 /**
- * Month query input for an Android agent or assistant.
+ * Result returned after adding or deleting a Spesify category.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
-data class MonthTotalRequest(
-    /** Four-digit year to query, for example 2026. */
-    val year: Int,
-    /** Calendar month to query. January is 1 and December is 12. */
-    val month: Int
-)
+data class CategoryMutationResponse(
+    /** Result status: success, needs_confirmation, or failed. */
+    val status: String,
+    /** Category ID when relevant. */
+    val categoryId: String? = null,
+    /** Human-readable message for the agent or assistant. */
+    val message: String? = null,
+    /** True when the agent should ask the user for more information before retrying. */
+    val needsConfirmation: Boolean = false
+) {
+    companion object {
+        fun needsConfirmation(message: String): CategoryMutationResponse = CategoryMutationResponse(
+            status = STATUS_NEEDS_CONFIRMATION,
+            message = message,
+            needsConfirmation = true
+        )
 
-/**
- * Inclusive date-period query input for an Android agent or assistant.
- */
-@AppFunctionSerializable(isDescribedByKDoc = true)
-data class PeriodTotalRequest(
-    /** Inclusive start date in ISO yyyy-MM-dd format. */
-    val startDateIso: String,
-    /** Inclusive end date in ISO yyyy-MM-dd format. */
-    val endDateIso: String
-)
+        const val STATUS_SUCCESS = "success"
+        const val STATUS_NEEDS_CONFIRMATION = "needs_confirmation"
+        const val STATUS_FAILED = "failed"
+    }
+}
 
 /**
  * Result returned after trying to create a Spesify transaction.
@@ -404,6 +527,71 @@ data class FinancialAmountResponse(
 
         const val STATUS_SUCCESS = "success"
         const val STATUS_FAILED = "failed"
+    }
+}
+
+private fun CategoryListResult.toCategoryListResponse(): CategoryListResponse {
+    return CategoryListResponse(
+        status = status,
+        message = message,
+        categoriesJson = categories.toCategoryJson()
+    )
+}
+
+private fun List<it.danielebufarini.spesify.data.AgentCategory>.toCategoryJson(): String {
+    return joinToString(prefix = "[", separator = ",", postfix = "]") { category ->
+        "{" +
+            "\"id\":\"${category.id.escapeJson()}\"," +
+            "\"name\":\"${category.name.escapeJson()}\"," +
+            "\"kind\":\"${category.kind.toJsonKind()}\"," +
+            "\"icon\":\"${category.icon.escapeJson()}\"," +
+            "\"color\":\"${category.color.escapeJson()}\"," +
+            "\"isArchived\":${category.isArchived}," +
+            "\"isInUse\":${category.isInUse}" +
+            "}"
+    }
+}
+
+private fun TransactionKind.toJsonKind(): String {
+    return when (this) {
+        TransactionKind.Expense -> "expense"
+        TransactionKind.Income -> "income"
+    }
+}
+
+private fun String.escapeJson(): String {
+    return buildString {
+        for (char in this@escapeJson) {
+            when (char) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> append(char)
+            }
+        }
+    }
+}
+
+private fun CategoryCommandResult.toCategoryMutationResponse(): CategoryMutationResponse {
+    return when (this) {
+        is CategoryCommandResult.Success -> CategoryMutationResponse(
+            status = CategoryMutationResponse.STATUS_SUCCESS,
+            categoryId = categoryId,
+            message = message,
+            needsConfirmation = false
+        )
+        is CategoryCommandResult.NeedsConfirmation -> CategoryMutationResponse(
+            status = CategoryMutationResponse.STATUS_NEEDS_CONFIRMATION,
+            message = message,
+            needsConfirmation = true
+        )
+        is CategoryCommandResult.Failed -> CategoryMutationResponse(
+            status = CategoryMutationResponse.STATUS_FAILED,
+            message = message,
+            needsConfirmation = false
+        )
     }
 }
 

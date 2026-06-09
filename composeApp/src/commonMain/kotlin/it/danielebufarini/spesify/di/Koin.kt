@@ -4,6 +4,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import it.danielebufarini.spesify.data.AddTransactionUseCase
 import it.danielebufarini.spesify.data.BackupRestoreService
 import it.danielebufarini.spesify.data.BudgetDataReplacementRepository
+import it.danielebufarini.spesify.data.CategoryAgentUseCase
 import it.danielebufarini.spesify.data.CategoryManagementRepository
 import it.danielebufarini.spesify.data.CategoryRepository
 import it.danielebufarini.spesify.data.CloudSyncService
@@ -51,6 +52,7 @@ val sharedModule = module {
     single { DashboardRepository(get()) }
     single { RecurringTransactionService(get(), get(), get()) }
     single { AddTransactionUseCase(get<CategoryManagementRepository>(), get<TransactionWriteRepository>()) }
+    single { CategoryAgentUseCase(get<CategoryManagementRepository>()) }
     single { FinancialQueryUseCase(get(), get()) }
     single { DataReplacementService(get(), get(), get()) }
     single { ExpenseRepository(get(), get(), get(), get(), get(), get()) }
