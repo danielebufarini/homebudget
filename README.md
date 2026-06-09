@@ -16,7 +16,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
 - Voice-assisted expense entry
-- Assistant and agent integrations for adding transactions, reading totals, and checking balance
+- Assistant and agent integrations for transaction entry, financial summaries, and category management
 - Android and iOS home screen widgets
 - English and Italian localization
 
@@ -102,6 +102,7 @@ Spesify exposes selected finance actions through native system integration point
 
 - Shared transaction creation: [AddTransactionUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/AddTransactionUseCase.kt)
 - Shared financial queries: [FinancialQueryUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/FinancialQueryUseCase.kt)
+- Shared category management: [CategoryAgentUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/CategoryAgentUseCase.kt)
 - iOS bridge: [composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/ui/screens](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/ui/screens)
 - iOS App Intents: [iosApp/iosApp/AppIntents](./iosApp/iosApp/AppIntents)
 - Android AppFunctions: [SpesifyTransactionAppFunctions.kt](./androidApp/src/main/kotlin/it/danielebufarini/spesify/appfunctions/SpesifyTransactionAppFunctions.kt)
@@ -109,12 +110,14 @@ Spesify exposes selected finance actions through native system integration point
 
 Supported actions:
 
-- Add a single non-recurring expense or income. User-facing amounts are accepted in standard currency format, such as `55.56`, and converted internally to `Long` minor units.
+- Add a single non-recurring expense or income. User-facing amounts are accepted in standard currency format, such as `55.56`, and converted internally to `Long` minor units. Transaction creation does not auto-create missing categories; unknown or wrong-type categories return a confirmation/error result so an assistant does not silently create hallucinated categories.
 - Request total expenses for the current month, for a selected month, or for an inclusive date period.
 - Request total income for the current month, for a selected month, or for an inclusive date period.
-- Request the current balance, computed as recorded income up to today minus recorded expenses up to today.
+- Request the current balance, matching the dashboard cumulative balance through the current calendar month.
+- List existing expense or income categories using compact, human-readable output for Shortcuts/Siri and structured data for Android agents.
+- Add an explicit expense or income category.
 
-App Intents and AppFunctions should remain thin adapters: they parse native parameters, call the shared use cases, and return display-ready results without duplicating persistence or validation logic.
+App Intents and AppFunctions should remain thin adapters: they parse native parameters, call the shared use cases, and return display-ready results without duplicating persistence or validation logic. Android AppFunctions expose flat primitive parameters for easier ADB and agent invocation. Destructive category deletion is intentionally not exposed through assistant/agent integrations.
 
 ### UI and Navigation
 
@@ -194,12 +197,12 @@ Run the local verification suite:
 - `:androidApp:assembleDebug`
 - `:composeApp:compileKotlinIosSimulatorArm64`
 
-Run the assistant integration smoke checks after changing App Intents, AppFunctions, transaction creation, financial queries, or amount/date parsing:
+Run the assistant integration smoke checks after changing App Intents, AppFunctions, transaction creation, financial queries, category management, or amount/date parsing:
 
 1. iOS: delete and reinstall the app, open it once, recreate the Shortcuts actions, then add one expense using a standard amount such as `55.56`.
-2. iOS: run the total-expenses, total-income, and current-balance shortcuts and verify the displayed values against the app UI.
-3. Android: rebuild and reinstall the debug app, list registered AppFunctions with `adb shell cmd app_function list-app-functions`, then execute one add-transaction call and one financial-query call.
-4. Android: verify that returned minor-unit amounts and display strings match the dashboard and monthly lists.
+2. iOS: run the total-expenses, total-income, current-balance, and list-categories shortcuts; verify the displayed values against the app UI and confirm category output is readable.
+3. Android: rebuild and reinstall the debug app, list registered AppFunctions with `adb shell cmd app_function list-app-functions`, then execute one add-transaction call, one financial-query call, and one non-destructive category-management call such as list or add category.
+4. Android: verify that returned minor-unit amounts, display strings, and category results match the dashboard, monthly lists, and category list.
 
 Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, recurring transaction generation, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 
@@ -217,6 +220,8 @@ Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room
 ### Android AppFunctions
 
 AppFunctions are wired in the Android host app and backed by shared Kotlin use cases. They require an Android version that exposes the `app_function` system service; older devices can still build and run the app, but cannot execute AppFunctions through system agents or `adb shell cmd app_function`.
+
+For ADB smoke tests, pass flat JSON parameters and wrap the full command in `adb shell "..."` when the JSON contains quotes, for example `--parameters '{\"kind\":\"expense\",\"amount\":\"12.50\"}'`.
 
 ### Android Google Drive Backup
 
