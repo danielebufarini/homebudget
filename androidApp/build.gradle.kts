@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -53,12 +54,19 @@ android {
     }
 }
 
+ksp {
+    arg("appfunctions:aggregateAppFunctions", "true")
+}
+
 dependencies {
     implementation(projects.composeApp)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.appfunctions)
+    implementation(libs.androidx.appfunctions.service)
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.koin.core)
     debugImplementation(libs.compose.uiTooling)
+    ksp(libs.androidx.appfunctions.compiler)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

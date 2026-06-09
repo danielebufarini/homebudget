@@ -9,4 +9,5 @@
     <string name="widget_month_title_placeholder_short">Maggio</string>
     <string name="widget_month_title_placeholder_long">Maggio 2026</string>
     <string name="widget_amount_placeholder">€ 0.00</string>
+    <string name="appfunctions_display_description">Aggiungi transazioni e chiedi totali tramite assistenti e agenti.</string>
 </resources>

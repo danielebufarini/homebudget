@@ -1,6 +1,7 @@
 package it.danielebufarini.spesify.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import it.danielebufarini.spesify.data.AddTransactionUseCase
 import it.danielebufarini.spesify.data.BackupRestoreService
 import it.danielebufarini.spesify.data.BudgetDataReplacementRepository
 import it.danielebufarini.spesify.data.CategoryManagementRepository
@@ -20,6 +21,7 @@ import it.danielebufarini.spesify.data.ExpenseRepositoryDashboardReadAdapter
 import it.danielebufarini.spesify.data.ExpenseRepositoryIncomeReadAdapter
 import it.danielebufarini.spesify.data.ExpenseRepositoryReadAdapter
 import it.danielebufarini.spesify.data.ExpenseRepositoryTransactionWriteAdapter
+import it.danielebufarini.spesify.data.FinancialQueryUseCase
 import it.danielebufarini.spesify.data.IncomeReadRepository
 import it.danielebufarini.spesify.data.IncomeRepository
 import it.danielebufarini.spesify.data.PersistentWriteScope
@@ -48,6 +50,8 @@ val sharedModule = module {
     single { IncomeRepository(get(), get(), get()) }
     single { DashboardRepository(get()) }
     single { RecurringTransactionService(get(), get(), get()) }
+    single { AddTransactionUseCase(get<CategoryManagementRepository>(), get<TransactionWriteRepository>()) }
+    single { FinancialQueryUseCase(get(), get()) }
     single { DataReplacementService(get(), get(), get()) }
     single { ExpenseRepository(get(), get(), get(), get(), get(), get()) }
     single<CategoryManagementRepository> { ExpenseRepositoryCategoryManagementAdapter(get()) }

@@ -16,6 +16,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
 - Voice-assisted expense entry
+- Assistant and agent integrations for adding transactions, reading totals, and checking balance
 - Android and iOS home screen widgets
 - English and Italian localization
 
@@ -28,6 +29,8 @@ The shared module contains the domain model, persistence, repositories, resource
 - Koin
 - Voyager
 - SKIE
+- Apple App Intents
+- Android AppFunctions
 - kotlinx.serialization
 - kotlinx.datetime
 
@@ -45,8 +48,8 @@ Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.ver
 ## Project Layout
 
 - [composeApp](./composeApp): shared Kotlin Multiplatform module.
-- [androidApp](./androidApp): Android host application, manifest, widgets, and platform wiring.
-- [iosApp](./iosApp): Xcode project, SwiftUI app shell, iCloud integration, native iOS screens, and widget extension.
+- [androidApp](./androidApp): Android host application, manifest, widgets, AppFunctions, and platform wiring.
+- [iosApp](./iosApp): Xcode project, SwiftUI app shell, App Intents, iCloud integration, native iOS screens, and widget extension.
 
 Key shared source sets:
 
@@ -57,6 +60,7 @@ Key shared source sets:
 Key iOS areas:
 
 - [iosApp/iosApp/App](./iosApp/iosApp/App): SwiftUI app entry point, navigation, shell actions, and localization helpers.
+- [iosApp/iosApp/AppIntents](./iosApp/iosApp/AppIntents): native iOS App Intents exposed to Shortcuts and Siri.
 - [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native transaction, monthly, grouped, income, and search screens.
 - [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense): native voice expense flow.
 - [iosApp/iosApp/Sync](./iosApp/iosApp/Sync): iCloud backup and widget summary storage.
@@ -91,6 +95,26 @@ Koin is the composition root.
 - Shared graph: [composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/di](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/di)
 - Android graph: [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/di](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/di)
 - iOS graph: [composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/di](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/di)
+
+### Assistant and Agent Integrations
+
+Spesify exposes selected finance actions through native system integration points while keeping business logic in shared Kotlin code.
+
+- Shared transaction creation: [AddTransactionUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/AddTransactionUseCase.kt)
+- Shared financial queries: [FinancialQueryUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/FinancialQueryUseCase.kt)
+- iOS bridge: [composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/ui/screens](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/ui/screens)
+- iOS App Intents: [iosApp/iosApp/AppIntents](./iosApp/iosApp/AppIntents)
+- Android AppFunctions: [SpesifyTransactionAppFunctions.kt](./androidApp/src/main/kotlin/it/danielebufarini/spesify/appfunctions/SpesifyTransactionAppFunctions.kt)
+- Android AppFunctions metadata: [app_metadata.xml](./androidApp/src/main/res/xml/app_metadata.xml)
+
+Supported actions:
+
+- Add a single non-recurring expense or income. User-facing amounts are accepted in standard currency format, such as `55.56`, and converted internally to `Long` minor units.
+- Request total expenses for the current month, for a selected month, or for an inclusive date period.
+- Request total income for the current month, for a selected month, or for an inclusive date period.
+- Request the current balance, computed as recorded income up to today minus recorded expenses up to today.
+
+App Intents and AppFunctions should remain thin adapters: they parse native parameters, call the shared use cases, and return display-ready results without duplicating persistence or validation logic.
 
 ### UI and Navigation
 
@@ -170,6 +194,13 @@ Run the local verification suite:
 - `:androidApp:assembleDebug`
 - `:composeApp:compileKotlinIosSimulatorArm64`
 
+Run the assistant integration smoke checks after changing App Intents, AppFunctions, transaction creation, financial queries, or amount/date parsing:
+
+1. iOS: delete and reinstall the app, open it once, recreate the Shortcuts actions, then add one expense using a standard amount such as `55.56`.
+2. iOS: run the total-expenses, total-income, and current-balance shortcuts and verify the displayed values against the app UI.
+3. Android: rebuild and reinstall the debug app, list registered AppFunctions with `adb shell cmd app_function list-app-functions`, then execute one add-transaction call and one financial-query call.
+4. Android: verify that returned minor-unit amounts and display strings match the dashboard and monthly lists.
+
 Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, recurring transaction generation, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 
 1. Add an expense category in the native add/edit transaction flow, verify it is selected, then reopen the category picker and confirm it persists.
@@ -182,6 +213,10 @@ Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room
 8. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
 
 ## Setup Notes
+
+### Android AppFunctions
+
+AppFunctions are wired in the Android host app and backed by shared Kotlin use cases. They require an Android version that exposes the `app_function` system service; older devices can still build and run the app, but cannot execute AppFunctions through system agents or `adb shell cmd app_function`.
 
 ### Android Google Drive Backup
 

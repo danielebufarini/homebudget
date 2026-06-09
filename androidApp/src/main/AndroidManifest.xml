@@ -15,6 +15,10 @@
             android:supportsRtl="true"
             android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
+        <property
+                android:name="android.app.appfunctions.app_metadata"
+                android:resource="@xml/app_metadata" />
+
         <receiver
                 android:name=".SpesifyWidgetProvider"
                 android:exported="false">
