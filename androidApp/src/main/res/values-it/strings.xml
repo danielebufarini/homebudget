@@ -10,4 +10,14 @@
     <string name="widget_month_title_placeholder_long">Maggio 2026</string>
     <string name="widget_amount_placeholder">€ 0.00</string>
     <string name="appfunctions_display_description">Aggiungi transazioni e chiedi totali tramite assistenti e agenti.</string>
+
+    <!-- Notification expense detection -->
+    <string name="notification_detection_title">Rilevamento spese</string>
+    <string name="notification_detection_description">Spesify può aiutarti a registrare più velocemente alcune spese leggendo localmente le notifiche delle app supportate. I dati delle notifiche non vengono inviati a server esterni.</string>
+    <string name="notification_listener_access_description">Consenti l’accesso alle notifiche per permettere a Spesify di rilevare localmente le notifiche di spesa supportate.</string>
+    <string name="notification_permission_description">Consenti le notifiche per permettere a Spesify di mostrare conferme locali prima di salvare le spese rilevate.</string>
+    <string name="notification_detection_open_listener_settings">Apri impostazioni accesso notifiche</string>
+    <string name="notification_detection_open_notification_settings">Apri impostazioni notifiche</string>
+    <string name="notification_detection_whitelist_empty">Nessuna app supportata è stata ancora sincronizzata.</string>
+    <string name="notification_detection_whitelist_stale">L’elenco delle app supportate potrebbe non essere aggiornato.</string>
 </resources>

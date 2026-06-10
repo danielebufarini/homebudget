@@ -2,6 +2,7 @@ package it.danielebufarini.spesify.data.csv
 
 import it.danielebufarini.spesify.data.PendingExpense
 import it.danielebufarini.spesify.data.PendingIncome
+import it.danielebufarini.spesify.data.RECURRING_MONTHLY_OCCURRENCES
 import it.danielebufarini.spesify.data.buildRecurringMonthlyExpenses
 import it.danielebufarini.spesify.data.buildRecurringMonthlyIncomes
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_EXPENSE
@@ -67,13 +68,13 @@ class CsvBudgetRoundTripTest {
 
         assertEquals(
             CsvImportResult(
-                importedCount = 72,
+                importedCount = RECURRING_MONTHLY_OCCURRENCES * 2,
                 skippedCount = 0
             ),
             importResult
         )
-        assertEquals(36, importStore.getAllExpensesSnapshotBlocking().size)
-        assertEquals(36, importStore.getAllIncomesSnapshotBlocking().size)
+        assertEquals(RECURRING_MONTHLY_OCCURRENCES, importStore.getAllExpensesSnapshotBlocking().size)
+        assertEquals(RECURRING_MONTHLY_OCCURRENCES, importStore.getAllIncomesSnapshotBlocking().size)
         assertTrue(
             importStore.getAllExpensesSnapshotBlocking()
                 .all { expense -> expense.description == "mortgage payment" }

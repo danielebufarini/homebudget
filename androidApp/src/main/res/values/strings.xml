@@ -9,4 +9,14 @@
     <string name="widget_month_title_placeholder_long">May 2026</string>
     <string name="widget_amount_placeholder">$ 0.00</string>
     <string name="appfunctions_display_description">Add transactions and ask for totals through assistants and agents.</string>
+
+    <!-- Notification expense detection -->
+    <string name="notification_detection_title">Expense detection</string>
+    <string name="notification_detection_description">Spesify can help you record some expenses faster by locally reading notifications from supported apps. Notification data is not sent to external servers.</string>
+    <string name="notification_listener_access_description">Allow notification access so Spesify can detect supported expense notifications locally.</string>
+    <string name="notification_permission_description">Allow notifications so Spesify can show local confirmations before saving detected expenses.</string>
+    <string name="notification_detection_open_listener_settings">Open notification access settings</string>
+    <string name="notification_detection_open_notification_settings">Open notification settings</string>
+    <string name="notification_detection_whitelist_empty">No supported apps have been synced yet.</string>
+    <string name="notification_detection_whitelist_stale">The supported apps list may be out of date.</string>
 </resources>

@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.di
 
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.android.Android
 import it.danielebufarini.spesify.AndroidStartupRestore
 import it.danielebufarini.spesify.PlatformStartupRestore
 import it.danielebufarini.spesify.data.AndroidCloudBackupStore
@@ -7,6 +9,16 @@ import it.danielebufarini.spesify.data.DashboardPreferencesStore
 import it.danielebufarini.spesify.data.DatabaseBuilderFactory
 import it.danielebufarini.spesify.data.GoogleDriveAuthorizationManager
 import it.danielebufarini.spesify.data.PlatformDashboardPreferencesStore
+import it.danielebufarini.spesify.data.notifications.AppWhitelistCache
+import it.danielebufarini.spesify.data.notifications.AppWhitelistHttpTransport
+import it.danielebufarini.spesify.data.notifications.AppWhitelistRemoteDataSource
+import it.danielebufarini.spesify.data.notifications.AppWhitelistRepository
+import it.danielebufarini.spesify.data.notifications.DataStoreAppWhitelistCache
+import it.danielebufarini.spesify.data.notifications.DefaultAppWhitelistRepository
+import it.danielebufarini.spesify.data.notifications.KtorAppWhitelistHttpTransport
+import it.danielebufarini.spesify.data.notifications.KtorAppWhitelistRemoteDataSource
+import it.danielebufarini.spesify.data.notifications.NotificationDetectionPermissionHelper
+import it.danielebufarini.spesify.data.notifications.appWhitelistJson
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -16,4 +28,11 @@ actual val platformModule = module {
     single { AndroidCloudBackupStore(androidContext(), get()) }
     single { DatabaseBuilderFactory(androidContext()) }
     single<DashboardPreferencesStore> { PlatformDashboardPreferencesStore(androidContext()) }
+    single { appWhitelistJson }
+    single { HttpClient(Android) { expectSuccess = false } }
+    single<AppWhitelistHttpTransport> { KtorAppWhitelistHttpTransport(get()) }
+    single<AppWhitelistRemoteDataSource> { KtorAppWhitelistRemoteDataSource(get(), get()) }
+    single<AppWhitelistCache> { DataStoreAppWhitelistCache(androidContext(), get()) }
+    single<AppWhitelistRepository> { DefaultAppWhitelistRepository(get(), get()) }
+    single { NotificationDetectionPermissionHelper(androidContext()) }
 }

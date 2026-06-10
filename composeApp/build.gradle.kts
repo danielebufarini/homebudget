@@ -58,6 +58,9 @@ kotlin {
             implementation(libs.google.api.services.drive)
             implementation(libs.googleid)
             implementation(libs.mlkit.genai.prompt)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.android)
+            implementation(libs.androidx.datastore.preferences)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
