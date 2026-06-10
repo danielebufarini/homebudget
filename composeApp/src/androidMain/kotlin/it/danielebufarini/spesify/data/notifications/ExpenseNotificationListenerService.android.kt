@@ -4,17 +4,21 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.concurrent.Executors
 
 class ExpenseNotificationListenerService : NotificationListenerService(), KoinComponent {
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val processorDispatcher = Executors.newFixedThreadPool(MAX_PARALLEL_NOTIFICATION_JOBS) { runnable ->
+        Thread(runnable, "SpesifyNotificationProcessor").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+    private val serviceScope = CoroutineScope(SupervisorJob() + processorDispatcher)
     private val whitelistRepository: AppWhitelistRepository by inject()
-    private val parser: ExpenseNotificationTextParser by inject()
+    private val interpretationPipeline: ExpenseInterpretationPipeline by inject()
     private val merchantCategoryResolver: MerchantCategoryResolver by inject()
     private val notifier: ExpenseConfirmationNotifier by inject()
 
@@ -30,6 +34,7 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
 
     override fun onDestroy() {
         serviceScope.cancel()
+        processorDispatcher.close()
         super.onDestroy()
     }
 
@@ -51,18 +56,22 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
             return
         }
 
-        val parsed = parser.parse(rawText)
-        if (parsed == null) {
-            Log.d(TAG, "Ignored whitelisted notification: parser found no amount")
+        val interpretation = interpretationPipeline.interpret(
+            text = rawText,
+            canUseLocalLlmFallback = isWhitelisted
+        )
+        if (interpretation?.amountMinor == null) {
+            Log.d(TAG, "Ignored whitelisted notification: no amount candidate found")
             return
         }
 
+        val merchant = interpretation.merchant
         val textHash = rawText.sha256Hex()
         val dedupeKey = listOf(
             sourcePackage,
             sbn.postTime.toString(),
-            parsed.toAmountMinor().toString(),
-            parsed.merchant.orEmpty(),
+            interpretation.amountMinor.toString(),
+            merchant.orEmpty(),
             textHash
         ).joinToString(separator = "|")
         if (!recentDeduplicator.shouldProcess(dedupeKey, System.currentTimeMillis())) {
@@ -70,25 +79,26 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
             return
         }
 
-        val categoryId = merchantCategoryResolver.resolveCategoryId(parsed.merchant)
+        val categoryId = merchantCategoryResolver.resolveCategoryId(merchant)
         val candidate = ExpenseNotificationCandidate(
             sourcePackage = sourcePackage,
-            amountMinor = parsed.toAmountMinor(),
-            merchant = parsed.merchant,
+            amountMinor = interpretation.amountMinor,
+            merchant = merchant,
             textHash = textHash,
             postTimeMillis = sbn.postTime,
             categoryId = categoryId
         )
         Log.d(
             TAG,
-            "Parsed candidate: amountMinor=${candidate.amountMinor} merchantPresent=${!candidate.merchant.isNullOrBlank()} categoryResolved=${!categoryId.isNullOrBlank()} notificationId=${candidate.notificationId}"
+            "Parsed candidate: source=${interpretation.source} amountMinor=${candidate.amountMinor} merchantPresent=${!candidate.merchant.isNullOrBlank()} categoryResolved=${!categoryId.isNullOrBlank()} notificationId=${candidate.notificationId}"
         )
-        val shown = notifier.show(candidate)
-        Log.d(TAG, "Confirmation notification requested: shown=$shown notificationId=${candidate.notificationId}")
+        notifier.show(candidate)
+        Log.d(TAG, "Confirmation notification requested: notificationId=${candidate.notificationId}")
     }
 
     private companion object {
         private const val TAG = "SpesifyNotifDetect"
+        private const val MAX_PARALLEL_NOTIFICATION_JOBS = 2
         private val recentDeduplicator = RecentNotificationDeduplicator()
     }
 }

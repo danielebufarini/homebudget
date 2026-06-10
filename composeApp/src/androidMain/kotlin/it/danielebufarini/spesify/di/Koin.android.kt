@@ -9,6 +9,7 @@ import it.danielebufarini.spesify.data.DashboardPreferencesStore
 import it.danielebufarini.spesify.data.DatabaseBuilderFactory
 import it.danielebufarini.spesify.data.GoogleDriveAuthorizationManager
 import it.danielebufarini.spesify.data.PlatformDashboardPreferencesStore
+import it.danielebufarini.spesify.data.notifications.AndroidLocalLlmExpenseTextInterpreter
 import it.danielebufarini.spesify.data.notifications.AppWhitelistCache
 import it.danielebufarini.spesify.data.notifications.AppWhitelistFallbackDataSource
 import it.danielebufarini.spesify.data.notifications.AppWhitelistHttpTransport
@@ -20,13 +21,15 @@ import it.danielebufarini.spesify.data.notifications.DataStoreExpenseNotificatio
 import it.danielebufarini.spesify.data.notifications.DefaultAppWhitelistRepository
 import it.danielebufarini.spesify.data.notifications.DefaultMerchantCategoryResolver
 import it.danielebufarini.spesify.data.notifications.ExpenseConfirmationNotifier
+import it.danielebufarini.spesify.data.notifications.ExpenseInterpretationPipeline
 import it.danielebufarini.spesify.data.notifications.ExpenseNotificationActionHandler
 import it.danielebufarini.spesify.data.notifications.ExpenseNotificationActionStore
-import it.danielebufarini.spesify.data.notifications.ExpenseNotificationTextParser
 import it.danielebufarini.spesify.data.notifications.KtorAppWhitelistHttpTransport
 import it.danielebufarini.spesify.data.notifications.KtorAppWhitelistRemoteDataSource
+import it.danielebufarini.spesify.data.notifications.LlmExpenseJsonValidator
 import it.danielebufarini.spesify.data.notifications.MerchantCategoryResolver
 import it.danielebufarini.spesify.data.notifications.NotificationDetectionPermissionHelper
+import it.danielebufarini.spesify.data.notifications.RegexExpenseTextInterpreter
 import it.danielebufarini.spesify.data.notifications.appWhitelistJson
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -45,7 +48,15 @@ actual val platformModule = module {
     single<AppWhitelistCache> { DataStoreAppWhitelistCache(androidContext(), get()) }
     single<AppWhitelistRepository> { DefaultAppWhitelistRepository(get(), get(), get()) }
     single { NotificationDetectionPermissionHelper(androidContext()) }
-    single { ExpenseNotificationTextParser() }
+    single { RegexExpenseTextInterpreter() }
+    single { LlmExpenseJsonValidator() }
+    single { AndroidLocalLlmExpenseTextInterpreter(get()) }
+    single {
+        ExpenseInterpretationPipeline(
+            regexInterpreter = get<RegexExpenseTextInterpreter>(),
+            localLlmInterpreter = get<AndroidLocalLlmExpenseTextInterpreter>()
+        )
+    }
     single<MerchantCategoryResolver> { DefaultMerchantCategoryResolver(get()) }
     single<ExpenseNotificationActionStore> { DataStoreExpenseNotificationActionStore(androidContext()) }
     single { ExpenseNotificationActionHandler(get(), get()) }

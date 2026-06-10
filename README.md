@@ -16,7 +16,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
 - Voice-assisted expense entry
-- Android notification-based expense detection for supported apps, with local parsing and explicit confirmation
+- Android notification-based expense detection for supported apps, with deterministic parsing, local Gemini Nano fallback, and explicit confirmation
 - Assistant and agent integrations for transaction entry, financial summaries, and category management
 - Android and iOS home screen widgets
 - English and Italian localization
@@ -32,6 +32,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - WorkManager
 - Ktor
 - Jetpack DataStore
+- ML Kit GenAI Prompt API / Gemini Nano on Android
 - SKIE
 - Apple App Intents
 - Android AppFunctions
@@ -57,14 +58,14 @@ Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.ver
 
 Key shared source sets:
 
-- [composeApp/src/commonMain](./composeApp/src/commonMain): shared app entry point, Compose UI, repositories, Room schema, resources, and localization.
-- [composeApp/src/androidMain](./composeApp/src/androidMain): Android DI, platform bridges, Google Drive backup, Android voice entry, and Android notification expense detection.
+- [composeApp/src/commonMain](./composeApp/src/commonMain): shared app entry point, Compose UI, repositories, Room schema, resources, localization, and platform-neutral notification interpretation pipeline.
+- [composeApp/src/androidMain](./composeApp/src/androidMain): Android DI, platform bridges, Google Drive backup, Android voice entry, Android notification expense detection, and Gemini Nano fallback wiring.
 - [composeApp/src/iosMain](./composeApp/src/iosMain): iOS DI, `ComposeUIViewController` factories, and Kotlin bridges used by SwiftUI.
 
 Key Android areas:
 
 - [androidApp/src/main/kotlin/it/danielebufarini/spesify/notificationsync](./androidApp/src/main/kotlin/it/danielebufarini/spesify/notificationsync): WorkManager scheduling and worker for supported-app whitelist synchronization.
-- [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/notifications](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/notifications): Android-only notification listener, whitelist cache, notification parsing, confirmation actions, and permission helpers.
+- [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/notifications](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/notifications): Android-only notification listener, whitelist cache, Gemini Nano fallback, confirmation actions, and permission helpers.
 - [androidApp/src/main/assets/android_banks_packages_list.json](./androidApp/src/main/assets/android_banks_packages_list.json): bundled supported-app whitelist used only as a first-run fallback when the remote sync is unavailable and the cache is empty.
 
 Key iOS areas:
@@ -164,7 +165,9 @@ Notification-based expense detection is Android-only and opt-in. The Android hos
 
 Supported financial app packages are fetched with Ktor from the remote JSON whitelist and cached locally with Jetpack DataStore. The sync runs through WorkManager periodically and can also be triggered at cold start when the cache is empty or stale. If the remote sync fails and there is no cached whitelist yet, the app bootstraps the cache from the bundled asset [android_banks_packages_list.json](./androidApp/src/main/assets/android_banks_packages_list.json). Existing cache data is preserved on sync failure.
 
-When Notification Listener access is enabled by the user, Spesify filters posted notifications by source package using the local whitelist, extracts notification text locally, and parses candidate expense amounts and merchants. Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are not persisted and are not sent to external services.
+When Notification Listener access is enabled by the user, Spesify filters posted notifications by source package using the local whitelist, extracts notification text locally, and interprets candidate expense amounts and merchants through a shared pipeline. The pipeline runs the deterministic regex parser first and uses its high-confidence result directly. If regex parsing fails, produces low confidence, or finds an amount without a useful merchant, Android may fall back to the local Gemini Nano interpreter. The fallback is only attempted for whitelisted source packages, runs outside the notification listener callback, and normalizes strictly validated JSON into the same parsed candidate model used by regex.
+
+Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are used only transiently for local interpretation: they are not persisted, logged, or sent to external services. Parsed amounts are represented internally as `Long` minor units.
 
 ## Localization
 
@@ -228,7 +231,9 @@ Run the Android notification detection smoke checklist after changing the notifi
 2. Open Spesify once so the whitelist cache can be populated from the remote source or bundled fallback.
 3. Post a notification from a whitelisted test package, such as `it.fineco.mobile`, with text like `Pagamento carta 12,34 EUR presso SUPERMERCATO TEST`.
 4. Verify the confirmation notification appears, `Ignora` dismisses without saving, `Modifica` opens the pre-filled expense editor, and `Conferma` saves exactly one expense.
-5. Verify notifications from non-whitelisted packages or without a parseable amount are ignored.
+5. Verify notifications from non-whitelisted packages are ignored and do not trigger the local LLM fallback.
+6. Post a whitelisted notification that regex cannot fully parse, then verify the local fallback does not block the listener and either produces a validated confirmation candidate or safely ignores the notification when Gemini Nano is unavailable or validation fails.
+7. Check Logcat while testing and verify raw notification text is not printed.
 
 Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, recurring transaction generation, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 

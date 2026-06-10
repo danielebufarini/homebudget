@@ -1,7 +1,5 @@
 package it.danielebufarini.spesify.data.notifications
 
-import java.math.BigDecimal
-import java.math.RoundingMode
 import kotlin.math.absoluteValue
 
 internal data class ExpenseNotificationCandidate(
@@ -32,11 +30,6 @@ internal data class ExpenseNotificationActionData(
     val dateMillis: Long
 )
 
-internal fun ParsedExpenseNotification.toAmountMinor(): Long = amount.toMinorUnits()
-
-internal fun BigDecimal.toMinorUnits(): Long = movePointRight(2)
-    .setScale(0, RoundingMode.HALF_UP)
-    .longValueExact()
 
 private fun buildConfirmationId(
     sourcePackage: String,

@@ -1,31 +1,34 @@
 package it.danielebufarini.spesify.data.notifications
 
-import java.math.BigDecimal
-
 data class ParsedExpenseNotification(
-    val amount: BigDecimal,
-    val merchant: String?,
-    val rawText: String
+    val amountMinor: Long,
+    val merchant: String?
 )
 
 class ExpenseNotificationTextParser {
 
     fun parse(rawText: String): ParsedExpenseNotification? {
         val amountMatch = amountRegex.find(rawText) ?: return null
-        val amount = amountMatch.toBigDecimalOrNull() ?: return null
+        val amountMinor = amountMatch.toMinorUnitsOrNull() ?: return null
         return ParsedExpenseNotification(
-            amount = amount,
-            merchant = extractMerchant(rawText),
-            rawText = rawText
+            amountMinor = amountMinor,
+            merchant = extractMerchant(rawText)
         )
     }
 
-    private fun MatchResult.toBigDecimalOrNull(): BigDecimal? {
+    private fun MatchResult.toMinorUnitsOrNull(): Long? {
         val integerPart = groups[1]?.value ?: return null
         val decimalPart = groups[2]?.value ?: return null
-        val normalized = integerPart.replace(".", "") + "." + decimalPart
-        return runCatching { BigDecimal(normalized) }.getOrNull()
+        val euros = integerPart.replace(".", "").toLongOrNull() ?: return null
+        val cents = decimalPart.toLongOrNull() ?: return null
+        return euros.safeMultiply(100L)?.safeAdd(cents)?.takeIf { it > 0L }
     }
+
+    private fun Long.safeMultiply(other: Long): Long? =
+        if (this > Long.MAX_VALUE / other) null else this * other
+
+    private fun Long.safeAdd(other: Long): Long? =
+        if (this > Long.MAX_VALUE - other) null else this + other
 
     private fun extractMerchant(rawText: String): String? {
         return merchantMarkers.firstNotNullOfOrNull { marker ->

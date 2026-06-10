@@ -1,8 +1,8 @@
 package it.danielebufarini.spesify.data.notifications
 
-import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class ExpenseNotificationTextParserTest {
@@ -12,42 +12,42 @@ class ExpenseNotificationTextParserTest {
     fun parse_extractsAmountWithCommaDecimals() {
         val parsed = parser.parse("Hai speso 12,50€")
 
-        assertEquals(BigDecimal("12.50"), parsed?.amount)
+        assertEquals(1_250L, parsed?.amountMinor)
     }
 
     @Test
     fun parse_extractsAmountWithEuroSymbolAfterNumber() {
         val parsed = parser.parse("Hai speso 12,50 €")
 
-        assertEquals(BigDecimal("12.50"), parsed?.amount)
+        assertEquals(1_250L, parsed?.amountMinor)
     }
 
     @Test
     fun parse_extractsAmountWithEuroSymbolBeforeNumber() {
         val parsed = parser.parse("Spesa di €12,50 da Esselunga")
 
-        assertEquals(BigDecimal("12.50"), parsed?.amount)
+        assertEquals(1_250L, parsed?.amountMinor)
     }
 
     @Test
     fun parse_extractsAmountWithEurPrefix() {
         val parsed = parser.parse("Pagamento autorizzato: EUR 12,50")
 
-        assertEquals(BigDecimal("12.50"), parsed?.amount)
+        assertEquals(1_250L, parsed?.amountMinor)
     }
 
     @Test
     fun parse_extractsAmountWithEurSuffix() {
         val parsed = parser.parse("Pagamento di 12,50 EUR presso Esselunga")
 
-        assertEquals(BigDecimal("12.50"), parsed?.amount)
+        assertEquals(1_250L, parsed?.amountMinor)
     }
 
     @Test
     fun parse_extractsAmountWithThousandsSeparator() {
         val parsed = parser.parse("Pagamento di 1.234,56 €")
 
-        assertEquals(BigDecimal("1234.56"), parsed?.amount)
+        assertEquals(123_456L, parsed?.amountMinor)
     }
 
     @Test
@@ -74,5 +74,14 @@ class ExpenseNotificationTextParserTest {
     @Test
     fun parse_returnsNullWhenAmountIsMissing() {
         assertNull(parser.parse("Nuovo messaggio dalla banca"))
+    }
+
+    @Test
+    fun parse_doesNotKeepRawNotificationTextInResult() {
+        val rawText = "Pagamento carta 12,34 EUR presso SUPERMERCATO TEST"
+        val parsed = parser.parse(rawText)
+
+        assertEquals(1_234L, parsed?.amountMinor)
+        assertFalse(parsed.toString().contains(rawText))
     }
 }
