@@ -16,6 +16,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
 - Voice-assisted expense entry
+- Android notification-based expense detection for supported apps, with local parsing and explicit confirmation
 - Assistant and agent integrations for transaction entry, financial summaries, and category management
 - Android and iOS home screen widgets
 - English and Italian localization
@@ -28,6 +29,9 @@ The shared module contains the domain model, persistence, repositories, resource
 - Room KMP with bundled SQLite
 - Koin
 - Voyager
+- WorkManager
+- Ktor
+- Jetpack DataStore
 - SKIE
 - Apple App Intents
 - Android AppFunctions
@@ -54,8 +58,14 @@ Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.ver
 Key shared source sets:
 
 - [composeApp/src/commonMain](./composeApp/src/commonMain): shared app entry point, Compose UI, repositories, Room schema, resources, and localization.
-- [composeApp/src/androidMain](./composeApp/src/androidMain): Android DI, platform bridges, Google Drive backup, and Android voice entry.
+- [composeApp/src/androidMain](./composeApp/src/androidMain): Android DI, platform bridges, Google Drive backup, Android voice entry, and Android notification expense detection.
 - [composeApp/src/iosMain](./composeApp/src/iosMain): iOS DI, `ComposeUIViewController` factories, and Kotlin bridges used by SwiftUI.
+
+Key Android areas:
+
+- [androidApp/src/main/kotlin/it/danielebufarini/spesify/notificationsync](./androidApp/src/main/kotlin/it/danielebufarini/spesify/notificationsync): WorkManager scheduling and worker for supported-app whitelist synchronization.
+- [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/notifications](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/data/notifications): Android-only notification listener, whitelist cache, notification parsing, confirmation actions, and permission helpers.
+- [androidApp/src/main/assets/android_banks_packages_list.json](./androidApp/src/main/assets/android_banks_packages_list.json): bundled supported-app whitelist used only as a first-run fallback when the remote sync is unavailable and the cache is empty.
 
 Key iOS areas:
 
@@ -148,6 +158,14 @@ Voice entry is platform-specific, with shared prompt and contract helpers in [Vo
 - Android implementation: [composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/ui/screens](./composeApp/src/androidMain/kotlin/it/danielebufarini/spesify/ui/screens)
 - iOS implementation: [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense)
 
+### Android Notification Expense Detection
+
+Notification-based expense detection is Android-only and opt-in. The Android host registers the `NotificationListenerService`, while shared Android source-set code owns whitelist caching, parsing, confirmation notifications, action handling, and permission helpers.
+
+Supported financial app packages are fetched with Ktor from the remote JSON whitelist and cached locally with Jetpack DataStore. The sync runs through WorkManager periodically and can also be triggered at cold start when the cache is empty or stale. If the remote sync fails and there is no cached whitelist yet, the app bootstraps the cache from the bundled asset [android_banks_packages_list.json](./androidApp/src/main/assets/android_banks_packages_list.json). Existing cache data is preserved on sync failure.
+
+When Notification Listener access is enabled by the user, Spesify filters posted notifications by source package using the local whitelist, extracts notification text locally, and parses candidate expense amounts and merchants. Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are not persisted and are not sent to external services.
+
 ## Localization
 
 - Shared Compose strings: [values](./composeApp/src/commonMain/composeResources/values/strings.xml), [values-it](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
@@ -204,6 +222,14 @@ Run the assistant integration smoke checks after changing App Intents, AppFuncti
 3. Android: rebuild and reinstall the debug app, list registered AppFunctions with `adb shell cmd app_function list-app-functions`, then execute one add-transaction call, one financial-query call, and one non-destructive category-management call such as list or add category.
 4. Android: verify that returned minor-unit amounts, display strings, and category results match the dashboard, monthly lists, and category list.
 
+Run the Android notification detection smoke checklist after changing the notification listener, whitelist sync, parser, permission handling, or confirmation actions:
+
+1. Install the Android app, enable Notification Listener access for Spesify, and allow app notifications on Android 13+.
+2. Open Spesify once so the whitelist cache can be populated from the remote source or bundled fallback.
+3. Post a notification from a whitelisted test package, such as `it.fineco.mobile`, with text like `Pagamento carta 12,34 EUR presso SUPERMERCATO TEST`.
+4. Verify the confirmation notification appears, `Ignora` dismisses without saving, `Modifica` opens the pre-filled expense editor, and `Conferma` saves exactly one expense.
+5. Verify notifications from non-whitelisted packages or without a parseable amount are ignored.
+
 Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, recurring transaction generation, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 
 1. Add an expense category in the native add/edit transaction flow, verify it is selected, then reopen the category picker and confirm it persists.
@@ -216,6 +242,12 @@ Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room
 8. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
 
 ## Setup Notes
+
+### Android Notification Detection
+
+Notification-based expense detection requires the user to enable Android Notification Listener access manually from system settings. This is not a normal runtime permission and cannot be granted through a permission dialog. On Android 13 and later, Spesify also needs the standard notification posting permission to show confirmation notifications.
+
+The feature remains inactive when the required access is missing. It only processes notifications locally from packages present in the cached supported-app whitelist.
 
 ### Android AppFunctions
 
