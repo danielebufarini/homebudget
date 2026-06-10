@@ -1,0 +1,14 @@
+[
+  {
+    "packageName":"it.fineco.mobile",
+    "bankName":"Fineco"
+  },
+  {
+    "packageName":"com.unicredit",
+    "bankName":"UniCredit"
+  },
+  {
+    "packageName":"com.illimity.retail",
+    "bankName":"Illimity Bank"
+  }
+]

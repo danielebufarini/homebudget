@@ -32,6 +32,12 @@ sealed class AppWhitelistSyncException(
         message = "App whitelist contains an invalid entry: $reason.",
         isTransient = false
     )
+
+    class BundledFallbackUnavailable(cause: Throwable) : AppWhitelistSyncException(
+        message = "Bundled app whitelist fallback could not be read.",
+        cause = cause,
+        isTransient = false
+    )
 }
 
 fun Throwable.isTransientAppWhitelistFailure(): Boolean {

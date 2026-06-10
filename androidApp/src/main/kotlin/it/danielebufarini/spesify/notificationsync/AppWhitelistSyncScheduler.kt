@@ -20,7 +20,6 @@ object AppWhitelistSyncScheduler {
     fun schedulePeriodic(context: Context) {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(true)
             .build()
 
         val periodicWork = PeriodicWorkRequestBuilder<AppWhitelistSyncWorker>(1, TimeUnit.DAYS)
@@ -43,7 +42,6 @@ object AppWhitelistSyncScheduler {
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(true)
             .build()
 
         val oneTimeWork = OneTimeWorkRequestBuilder<AppWhitelistSyncWorker>()
@@ -53,7 +51,7 @@ object AppWhitelistSyncScheduler {
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             COLD_START_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             oneTimeWork
         )
     }

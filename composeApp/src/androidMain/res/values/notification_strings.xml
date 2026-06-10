@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_expense_confirmation_channel_name">Expense confirmations</string>
+    <string name="notification_expense_confirmation_channel_description">Notifications that ask you to confirm expenses detected locally.</string>
+    <string name="notification_expense_confirmation_title">Confirm expense</string>
+    <string name="notification_expense_confirmation_body_with_merchant">I saw %1$s€ at %2$s, confirm?</string>
+    <string name="notification_expense_confirmation_body_without_merchant">I saw %1$s€, confirm?</string>
+    <string name="notification_expense_action_confirm">Confirm</string>
+    <string name="notification_expense_action_modify">Modify</string>
+    <string name="notification_expense_action_ignore">Ignore</string>
+    <string name="notification_detection_settings_title">Notification expense detection</string>
+    <string name="notification_detection_settings_description">Spesify can help you record some expenses faster by locally reading notifications from supported apps. Notification data is not sent to external servers.</string>
+    <string name="notification_listener_access_enabled">Notification access enabled</string>
+    <string name="notification_listener_access_disabled">Notification access disabled</string>
+    <string name="notification_permission_enabled">Notification permission granted</string>
+    <string name="notification_permission_disabled">Notification permission not granted</string>
+    <string name="notification_detection_open_listener_settings">Open notification access settings</string>
+    <string name="notification_detection_open_notification_settings">Open app notification settings</string>
+</resources>

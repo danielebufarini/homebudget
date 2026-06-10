@@ -21,6 +21,9 @@ import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import it.danielebufarini.spesify.data.RecurringTransactionService
 import it.danielebufarini.spesify.ui.screens.dashboard.DashboardScreen
+import it.danielebufarini.spesify.ui.screens.transactions.AddTransactionScreen
+import it.danielebufarini.spesify.ui.screens.transactions.ExpenseEditorPrefill
+import it.danielebufarini.spesify.ui.screens.transactions.TransactionEditorKind
 import it.danielebufarini.spesify.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -42,7 +45,10 @@ private sealed interface AppStartupUiState {
 }
 
 @Composable
-fun App(openVoiceExpenseRequest: Int = 0) {
+fun App(
+    openVoiceExpenseRequest: Int = 0,
+    openExpenseEditorPrefill: ExpenseEditorPrefill? = null
+) {
     val startupRestore: PlatformStartupRestore = koinInject()
     val recurringTransactionService: RecurringTransactionService = koinInject()
     val scope = rememberCoroutineScope()
@@ -72,6 +78,9 @@ fun App(openVoiceExpenseRequest: Int = 0) {
                 var lastHandledVoiceExpenseRequest by remember {
                     mutableIntStateOf(openVoiceExpenseRequest)
                 }
+                var lastHandledExpensePrefillRequestId by remember {
+                    mutableStateOf<String?>(null)
+                }
 
                 Navigator(
                     DashboardScreen(openVoiceExpenseRequest = openVoiceExpenseRequest)
@@ -81,6 +90,18 @@ fun App(openVoiceExpenseRequest: Int = 0) {
                             lastHandledVoiceExpenseRequest = openVoiceExpenseRequest
                             navigator.replaceAll(
                                 DashboardScreen(openVoiceExpenseRequest = openVoiceExpenseRequest)
+                            )
+                        }
+                    }
+                    LaunchedEffect(openExpenseEditorPrefill) {
+                        val prefill = openExpenseEditorPrefill ?: return@LaunchedEffect
+                        if (prefill.requestId != lastHandledExpensePrefillRequestId) {
+                            lastHandledExpensePrefillRequestId = prefill.requestId
+                            navigator.push(
+                                AddTransactionScreen(
+                                    initialKind = TransactionEditorKind.Expense,
+                                    initialExpensePrefill = prefill
+                                )
                             )
                         }
                     }

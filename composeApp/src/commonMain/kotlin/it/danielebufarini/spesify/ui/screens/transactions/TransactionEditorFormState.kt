@@ -42,6 +42,18 @@ internal class TransactionEditorFormState internal constructor(
         isInitialized = true
     }
 
+    fun initializeFromExpensePrefill(prefill: ExpenseEditorPrefill) {
+        amount = formatAmountInput(prefill.amountMinor)
+        description = prefill.description.orEmpty()
+        selectedCategoryId = prefill.categoryId
+        selectedDateMillis = prefill.dateMillis ?: selectedDateMillis
+        installmentCount = 1
+        isRecurringMonthly = false
+        recurringSeriesId = null
+        isShared = false
+        isInitialized = true
+    }
+
     fun initializeFromIncome(income: Income) {
         amount = formatAmountInput(income.amount)
         description = income.description.orEmpty()

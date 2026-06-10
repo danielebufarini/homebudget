@@ -26,6 +26,7 @@ import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.categories.EnsureStarterCategoriesSeeded
 import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
 import it.danielebufarini.spesify.ui.screens.platform.rememberPlatformDatePicker
+import it.danielebufarini.spesify.ui.screens.transactions.ExpenseEditorPrefill
 import it.danielebufarini.spesify.ui.screens.transactions.rememberTransactionEditorFormState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
@@ -42,6 +43,7 @@ internal fun AddExpenseRoute(
     showNavigationChrome: Boolean,
     onClose: () -> Unit,
     useHostedFloatingChrome: Boolean = false,
+    initialPrefill: ExpenseEditorPrefill? = null,
 ) {
     val categoryRepository: CategoryManagementRepository = koinInject()
     val expenseReadRepository: ExpenseReadRepository = koinInject()
@@ -55,12 +57,12 @@ internal fun AddExpenseRoute(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val resolveCategoryName = rememberCategoryNameResolver()
-    val initialDateMillis = remember(expenseId) {
-        Clock.System.now().toEpochMilliseconds()
+    val initialDateMillis = remember(expenseId, initialPrefill) {
+        initialPrefill?.dateMillis ?: Clock.System.now().toEpochMilliseconds()
     }
 
     val editorState = rememberTransactionEditorFormState(
-        resetKey = expenseId,
+        resetKey = expenseId ?: initialPrefill?.requestId,
         initialDateMillis = initialDateMillis,
         initiallyInitialized = expenseId == null,
     )
@@ -83,6 +85,12 @@ internal fun AddExpenseRoute(
     val isAmountValid = evaluatedAmount != null && evaluatedAmount > 0L
 
     EnsureStarterCategoriesSeeded(categoryRepository)
+
+    LaunchedEffect(initialPrefill) {
+        if (expenseId == null && initialPrefill != null) {
+            editorState.initializeFromExpensePrefill(initialPrefill)
+        }
+    }
 
     LaunchedEffect(expenseId, categories) {
         if (expenseId == null || editorState.isInitialized) return@LaunchedEffect

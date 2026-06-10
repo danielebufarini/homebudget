@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_expense_confirmation_channel_name">Conferme spese</string>
+    <string name="notification_expense_confirmation_channel_description">Notifiche che chiedono di confermare le spese rilevate localmente.</string>
+    <string name="notification_expense_confirmation_title">Conferma spesa</string>
+    <string name="notification_expense_confirmation_body_with_merchant">Ho visto %1$s€ da %2$s, confermi?</string>
+    <string name="notification_expense_confirmation_body_without_merchant">Ho visto %1$s€, confermi?</string>
+    <string name="notification_expense_action_confirm">Conferma</string>
+    <string name="notification_expense_action_modify">Modifica</string>
+    <string name="notification_expense_action_ignore">Ignora</string>
+    <string name="notification_detection_settings_title">Rilevamento spese da notifiche</string>
+    <string name="notification_detection_settings_description">Spesify può aiutarti a registrare più velocemente alcune spese leggendo localmente le notifiche delle app supportate. I dati delle notifiche non vengono inviati a server esterni.</string>
+    <string name="notification_listener_access_enabled">Accesso alle notifiche attivo</string>
+    <string name="notification_listener_access_disabled">Accesso alle notifiche non attivo</string>
+    <string name="notification_permission_enabled">Permesso notifiche concesso</string>
+    <string name="notification_permission_disabled">Permesso notifiche non concesso</string>
+    <string name="notification_detection_open_listener_settings">Apri impostazioni accesso notifiche</string>
+    <string name="notification_detection_open_notification_settings">Apri impostazioni notifiche app</string>
+</resources>

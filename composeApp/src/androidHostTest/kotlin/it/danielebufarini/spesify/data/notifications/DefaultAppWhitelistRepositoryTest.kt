@@ -52,6 +52,75 @@ class DefaultAppWhitelistRepositoryTest {
         assertEquals(5_000L, cache.readSnapshot().lastSuccessfulSyncMillis)
     }
 
+
+    @Test
+    fun refreshWhitelist_remoteFailureWithEmptyCacheStoresBundledFallback() = runTest {
+        val cache = InMemoryAppWhitelistCache()
+        val repository = DefaultAppWhitelistRepository(
+            remoteDataSource = FakeAppWhitelistRemoteDataSource(
+                failure = AppWhitelistSyncException.RequestFailed(IllegalStateException("offline"))
+            ),
+            cache = cache,
+            fallbackDataSource = FakeAppWhitelistFallbackDataSource(
+                apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco"))
+            ),
+            clock = FixedClock(nowMillis = 10_000L)
+        )
+
+        val result = repository.refreshWhitelist()
+
+        assertTrue(result.isSuccess)
+        assertEquals(setOf("it.fineco.mobile"), repository.getWhitelistedPackages())
+        assertEquals(10_000L, cache.readSnapshot().lastSuccessfulSyncMillis)
+    }
+
+    @Test
+    fun refreshWhitelist_remoteFailureDoesNotUseBundledFallbackWhenCacheAlreadyExists() = runTest {
+        val cache = InMemoryAppWhitelistCache(
+            initialSnapshot = AppWhitelistCacheSnapshot(
+                apps = listOf(WhitelistedApp("com.unicredit", "UniCredit")),
+                lastSuccessfulSyncMillis = 5_000L
+            )
+        )
+        val repository = DefaultAppWhitelistRepository(
+            remoteDataSource = FakeAppWhitelistRemoteDataSource(
+                failure = AppWhitelistSyncException.RequestFailed(IllegalStateException("offline"))
+            ),
+            cache = cache,
+            fallbackDataSource = FakeAppWhitelistFallbackDataSource(
+                apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco"))
+            ),
+            clock = FixedClock(nowMillis = 10_000L)
+        )
+
+        val result = repository.refreshWhitelist()
+
+        assertTrue(result.isFailure)
+        assertEquals(setOf("com.unicredit"), repository.getWhitelistedPackages())
+        assertEquals(5_000L, cache.readSnapshot().lastSuccessfulSyncMillis)
+    }
+
+    @Test
+    fun refreshWhitelist_remoteAndBundledFallbackFailureLeavesEmptyCache() = runTest {
+        val cache = InMemoryAppWhitelistCache()
+        val repository = DefaultAppWhitelistRepository(
+            remoteDataSource = FakeAppWhitelistRemoteDataSource(
+                failure = AppWhitelistSyncException.RequestFailed(IllegalStateException("offline"))
+            ),
+            cache = cache,
+            fallbackDataSource = FakeAppWhitelistFallbackDataSource(
+                failure = AppWhitelistSyncException.BundledFallbackUnavailable(IllegalStateException("missing asset"))
+            ),
+            clock = FixedClock(nowMillis = 10_000L)
+        )
+
+        val result = repository.refreshWhitelist()
+
+        assertTrue(result.isFailure)
+        assertEquals(emptySet(), repository.getWhitelistedPackages())
+        assertEquals(null, cache.readSnapshot().lastSuccessfulSyncMillis)
+    }
+
     @Test
     fun isCacheEmptyOrStale_returnsTrueWhenCacheIsEmpty() = runTest {
         val repository = DefaultAppWhitelistRepository(
@@ -107,6 +176,16 @@ private class FakeAppWhitelistRemoteDataSource(
     private val failure: Throwable? = null
 ) : AppWhitelistRemoteDataSource {
     override suspend fun fetchWhitelist(): List<WhitelistedApp> {
+        failure?.let { throw it }
+        return apps
+    }
+}
+
+private class FakeAppWhitelistFallbackDataSource(
+    private val apps: List<WhitelistedApp> = emptyList(),
+    private val failure: Throwable? = null
+) : AppWhitelistFallbackDataSource {
+    override suspend fun fetchFallbackWhitelist(): List<WhitelistedApp> {
         failure?.let { throw it }
         return apps
     }

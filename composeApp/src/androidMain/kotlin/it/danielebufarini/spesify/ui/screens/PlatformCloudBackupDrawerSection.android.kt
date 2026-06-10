@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -22,12 +24,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import it.danielebufarini.spesify.data.AndroidCloudBackupStore
 import it.danielebufarini.spesify.data.CloudSyncService
 import it.danielebufarini.spesify.data.DriveAuthorizationResult
 import it.danielebufarini.spesify.data.DriveAuthorizationSnapshot
 import it.danielebufarini.spesify.data.DriveAuthorizationState
 import it.danielebufarini.spesify.data.GoogleDriveAuthorizationManager
+import it.danielebufarini.spesify.data.notifications.NotificationDetectionPermissionHelper
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -48,14 +54,17 @@ import spesify.composeapp.generated.resources.google_drive_access_failed
 internal actual fun PlatformCloudBackupDrawerSection() {
     val context = LocalContext.current
     val activity = context.findActivity()
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val authorizationManager: GoogleDriveAuthorizationManager = koinInject()
     val cloudSyncService: CloudSyncService = koinInject()
     val cloudBackupStore: AndroidCloudBackupStore = koinInject()
-
+    val notificationPermissionHelper: NotificationDetectionPermissionHelper = koinInject()
     var authorizationSnapshot by remember { mutableStateOf<DriveAuthorizationSnapshot?>(null) }
     var isBusy by remember { mutableStateOf(false) }
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
+    var notificationListenerEnabled by remember { mutableStateOf(false) }
+    var appNotificationsEnabled by remember { mutableStateOf(false) }
 
     suspend fun refreshSnapshot() {
         authorizationSnapshot = authorizationManager.checkDriveAuthorizationStatus()
@@ -66,8 +75,24 @@ internal actual fun PlatformCloudBackupDrawerSection() {
         cloudBackupStore.writeBackupFile(backup)
     }
 
+    fun refreshNotificationPermissionState() {
+        notificationListenerEnabled = notificationPermissionHelper.isNotificationListenerAccessEnabled()
+        appNotificationsEnabled = notificationPermissionHelper.canPostNotifications()
+    }
+
     LaunchedEffect(Unit) {
         refreshSnapshot()
+        refreshNotificationPermissionState()
+    }
+
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, notificationPermissionHelper) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshNotificationPermissionState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val toggleLabel = stringResource(Res.string.cloud_backup_drive_toggle)
@@ -81,7 +106,32 @@ internal actual fun PlatformCloudBackupDrawerSection() {
     val cancelledMessage = stringResource(Res.string.cloud_backup_toggle_cancelled)
     val setupRequiredMessage = stringResource(Res.string.cloud_backup_google_setup_required)
     val authorizeFailureMessage = stringResource(Res.string.google_drive_access_failed)
-
+    val notificationFeatureTitle = context.getString(
+        it.danielebufarini.spesify.shared.R.string.notification_detection_settings_title
+    )
+    val notificationFeatureDescription = context.getString(
+        it.danielebufarini.spesify.shared.R.string.notification_detection_settings_description
+    )
+    val notificationListenerStatus = context.getString(
+        if (notificationListenerEnabled) {
+            it.danielebufarini.spesify.shared.R.string.notification_listener_access_enabled
+        } else {
+            it.danielebufarini.spesify.shared.R.string.notification_listener_access_disabled
+        }
+    )
+    val appNotificationStatus = context.getString(
+        if (appNotificationsEnabled) {
+            it.danielebufarini.spesify.shared.R.string.notification_permission_enabled
+        } else {
+            it.danielebufarini.spesify.shared.R.string.notification_permission_disabled
+        }
+    )
+    val openNotificationListenerSettingsLabel = context.getString(
+        it.danielebufarini.spesify.shared.R.string.notification_detection_open_listener_settings
+    )
+    val openAppNotificationSettingsLabel = context.getString(
+        it.danielebufarini.spesify.shared.R.string.notification_detection_open_notification_settings
+    )
     val statusMessage = when {
         isBusy -> enablingMessage
         authorizationSnapshot == null -> checkingMessage
@@ -190,8 +240,49 @@ internal actual fun PlatformCloudBackupDrawerSection() {
                 MaterialTheme.colorScheme.error
             }
         )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        Text(
+            text = notificationFeatureTitle,
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Text(
+            text = notificationFeatureDescription,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = notificationListenerStatus,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = appNotificationStatus,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Button(
+            onClick = {
+                notificationPermissionHelper.openNotificationListenerSettings()
+                refreshNotificationPermissionState()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(openNotificationListenerSettingsLabel)
+        }
+        Button(
+            onClick = {
+                notificationPermissionHelper.openAppNotificationSettings()
+                refreshNotificationPermissionState()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(openAppNotificationSettingsLabel)
+        }
     }
 }
+
 
 @Composable
 private fun DrawerToggleRow(

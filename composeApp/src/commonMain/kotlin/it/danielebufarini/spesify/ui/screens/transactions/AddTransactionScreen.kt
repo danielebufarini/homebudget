@@ -31,7 +31,8 @@ import spesify.composeapp.generated.resources.income
 class AddTransactionScreen(
     private val initialKind: TransactionEditorKind = TransactionEditorKind.Expense,
     private val initialIncomeYear: Int? = null,
-    private val initialIncomeMonth: Int? = null
+    private val initialIncomeMonth: Int? = null,
+    private val initialExpensePrefill: ExpenseEditorPrefill? = null
 ) : Screen {
     @Composable
     override fun Content() {
@@ -99,7 +100,9 @@ class AddTransactionScreen(
                         .weight(1f)
                 ) {
                     when (routeState.selectedKind) {
-                        TransactionEditorKind.Expense -> AddExpenseScreen().RouteContent(
+                        TransactionEditorKind.Expense -> AddExpenseScreen(
+                            initialPrefill = initialExpensePrefill
+                        ).RouteContent(
                             showNavigationChrome = false,
                             onClose = onClose
                         )

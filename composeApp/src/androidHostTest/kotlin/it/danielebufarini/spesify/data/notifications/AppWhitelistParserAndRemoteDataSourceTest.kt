@@ -61,6 +61,24 @@ class AppWhitelistParserAndRemoteDataSourceTest {
     }
 
     @Test
+    fun fetchWhitelist_acceptsRawJsonResponseWithPlainTextContentType() = runTest {
+        val dataSource = KtorAppWhitelistRemoteDataSource(
+            transport = AppWhitelistHttpTransport { _ ->
+                AppWhitelistHttpResponse(
+                    statusCode = 200,
+                    contentType = "text/plain; charset=utf-8",
+                    body = """[{ "packageName": "it.fineco.mobile", "bankName": "Fineco" }]"""
+                )
+            }
+        )
+
+        assertEquals(
+            listOf(WhitelistedApp(packageName = "it.fineco.mobile", bankName = "Fineco")),
+            dataSource.fetchWhitelist()
+        )
+    }
+
+    @Test
     fun fetchWhitelist_rejectsFailedHttpResponse() = runTest {
         val dataSource = KtorAppWhitelistRemoteDataSource(
             transport = AppWhitelistHttpTransport { _ ->

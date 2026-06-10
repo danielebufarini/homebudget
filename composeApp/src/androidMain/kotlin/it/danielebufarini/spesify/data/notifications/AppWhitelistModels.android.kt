@@ -35,6 +35,10 @@ internal interface AppWhitelistRemoteDataSource {
     suspend fun fetchWhitelist(): List<WhitelistedApp>
 }
 
+internal interface AppWhitelistFallbackDataSource {
+    suspend fun fetchFallbackWhitelist(): List<WhitelistedApp>
+}
+
 internal fun interface AppWhitelistClock {
     fun nowMillis(): Long
 }

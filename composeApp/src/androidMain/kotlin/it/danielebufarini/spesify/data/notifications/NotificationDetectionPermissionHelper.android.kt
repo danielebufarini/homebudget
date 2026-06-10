@@ -68,8 +68,8 @@ class NotificationDetectionPermissionHelper(
     }
 
     fun shouldRequestPostNotificationsPermission(): Boolean {
-        // TODO(pass 2): connect this to the established Android permission-request UI once
-        // the confirmation notification flow is implemented.
+        // TODO: connect this to an explicit Android runtime permission request once
+        // the app has an established permission-request UI for POST_NOTIFICATIONS.
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !canPostNotifications()
     }
 }
