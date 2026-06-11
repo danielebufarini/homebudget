@@ -6,6 +6,8 @@ enum TransactionSearchHeaderLayout {
             MonthNavigationHeaderLayout.minHeight +
             MonthlyTransactionsHeaderLayout.selectorTopSpacing +
             MonthlyTransactionsHeaderLayout.selectorHeight +
+            MonthlyTransactionsHeaderLayout.groupingTopSpacing +
+            MonthlyTransactionsHeaderLayout.groupingHeight +
             MonthlyTransactionsHeaderLayout.bottomSpacing
     }
 }

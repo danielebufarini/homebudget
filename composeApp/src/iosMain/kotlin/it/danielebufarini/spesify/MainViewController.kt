@@ -40,7 +40,7 @@ fun DashboardContentViewController(
         showNavigationChrome = true,
         showFab = false,
         showQuickActions = false,
-        reserveQuickActionsSpace = true,
+        reserveQuickActionsSpace = false,
         onOpenCategories = onOpenCategories,
         onOpenAddExpense = onOpenAddExpense,
         onOpenVoiceExpense = onOpenVoiceExpense,

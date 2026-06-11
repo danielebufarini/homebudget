@@ -43,6 +43,7 @@ struct MonthlyIncomesSectionsContent: View {
     let headerAmountDescriptor: String?
     let topReservedInset: CGFloat?
     let headerAccessory: (() -> AnyView)?
+    let bottomScrollClearance: CGFloat
     @Binding private var groupingMode: ExpenseGroupingMode
 
     @State private var viewModel: MonthlyIncomesSectionsViewModel
@@ -56,6 +57,7 @@ struct MonthlyIncomesSectionsContent: View {
         headerAmountDescriptor: String? = nil,
         topReservedInset: CGFloat? = nil,
         headerAccessory: (() -> AnyView)? = nil,
+        bottomScrollClearance: CGFloat = 0,
         groupingMode: Binding<ExpenseGroupingMode>
     ) {
         self.selectedMonth = selectedMonth
@@ -65,6 +67,7 @@ struct MonthlyIncomesSectionsContent: View {
         self.headerAmountDescriptor = headerAmountDescriptor
         self.topReservedInset = topReservedInset
         self.headerAccessory = headerAccessory
+        self.bottomScrollClearance = bottomScrollClearance
         _groupingMode = groupingMode
         _viewModel = State(
             initialValue: MonthlyIncomesSectionsViewModel(
@@ -94,9 +97,6 @@ struct MonthlyIncomesSectionsContent: View {
         .onDisappear {
             viewModel.stop()
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            groupingControlBar
-        }
         .overlay {
             if let pendingIncomeDeleteRow {
                 AppGlassDialogOverlay {
@@ -120,7 +120,12 @@ struct MonthlyIncomesSectionsContent: View {
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .top, spacing: 0) {
-            Color.clear.frame(height: topReservedInset ?? MonthNavigationHeaderLayout.reservedTopInset)
+            Color.clear.frame(height: resolvedTopReservedInset)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if bottomScrollClearance > 0 {
+                Color.clear.frame(height: bottomScrollClearance)
+            }
         }
     }
 
@@ -173,11 +178,17 @@ struct MonthlyIncomesSectionsContent: View {
     }
 
     private var headerStack: some View {
-        VStack(spacing: MonthlyTransactionsHeaderLayout.selectorTopSpacing) {
+        VStack(spacing: 0) {
             monthHeader
             if let headerAccessory {
+                Color.clear
+                    .frame(height: MonthlyTransactionsHeaderLayout.selectorTopSpacing)
                 headerAccessory()
             }
+            Color.clear
+                .frame(height: MonthlyTransactionsHeaderLayout.groupingTopSpacing)
+            ExpenseGroupingMenuControl(selection: $groupingMode)
+                .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding + 16)
         }
         .monthSwipeNavigationGesture(
             onPreviousMonth: onPreviousMonth,
@@ -195,20 +206,12 @@ struct MonthlyIncomesSectionsContent: View {
             onPreviousMonth: onPreviousMonth,
             onNextMonth: onNextMonth
         )
-        .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
+        .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding + MonthNavigationHeaderLayout.sideChromeReservedWidth)
         .padding(.top, MonthNavigationHeaderLayout.topPadding)
     }
 
-    private var groupingControlBar: some View {
-        HStack {
-            Spacer(minLength: 0)
-            ExpenseGroupingGlassControl(selection: $groupingMode)
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
+    private var resolvedTopReservedInset: CGFloat {
+        topReservedInset ?? MonthlyTransactionsHeaderLayout.groupingOnlyReservedTopInset
     }
 
     @ViewBuilder

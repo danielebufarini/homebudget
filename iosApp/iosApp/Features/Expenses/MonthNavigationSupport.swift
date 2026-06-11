@@ -87,6 +87,7 @@ func monthlyHeaderAmountText(descriptor: String?, amountText: String) -> String 
 
 enum MonthNavigationHeaderLayout {
     static let horizontalPadding: CGFloat = 22
+    static let sideChromeReservedWidth: CGFloat = 42
     static let topPadding: CGFloat = 5
     static let bottomSpacing: CGFloat = 22
     static let minHeight: CGFloat = 76

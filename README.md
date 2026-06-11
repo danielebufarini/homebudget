@@ -174,7 +174,7 @@ Matching notifications show a local confirmation notification with explicit acti
 
 ### iOS Payment Screenshot Import
 
-Payment screenshot import is iOS-native and starts from the monthly expenses screen. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, and passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
+Payment screenshot import is iOS-native, expense-oriented, and available from the dashboard and monthly expenses list input dock. It is intentionally not exposed from the income list dock, where the secondary dock action starts voice input directly instead of showing the screenshot import menu. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, and passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
 
 The shared interpretation pipeline can return multiple expense candidates from one OCR input. It first applies deterministic regex parsing, including payment-notification blocks such as `pagamento di <amount> EUR presso <merchant> con la tua carta` and `payment of <amount> EUR at <merchant> with your card`. When the regex result is incomplete or ambiguous, the local iOS fallback remains available through the platform LLM bridge and returns raw JSON for shared Kotlin validation.
 

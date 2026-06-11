@@ -135,66 +135,119 @@ struct AppGlassRecurringDeleteConfirmationDialog: View {
     }
 }
 
-struct AppGlassBottomQuickActionsBar: View {
-    let addAccessibilityLabel: String
-    let voiceAccessibilityLabel: String
-    let screenshotAccessibilityLabel: String?
-    let onAdd: () -> Void
-    let onVoice: () -> Void
-    let onScreenshot: (() -> Void)?
+enum TransactionInputDockLayout {
+    static let actionHeight: CGFloat = 44
+    static let horizontalPadding: CGFloat = 16
+    static let topPadding: CGFloat = 8
+    static let bottomPadding: CGFloat = 12
+    static let dashboardBottomPadding: CGFloat = 6
+    static let dashboardVerticalOffset: CGFloat = 24
+    static let contentVerticalPadding: CGFloat = 4
+
+    static var overlayHeight: CGFloat {
+        actionHeight + (contentVerticalPadding * 2) + topPadding + bottomPadding
+    }
+
+    static var listBottomClearance: CGFloat {
+        overlayHeight + 8
+    }
+}
+
+struct TransactionInputDock: View {
+    enum SecondaryActionStyle {
+        case overflowMenu
+        case directVoice
+    }
+
+    let onManualAdd: () -> Void
+    let onVoiceInput: () -> Void
+    let onImportScreenshot: () -> Void
+    private let bottomPadding: CGFloat
+    private let secondaryActionStyle: SecondaryActionStyle
 
     init(
-        addAccessibilityLabel: String,
-        voiceAccessibilityLabel: String,
-        screenshotAccessibilityLabel: String? = nil,
-        onAdd: @escaping () -> Void,
-        onVoice: @escaping () -> Void,
-        onScreenshot: (() -> Void)? = nil
+        onManualAdd: @escaping () -> Void,
+        onVoiceInput: @escaping () -> Void,
+        onImportScreenshot: @escaping () -> Void,
+        bottomPadding: CGFloat = TransactionInputDockLayout.bottomPadding,
+        secondaryActionStyle: SecondaryActionStyle = .overflowMenu
     ) {
-        self.addAccessibilityLabel = addAccessibilityLabel
-        self.voiceAccessibilityLabel = voiceAccessibilityLabel
-        self.screenshotAccessibilityLabel = screenshotAccessibilityLabel
-        self.onAdd = onAdd
-        self.onVoice = onVoice
-        self.onScreenshot = onScreenshot
+        self.onManualAdd = onManualAdd
+        self.onVoiceInput = onVoiceInput
+        self.onImportScreenshot = onImportScreenshot
+        self.bottomPadding = bottomPadding
+        self.secondaryActionStyle = secondaryActionStyle
     }
 
     var body: some View {
-        HStack(spacing: 3) {
-            Button(action: onAdd) {
+        HStack(spacing: 2) {
+            Button(action: onManualAdd) {
                 AppGlassBottomQuickActionIcon(systemName: "plus")
+                    .frame(width: 50, height: TransactionInputDockLayout.actionHeight)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(addAccessibilityLabel)
+            .accessibilityLabel(appLocalized("Add transaction"))
 
             quickActionDivider
 
-            Button(action: onVoice) {
-                AppGlassBottomQuickActionIcon(systemName: "mic")
+            secondaryAction
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, TransactionInputDockLayout.contentVerticalPadding)
+        .foregroundStyle(AppThemePalette.onSurface)
+        .appDashboardChromeSurface(cornerRadius: 28)
+        .padding(.horizontal, TransactionInputDockLayout.horizontalPadding)
+        .padding(.top, TransactionInputDockLayout.topPadding)
+        .padding(.bottom, bottomPadding)
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    @ViewBuilder
+    private var secondaryAction: some View {
+        switch secondaryActionStyle {
+        case .overflowMenu:
+            Menu {
+                Button {
+                    performAfterMenuDismiss(onVoiceInput)
+                } label: {
+                    Label(appLocalized("Voice input"), systemImage: "mic")
+                }
+                .accessibilityLabel(appLocalized("Voice input"))
+
+                Button {
+                    performAfterMenuDismiss(onImportScreenshot)
+                } label: {
+                    Label(appLocalized("Import payment screenshot"), systemImage: "doc.text.viewfinder")
+                }
+                .accessibilityLabel(appLocalized("Import payment screenshot"))
+            } label: {
+                AppGlassBottomQuickActionIcon(systemName: "ellipsis")
+                    .frame(width: 50, height: TransactionInputDockLayout.actionHeight)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(voiceAccessibilityLabel)
+            .accessibilityLabel(appLocalized("More transaction input options"))
 
-            if let onScreenshot, let screenshotAccessibilityLabel {
-                quickActionDivider
-
-                Button(action: onScreenshot) {
-                    AppGlassBottomQuickActionIcon(systemName: "doc.text.viewfinder")
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(screenshotAccessibilityLabel)
+        case .directVoice:
+            Button(action: onVoiceInput) {
+                AppGlassBottomQuickActionIcon(systemName: "mic")
+                    .frame(width: 50, height: TransactionInputDockLayout.actionHeight)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(appLocalized("Voice input"))
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 3)
-        .foregroundStyle(AppThemePalette.onSurface)
-        .appDashboardChromeSurface(cornerRadius: 24)
+    }
+
+    private func performAfterMenuDismiss(_ action: @escaping () -> Void) {
+        DispatchQueue.main.async {
+            action()
+        }
     }
 
     private var quickActionDivider: some View {
         Rectangle()
             .fill(AppThemePalette.onSurface.opacity(0.18))
-            .frame(width: 1, height: 22)
+            .frame(width: 1, height: 24)
+            .accessibilityHidden(true)
     }
 }
 

@@ -67,7 +67,7 @@ struct DashboardRootView: View {
             )
         }
         .appGlassHostedScreenChrome()
-        .ignoresSafeArea()
+        .ignoresSafeArea(edges: .vertical)
     }
 }
 

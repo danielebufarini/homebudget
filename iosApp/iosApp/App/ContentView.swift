@@ -9,6 +9,7 @@ struct ContentView: View {
     @State var path = NavigationPath()
     @State var showVoiceExpenseSheet = false
     @State var voiceExpenseAutoStartRequest = 0
+    @State var showPaymentScreenshotImport = false
     @State var showCsvTransferSheet = false
     @State var showCsvExportSheet = false
     @State var showCsvExporter = false
@@ -43,6 +44,15 @@ struct ContentView: View {
                         showVoiceExpenseSheet = false
                     }
                     .appGlassSheetPresentation()
+                }
+                .sheet(isPresented: $showPaymentScreenshotImport) {
+                    PaymentScreenshotImportSheet(
+                        onCandidates: handlePaymentScreenshotCandidates,
+                        onClose: {
+                            showPaymentScreenshotImport = false
+                        }
+                    )
+                    .appGlassSheetPresentation(detents: [.height(420)])
                 }
                 .sheet(isPresented: $showCsvTransferSheet) {
                     CsvTransferSheet(
@@ -91,9 +101,6 @@ struct ContentView: View {
                     defaultFilename: csvExportFilename
                 ) { result in
                     handleCsvExport(result: result)
-                }
-                .overlay(alignment: .top) {
-                    dashboardQuickActionsChrome
                 }
                 .overlay(alignment: .top) {
                     AppGlassBannerOverlay(presenter: bannerPresenter)
@@ -272,31 +279,14 @@ struct ContentView: View {
                     SpesifyWidgetSummaryRefresher.shared.refresh()
                 }
         }
+        .overlay(alignment: .bottom) {
+            dashboardFloatingInputDock
+                .ignoresSafeArea(edges: .bottom)
+                .offset(y: TransactionInputDockLayout.dashboardVerticalOffset)
+        }
         .appGlassHostedScreenChrome()
         .dismissesKeyboardOnTap()
         .restoresInteractivePopGesture()
-    }
-
-    @ViewBuilder
-    private var dashboardQuickActionsChrome: some View {
-        if path.isEmpty && !dashboardNavigationDrawerOpen {
-            HStack {
-                Spacer(minLength: 0)
-
-                AppGlassBottomQuickActionsBar(
-                    addAccessibilityLabel: appLocalized("Add Expense"),
-                    voiceAccessibilityLabel: appLocalized("Voice Expense"),
-                    onAdd: {
-                        path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
-                    },
-                    onVoice: startVoiceExpense
-                )
-            }
-            .frame(height: MonthNavigationHeaderLayout.minHeight)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.top, MonthNavigationHeaderLayout.topPadding)
-        }
     }
 
     @ToolbarContentBuilder
@@ -316,6 +306,34 @@ struct ContentView: View {
     func startVoiceExpense() {
         voiceExpenseAutoStartRequest += 1
         showVoiceExpenseSheet = true
+    }
+
+    func handlePaymentScreenshotCandidates(_ prefills: [NativeExpenseEditorPrefill]) {
+        showPaymentScreenshotImport = false
+        guard let first = prefills.first else {
+            return
+        }
+
+        let remaining = Array(prefills.dropFirst())
+        DispatchQueue.main.async {
+            path.append(Route.addPrefilledExpense(first, remaining: remaining))
+        }
+    }
+
+    @ViewBuilder
+    private var dashboardFloatingInputDock: some View {
+        if path.isEmpty && !dashboardNavigationDrawerOpen {
+            TransactionInputDock(
+                onManualAdd: {
+                    path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
+                },
+                onVoiceInput: startVoiceExpense,
+                onImportScreenshot: {
+                    showPaymentScreenshotImport = true
+                },
+                bottomPadding: TransactionInputDockLayout.dashboardBottomPadding
+            )
+        }
     }
 
     private var leadingBackChrome: some View {

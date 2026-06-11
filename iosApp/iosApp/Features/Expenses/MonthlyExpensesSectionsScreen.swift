@@ -107,6 +107,16 @@ struct MonthlyTransactionsRootView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, MonthNavigationHeaderLayout.topPadding)
         }
+        .overlay(alignment: .bottom) {
+            TransactionInputDock(
+                onManualAdd: addTransaction,
+                onVoiceInput: onStartVoiceExpense,
+                onImportScreenshot: {
+                    showPaymentScreenshotImport = true
+                },
+                secondaryActionStyle: selectedKind == .income ? .directVoice : .overflowMenu
+            )
+        }
         .sheet(isPresented: $showPaymentScreenshotImport) {
             PaymentScreenshotImportSheet(
                 onCandidates: { prefills in
@@ -155,15 +165,6 @@ struct MonthlyTransactionsRootView: View {
             .accessibilityLabel(appLocalized("Back"))
 
             Spacer(minLength: 0)
-
-            AppGlassBottomQuickActionsBar(
-                addAccessibilityLabel: selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
-                voiceAccessibilityLabel: appLocalized("Voice Expense"),
-                screenshotAccessibilityLabel: selectedKind == .expense ? appLocalized("Import Payment Screenshot") : nil,
-                onAdd: addTransaction,
-                onVoice: onStartVoiceExpense,
-                onScreenshot: selectedKind == .expense ? { showPaymentScreenshotImport = true } : nil
-            )
         }
         .frame(height: MonthNavigationHeaderLayout.minHeight)
         .frame(maxWidth: .infinity)
@@ -192,6 +193,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
                     onOpenExpense: onOpenExpense,
                     headerAmountDescriptor: appLocalized("Expenses"),
                     topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
+                    bottomScrollClearance: TransactionInputDockLayout.listBottomClearance,
                     headerAccessory: transactionKindSelector,
                     expandsSectionsInitially: false
                 )
@@ -204,6 +206,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
                     headerAmountDescriptor: appLocalized("Income"),
                     topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
                     headerAccessory: transactionKindSelector,
+                    bottomScrollClearance: TransactionInputDockLayout.listBottomClearance,
                     groupingMode: $groupingMode
                 )
             }

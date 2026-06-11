@@ -136,6 +136,22 @@
         }
       }
     },
+    "Add transaction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add transaction"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi transazione"
+          }
+        }
+      }
+    },
     "All dates" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -676,6 +692,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Data"
+          }
+        }
+      }
+    },
+    "Grouped by" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grouped by"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raggruppa per"
           }
         }
       }
@@ -1241,6 +1273,22 @@
         }
       }
     },
+    "Import payment screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import payment screenshot"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importa screenshot pagamento"
+          }
+        }
+      }
+    },
     "Income" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1373,6 +1421,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sposta dati selezionati usando file CSV salvati su questo telefono."
+          }
+        }
+      }
+    },
+    "More transaction input options" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More transaction input options"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Altre opzioni di inserimento"
           }
         }
       }
@@ -2447,6 +2511,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spesa vocale"
+          }
+        }
+      }
+    },
+    "Voice input" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice input"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserimento vocale"
           }
         }
       }

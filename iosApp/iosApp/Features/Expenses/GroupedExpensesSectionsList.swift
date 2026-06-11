@@ -9,6 +9,7 @@ struct GroupedExpensesSectionsList: View {
     let headerTitle: String?
     let headerAmountDescriptor: String?
     let topReservedInset: CGFloat?
+    let bottomScrollClearance: CGFloat
     let headerAccessory: (() -> AnyView)?
 
     @Binding private var groupingMode: ExpenseGroupingMode
@@ -27,6 +28,7 @@ struct GroupedExpensesSectionsList: View {
         headerTitle: String? = nil,
         headerAmountDescriptor: String? = nil,
         topReservedInset: CGFloat? = nil,
+        bottomScrollClearance: CGFloat = 0,
         headerAccessory: (() -> AnyView)? = nil,
         expandsSectionsInitially: Bool = true
     ) {
@@ -38,6 +40,7 @@ struct GroupedExpensesSectionsList: View {
         self.headerTitle = headerTitle
         self.headerAmountDescriptor = headerAmountDescriptor
         self.topReservedInset = topReservedInset
+        self.bottomScrollClearance = bottomScrollClearance
         self.headerAccessory = headerAccessory
         _groupingMode = groupingMode
         _viewModel = State(
@@ -70,11 +73,6 @@ struct GroupedExpensesSectionsList: View {
         .onDisappear {
             viewModel.stop()
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if kind.showsGroupingControl {
-                groupingControlBar
-            }
-        }
         .overlay {
             if let pendingExpenseDeleteRow {
                 AppGlassDialogOverlay {
@@ -97,7 +95,12 @@ struct GroupedExpensesSectionsList: View {
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .top, spacing: 0) {
             if showsHeader {
-                Color.clear.frame(height: topReservedInset ?? MonthNavigationHeaderLayout.reservedTopInset)
+                Color.clear.frame(height: resolvedTopReservedInset)
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if bottomScrollClearance > 0 {
+                Color.clear.frame(height: bottomScrollClearance)
             }
         }
     }
@@ -137,10 +140,18 @@ struct GroupedExpensesSectionsList: View {
     }
 
     private var headerStack: some View {
-        VStack(spacing: MonthlyTransactionsHeaderLayout.selectorTopSpacing) {
+        VStack(spacing: 0) {
             monthHeader
             if let headerAccessory {
+                Color.clear
+                    .frame(height: MonthlyTransactionsHeaderLayout.selectorTopSpacing)
                 headerAccessory()
+            }
+            if kind.showsGroupingControl {
+                Color.clear
+                    .frame(height: MonthlyTransactionsHeaderLayout.groupingTopSpacing)
+                ExpenseGroupingMenuControl(selection: $groupingMode)
+                    .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding + 16)
             }
         }
         .monthSwipeNavigationGesture(
@@ -162,7 +173,7 @@ struct GroupedExpensesSectionsList: View {
                 onPreviousMonth: onPreviousMonth,
                 onNextMonth: onNextMonth
             )
-            .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
+            .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding + MonthNavigationHeaderLayout.sideChromeReservedWidth)
             .padding(.top, MonthNavigationHeaderLayout.topPadding)
         }
     }
@@ -171,16 +182,16 @@ struct GroupedExpensesSectionsList: View {
         headerTitle != nil || (onPreviousMonth != nil && onNextMonth != nil)
     }
 
-    private var groupingControlBar: some View {
-        HStack {
-            Spacer(minLength: 0)
-            ExpenseGroupingGlassControl(selection: $groupingMode)
-            Spacer(minLength: 0)
+    private var resolvedTopReservedInset: CGFloat {
+        if let topReservedInset {
+            return topReservedInset
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
+
+        if kind.showsGroupingControl {
+            return MonthlyTransactionsHeaderLayout.groupingOnlyReservedTopInset
+        }
+
+        return MonthNavigationHeaderLayout.reservedTopInset
     }
 
     @ViewBuilder

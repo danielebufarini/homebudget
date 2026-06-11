@@ -54,17 +54,6 @@ struct TransactionSearchSectionsRootView: View {
                 .buttonStyle(.glass)
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack {
-                Spacer(minLength: 0)
-                ExpenseGroupingGlassControl(selection: $groupingMode)
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-        }
         .onAppear {
             viewModel.start()
         }
@@ -172,7 +161,7 @@ struct TransactionSearchSectionsRootView: View {
     }
 
     private var headerStack: some View {
-        VStack(spacing: MonthlyTransactionsHeaderLayout.selectorTopSpacing) {
+        VStack(spacing: 0) {
             TransactionSearchGlassHeader(
                 query: query,
                 amountText: monthlyHeaderAmountText(
@@ -183,8 +172,17 @@ struct TransactionSearchSectionsRootView: View {
             .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
             .padding(.top, MonthNavigationHeaderLayout.topPadding)
 
+            Color.clear
+                .frame(height: MonthlyTransactionsHeaderLayout.selectorTopSpacing)
+
             MonthlyTransactionKindGlassControl(selection: $selectedKind)
                 .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding)
+
+            Color.clear
+                .frame(height: MonthlyTransactionsHeaderLayout.groupingTopSpacing)
+
+            ExpenseGroupingMenuControl(selection: $groupingMode)
+                .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding + 16)
         }
     }
 
