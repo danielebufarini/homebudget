@@ -29,6 +29,11 @@ import it.danielebufarini.spesify.data.PersistentWriteScope
 import it.danielebufarini.spesify.data.RecurringTransactionService
 import it.danielebufarini.spesify.data.TransactionWriteRepository
 import it.danielebufarini.spesify.data.WidgetRefreshCoordinator
+import it.danielebufarini.spesify.data.notifications.ExpenseInterpretationPipeline
+import it.danielebufarini.spesify.data.notifications.InterpretExpenseTextUseCase
+import it.danielebufarini.spesify.data.notifications.LlmExpenseJsonValidator
+import it.danielebufarini.spesify.data.notifications.LocalExpenseTextLlmInterpreter
+import it.danielebufarini.spesify.data.notifications.RegexExpenseTextInterpreter
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -54,6 +59,16 @@ val sharedModule = module {
     single { AddTransactionUseCase(get<CategoryManagementRepository>(), get<TransactionWriteRepository>()) }
     single { CategoryAgentUseCase(get<CategoryManagementRepository>()) }
     single { FinancialQueryUseCase(get(), get()) }
+    single { RegexExpenseTextInterpreter() }
+    single { LlmExpenseJsonValidator() }
+    single {
+        ExpenseInterpretationPipeline(
+            regexInterpreter = get<RegexExpenseTextInterpreter>(),
+            localLlmInterpreter = runCatching { get<LocalExpenseTextLlmInterpreter>() }.getOrNull(),
+            llmJsonValidator = get<LlmExpenseJsonValidator>()
+        )
+    }
+    single { InterpretExpenseTextUseCase(get()) }
     single { DataReplacementService(get(), get(), get()) }
     single { ExpenseRepository(get(), get(), get(), get(), get(), get()) }
     single<CategoryManagementRepository> { ExpenseRepositoryCategoryManagementAdapter(get()) }
@@ -70,8 +85,8 @@ fun initKoin(appModule: Module? = null) {
     startKoin {
         modules(
             listOfNotNull(
-                platformModule,
                 sharedModule,
+                platformModule,
                 appModule
             )
         )

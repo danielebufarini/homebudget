@@ -44,6 +44,16 @@ final class NativeTransactionEditorViewModel {
         isLoading = false
     }
 
+    init(prefilledExpense: NativeExpenseEditorPrefill) {
+        incomeId = nil
+        selectedKind = .expense
+        selectedDate = Self.date(fromMillis: prefilledExpense.dateMillis) ?? Date()
+        amount = prefilledExpense.amountInput
+        selectedCategoryId = prefilledExpense.categoryId ?? ""
+        description = prefilledExpense.descriptionText
+        isLoading = false
+    }
+
     init(incomeId: String) {
         self.incomeId = incomeId
         selectedKind = .income
@@ -322,6 +332,14 @@ final class NativeTransactionEditorViewModel {
     ) {
         isSaving = false
         onComplete(result.isSuccess ? nil : result.errorKey)
+    }
+
+    private static func date(fromMillis millis: Int64?) -> Date? {
+        guard let millis, millis > 0 else {
+            return nil
+        }
+
+        return Date(timeIntervalSince1970: Double(millis) / 1000.0)
     }
 
     private static func initialDate(year: Int?, month: Int?) -> Date {

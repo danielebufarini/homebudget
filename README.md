@@ -16,6 +16,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
 - Voice-assisted expense entry
+- iOS payment screenshot import with Apple Vision OCR, regex-first parsing, local fallback when available, and sequential review of multiple detected expenses
 - Android notification-based expense detection for supported apps, with deterministic parsing, local Gemini Nano fallback, and explicit confirmation
 - Assistant and agent integrations for transaction entry, financial summaries, and category management
 - Android and iOS home screen widgets
@@ -26,6 +27,8 @@ The shared module contains the domain model, persistence, repositories, resource
 - Kotlin Multiplatform
 - Compose Multiplatform
 - SwiftUI
+- Apple Vision OCR
+- Apple Foundation Models, when available on iOS
 - Room KMP with bundled SQLite
 - Koin
 - Voyager
@@ -42,10 +45,10 @@ The shared module contains the domain model, persistence, repositories, resource
 Current baseline:
 
 - JDK 21
-- Kotlin 2.3.10
+- Kotlin 2.3.21
 - Compose Multiplatform 1.11.1
 - Android Gradle Plugin 9.2.1
-- Android min SDK 26
+- Android min SDK 31
 - Android compile/target SDK 37
 
 Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.versions.toml).
@@ -58,9 +61,9 @@ Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.ver
 
 Key shared source sets:
 
-- [composeApp/src/commonMain](./composeApp/src/commonMain): shared app entry point, Compose UI, repositories, Room schema, resources, localization, and platform-neutral notification interpretation pipeline.
+- [composeApp/src/commonMain](./composeApp/src/commonMain): shared app entry point, Compose UI, repositories, Room schema, resources, localization, and platform-neutral notification and payment screenshot interpretation pipeline.
 - [composeApp/src/androidMain](./composeApp/src/androidMain): Android DI, platform bridges, Google Drive backup, Android voice entry, Android notification expense detection, and Gemini Nano fallback wiring.
-- [composeApp/src/iosMain](./composeApp/src/iosMain): iOS DI, `ComposeUIViewController` factories, and Kotlin bridges used by SwiftUI.
+- [composeApp/src/iosMain](./composeApp/src/iosMain): iOS DI, `ComposeUIViewController` factories, and Kotlin bridges used by SwiftUI, including the payment screenshot interpretation bridge.
 
 Key Android areas:
 
@@ -72,7 +75,7 @@ Key iOS areas:
 
 - [iosApp/iosApp/App](./iosApp/iosApp/App): SwiftUI app entry point, navigation, shell actions, and localization helpers.
 - [iosApp/iosApp/AppIntents](./iosApp/iosApp/AppIntents): native iOS App Intents exposed to Shortcuts and Siri.
-- [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native transaction, monthly, grouped, income, and search screens.
+- [iosApp/iosApp/Features/Expenses](./iosApp/iosApp/Features/Expenses): native transaction, monthly, grouped, income, search, and payment screenshot import screens.
 - [iosApp/iosApp/Features/VoiceExpense](./iosApp/iosApp/Features/VoiceExpense): native voice expense flow.
 - [iosApp/iosApp/Sync](./iosApp/iosApp/Sync): iCloud backup and widget summary storage.
 - [iosApp/SpesifyWidget](./iosApp/SpesifyWidget): iOS widget extension.
@@ -169,6 +172,16 @@ When Notification Listener access is enabled by the user, Spesify filters posted
 
 Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are used only transiently for local interpretation: they are not persisted, logged, or sent to external services. Parsed amounts are represented internally as `Long` minor units.
 
+### iOS Payment Screenshot Import
+
+Payment screenshot import is iOS-native and starts from the monthly expenses screen. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, and passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
+
+The shared interpretation pipeline can return multiple expense candidates from one OCR input. It first applies deterministic regex parsing, including payment-notification blocks such as `pagamento di <amount> EUR presso <merchant> con la tua carta` and `payment of <amount> EUR at <merchant> with your card`. When the regex result is incomplete or ambiguous, the local iOS fallback remains available through the platform LLM bridge and returns raw JSON for shared Kotlin validation.
+
+The Kotlin validator accepts only safe candidates: expenses with positive `Long` minor-unit amounts, EUR currency or safely inferred EUR, sufficient confidence, and an amount that appears in the OCR text as explicit monetary evidence such as `22,20 EUR`, `EUR 22,20`, or `€22,20`. Plain numbers from the lock screen or status bar, such as time, date, battery percentage, or card suffixes, are rejected as transaction amounts.
+
+When multiple candidates are found, iOS queues them in memory and opens the native expense editor one at a time. The user confirms, edits, or cancels each candidate before anything is saved.
+
 ## Localization
 
 - Shared Compose strings: [values](./composeApp/src/commonMain/composeResources/values/strings.xml), [values-it](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
@@ -244,7 +257,10 @@ Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room
 5. Export a CSV date range, verify the file content, import the file, and confirm success or skipped-row feedback.
 6. Launch an empty iOS install with an iCloud backup available, preview restore counts, restore, and verify dashboard data.
 7. Use voice entry to create or update a draft, save it, and verify the expense appears in the current month.
-8. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
+8. From the monthly expenses screen, import a payment screenshot with one notification and verify the native editor is pre-filled with the correct amount and merchant.
+9. Import a payment screenshot with multiple payment notifications and verify the editor opens candidates sequentially, one transaction at a time.
+10. Import a screenshot that also contains lock-screen/status-bar numbers and verify time, date, battery percentage, and card suffixes are not accepted as transaction amounts.
+11. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
 
 ## Setup Notes
 
@@ -269,6 +285,12 @@ Drive backup requires Android OAuth configuration.
 3. Put the Web client ID in [google_identity.xml](./composeApp/src/androidMain/res/values/google_identity.xml).
 
 Without this setup, local backup still works.
+
+### iOS Payment Screenshot Import
+
+Payment screenshot import is an in-app flow exposed from the monthly expenses screen. It is not currently an iOS Share Sheet target; appearing in Photos as a share recipient would require a separate Share Extension.
+
+The local iOS LLM fallback is kept available through the platform bridge, but the app still builds and runs when Foundation Models are unavailable. In that case, regex parsing and shared validation remain active, and unsafe or invalid fallback output is ignored.
 
 ### iOS
 

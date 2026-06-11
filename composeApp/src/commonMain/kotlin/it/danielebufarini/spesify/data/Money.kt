@@ -46,6 +46,110 @@ fun evaluateAmountExpressionInput(value: String): Long? {
     }.getOrNull()
 }
 
+
+/**
+ * Parses a positive localized decimal amount into Long minor units without using floating
+ * point or BigDecimal.
+ *
+ * Supported examples include: 12,34; 12.34; 1.234,56; 1234,56; 10.
+ * The helper intentionally rejects negative, zero, malformed, and overflowing values.
+ */
+fun parsePositiveLocalizedAmountMinorOrNull(value: String): Long? {
+    val normalized = value
+        .trim()
+        .replace("\u00A0", "")
+        .replace(" ", "")
+        .removeSurroundingCurrency()
+
+    if (normalized.isEmpty() || normalized.startsWith("-") || normalized.startsWith("+")) {
+        return null
+    }
+    if (!normalized.all { it.isDigit() || it == ',' || it == '.' }) {
+        return null
+    }
+
+    val decimalSeparator = normalized.decimalSeparatorOrNull()
+    val groupingSeparator = decimalSeparator?.let { separator ->
+        when (separator) {
+            ',' -> '.'
+            '.' -> ','
+            else -> null
+        }
+    }
+
+    val majorPart: String
+    val minorPart: String
+    if (decimalSeparator == null) {
+        val majorDigits = normalized.withoutValidGroupingOrNull(allowedGroupingSeparator = '.') ?: return null
+        majorPart = majorDigits
+        minorPart = "00"
+    } else {
+        val separatorIndex = normalized.lastIndexOf(decimalSeparator)
+        val rawMajor = normalized.substring(0, separatorIndex)
+        val rawMinor = normalized.substring(separatorIndex + 1)
+        if (rawMajor.isEmpty() || rawMinor.isEmpty() || rawMinor.length > 2) return null
+        if (rawMinor.any { !it.isDigit() }) return null
+
+        majorPart = rawMajor.withoutValidGroupingOrNull(allowedGroupingSeparator = groupingSeparator) ?: return null
+        minorPart = rawMinor.padEnd(2, '0')
+    }
+
+    val major = majorPart.trimStart('0').ifEmpty { "0" }.toLongOrNull() ?: return null
+    val minor = minorPart.toLongOrNull() ?: return null
+    val amountMinor = major.safeMultiplyMinorUnits(100L)?.safeAddMinorUnits(minor) ?: return null
+    return amountMinor.takeIf { it > 0L }
+}
+
+private fun String.removeSurroundingCurrency(): String = trim()
+    .removePrefix("€")
+    .removePrefix("EUR")
+    .removeSuffix("€")
+    .removeSuffix("EUR")
+    .trim()
+
+private fun String.decimalSeparatorOrNull(): Char? {
+    val lastComma = lastIndexOf(',')
+    val lastDot = lastIndexOf('.')
+    if (lastComma < 0 && lastDot < 0) return null
+
+    val separator = if (lastComma > lastDot) ',' else '.'
+    val separatorIndex = lastIndexOf(separator)
+    val digitsAfter = length - separatorIndex - 1
+    val otherSeparator = if (separator == ',') '.' else ','
+
+    return when {
+        digitsAfter in 1..2 -> separator
+        contains(otherSeparator) -> null
+        hasValidSingleSeparatorGrouping(separator) -> null
+        else -> null
+    }
+}
+
+private fun String.withoutValidGroupingOrNull(allowedGroupingSeparator: Char? = null): String? {
+    if (isEmpty()) return null
+    val separators = filter { it == ',' || it == '.' }.toSet()
+    if (separators.isEmpty()) return takeIf { it.all(Char::isDigit) }
+    if (separators.size > 1) return null
+
+    val separator = separators.single()
+    if (allowedGroupingSeparator != null && separator != allowedGroupingSeparator) return null
+    if (!hasValidSingleSeparatorGrouping(separator)) return null
+    return replace(separator.toString(), "").takeIf { it.all(Char::isDigit) }
+}
+
+private fun String.hasValidSingleSeparatorGrouping(separator: Char): Boolean {
+    val groups = split(separator)
+    if (groups.size < 2) return false
+    if (groups.first().isEmpty() || groups.first().length > 3 || groups.first().any { !it.isDigit() }) return false
+    return groups.drop(1).all { group -> group.length == 3 && group.all(Char::isDigit) }
+}
+
+private fun Long.safeMultiplyMinorUnits(other: Long): Long? =
+    if (this > Long.MAX_VALUE / other) null else this * other
+
+private fun Long.safeAddMinorUnits(other: Long): Long? =
+    if (this > Long.MAX_VALUE - other) null else this + other
+
 fun parseSerializedAmount(value: String): Long? {
     return value.trim()
         .takeIf(String::isNotEmpty)

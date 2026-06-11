@@ -6,11 +6,10 @@ import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.GenerativeModel
 
 class AndroidLocalLlmExpenseTextInterpreter(
-    private val validator: LlmExpenseJsonValidator,
     private val modelProvider: () -> GenerativeModel = { Generation.getClient() }
-) : ExpenseTextInterpreter {
+) : LocalExpenseTextLlmInterpreter {
 
-    override suspend fun interpret(text: String): ExpenseTextInterpretation {
+    override suspend fun interpret(text: String): String {
         val model = modelProvider()
         val status = runCatching { model.checkStatus() }
             .onFailure { Log.w(TAG, "Local LLM status check failed", it) }
@@ -18,29 +17,29 @@ class AndroidLocalLlmExpenseTextInterpreter(
 
         if (status != FeatureStatus.AVAILABLE) {
             Log.d(TAG, "Local LLM fallback unavailable: status=$status")
-            return emptyExpenseTextInterpretation(InterpretationSource.LocalLlm)
+            return ""
         }
 
-        val rawJson = runCatching {
+        return runCatching {
             model.generateContent(buildPrompt(text)).candidates.firstOrNull()?.text.orEmpty()
         }.onFailure {
             Log.w(TAG, "Local LLM fallback failed", it)
-        }.getOrNull() ?: return emptyExpenseTextInterpretation(InterpretationSource.LocalLlm)
-
-        return validator.validate(rawJson)
-            ?: emptyExpenseTextInterpretation(InterpretationSource.LocalLlm)
+        }.getOrNull().orEmpty()
     }
 
     private fun buildPrompt(notificationText: String): String = """
         You interpret one bank/card notification for a personal finance app.
         The text was read locally on device. Return strict JSON only, with no Markdown.
         Use this exact shape:
-        {"isExpense":true,"amount":"12.34","currency":"EUR","merchant":"SUPERMERCATO TEST","confidence":0.86}
+        {"transactions":[{"isExpense":true,"amountMinor":1234,"currency":"EUR","merchant":"SUPERMERCATO TEST","confidence":0.86}]}
 
         Rules:
+        - Extract every distinct expense visible in the text.
         - isExpense must be true only for card payments, debit card payments, POS purchases, online purchases, or other money spent by the user.
-        - Return isExpense false if the text is not an expense, is a refund, is an incoming transfer, is an income, or is ambiguous.
-        - amount must be a positive decimal string using dot as decimal separator.
+        - Return an empty transactions array if the text is not an expense, is a refund, is an incoming transfer, is an income, or is ambiguous.
+        - Never use unrelated numbers such as time, date, battery percentage, or card suffixes as amounts.
+        - amountMinor must be a positive integer number of cents/minor units.
+        - Only use amounts that appear as money in the text, such as 12,34 EUR, EUR 12,34, €12,34, or 12,34 €.
         - currency must be EUR when present.
         - merchant may be null if unavailable.
         - confidence must be between 0 and 1.

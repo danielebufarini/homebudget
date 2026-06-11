@@ -11,55 +11,90 @@ data class ExpenseInterpretationPipelineConfig(
 
 class ExpenseInterpretationPipeline(
     private val regexInterpreter: ExpenseTextInterpreter = RegexExpenseTextInterpreter(),
-    private val localLlmInterpreter: ExpenseTextInterpreter? = null,
-    private val config: ExpenseInterpretationPipelineConfig = ExpenseInterpretationPipelineConfig()
+    private val localLlmInterpreter: LocalExpenseTextLlmInterpreter? = null,
+    private val llmJsonValidator: LlmExpenseJsonValidator = LlmExpenseJsonValidator(),
+    private val config: ExpenseInterpretationPipelineConfig = ExpenseInterpretationPipelineConfig(),
+    private val evidenceParser: ExpenseNotificationTextParser = ExpenseNotificationTextParser()
 ) : ExpenseTextInterpreter {
 
     override suspend fun interpret(text: String): ExpenseTextInterpretation =
         // The generic entry point remains regex-only because common callers do not know
-        // whether the notification source is whitelisted. Android notification detection
-        // calls the overload below after whitelist validation.
-        interpret(text = text, canUseLocalLlmFallback = false)
+        // whether local fallback is appropriate. Platform flows call the overload below.
+        interpretAll(text = text, canUseLocalLlmFallback = false).firstOrNull()
             ?: emptyExpenseTextInterpretation(InterpretationSource.Regex)
+
+    override suspend fun interpretAll(text: String): List<ExpenseTextInterpretation> =
+        interpretAll(text = text, canUseLocalLlmFallback = false)
 
     suspend fun interpret(
         text: String,
         canUseLocalLlmFallback: Boolean
-    ): ExpenseTextInterpretation? {
-        val regexResult = regexInterpreter.interpret(text).normalized()
-        if (!shouldFallback(regexResult)) return regexResult
+    ): ExpenseTextInterpretation? = interpretAll(
+        text = text,
+        canUseLocalLlmFallback = canUseLocalLlmFallback
+    ).firstOrNull()
 
-        val llmResult = if (canUseLocalLlmFallback) {
-            interpretWithLocalLlm(text)
+    suspend fun interpretAll(
+        text: String,
+        canUseLocalLlmFallback: Boolean
+    ): List<ExpenseTextInterpretation> {
+        val input = text.trim()
+        if (input.isBlank()) return emptyList()
+
+        val regexResults = regexInterpreter.interpretAll(input)
+            .map { it.normalized() }
+            .filter { it.hasValidAmount }
+            .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
+
+        if (!shouldFallback(regexResults, input)) return regexResults
+
+        val llmResults = if (canUseLocalLlmFallback) {
+            interpretAllWithLocalLlm(input)
         } else {
-            null
+            emptyList()
         }
 
-        return llmResult ?: regexResult.takeIf { it.hasValidAmount }
+        return when {
+            llmResults.isEmpty() -> regexResults
+            regexResults.isEmpty() -> llmResults
+            llmResults.size >= regexResults.size -> llmResults
+            else -> regexResults
+        }
     }
 
-    private fun shouldFallback(regexResult: ExpenseTextInterpretation): Boolean {
-        if (!regexResult.hasValidAmount) return true
-        if (regexResult.confidence < config.highConfidenceThreshold) return true
-        if (regexResult.merchant.isNullOrBlank()) return true
+    private fun shouldFallback(regexResults: List<ExpenseTextInterpretation>, text: String): Boolean {
+        if (regexResults.isEmpty()) return true
+        if (regexResults.any { !it.hasValidAmount }) return true
+        if (regexResults.any { it.confidence < config.highConfidenceThreshold }) return true
+        if (regexResults.any { it.merchant.isNullOrBlank() }) return true
+
+        val monetaryAmountCount = evidenceParser.monetaryAmountMinorEvidence(text).size
+        if (monetaryAmountCount > regexResults.size) return true
+
         return false
     }
 
-    private suspend fun interpretWithLocalLlm(text: String): ExpenseTextInterpretation? {
-        val interpreter = localLlmInterpreter ?: return null
+    private suspend fun interpretAllWithLocalLlm(text: String): List<ExpenseTextInterpretation> {
+        val interpreter = localLlmInterpreter ?: return emptyList()
         return try {
             withTimeout(config.llmTimeoutMillis) {
-                interpreter.interpret(text)
-                    .normalized()
-                    .takeIf { it.source == InterpretationSource.LocalLlm }
-                    ?.takeIf { it.hasValidAmount }
-                    ?.takeIf { it.confidence >= config.llmConfidenceThreshold }
-                    ?.takeIf { it.currency == null || it.currency == SUPPORTED_CURRENCY }
+                val rawJson = interpreter.interpret(text).trim()
+                if (rawJson.isBlank()) return@withTimeout emptyList()
+                llmJsonValidator.validateAll(
+                    rawJson = rawJson,
+                    minConfidence = config.llmConfidenceThreshold,
+                    ocrText = text
+                ).map { it.normalized() }
+                    .filter { it.source == InterpretationSource.LocalLlm }
+                    .filter { it.hasValidAmount }
+                    .filter { it.confidence >= config.llmConfidenceThreshold }
+                    .filter { it.currency == SUPPORTED_CURRENCY }
+                    .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
             }
         } catch (_: TimeoutCancellationException) {
-            null
+            emptyList()
         } catch (_: Throwable) {
-            null
+            emptyList()
         }
     }
 

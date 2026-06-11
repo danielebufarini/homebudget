@@ -73,6 +73,7 @@ struct MonthlyTransactionsRootView: View {
     @State private var selectedMonth: MonthCursor
     @State private var selectedKind: AddTransactionKind
     @State private var groupingMode: ExpenseGroupingMode = .byCategory
+    @State private var showPaymentScreenshotImport = false
 
     init(
         year: Int,
@@ -105,6 +106,24 @@ struct MonthlyTransactionsRootView: View {
             transactionsChromeActions
                 .padding(.horizontal, 16)
                 .padding(.top, MonthNavigationHeaderLayout.topPadding)
+        }
+        .sheet(isPresented: $showPaymentScreenshotImport) {
+            PaymentScreenshotImportSheet(
+                onCandidates: { prefills in
+                    showPaymentScreenshotImport = false
+                    guard let first = prefills.first else {
+                        return
+                    }
+                    let remaining = Array(prefills.dropFirst())
+                    DispatchQueue.main.async {
+                        path.append(Route.addPrefilledExpense(first, remaining: remaining))
+                    }
+                },
+                onClose: {
+                    showPaymentScreenshotImport = false
+                }
+            )
+            .appGlassSheetPresentation(detents: [.height(420)])
         }
     }
 
@@ -140,8 +159,10 @@ struct MonthlyTransactionsRootView: View {
             AppGlassBottomQuickActionsBar(
                 addAccessibilityLabel: selectedKind == .income ? appLocalized("Add Income") : appLocalized("Add Expense"),
                 voiceAccessibilityLabel: appLocalized("Voice Expense"),
+                screenshotAccessibilityLabel: selectedKind == .expense ? appLocalized("Import Payment Screenshot") : nil,
                 onAdd: addTransaction,
-                onVoice: onStartVoiceExpense
+                onVoice: onStartVoiceExpense,
+                onScreenshot: selectedKind == .expense ? { showPaymentScreenshotImport = true } : nil
             )
         }
         .frame(height: MonthNavigationHeaderLayout.minHeight)

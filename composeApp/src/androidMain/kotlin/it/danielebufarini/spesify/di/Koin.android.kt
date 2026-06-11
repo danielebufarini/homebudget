@@ -21,15 +21,13 @@ import it.danielebufarini.spesify.data.notifications.DataStoreExpenseNotificatio
 import it.danielebufarini.spesify.data.notifications.DefaultAppWhitelistRepository
 import it.danielebufarini.spesify.data.notifications.DefaultMerchantCategoryResolver
 import it.danielebufarini.spesify.data.notifications.ExpenseConfirmationNotifier
-import it.danielebufarini.spesify.data.notifications.ExpenseInterpretationPipeline
 import it.danielebufarini.spesify.data.notifications.ExpenseNotificationActionHandler
 import it.danielebufarini.spesify.data.notifications.ExpenseNotificationActionStore
 import it.danielebufarini.spesify.data.notifications.KtorAppWhitelistHttpTransport
 import it.danielebufarini.spesify.data.notifications.KtorAppWhitelistRemoteDataSource
-import it.danielebufarini.spesify.data.notifications.LlmExpenseJsonValidator
+import it.danielebufarini.spesify.data.notifications.LocalExpenseTextLlmInterpreter
 import it.danielebufarini.spesify.data.notifications.MerchantCategoryResolver
 import it.danielebufarini.spesify.data.notifications.NotificationDetectionPermissionHelper
-import it.danielebufarini.spesify.data.notifications.RegexExpenseTextInterpreter
 import it.danielebufarini.spesify.data.notifications.appWhitelistJson
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -48,15 +46,7 @@ actual val platformModule = module {
     single<AppWhitelistCache> { DataStoreAppWhitelistCache(androidContext(), get()) }
     single<AppWhitelistRepository> { DefaultAppWhitelistRepository(get(), get(), get()) }
     single { NotificationDetectionPermissionHelper(androidContext()) }
-    single { RegexExpenseTextInterpreter() }
-    single { LlmExpenseJsonValidator() }
-    single { AndroidLocalLlmExpenseTextInterpreter(get()) }
-    single {
-        ExpenseInterpretationPipeline(
-            regexInterpreter = get<RegexExpenseTextInterpreter>(),
-            localLlmInterpreter = get<AndroidLocalLlmExpenseTextInterpreter>()
-        )
-    }
+    single<LocalExpenseTextLlmInterpreter> { AndroidLocalLlmExpenseTextInterpreter() }
     single<MerchantCategoryResolver> { DefaultMerchantCategoryResolver(get()) }
     single<ExpenseNotificationActionStore> { DataStoreExpenseNotificationActionStore(androidContext()) }
     single { ExpenseNotificationActionHandler(get(), get()) }

@@ -6,9 +6,17 @@ enum AddTransactionKind: Hashable {
     case income
 }
 
+struct NativeExpenseEditorPrefill: Hashable {
+    let amountInput: String
+    let descriptionText: String
+    let dateMillis: Int64?
+    let categoryId: String?
+}
+
 enum Route: Hashable {
     case categories
     case addTransaction(initialKind: AddTransactionKind, year: Int?, month: Int?)
+    case addPrefilledExpense(NativeExpenseEditorPrefill, remaining: [NativeExpenseEditorPrefill])
     case addExpense(expenseId: String?, readOnly: Bool)
     case addIncome(incomeId: String?, year: Int?, month: Int?)
     case dayExpenses(year: Int, month: Int, day: Int)

@@ -21,6 +21,9 @@ struct iOSApp: App {
     @State private var pendingStartupRestore: PendingStartupRestore?
 
     init() {
+        IosLocalLlmExpenseTextInterpreterRegistry.shared.installProvider(
+            provider: FoundationModelsPaymentScreenshotLlmProvider()
+        )
         CloudBackupBackgroundTasks.register()
         CloudBackupBackgroundTasks.schedule()
     }

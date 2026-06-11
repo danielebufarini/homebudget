@@ -120,6 +120,20 @@ struct ContentView: View {
                         }
                         .appGlassHostedScreenChrome()
                         .toolbar(.hidden, for: .navigationBar)
+                    case let .addPrefilledExpense(prefill, remaining):
+                        NativeTransactionEditorScreen(prefilledExpense: prefill) {
+                            if !path.isEmpty {
+                                path.removeLast()
+                            }
+                            if let next = remaining.first {
+                                let nextRemaining = Array(remaining.dropFirst())
+                                DispatchQueue.main.async {
+                                    path.append(Route.addPrefilledExpense(next, remaining: nextRemaining))
+                                }
+                            }
+                        }
+                        .appGlassHostedScreenChrome()
+                        .toolbar(.hidden, for: .navigationBar)
                     case let .addExpense(expenseId, readOnly):
                         if let expenseId, expenseId.isEmpty == false {
                             NativeExpenseEditorScreen(

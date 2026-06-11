@@ -5,10 +5,13 @@ import it.danielebufarini.spesify.PlatformStartupRestore
 import it.danielebufarini.spesify.data.DashboardPreferencesStore
 import it.danielebufarini.spesify.data.DatabaseBuilderFactory
 import it.danielebufarini.spesify.data.PlatformDashboardPreferencesStore
+import it.danielebufarini.spesify.data.notifications.IosLocalLlmExpenseTextInterpreter
+import it.danielebufarini.spesify.data.notifications.LocalExpenseTextLlmInterpreter
 import org.koin.dsl.module
 
 actual val platformModule = module {
     single<PlatformStartupRestore> { NoOpPlatformStartupRestore }
     single { DatabaseBuilderFactory() }
     single<DashboardPreferencesStore> { PlatformDashboardPreferencesStore() }
+    single<LocalExpenseTextLlmInterpreter> { IosLocalLlmExpenseTextInterpreter() }
 }

@@ -138,8 +138,26 @@ struct AppGlassRecurringDeleteConfirmationDialog: View {
 struct AppGlassBottomQuickActionsBar: View {
     let addAccessibilityLabel: String
     let voiceAccessibilityLabel: String
+    let screenshotAccessibilityLabel: String?
     let onAdd: () -> Void
     let onVoice: () -> Void
+    let onScreenshot: (() -> Void)?
+
+    init(
+        addAccessibilityLabel: String,
+        voiceAccessibilityLabel: String,
+        screenshotAccessibilityLabel: String? = nil,
+        onAdd: @escaping () -> Void,
+        onVoice: @escaping () -> Void,
+        onScreenshot: (() -> Void)? = nil
+    ) {
+        self.addAccessibilityLabel = addAccessibilityLabel
+        self.voiceAccessibilityLabel = voiceAccessibilityLabel
+        self.screenshotAccessibilityLabel = screenshotAccessibilityLabel
+        self.onAdd = onAdd
+        self.onVoice = onVoice
+        self.onScreenshot = onScreenshot
+    }
 
     var body: some View {
         HStack(spacing: 3) {
@@ -149,20 +167,34 @@ struct AppGlassBottomQuickActionsBar: View {
             .buttonStyle(.plain)
             .accessibilityLabel(addAccessibilityLabel)
 
-            Rectangle()
-                .fill(AppThemePalette.onSurface.opacity(0.18))
-                .frame(width: 1, height: 22)
+            quickActionDivider
 
             Button(action: onVoice) {
                 AppGlassBottomQuickActionIcon(systemName: "mic")
             }
             .buttonStyle(.plain)
             .accessibilityLabel(voiceAccessibilityLabel)
+
+            if let onScreenshot, let screenshotAccessibilityLabel {
+                quickActionDivider
+
+                Button(action: onScreenshot) {
+                    AppGlassBottomQuickActionIcon(systemName: "doc.text.viewfinder")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(screenshotAccessibilityLabel)
+            }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 3)
         .foregroundStyle(AppThemePalette.onSurface)
         .appDashboardChromeSurface(cornerRadius: 24)
+    }
+
+    private var quickActionDivider: some View {
+        Rectangle()
+            .fill(AppThemePalette.onSurface.opacity(0.18))
+            .frame(width: 1, height: 22)
     }
 }
 

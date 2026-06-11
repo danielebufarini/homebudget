@@ -18,7 +18,7 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
     }.asCoroutineDispatcher()
     private val serviceScope = CoroutineScope(SupervisorJob() + processorDispatcher)
     private val whitelistRepository: AppWhitelistRepository by inject()
-    private val interpretationPipeline: ExpenseInterpretationPipeline by inject()
+    private val interpretExpenseTextUseCase: InterpretExpenseTextUseCase by inject()
     private val merchantCategoryResolver: MerchantCategoryResolver by inject()
     private val notifier: ExpenseConfirmationNotifier by inject()
 
@@ -56,21 +56,21 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
             return
         }
 
-        val interpretation = interpretationPipeline.interpret(
-            text = rawText,
+        val interpretedCandidate = interpretExpenseTextUseCase.execute(
+            rawText = rawText,
             canUseLocalLlmFallback = isWhitelisted
         )
-        if (interpretation?.amountMinor == null) {
+        if (interpretedCandidate == null) {
             Log.d(TAG, "Ignored whitelisted notification: no amount candidate found")
             return
         }
 
-        val merchant = interpretation.merchant
+        val merchant = interpretedCandidate.description
         val textHash = rawText.sha256Hex()
         val dedupeKey = listOf(
             sourcePackage,
             sbn.postTime.toString(),
-            interpretation.amountMinor.toString(),
+            interpretedCandidate.amountMinor.toString(),
             merchant.orEmpty(),
             textHash
         ).joinToString(separator = "|")
@@ -82,7 +82,7 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
         val categoryId = merchantCategoryResolver.resolveCategoryId(merchant)
         val candidate = ExpenseNotificationCandidate(
             sourcePackage = sourcePackage,
-            amountMinor = interpretation.amountMinor,
+            amountMinor = interpretedCandidate.amountMinor,
             merchant = merchant,
             textHash = textHash,
             postTimeMillis = sbn.postTime,
@@ -90,7 +90,7 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
         )
         Log.d(
             TAG,
-            "Parsed candidate: source=${interpretation.source} amountMinor=${candidate.amountMinor} merchantPresent=${!candidate.merchant.isNullOrBlank()} categoryResolved=${!categoryId.isNullOrBlank()} notificationId=${candidate.notificationId}"
+            "Parsed candidate: source=${interpretedCandidate.source} amountMinor=${candidate.amountMinor} merchantPresent=${!candidate.merchant.isNullOrBlank()} categoryResolved=${!categoryId.isNullOrBlank()} notificationId=${candidate.notificationId}"
         )
         notifier.show(candidate)
         Log.d(TAG, "Confirmation notification requested: notificationId=${candidate.notificationId}")

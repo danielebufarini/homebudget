@@ -2,6 +2,11 @@ package it.danielebufarini.spesify.data.notifications
 
 interface ExpenseTextInterpreter {
     suspend fun interpret(text: String): ExpenseTextInterpretation
+
+    suspend fun interpretAll(text: String): List<ExpenseTextInterpretation> {
+        val interpretation = interpret(text)
+        return if (interpretation.hasValidAmount) listOf(interpretation) else emptyList()
+    }
 }
 
 data class ExpenseTextInterpretation(

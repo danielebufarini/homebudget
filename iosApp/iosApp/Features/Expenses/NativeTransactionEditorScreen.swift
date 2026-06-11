@@ -31,6 +31,14 @@ struct NativeTransactionEditorScreen: View {
     }
 
     init(
+        prefilledExpense: NativeExpenseEditorPrefill,
+        onClose: @escaping () -> Void
+    ) {
+        self.onClose = onClose
+        _viewModel = State(initialValue: NativeTransactionEditorViewModel(prefilledExpense: prefilledExpense))
+    }
+
+    init(
         incomeId: String,
         onClose: @escaping () -> Void
     ) {
