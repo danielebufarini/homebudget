@@ -51,7 +51,7 @@ fun DashboardContentViewController(
         onOpenMonthlyExpenses = onOpenMonthlyExpenses,
         onOpenSharedExpenses = onOpenSharedExpenses,
         onOpenCategoryExpenses = onOpenCategoryExpenses,
-        onOpenExpenseDetails = { expenseId -> onOpenExpenseDetails(expenseId, true) },
+        onOpenExpenseDetails = { expenseId -> onOpenExpenseDetails(expenseId, false) },
         onOpenIncomeDetails = onOpenIncomeDetails,
         onOpenTransactionSearch = onOpenTransactionSearch
     )
