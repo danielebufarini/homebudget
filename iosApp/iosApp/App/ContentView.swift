@@ -139,6 +139,7 @@ struct ContentView: View {
                                 }
                             }
                         }
+                        .id(prefill.id)
                         .appGlassHostedScreenChrome()
                         .toolbar(.hidden, for: .navigationBar)
                     case let .addExpense(expenseId, readOnly):

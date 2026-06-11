@@ -1,4 +1,5 @@
 @preconcurrency import ComposeApp
+import Foundation
 import SwiftUI
 
 enum AddTransactionKind: Hashable {
@@ -7,6 +8,7 @@ enum AddTransactionKind: Hashable {
 }
 
 struct NativeExpenseEditorPrefill: Hashable {
+    let id = UUID()
     let amountInput: String
     let descriptionText: String
     let dateMillis: Int64?
