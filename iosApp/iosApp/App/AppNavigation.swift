@@ -15,6 +15,11 @@ struct NativeExpenseEditorPrefill: Hashable {
     let categoryId: String?
 }
 
+struct PendingOpenURL: Identifiable, Equatable {
+    let id = UUID()
+    let url: URL
+}
+
 enum Route: Hashable {
     case categories
     case addTransaction(initialKind: AddTransactionKind, year: Int?, month: Int?)

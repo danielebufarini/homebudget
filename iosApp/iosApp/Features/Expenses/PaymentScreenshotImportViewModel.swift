@@ -3,6 +3,7 @@ import Foundation
 import PhotosUI
 import SwiftUI
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -37,7 +38,7 @@ final class PaymentScreenshotImportViewModel {
         statusMessage = appLocalized("Reading screenshot...")
         errorMessage = nil
 
-        Task { [weak self, ocrService, controller] in
+        Task { [weak self] in
             guard let self else {
                 return
             }
@@ -50,15 +51,10 @@ final class PaymentScreenshotImportViewModel {
                     throw PaymentScreenshotImportError.imageLoadFailed
                 }
 
-                let recognizedText = try await ocrService.recognizeText(in: image)
                 busyLabel = appLocalized("Preparing expense...")
                 statusMessage = appLocalized("Preparing expense...")
 
-                let candidateQueue = try await controller.interpretOcrTextQueue(rawText: recognizedText)
-                var prefills: [NativeExpenseEditorPrefill] = []
-                while let candidate = candidateQueue.nextCandidate() {
-                    prefills.append(candidate.nativePrefill)
-                }
+                let prefills = try await candidates(from: image)
 
                 guard !prefills.isEmpty else {
                     isBusy = false
@@ -79,6 +75,36 @@ final class PaymentScreenshotImportViewModel {
                 errorMessage = paymentScreenshotImportMessage(for: error)
             }
         }
+    }
+
+    func candidates(fromImageFileAt url: URL) async throws -> [NativeExpenseEditorPrefill] {
+        let data = try await Task.detached(priority: .userInitiated) {
+            let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccessSecurityScope {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            return try Data(contentsOf: url)
+        }.value
+
+        guard let image = UIImage(data: data) else {
+            throw PaymentScreenshotImportError.imageLoadFailed
+        }
+
+        return try await candidates(from: image)
+    }
+
+    private func candidates(from image: UIImage) async throws -> [NativeExpenseEditorPrefill] {
+        let recognizedText = try await ocrService.recognizeText(in: image)
+        let candidateQueue = try await controller.interpretOcrTextQueue(rawText: recognizedText)
+        var prefills: [NativeExpenseEditorPrefill] = []
+        while let candidate = candidateQueue.nextCandidate() {
+            prefills.append(candidate.nativePrefill)
+        }
+
+        return prefills
     }
 }
 
@@ -104,7 +130,7 @@ private extension IosPaymentScreenshotExpenseCandidate {
     }
 }
 
-private func paymentScreenshotImportMessage(for error: Error) -> String {
+func paymentScreenshotImportMessage(for error: Error) -> String {
     if let localizedError = error as? LocalizedError,
        let description = localizedError.errorDescription,
        !description.isEmpty {

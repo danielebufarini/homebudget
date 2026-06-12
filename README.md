@@ -174,7 +174,7 @@ Matching notifications show a local confirmation notification with explicit acti
 
 ### iOS Payment Screenshot Import
 
-Payment screenshot import is iOS-native, expense-oriented, and available from the dashboard and monthly expenses list input dock. It is intentionally not exposed from the income list dock, where the secondary dock action starts voice input directly instead of showing the screenshot import menu. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, and passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
+Payment screenshot import is iOS-native, expense-oriented, and available from the dashboard and monthly expenses list input dock. It is intentionally not exposed from the income list dock, where the secondary dock action starts voice input directly instead of showing the screenshot import menu. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, and passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The iOS app also registers as an alternate document handler for image files, so compatible screenshots opened with Spesify through iOS document handoff use the same OCR and editable review flow without a Share Extension. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
 
 The shared interpretation pipeline can return multiple expense candidates from one OCR input. It first applies deterministic regex parsing, including payment-notification blocks such as `pagamento di <amount> EUR presso <merchant> con la tua carta` and `payment of <amount> EUR at <merchant> with your card`. When the regex result is incomplete or ambiguous, the local iOS fallback remains available through the platform LLM bridge and returns raw JSON for shared Kotlin validation.
 
@@ -288,7 +288,7 @@ Without this setup, local backup still works.
 
 ### iOS Payment Screenshot Import
 
-Payment screenshot import is an in-app flow exposed from the monthly expenses screen. It is not currently an iOS Share Sheet target; appearing in Photos as a share recipient would require a separate Share Extension.
+Payment screenshot import is exposed in-app and through iOS Document Handling for image files (`public.image`, `public.png`, `public.jpeg`, and `public.heic`). Spesify does not use a Share Extension for this path; when iOS hands the app an image document URL, the main app reads the file and runs the existing OCR, interpretation, and editable expense review flow.
 
 The local iOS LLM fallback is kept available through the platform bridge, but the app still builds and runs when Foundation Models are unavailable. In that case, regex parsing and shared validation remain active, and unsafe or invalid fallback output is ignored.
 

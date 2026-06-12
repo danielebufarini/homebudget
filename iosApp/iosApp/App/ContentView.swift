@@ -21,7 +21,14 @@ struct ContentView: View {
     @State var csvExportEndDate = Date()
     @State var csvImportController = IosCsvImportController()
     @State var csvExportController = IosCsvExportController()
+    @State var documentPaymentScreenshotImporter = PaymentScreenshotImportViewModel()
+    @State var isProcessingDocumentPaymentScreenshot = false
     @State private var dashboardNavigationDrawerOpen = false
+    @Binding var pendingOpenURL: PendingOpenURL?
+
+    init(pendingOpenURL: Binding<PendingOpenURL?> = .constant(nil)) {
+        _pendingOpenURL = pendingOpenURL
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -273,12 +280,18 @@ struct ContentView: View {
                         )
                     }
                 }
-                .onOpenURL { url in
-                    handleIncomingURL(url)
-                }
                 .task {
                     SpesifyWidgetSummaryRefresher.shared.refresh()
+                    consumePendingOpenURLIfNeeded()
                 }
+                .onChange(of: pendingOpenURL) { _, _ in
+                    consumePendingOpenURLIfNeeded()
+                }
+        }
+        .overlay {
+            if isProcessingDocumentPaymentScreenshot {
+                documentPaymentScreenshotProgressOverlay
+            }
         }
         .overlay(alignment: .bottom) {
             dashboardFloatingInputDock
@@ -335,6 +348,18 @@ struct ContentView: View {
                 bottomPadding: TransactionInputDockLayout.dashboardBottomPadding
             )
         }
+    }
+
+    private var documentPaymentScreenshotProgressOverlay: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text(appLocalized("Reading screenshot..."))
+                .font(.subheadline.weight(.medium))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .appGlassSurface(cornerRadius: 24)
+        .padding(.horizontal, 24)
     }
 
     private var leadingBackChrome: some View {

@@ -14,7 +14,21 @@ private enum CsvImportReadError: LocalizedError {
 }
 
 extension ContentView {
+    func consumePendingOpenURLIfNeeded() {
+        guard let pendingOpenURL else {
+            return
+        }
+
+        self.pendingOpenURL = nil
+        handleIncomingURL(pendingOpenURL.url)
+    }
+
     func handleIncomingURL(_ url: URL) {
+        if url.isFileURL {
+            handlePaymentScreenshotDocument(url)
+            return
+        }
+
         guard url.scheme == "spesify" else {
             return
         }
@@ -27,6 +41,53 @@ extension ContentView {
         default:
             break
         }
+    }
+
+    private func handlePaymentScreenshotDocument(_ url: URL) {
+        guard isSupportedPaymentScreenshotDocument(url) else {
+            showCsvFeedback(appLocalized("Unable to import this payment screenshot."), style: .error)
+            return
+        }
+
+        guard !isProcessingDocumentPaymentScreenshot else {
+            showCsvFeedback(appLocalized("Another payment screenshot is already being imported."), style: .error)
+            return
+        }
+
+        isProcessingDocumentPaymentScreenshot = true
+        Task { @MainActor in
+            defer {
+                isProcessingDocumentPaymentScreenshot = false
+            }
+
+            do {
+                let prefills = try await documentPaymentScreenshotImporter.candidates(fromImageFileAt: url)
+                guard !prefills.isEmpty else {
+                    showCsvFeedback(
+                        appLocalized("I could not find a usable expense in this screenshot."),
+                        style: .error
+                    )
+                    return
+                }
+
+                handlePaymentScreenshotCandidates(prefills)
+            } catch {
+                showCsvFeedback(paymentScreenshotImportMessage(for: error), style: .error)
+            }
+        }
+    }
+
+    private func isSupportedPaymentScreenshotDocument(_ url: URL) -> Bool {
+        if let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType,
+           contentType.conforms(to: .image) {
+            return true
+        }
+
+        guard let fallbackType = UTType(filenameExtension: url.pathExtension) else {
+            return false
+        }
+
+        return fallbackType.conforms(to: .image)
     }
 
     func handleCsvSelection(result: Result<URL, Error>) {

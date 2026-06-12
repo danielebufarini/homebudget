@@ -169,6 +169,22 @@
         }
       }
     },
+    "Another payment screenshot is already being imported." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another payment screenshot is already being imported."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un altro screenshot pagamento è già in importazione."
+          }
+        }
+      }
+    },
     "Amount" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1171,6 +1187,22 @@
         }
       }
     },
+    "I could not find a usable expense in this screenshot." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I could not find a usable expense in this screenshot."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non ho trovato una spesa utilizzabile in questo screenshot."
+          }
+        }
+      }
+    },
     "I could not understand the amount well enough to prepare the expense." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1661,6 +1693,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pronto per aggiornare la spesa trovata."
+          }
+        }
+      }
+    },
+    "Reading screenshot..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading screenshot..."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lettura screenshot..."
           }
         }
       }
@@ -2307,6 +2355,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossibile esportare il file CSV"
+          }
+        }
+      }
+    },
+    "Unable to import this payment screenshot." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to import this payment screenshot."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile importare questo screenshot di pagamento."
           }
         }
       }

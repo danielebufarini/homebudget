@@ -19,6 +19,7 @@ struct iOSApp: App {
     @State private var didStartStartupRestore = false
     @State private var isStartupReady = false
     @State private var pendingStartupRestore: PendingStartupRestore?
+    @State private var pendingOpenURL: PendingOpenURL?
 
     init() {
         IosLocalLlmExpenseTextInterpreterRegistry.shared.installProvider(
@@ -32,7 +33,7 @@ struct iOSApp: App {
         WindowGroup {
             Group {
                 if isStartupReady {
-                    ContentView()
+                    ContentView(pendingOpenURL: $pendingOpenURL)
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,6 +71,9 @@ struct iOSApp: App {
                         pendingRestore.preview.incomesCount
                     )
                 )
+            }
+            .onOpenURL { url in
+                pendingOpenURL = PendingOpenURL(url: url)
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
