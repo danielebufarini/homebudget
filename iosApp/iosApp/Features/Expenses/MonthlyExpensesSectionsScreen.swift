@@ -74,6 +74,7 @@ struct MonthlyTransactionsRootView: View {
     @State private var selectedKind: AddTransactionKind
     @State private var groupingMode: ExpenseGroupingMode = .byCategory
     @State private var showPaymentScreenshotImport = false
+    @State private var isDeleteConfirmationPresented = false
 
     init(
         year: Int,
@@ -93,6 +94,7 @@ struct MonthlyTransactionsRootView: View {
             selectedMonth: $selectedMonth,
             selectedKind: $selectedKind,
             groupingMode: $groupingMode,
+            isDeleteConfirmationPresented: $isDeleteConfirmationPresented,
             onOpenExpense: { expenseID in
                 path.append(Route.addExpense(expenseId: expenseID, readOnly: false))
             },
@@ -108,14 +110,17 @@ struct MonthlyTransactionsRootView: View {
                 .padding(.top, MonthNavigationHeaderLayout.topPadding)
         }
         .overlay(alignment: .bottom) {
-            TransactionInputDock(
-                onManualAdd: addTransaction,
-                onVoiceInput: onStartVoiceExpense,
-                onImportScreenshot: {
-                    showPaymentScreenshotImport = true
-                },
-                secondaryActionStyle: selectedKind == .income ? .directVoice : .overflowMenu
-            )
+            if !isDeleteConfirmationPresented {
+                TransactionInputDock(
+                    onManualAdd: addTransaction,
+                    onVoiceInput: onStartVoiceExpense,
+                    onImportScreenshot: {
+                        showPaymentScreenshotImport = true
+                    },
+                    secondaryActionStyle: selectedKind == .income ? .directVoice : .overflowMenu
+                )
+                .transition(.opacity)
+            }
         }
         .sheet(isPresented: $showPaymentScreenshotImport) {
             PaymentScreenshotImportSheet(
@@ -175,6 +180,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
     @Binding var selectedMonth: MonthCursor
     @Binding var selectedKind: AddTransactionKind
     @Binding var groupingMode: ExpenseGroupingMode
+    @Binding var isDeleteConfirmationPresented: Bool
     let onOpenExpense: (String) -> Void
     let onOpenIncome: (String) -> Void
 
@@ -194,6 +200,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
                     headerAmountDescriptor: appLocalized("Expenses"),
                     topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
                     bottomScrollClearance: TransactionInputDockLayout.listBottomClearance,
+                    isDeleteConfirmationPresented: $isDeleteConfirmationPresented,
                     headerAccessory: transactionKindSelector,
                     expandsSectionsInitially: false
                 )
@@ -207,6 +214,7 @@ private struct MonthlyTransactionsSectionsScreen: View {
                     topReservedInset: MonthlyTransactionsHeaderLayout.reservedTopInset,
                     headerAccessory: transactionKindSelector,
                     bottomScrollClearance: TransactionInputDockLayout.listBottomClearance,
+                    isDeleteConfirmationPresented: $isDeleteConfirmationPresented,
                     groupingMode: $groupingMode
                 )
             }

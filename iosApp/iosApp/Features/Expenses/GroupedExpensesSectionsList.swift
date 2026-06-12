@@ -13,6 +13,7 @@ struct GroupedExpensesSectionsList: View {
     let headerAccessory: (() -> AnyView)?
 
     @Binding private var groupingMode: ExpenseGroupingMode
+    @Binding private var isDeleteConfirmationPresented: Bool
     @State private var viewModel: GroupedExpensesSectionsViewModel
     @State private var pendingExpenseDeleteID: String?
 
@@ -29,6 +30,7 @@ struct GroupedExpensesSectionsList: View {
         headerAmountDescriptor: String? = nil,
         topReservedInset: CGFloat? = nil,
         bottomScrollClearance: CGFloat = 0,
+        isDeleteConfirmationPresented: Binding<Bool> = .constant(false),
         headerAccessory: (() -> AnyView)? = nil,
         expandsSectionsInitially: Bool = true
     ) {
@@ -43,6 +45,7 @@ struct GroupedExpensesSectionsList: View {
         self.bottomScrollClearance = bottomScrollClearance
         self.headerAccessory = headerAccessory
         _groupingMode = groupingMode
+        _isDeleteConfirmationPresented = isDeleteConfirmationPresented
         _viewModel = State(
             initialValue: GroupedExpensesSectionsViewModel(
                 year: year,
@@ -70,7 +73,11 @@ struct GroupedExpensesSectionsList: View {
         .onChange(of: groupingMode) { _, updatedMode in
             viewModel.updateGroupingMode(updatedMode)
         }
+        .onChange(of: pendingExpenseDeleteID) { _, _ in
+            syncDeleteConfirmationPresentation()
+        }
         .onDisappear {
+            isDeleteConfirmationPresented = false
             viewModel.stop()
         }
         .overlay {
@@ -223,5 +230,9 @@ struct GroupedExpensesSectionsList: View {
 
     private var pendingExpenseDeleteRow: GroupedExpenseRowModel? {
         viewModel.sections.row(withID: pendingExpenseDeleteID)
+    }
+
+    private func syncDeleteConfirmationPresentation() {
+        isDeleteConfirmationPresented = pendingExpenseDeleteRow != nil
     }
 }
