@@ -14,7 +14,11 @@ import kotlin.coroutines.resume
  * this provider is only a small iOS adapter boundary.
  */
 interface IosLocalLlmExpenseTextProvider {
-    fun interpret(text: String, completion: (String) -> Unit)
+    fun interpret(
+        text: String,
+        moneyCandidates: List<MoneyCandidate>,
+        completion: (String) -> Unit
+    )
 }
 
 /**
@@ -35,14 +39,18 @@ object IosLocalLlmExpenseTextInterpreterRegistry {
         this.provider = provider
     }
 
-    internal suspend fun interpret(text: String): String {
+    internal suspend fun interpret(
+        text: String,
+        moneyCandidates: List<MoneyCandidate>
+    ): String {
         if (!isEnabled) return ""
+        if (moneyCandidates.isEmpty()) return ""
         val installedProvider = provider ?: return ""
 
         return withTimeoutOrNull(IOS_LOCAL_LLM_TIMEOUT_MILLIS) {
             suspendCancellableCoroutine { continuation ->
                 try {
-                    installedProvider.interpret(text) { json ->
+                    installedProvider.interpret(text, moneyCandidates) { json ->
                         if (continuation.isActive) {
                             continuation.resume(json)
                         }
@@ -68,7 +76,12 @@ object IosLocalLlmExpenseTextInterpreterRegistry {
  */
 class IosLocalLlmExpenseTextInterpreter : LocalExpenseTextLlmInterpreter {
     override suspend fun interpret(text: String): String =
-        IosLocalLlmExpenseTextInterpreterRegistry.interpret(text)
+        interpret(text = text, moneyCandidates = emptyList())
+
+    override suspend fun interpret(
+        text: String,
+        moneyCandidates: List<MoneyCandidate>
+    ): String = IosLocalLlmExpenseTextInterpreterRegistry.interpret(text, moneyCandidates)
 }
 
 private const val IOS_LOCAL_LLM_TIMEOUT_MILLIS = 25_000L

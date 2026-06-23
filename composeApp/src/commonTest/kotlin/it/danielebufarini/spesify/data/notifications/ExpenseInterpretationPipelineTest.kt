@@ -53,8 +53,8 @@ class ExpenseInterpretationPipelineTest {
 
     @Test
     fun amountOnlyRegexResultTriggersLocalLlmFallbackWhenEnabled() = runTest {
-        val localLlm = CountingLocalLlmInterpreter(validLocalLlmJson(merchant = "SUPERMERCATO TEST"))
-        val pipeline = pipeline(localLlm = localLlm)
+        val llm = CountingExpenseTextLlmInterpreter(merchant = "SUPERMERCATO TEST")
+        val pipeline = pipeline(llm = llm)
 
         val result = pipeline.interpret(
             text = "Pagamento carta 12,34 EUR",
@@ -65,7 +65,25 @@ class ExpenseInterpretationPipelineTest {
         assertEquals(1_234L, result.amountMinor)
         assertEquals("SUPERMERCATO TEST", result.merchant)
         assertEquals(InterpretationSource.LocalLlm, result.source)
+        assertEquals(1, llm.calls)
+        assertEquals(listOf(1_234L), llm.lastMoneyCandidates.map { it.amountMinor })
+    }
+
+    @Test
+    fun localLlmRawAdapterReceivesDeterministicMoneyCandidates() = runTest {
+        val localLlm = CountingLocalLlmInterpreter(validLocalLlmJson(merchant = "SUPERMERCATO TEST"))
+        val pipeline = pipeline(localLlm = localLlm)
+
+        val result = pipeline.interpret(
+            text = "Pagamento carta 12,34 EUR",
+            canUseLocalLlmFallback = true
+        )
+
+        assertNotNull(result)
+        assertEquals(1_234L, result.amountMinor)
+        assertEquals(InterpretationSource.LocalLlm, result.source)
         assertEquals(1, localLlm.calls)
+        assertEquals(listOf(1_234L), localLlm.lastMoneyCandidates.map { it.amountMinor })
     }
 
     @Test
@@ -87,8 +105,8 @@ class ExpenseInterpretationPipelineTest {
 
     @Test
     fun regexFailureTriggersLocalLlmFallbackWhenEnabledAndAvailable() = runTest {
-        val localLlm = CountingLocalLlmInterpreter(validLocalLlmJson(amountMinor = 999L, merchant = "BAR CENTRALE"))
-        val pipeline = pipeline(localLlm = localLlm)
+        val llm = CountingExpenseTextLlmInterpreter(amountMinor = 999L, merchant = "BAR CENTRALE")
+        val pipeline = pipeline(llm = llm)
 
         val result = pipeline.interpret(
             text = "Carta usata al BAR CENTRALE per 9,99 EUR",
@@ -99,7 +117,7 @@ class ExpenseInterpretationPipelineTest {
         assertEquals(999L, result.amountMinor)
         assertEquals("BAR CENTRALE", result.merchant)
         assertEquals(InterpretationSource.LocalLlm, result.source)
-        assertEquals(1, localLlm.calls)
+        assertEquals(1, llm.calls)
     }
 
     @Test
@@ -116,7 +134,7 @@ class ExpenseInterpretationPipelineTest {
 
     @Test
     fun localLlmFailureDoesNotCrashTheFlow() = runTest {
-        val pipeline = pipeline(localLlm = ThrowingLocalLlmInterpreter)
+        val pipeline = pipeline(llm = ThrowingExpenseTextLlmInterpreter)
 
         val result = pipeline.interpret(
             text = "Pagamento carta 12,34 EUR",
@@ -131,7 +149,7 @@ class ExpenseInterpretationPipelineTest {
     @Test
     fun validLocalLlmJsonBecomesCandidateTransaction() = runTest {
         val useCase = InterpretExpenseTextUseCase(
-            pipeline(localLlm = CountingLocalLlmInterpreter(validLocalLlmJson(amountMinor = 1_999L, merchant = "BAR CENTRALE")))
+            pipeline(llm = CountingExpenseTextLlmInterpreter(amountMinor = 1_999L, merchant = "BAR CENTRALE"))
         )
 
         val candidate = useCase.execute(
@@ -151,11 +169,9 @@ class ExpenseInterpretationPipelineTest {
     fun validLocalLlmArrayBecomesMultipleCandidateTransactions() = runTest {
         val useCase = InterpretExpenseTextUseCase(
             pipeline(
-                localLlm = CountingLocalLlmInterpreter(
-                    validLocalLlmTransactionsJson(
-                        LlmFixture(2_220L, "MI CASA TOASTERIA"),
-                        LlmFixture(1_520L, "DR MAX ITALIA - MONZA")
-                    )
+                llm = MultipleExpenseTextLlmInterpreter(
+                    ExpenseLlmExtraction(true, 2_220L, "EUR", "MI CASA TOASTERIA", 0.86f),
+                    ExpenseLlmExtraction(true, 1_520L, "EUR", "DR MAX ITALIA - MONZA", 0.86f)
                 )
             )
         )
@@ -174,7 +190,7 @@ class ExpenseInterpretationPipelineTest {
 
     @Test
     fun localLlmAmountNotPresentAsMonetaryEvidenceIsRejected() = runTest {
-        val pipeline = pipeline(localLlm = CountingLocalLlmInterpreter(validLocalLlmJson(amountMinor = 2_700L, merchant = "STATUS BAR")))
+        val pipeline = pipeline(llm = CountingExpenseTextLlmInterpreter(amountMinor = 2_700L, merchant = "STATUS BAR"))
 
         val result = pipeline.interpret(
             text = "22:13\n27\nPagamento eseguito 22,20 EUR presso MI CASA TOASTERIA",
@@ -184,6 +200,66 @@ class ExpenseInterpretationPipelineTest {
         assertNotNull(result)
         assertEquals(2_220L, result.amountMinor)
         assertEquals(InterpretationSource.Regex, result.source)
+    }
+
+    @Test
+    fun finecoRegexResultIsPrimaryAndSkipsLocalLlmFallback() = runTest {
+        val llm = CountingExpenseTextLlmInterpreter(amountMinor = 31L, merchant = "Card suffix")
+        val pipeline = pipeline(llm = llm)
+
+        val result = pipeline.interpret(
+            text = finecoNotification,
+            canUseLocalLlmFallback = true
+        )
+
+        assertNotNull(result)
+        assertEquals(4_499L, result.amountMinor)
+        assertEquals("Amazon.it", result.merchant)
+        assertEquals("EUR", result.currency)
+        assertEquals(InterpretationSource.Regex, result.source)
+        assertEquals(0, llm.calls)
+    }
+
+    @Test
+    fun llmFallbackRejectsInventedAmountNotPresentInMoneyCandidates() = runTest {
+        val llm = CountingExpenseTextLlmInterpreter(amountMinor = 31L, merchant = "Card suffix")
+        val pipeline = pipeline(llm = llm)
+
+        val result = pipeline.interpret(
+            text = """
+                Carta usata
+                Carta ***0031
+                Importo non standard 44,99 EUR
+                Info 0228992899
+            """.trimIndent(),
+            canUseLocalLlmFallback = true
+        )
+
+        assertNotNull(result)
+        assertEquals(4_499L, result.amountMinor)
+        assertEquals(InterpretationSource.Regex, result.source)
+        assertEquals(1, llm.calls)
+        assertEquals(listOf(4_499L), llm.lastMoneyCandidates.map { it.amountMinor })
+    }
+
+    @Test
+    fun llmFallbackRejectsRefundAndIncomingTransferText() = runTest {
+        val llm = CountingExpenseTextLlmInterpreter(amountMinor = 1_234L, merchant = "Shop")
+        val pipeline = pipeline(llm = llm)
+
+        assertNull(
+            pipeline.interpret(
+                text = "Rimborso carta 12,34 EUR da Shop",
+                canUseLocalLlmFallback = true
+            )
+        )
+        assertNull(
+            pipeline.interpret(
+                text = "Bonifico ricevuto 12,34 EUR da Shop",
+                canUseLocalLlmFallback = true
+            )
+        )
+        assertEquals(0, llm.calls)
     }
 
     @Test
@@ -227,6 +303,15 @@ class ExpenseInterpretationPipelineTest {
         config = ExpenseInterpretationPipelineConfig(llmTimeoutMillis = 1_000L)
     )
 
+    private fun pipeline(
+        llm: ExpenseTextLlmInterpreter
+    ): ExpenseInterpretationPipeline = ExpenseInterpretationPipeline(
+        regexInterpreter = RegexExpenseTextInterpreter(),
+        llmInterpreter = llm,
+        llmExtractionValidator = ExpenseLlmExtractionValidator(),
+        config = ExpenseInterpretationPipelineConfig(llmTimeoutMillis = 1_000L)
+    )
+
     private fun validLocalLlmJson(
         amountMinor: Long = 1_234L,
         merchant: String? = "SUPERMERCATO TEST"
@@ -252,14 +337,84 @@ class ExpenseInterpretationPipelineTest {
     ) : LocalExpenseTextLlmInterpreter {
         var calls: Int = 0
             private set
+        var lastMoneyCandidates: List<MoneyCandidate> = emptyList()
+            private set
 
         override suspend fun interpret(text: String): String {
             calls += 1
+            return result
+        }
+
+        override suspend fun interpret(
+            text: String,
+            moneyCandidates: List<MoneyCandidate>
+        ): String {
+            calls += 1
+            lastMoneyCandidates = moneyCandidates
             return result
         }
     }
 
     private object ThrowingLocalLlmInterpreter : LocalExpenseTextLlmInterpreter {
         override suspend fun interpret(text: String): String = error("local model failed")
+    }
+
+    private class CountingExpenseTextLlmInterpreter(
+        private val amountMinor: Long = 1_234L,
+        private val merchant: String? = "SUPERMERCATO TEST",
+        private val isExpense: Boolean = true,
+        private val currency: String? = "EUR",
+        private val confidence: Float = 0.86f
+    ) : ExpenseTextLlmInterpreter {
+        var calls: Int = 0
+            private set
+        var lastMoneyCandidates: List<MoneyCandidate> = emptyList()
+            private set
+
+        override suspend fun interpret(
+            text: String,
+            moneyCandidates: List<MoneyCandidate>
+        ): ExpenseLlmExtraction {
+            calls += 1
+            lastMoneyCandidates = moneyCandidates
+            return ExpenseLlmExtraction(
+                isExpense = isExpense,
+                selectedAmountMinor = amountMinor,
+                currency = currency,
+                merchant = merchant,
+                confidence = confidence
+            )
+        }
+    }
+
+    private class MultipleExpenseTextLlmInterpreter(
+        private vararg val results: ExpenseLlmExtraction
+    ) : ExpenseTextLlmInterpreter {
+        override suspend fun interpret(
+            text: String,
+            moneyCandidates: List<MoneyCandidate>
+        ): ExpenseLlmExtraction? = results.firstOrNull()
+
+        override suspend fun interpretAll(
+            text: String,
+            moneyCandidates: List<MoneyCandidate>
+        ): List<ExpenseLlmExtraction> = results.toList()
+    }
+
+    private object ThrowingExpenseTextLlmInterpreter : ExpenseTextLlmInterpreter {
+        override suspend fun interpret(
+            text: String,
+            moneyCandidates: List<MoneyCandidate>
+        ): ExpenseLlmExtraction = error("local model failed")
+    }
+
+    private companion object {
+        private val finecoNotification = """
+            Fineco
+            ieri, 22:35
+            Autorizzato utilizzo Carta ***0031
+            Importo: 44,99 EUR, per: Amazon.it. Info:
+            0228992899
+        """.trimIndent()
     }
 }

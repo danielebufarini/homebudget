@@ -9,7 +9,15 @@ class AndroidLocalLlmExpenseTextInterpreter(
     private val modelProvider: () -> GenerativeModel = { Generation.getClient() }
 ) : LocalExpenseTextLlmInterpreter {
 
-    override suspend fun interpret(text: String): String {
+    override suspend fun interpret(text: String): String =
+        interpret(text = text, moneyCandidates = emptyList())
+
+    override suspend fun interpret(
+        text: String,
+        moneyCandidates: List<MoneyCandidate>
+    ): String {
+        if (moneyCandidates.isEmpty()) return ""
+
         val model = modelProvider()
         val status = runCatching { model.checkStatus() }
             .onFailure { Log.w(TAG, "Local LLM status check failed", it) }
@@ -21,43 +29,58 @@ class AndroidLocalLlmExpenseTextInterpreter(
         }
 
         return runCatching {
-            model.generateContent(buildPrompt(text)).candidates.firstOrNull()?.text.orEmpty()
+            model.generateContent(
+                buildAndroidExpenseLlmPrompt(
+                    notificationText = text,
+                    moneyCandidates = moneyCandidates
+                )
+            ).candidates.firstOrNull()?.text.orEmpty()
         }.onFailure {
             Log.w(TAG, "Local LLM fallback failed", it)
         }.getOrNull().orEmpty()
     }
 
-    private fun buildPrompt(notificationText: String): String = """
-        You extract expense data from one bank or card notification.
-        
-        Return only valid JSON. No Markdown. No explanation.
-        
-        Output shape:
-        {
-          "transactions": [
-            {
-              "isExpense": true,
-              "amountMinor": 0,
-              "currency": "EUR",
-              "merchant": null,
-              "confidence": 0.0
-            }
-          ]
-        }
-        
-        Rules:
-        - Return {"transactions":[]} if the notification is not clearly a payment made by the user.
-        - Extract only monetary amounts, not dates, times, percentages, card numbers, or balances.
-        - Convert the paid amount to cents. Example: 12,34 EUR means 1234.
-        - Use "EUR" only when the text indicates euro.
-        - merchant is the shop, company, payee, or merchant name. Use null if missing.
-        - Do not guess.
-        
-        Notification text:
-        ${notificationText.trim()}
-    """.trimIndent()
-
     private companion object {
         private const val TAG = "SpesifyLocalLlm"
     }
+}
+
+internal fun buildAndroidExpenseLlmPrompt(
+    notificationText: String,
+    moneyCandidates: List<MoneyCandidate>
+): String {
+    if (moneyCandidates.isEmpty()) return ""
+
+    val candidates = moneyCandidates.joinToString(separator = "\n") { candidate ->
+        "- selectedAmountMinor=${candidate.amountMinor}, currency=${candidate.currency ?: "null"}, text=\"${candidate.originalText}\""
+    }
+
+    return """
+        You classify one bank or card notification for Spesify.
+
+        Return only valid JSON. No Markdown. No explanation.
+
+        Output shape:
+        {
+          "isExpense": true,
+          "selectedAmountMinor": null,
+          "currency": "EUR",
+          "merchant": null,
+          "confidence": 0.0
+        }
+
+        Rules:
+        - Choose selectedAmountMinor from the allowed candidates only.
+        - Do not parse, convert, or invent another amount.
+        - Return {"isExpense":false,"selectedAmountMinor":null,"currency":null,"merchant":null,"confidence":0.0} if uncertain.
+        - Return no expense for refunds, incoming transfers, salary, top-ups, or balance-only notifications.
+        - Ignore dates, times, card suffixes, phone numbers, balances, and percentages.
+        - merchant is the shop, company, payee, or merchant name. Use null if missing.
+
+        Allowed amount candidates:
+        $candidates
+
+        Notification text:
+        ${notificationText.trim()}
+    """.trimIndent()
 }

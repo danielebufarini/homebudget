@@ -88,7 +88,8 @@ class LlmExpenseJsonValidatorTest {
     @Test
     fun validJsonIsNormalizedIntoExpenseTextInterpretation() {
         val result = validator.validate(
-            """{"isExpense":true,"amountMinor":1234,"currency":"eur","merchant":"  Shop  ","confidence":0.90}"""
+            """{"isExpense":true,"amountMinor":1234,"currency":"eur","merchant":"  Shop  ","confidence":0.90}""",
+            ocrText = "Pagamento carta 12,34 EUR presso Shop"
         )
 
         assertEquals(1_234L, result?.amountMinor)
@@ -101,11 +102,23 @@ class LlmExpenseJsonValidatorTest {
     @Test
     fun missingCurrencyIsSafelyInferredAsEur() {
         val result = validator.validate(
-            """{"isExpense":true,"amountMinor":1234,"merchant":"Shop","confidence":0.90}"""
+            """{"isExpense":true,"amountMinor":1234,"merchant":"Shop","confidence":0.90}""",
+            ocrText = "Pagamento carta 12,34 EUR presso Shop"
         )
 
         assertEquals(1_234L, result?.amountMinor)
         assertEquals("EUR", result?.currency)
+    }
+
+    @Test
+    fun selectedAmountMinorJsonFieldIsAccepted() {
+        val result = validator.validate(
+            """{"isExpense":true,"selectedAmountMinor":1234,"currency":"EUR","merchant":"Shop","confidence":0.90}""",
+            ocrText = "Pagamento carta 12,34 EUR presso Shop"
+        )
+
+        assertEquals(1_234L, result?.amountMinor)
+        assertEquals("Shop", result?.merchant)
     }
 
     @Test
@@ -160,5 +173,29 @@ class LlmExpenseJsonValidatorTest {
         assertEquals(1, results.size)
         assertEquals(2_220L, results.single().amountMinor)
         assertTrue(results.single().merchant != "Battery")
+    }
+
+    @Test
+    fun copiedAmountTextCannotBypassMissingMoneyCandidate() {
+        val result = validator.validate(
+            """{"isExpense":true,"amountMinor":31,"amountText":"0031","currency":"EUR","merchant":"Card suffix","confidence":0.90}""",
+            ocrText = """
+                Autorizzato utilizzo Carta ***0031
+                Importo: 44,99 EUR, per: Amazon.it. Info:
+                0228992899
+            """.trimIndent()
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun refundSourceTextIsRejectedEvenWhenJsonLooksValid() {
+        val result = validator.validate(
+            """{"isExpense":true,"amountMinor":1234,"currency":"EUR","merchant":"Shop","confidence":0.90}""",
+            ocrText = "Rimborso carta 12,34 EUR da Shop"
+        )
+
+        assertNull(result)
     }
 }

@@ -114,10 +114,7 @@ final class VisionPaymentScreenshotOCRService: PaymentScreenshotOCRServicing {
         let preferredLanguages = ["it-IT", "en-US"]
 
         do {
-            let supportedLanguages = try VNRecognizeTextRequest.supportedRecognitionLanguages(
-                for: .accurate,
-                revision: request.revision
-            )
+            let supportedLanguages = try request.supportedRecognitionLanguages()
             let availableLanguages = preferredLanguages.filter { supportedLanguages.contains($0) }
             if !availableLanguages.isEmpty {
                 request.recognitionLanguages = availableLanguages
@@ -159,10 +156,10 @@ struct PaymentScreenshotLlmTransaction {
     @Guide(description: "True only when this item is a user expense or card/POS payment.")
     var isExpense: Bool
 
-    @Guide(description: "Exact visible money amount text copied from the OCR, including currency when visible, for example 44,99 EUR. Use nil if no reliable monetary amount exists.")
-    var amountText: String?
+    @Guide(description: "One selectedAmountMinor value copied exactly from the allowed candidate list. Use nil when none apply.")
+    var selectedAmountMinor: Int?
 
-    @Guide(description: "Use EUR when present. Use nil only if EUR is safely inferable from the OCR text.")
+    @Guide(description: "Currency for the selected candidate. Use EUR for EUR candidates, or nil when not an expense.")
     var currency: String?
 
     @Guide(description: "Merchant, payee, or short payment description. Use nil if unavailable.")
@@ -183,14 +180,34 @@ private struct PaymentScreenshotLlmCompletion: @unchecked Sendable {
     let complete: (String) -> Void
 }
 
+struct PaymentScreenshotMoneyCandidate: Sendable {
+    let amountMinor: Int64
+    let currency: String?
+    let originalText: String
+}
+
 final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseTextProvider, @unchecked Sendable {
     private let interpreter = FoundationModelsPaymentScreenshotLlmInterpreter()
 
-    func interpret(text: String, completion: @escaping (String) -> Void) {
+    func interpret(
+        text: String,
+        moneyCandidates: [MoneyCandidate],
+        completion: @escaping (String) -> Void
+    ) {
         let safeCompletion = PaymentScreenshotLlmCompletion(complete: completion)
+        let candidates = moneyCandidates.map {
+            PaymentScreenshotMoneyCandidate(
+                amountMinor: $0.amountMinor,
+                currency: $0.currency,
+                originalText: $0.originalText
+            )
+        }
         Task {
             do {
-                let json = try await interpreter.interpret(text: text)
+                let json = try await interpreter.interpret(
+                    text: text,
+                    moneyCandidates: candidates
+                )
                 safeCompletion.complete(json)
             } catch {
                 safeCompletion.complete("")
@@ -200,9 +217,15 @@ final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseText
 }
 
 final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable {
-    func interpret(text: String) async throws -> String {
+    func interpret(
+        text: String,
+        moneyCandidates: [PaymentScreenshotMoneyCandidate]
+    ) async throws -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else {
+            return ""
+        }
+        guard !moneyCandidates.isEmpty else {
             return ""
         }
         if let unavailableMessage = PaymentScreenshotLlmAvailability.unavailableImportMessage() {
@@ -221,10 +244,9 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
             - If the screenshot contains multiple payment notifications, extract each reliable expense separately. Multiple notifications are not ambiguous by themselves.
             - Return an empty transactions array if the text is not an expense, is a refund, is an income, is an incoming transfer, or is ambiguous.
             - Never use lock-screen/status-bar numbers such as time, date, battery percentage, or card suffixes as amounts.
-            - amountText must be copied exactly from visible OCR money text. Do not calculate or invent numeric cents.
-            - Valid amountText examples from OCR are forms like 44,99 EUR, EUR 44,99, €44,99, or 44,99 €.
-            - Only use amounts that appear as money in the OCR text, such as 12,34 EUR, EUR 12,34, €12,34, or 12,34 €.
-            - currency must be EUR when present. Leave it nil only when EUR is safely inferable.
+            - selectedAmountMinor must be one value from the allowed candidates list.
+            - Do not parse, convert, calculate, or invent another amount.
+            - currency must match the selected candidate.
             - merchant should be the merchant/payee/short description for that transaction, not the whole OCR text.
             - confidence must be between 0 and 1.
             """
@@ -234,6 +256,9 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
             generating: PaymentScreenshotLlmResponse.self
         ) {
             """
+            Allowed amount candidates:
+            \(Self.candidatesPrompt(moneyCandidates))
+
             OCR text:
             \(trimmedText)
             """
@@ -249,11 +274,8 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
                 "confidence": transaction.confidence
             ]
 
-            if let amountMinor = Self.amountMinor(from: transaction.amountText) {
-                payload["amountMinor"] = amountMinor
-            }
-            if let amountText = transaction.amountText?.trimmingCharacters(in: .whitespacesAndNewlines), !amountText.isEmpty {
-                payload["amountText"] = amountText
+            if let selectedAmountMinor = transaction.selectedAmountMinor {
+                payload["selectedAmountMinor"] = selectedAmountMinor
             }
             if let currency = transaction.currency?.trimmingCharacters(in: .whitespacesAndNewlines), !currency.isEmpty {
                 payload["currency"] = currency
@@ -278,71 +300,15 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
         return json
     }
 
-    private static func amountMinor(from amountText: String?) -> Int? {
-        guard let amountText else {
-            return nil
-        }
-
-        var normalized = amountText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "\u{00A0}", with: "")
-            .replacingOccurrences(of: " ", with: "")
-
-        for currencyToken in ["EUR", "EURO", "EUROS", "€"] {
-            normalized = normalized.replacingOccurrences(
-                of: currencyToken,
-                with: "",
-                options: [.caseInsensitive]
-            )
-        }
-
-        guard !normalized.isEmpty,
-              !normalized.hasPrefix("-"),
-              !normalized.hasPrefix("+"),
-              normalized.allSatisfy({ $0.isNumber || $0 == "," || $0 == "." }) else {
-            return nil
-        }
-
-        let lastComma = normalized.lastIndex(of: ",")
-        let lastDot = normalized.lastIndex(of: ".")
-        let decimalSeparator: Character?
-        switch (lastComma, lastDot) {
-        case (nil, nil):
-            decimalSeparator = nil
-        case let (comma?, nil):
-            decimalSeparator = normalized.distance(from: comma, to: normalized.endIndex) <= 3 ? "," : nil
-        case let (nil, dot?):
-            decimalSeparator = normalized.distance(from: dot, to: normalized.endIndex) <= 3 ? "." : nil
-        case let (comma?, dot?):
-            decimalSeparator = comma > dot ? "," : "."
-        }
-
-        let majorText: String
-        let minorText: String
-        if let decimalSeparator,
-           let separatorIndex = normalized.lastIndex(of: decimalSeparator) {
-            let rawMajor = String(normalized[..<separatorIndex])
-            let rawMinor = String(normalized[normalized.index(after: separatorIndex)...])
-            guard !rawMajor.isEmpty,
-                  !rawMinor.isEmpty,
-                  rawMinor.count <= 2,
-                  rawMinor.allSatisfy(\.isNumber) else {
-                return nil
+    private static func candidatesPrompt(_ moneyCandidates: [PaymentScreenshotMoneyCandidate]) -> String {
+        moneyCandidates
+            .map { candidate in
+                let currency = candidate.currency ?? "null"
+                let originalText = candidate.originalText
+                    .replacingOccurrences(of: "\"", with: "\\\"")
+                    .replacingOccurrences(of: "\n", with: " ")
+                return "- selectedAmountMinor=\(candidate.amountMinor), currency=\(currency), text=\"\(originalText)\""
             }
-            majorText = rawMajor.filter(\.isNumber)
-            minorText = rawMinor.padding(toLength: 2, withPad: "0", startingAt: 0)
-        } else {
-            majorText = normalized.filter(\.isNumber)
-            minorText = "00"
-        }
-
-        guard !majorText.isEmpty,
-              let major = Int(majorText),
-              let minor = Int(minorText) else {
-            return nil
-        }
-
-        let amountMinor = major * 100 + minor
-        return amountMinor > 0 ? amountMinor : nil
+            .joined(separator: "\n")
     }
 }
