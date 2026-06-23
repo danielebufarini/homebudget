@@ -32,7 +32,7 @@ Se hai domande o suggerimenti sulla Privacy Policy, non esitare a contattarci.
 
 
 
-
+---
 # Privacy Policy
 
 The **Spesify** app is a family budget management app developed by **Daniele Bufarini** as a free service. This service is provided “as is.”
