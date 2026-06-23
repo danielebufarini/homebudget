@@ -1,5 +1,6 @@
 package it.danielebufarini.spesify.data.notifications
 
+import it.danielebufarini.spesify.data.parsePositiveLocalizedAmountMinorOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -37,7 +38,7 @@ class LlmExpenseJsonValidator(
                 decoded.toInterpretation(
                     minConfidence = minConfidence,
                     monetaryEvidence = monetaryEvidence,
-                    monetaryEvidenceWasRequired = ocrText != null
+                    ocrText = ocrText
                 )
             }
             .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
@@ -70,12 +71,21 @@ class LlmExpenseJsonValidator(
     private fun LlmExpenseJsonPayload.toInterpretation(
         minConfidence: Float,
         monetaryEvidence: Set<Long>,
-        monetaryEvidenceWasRequired: Boolean
+        ocrText: String?
     ): ExpenseTextInterpretation? {
         if (isExpense != true) return null
         val amountMinor = amountMinor?.takeIf { it > 0L } ?: return null
-        if (monetaryEvidence.isNotEmpty() && amountMinor !in monetaryEvidence) return null
-        if (monetaryEvidence.isEmpty() && monetaryEvidenceWasRequired) return null
+        val amountTextMinor = amountText
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::parsePositiveLocalizedAmountMinorOrNull)
+        val amountTextAppearsInOcr = amountText != null &&
+            ocrText?.normalizedEvidenceText()?.contains(amountText.normalizedEvidenceText()) == true
+        val hasCopiedAmountTextEvidence = amountTextMinor == amountMinor && amountTextAppearsInOcr
+        val hasAmountEvidence = when {
+            ocrText != null -> amountMinor in monetaryEvidence || hasCopiedAmountTextEvidence
+            else -> true
+        }
+        if (!hasAmountEvidence) return null
 
         val currency = currency
             ?.trim()
@@ -96,6 +106,11 @@ class LlmExpenseJsonValidator(
         )
     }
 
+    private fun String.normalizedEvidenceText(): String =
+        trim()
+            .replace(Regex("\\s+"), "")
+            .uppercase()
+
     @Serializable
     private data class LlmExpenseTransactionsJsonPayload(
         val transactions: List<LlmExpenseJsonPayload>
@@ -105,6 +120,7 @@ class LlmExpenseJsonValidator(
     private data class LlmExpenseJsonPayload(
         val isExpense: Boolean? = null,
         val amountMinor: Long? = null,
+        val amountText: String? = null,
         val currency: String? = null,
         val merchant: String? = null,
         val confidence: Float? = null

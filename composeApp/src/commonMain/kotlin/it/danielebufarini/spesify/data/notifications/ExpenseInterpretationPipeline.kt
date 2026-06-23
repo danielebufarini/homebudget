@@ -6,7 +6,7 @@ import kotlinx.coroutines.withTimeout
 data class ExpenseInterpretationPipelineConfig(
     val highConfidenceThreshold: Float = 0.85f,
     val llmConfidenceThreshold: Float = 0.75f,
-    val llmTimeoutMillis: Long = 4_500L
+    val llmTimeoutMillis: Long = 15_000L
 )
 
 class ExpenseInterpretationPipeline(

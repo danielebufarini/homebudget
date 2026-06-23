@@ -27,6 +27,40 @@ enum PaymentScreenshotOCRError: LocalizedError {
     }
 }
 
+struct PaymentScreenshotLlmUnavailableError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
+enum PaymentScreenshotLlmAvailability {
+    static func unavailableImportMessage(model: SystemLanguageModel = .default) -> String? {
+        switch model.availability {
+        case .available:
+            break
+        case let .unavailable(reason):
+            switch reason {
+            case .deviceNotEligible:
+                return appLocalized("Foundation Models are unavailable on this device.")
+            case .appleIntelligenceNotEnabled:
+                return appLocalized("Apple Intelligence must be enabled to import payment screenshots.")
+            case .modelNotReady:
+                return appLocalized("The on-device model is still preparing. Try again in a moment.")
+            @unknown default:
+                return appLocalized("Foundation Models are currently unavailable.")
+            }
+        }
+
+        guard model.supportsLocale() else {
+            return appLocalized("Apple Intelligence does not support this app language on this device.")
+        }
+
+        return nil
+    }
+}
+
 @MainActor
 final class VisionPaymentScreenshotOCRService: PaymentScreenshotOCRServicing {
     func recognizeText(in image: UIImage) async throws -> String {
@@ -125,8 +159,8 @@ struct PaymentScreenshotLlmTransaction {
     @Guide(description: "True only when this item is a user expense or card/POS payment.")
     var isExpense: Bool
 
-    @Guide(description: "Positive integer amount in minor units/cents, for example 1234 for EUR 12.34. Use nil if no reliable monetary amount exists.")
-    var amountMinor: Int?
+    @Guide(description: "Exact visible money amount text copied from the OCR, including currency when visible, for example 44,99 EUR. Use nil if no reliable monetary amount exists.")
+    var amountText: String?
 
     @Guide(description: "Use EUR when present. Use nil only if EUR is safely inferable from the OCR text.")
     var currency: String?
@@ -155,8 +189,12 @@ final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseText
     func interpret(text: String, completion: @escaping (String) -> Void) {
         let safeCompletion = PaymentScreenshotLlmCompletion(complete: completion)
         Task {
-            let json = (try? await interpreter.interpret(text: text)) ?? ""
-            safeCompletion.complete(json)
+            do {
+                let json = try await interpreter.interpret(text: text)
+                safeCompletion.complete(json)
+            } catch {
+                safeCompletion.complete("")
+            }
         }
     }
 }
@@ -164,8 +202,11 @@ final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseText
 final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable {
     func interpret(text: String) async throws -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty, SystemLanguageModel.default.isAvailable else {
+        guard !trimmedText.isEmpty else {
             return ""
+        }
+        if let unavailableMessage = PaymentScreenshotLlmAvailability.unavailableImportMessage() {
+            throw PaymentScreenshotLlmUnavailableError(message: unavailableMessage)
         }
 
         let session = LanguageModelSession(
@@ -177,9 +218,11 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
 
             Rules:
             - Extract every distinct card payment/POS purchase/online purchase visible in the OCR text.
+            - If the screenshot contains multiple payment notifications, extract each reliable expense separately. Multiple notifications are not ambiguous by themselves.
             - Return an empty transactions array if the text is not an expense, is a refund, is an income, is an incoming transfer, or is ambiguous.
             - Never use lock-screen/status-bar numbers such as time, date, battery percentage, or card suffixes as amounts.
-            - amountMinor must be a positive integer number of cents/minor units. Example: EUR 12.34 becomes 1234.
+            - amountText must be copied exactly from visible OCR money text. Do not calculate or invent numeric cents.
+            - Valid amountText examples from OCR are forms like 44,99 EUR, EUR 44,99, €44,99, or 44,99 €.
             - Only use amounts that appear as money in the OCR text, such as 12,34 EUR, EUR 12,34, €12,34, or 12,34 €.
             - currency must be EUR when present. Leave it nil only when EUR is safely inferable.
             - merchant should be the merchant/payee/short description for that transaction, not the whole OCR text.
@@ -206,8 +249,11 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
                 "confidence": transaction.confidence
             ]
 
-            if let amountMinor = transaction.amountMinor {
+            if let amountMinor = Self.amountMinor(from: transaction.amountText) {
                 payload["amountMinor"] = amountMinor
+            }
+            if let amountText = transaction.amountText?.trimmingCharacters(in: .whitespacesAndNewlines), !amountText.isEmpty {
+                payload["amountText"] = amountText
             }
             if let currency = transaction.currency?.trimmingCharacters(in: .whitespacesAndNewlines), !currency.isEmpty {
                 payload["currency"] = currency
@@ -230,5 +276,73 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
         }
 
         return json
+    }
+
+    private static func amountMinor(from amountText: String?) -> Int? {
+        guard let amountText else {
+            return nil
+        }
+
+        var normalized = amountText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\u{00A0}", with: "")
+            .replacingOccurrences(of: " ", with: "")
+
+        for currencyToken in ["EUR", "EURO", "EUROS", "€"] {
+            normalized = normalized.replacingOccurrences(
+                of: currencyToken,
+                with: "",
+                options: [.caseInsensitive]
+            )
+        }
+
+        guard !normalized.isEmpty,
+              !normalized.hasPrefix("-"),
+              !normalized.hasPrefix("+"),
+              normalized.allSatisfy({ $0.isNumber || $0 == "," || $0 == "." }) else {
+            return nil
+        }
+
+        let lastComma = normalized.lastIndex(of: ",")
+        let lastDot = normalized.lastIndex(of: ".")
+        let decimalSeparator: Character?
+        switch (lastComma, lastDot) {
+        case (nil, nil):
+            decimalSeparator = nil
+        case let (comma?, nil):
+            decimalSeparator = normalized.distance(from: comma, to: normalized.endIndex) <= 3 ? "," : nil
+        case let (nil, dot?):
+            decimalSeparator = normalized.distance(from: dot, to: normalized.endIndex) <= 3 ? "." : nil
+        case let (comma?, dot?):
+            decimalSeparator = comma > dot ? "," : "."
+        }
+
+        let majorText: String
+        let minorText: String
+        if let decimalSeparator,
+           let separatorIndex = normalized.lastIndex(of: decimalSeparator) {
+            let rawMajor = String(normalized[..<separatorIndex])
+            let rawMinor = String(normalized[normalized.index(after: separatorIndex)...])
+            guard !rawMajor.isEmpty,
+                  !rawMinor.isEmpty,
+                  rawMinor.count <= 2,
+                  rawMinor.allSatisfy(\.isNumber) else {
+                return nil
+            }
+            majorText = rawMajor.filter(\.isNumber)
+            minorText = rawMinor.padding(toLength: 2, withPad: "0", startingAt: 0)
+        } else {
+            majorText = normalized.filter(\.isNumber)
+            minorText = "00"
+        }
+
+        guard !majorText.isEmpty,
+              let major = Int(majorText),
+              let minor = Int(minorText) else {
+            return nil
+        }
+
+        let amountMinor = major * 100 + minor
+        return amountMinor > 0 ? amountMinor : nil
     }
 }

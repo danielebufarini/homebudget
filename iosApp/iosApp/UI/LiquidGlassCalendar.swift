@@ -130,7 +130,13 @@ struct LiquidGlassCalendar: View {
     private var weekdaySymbols: [String] {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
-        return formatter.shortStandaloneWeekdaySymbols
+        let symbols = formatter.shortStandaloneWeekdaySymbols ?? []
+        guard !symbols.isEmpty else {
+            return []
+        }
+
+        let firstWeekdayIndex = max(0, min(symbols.count - 1, calendar.firstWeekday - 1))
+        return Array(symbols[firstWeekdayIndex...]) + Array(symbols[..<firstWeekdayIndex])
     }
 
     private var days: [Date?] {

@@ -71,4 +71,4 @@ class IosLocalLlmExpenseTextInterpreter : LocalExpenseTextLlmInterpreter {
         IosLocalLlmExpenseTextInterpreterRegistry.interpret(text)
 }
 
-private const val IOS_LOCAL_LLM_TIMEOUT_MILLIS = 10_000L
+private const val IOS_LOCAL_LLM_TIMEOUT_MILLIS = 25_000L

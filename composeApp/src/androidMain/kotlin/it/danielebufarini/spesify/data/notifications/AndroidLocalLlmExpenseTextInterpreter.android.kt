@@ -28,23 +28,31 @@ class AndroidLocalLlmExpenseTextInterpreter(
     }
 
     private fun buildPrompt(notificationText: String): String = """
-        You interpret one bank/card notification for a personal finance app.
-        The text was read locally on device. Return strict JSON only, with no Markdown.
-        Use this exact shape:
-        {"transactions":[{"isExpense":true,"amountMinor":1234,"currency":"EUR","merchant":"SUPERMERCATO TEST","confidence":0.86}]}
-
+        You extract expense data from one bank or card notification.
+        
+        Return only valid JSON. No Markdown. No explanation.
+        
+        Output shape:
+        {
+          "transactions": [
+            {
+              "isExpense": true,
+              "amountMinor": 0,
+              "currency": "EUR",
+              "merchant": null,
+              "confidence": 0.0
+            }
+          ]
+        }
+        
         Rules:
-        - Extract every distinct expense visible in the text.
-        - isExpense must be true only for card payments, debit card payments, POS purchases, online purchases, or other money spent by the user.
-        - Return an empty transactions array if the text is not an expense, is a refund, is an incoming transfer, is an income, or is ambiguous.
-        - Never use unrelated numbers such as time, date, battery percentage, or card suffixes as amounts.
-        - amountMinor must be a positive integer number of cents/minor units.
-        - Only use amounts that appear as money in the text, such as 12,34 EUR, EUR 12,34, €12,34, or 12,34 €.
-        - currency must be EUR when present.
-        - merchant may be null if unavailable.
-        - confidence must be between 0 and 1.
-        - Do not include any field not shown in the JSON shape.
-
+        - Return {"transactions":[]} if the notification is not clearly a payment made by the user.
+        - Extract only monetary amounts, not dates, times, percentages, card numbers, or balances.
+        - Convert the paid amount to cents. Example: 12,34 EUR means 1234.
+        - Use "EUR" only when the text indicates euro.
+        - merchant is the shop, company, payee, or merchant name. Use null if missing.
+        - Do not guess.
+        
         Notification text:
         ${notificationText.trim()}
     """.trimIndent()

@@ -51,6 +51,10 @@ final class PaymentScreenshotImportViewModel {
                 }
 
                 let recognizedText = try await ocrService.recognizeText(in: image)
+                if let unavailableMessage = PaymentScreenshotLlmAvailability.unavailableImportMessage() {
+                    throw PaymentScreenshotLlmUnavailableError(message: unavailableMessage)
+                }
+
                 busyLabel = appLocalized("Preparing expense...")
                 statusMessage = appLocalized("Preparing expense...")
 

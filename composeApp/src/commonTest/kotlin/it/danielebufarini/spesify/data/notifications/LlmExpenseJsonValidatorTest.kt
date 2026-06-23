@@ -123,6 +123,24 @@ class LlmExpenseJsonValidatorTest {
     }
 
     @Test
+    fun copiedAmountTextCanProvideOcrEvidenceForMultipleTransactions() {
+        val results = validator.validateAll(
+            """{"transactions":[{"isExpense":true,"amountMinor":4499,"amountText":"44,99 EUR","merchant":"Amazon.it","confidence":1},{"isExpense":true,"amountMinor":16430,"amountText":"164,3 EUR","merchant":"TRENITALIA - LEFRECCE","confidence":1}]}""",
+            ocrText = """
+            Importo: 44,99 EUR, per: Amazon.it. Info:
+            Importo: 164,3 EUR, per: TRENITALIA -
+            LEFRECCE. Info:
+            """.trimIndent()
+        )
+
+        assertEquals(2, results.size)
+        assertEquals(4_499L, results[0].amountMinor)
+        assertEquals("Amazon.it", results[0].merchant)
+        assertEquals(16_430L, results[1].amountMinor)
+        assertEquals("TRENITALIA - LEFRECCE", results[1].merchant)
+    }
+
+    @Test
     fun amountWithoutMonetaryEvidenceIsRejectedWhenOcrTextIsProvided() {
         val result = validator.validate(
             """{"isExpense":true,"amountMinor":2700,"currency":"EUR","merchant":"Battery","confidence":0.90}""",
