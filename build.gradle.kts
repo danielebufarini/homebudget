@@ -12,6 +12,9 @@ plugins {
     alias(libs.plugins.skie) apply false
 }
 
+extra["spesifyVersionCode"] = 1
+extra["spesifyVersionName"] = "1.0"
+
 val verifyUnitTests by tasks.registering {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     description = "Runs the shared and Android unit test suite."

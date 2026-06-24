@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ImportExport
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import spesify.composeapp.generated.resources.Res
+import spesify.composeapp.generated.resources.about
 import spesify.composeapp.generated.resources.categories
 import spesify.composeapp.generated.resources.csv
 
@@ -40,12 +42,14 @@ internal fun AndroidNavigationRailOverlay(
     selectedDestination: AndroidNavigationDestination,
     onDismiss: () -> Unit,
     onOpenCategories: () -> Unit,
-    onOpenCsvTransfer: () -> Unit
+    onOpenCsvTransfer: () -> Unit,
+    onOpenAbout: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Open)
     val scope = rememberCoroutineScope()
     val categoriesLabel = stringResource(Res.string.categories)
     val csvLabel = stringResource(Res.string.csv)
+    val aboutLabel = stringResource(Res.string.about)
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -100,6 +104,24 @@ internal fun AndroidNavigationRailOverlay(
                             scope.launch {
                                 drawerState.close()
                                 onOpenCsvTransfer()
+                            }
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        selected = false,
+                        label = { Text(aboutLabel) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Info,
+                                contentDescription = aboutLabel,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                onOpenAbout()
                             }
                         }
                     )

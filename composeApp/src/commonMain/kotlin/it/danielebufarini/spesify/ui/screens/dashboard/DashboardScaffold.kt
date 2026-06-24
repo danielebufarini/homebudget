@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.ui.screens.common.MonthCursor
+import it.danielebufarini.spesify.ui.screens.platform.AboutDialog
 import it.danielebufarini.spesify.ui.screens.platform.AndroidDataTransferUi
 import it.danielebufarini.spesify.ui.screens.platform.AndroidNavigationDestination
 import it.danielebufarini.spesify.ui.screens.platform.AndroidNavigationRailOverlay
@@ -54,6 +55,7 @@ internal fun DashboardScreenScaffold(
     val dataTransferState = rememberAndroidDataTransferSheetState()
     val openCsvTransfer = onOpenCsvTransfer ?: dataTransferState::openCsvTransferSheet
     var showNavigationRail by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidDataTransferUi(
@@ -139,6 +141,18 @@ internal fun DashboardScreenScaffold(
                 onOpenCsvTransfer = {
                     onNavigationDrawerVisibilityChange(false)
                     openCsvTransfer()
+                },
+                onOpenAbout = {
+                    onNavigationDrawerVisibilityChange(false)
+                    showAboutDialog = true
+                }
+            )
+        }
+
+        if (showAboutDialog) {
+            AboutDialog(
+                onDismiss = {
+                    showAboutDialog = false
                 }
             )
         }
