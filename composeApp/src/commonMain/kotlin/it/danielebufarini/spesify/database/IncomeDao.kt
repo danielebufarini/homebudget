@@ -1,8 +1,10 @@
 package it.danielebufarini.spesify.database
 
-import androidx.room.Dao
-import androidx.room.Query
-import androidx.room.Upsert
+import androidx.room3.Dao
+import androidx.room3.Query
+import androidx.room3.RawQuery
+import androidx.room3.RoomRawQuery
+import androidx.room3.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -84,42 +86,11 @@ interface IncomeDao {
         offset: Int
     ): Flow<List<Income>>
 
-    @Query(
-        """
-        SELECT income.*
-        FROM income
-        JOIN income_search_fts ON income_search_fts.transactionId = income.id
-        WHERE income_search_fts MATCH :ftsQuery
-        ORDER BY income.date DESC, income.id ASC
-        LIMIT :limit OFFSET :offset
-        """
-    )
-    fun searchIncomes(
-        ftsQuery: String,
-        limit: Int,
-        offset: Int
-    ): Flow<List<Income>>
+    @RawQuery(observedEntities = [Income::class, Category::class])
+    fun searchIncomes(query: RoomRawQuery): Flow<List<Income>>
 
-    @Query(
-        """
-        SELECT income.*
-        FROM income
-        JOIN income_search_fts ON income_search_fts.transactionId = income.id
-        WHERE income_search_fts MATCH :ftsQuery
-          AND (
-            income.date < :cursorDate
-            OR (income.date = :cursorDate AND income.id > :cursorId)
-          )
-        ORDER BY income.date DESC, income.id ASC
-        LIMIT :limit
-        """
-    )
-    fun searchIncomesAfter(
-        ftsQuery: String,
-        limit: Int,
-        cursorDate: Long,
-        cursorId: String
-    ): Flow<List<Income>>
+    @RawQuery(observedEntities = [Income::class, Category::class])
+    fun searchIncomesAfter(query: RoomRawQuery): Flow<List<Income>>
 
     @Query(
         """
@@ -163,4 +134,49 @@ interface IncomeDao {
 
     @Query("DELETE FROM income WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringIncomeSeries(seriesId: String)
+}
+
+internal fun incomeSearchQuery(
+    ftsQuery: String,
+    limit: Int,
+    offset: Int
+): RoomRawQuery = RoomRawQuery(
+    sql = """
+        SELECT income.*
+        FROM income
+        JOIN income_search_fts ON income_search_fts.transactionId = income.id
+        WHERE income_search_fts MATCH ?
+        ORDER BY income.date DESC, income.id ASC
+        LIMIT ? OFFSET ?
+    """.trimIndent()
+) { statement ->
+    statement.bindText(1, ftsQuery)
+    statement.bindLong(2, limit.toLong())
+    statement.bindLong(3, offset.toLong())
+}
+
+internal fun incomeSearchAfterQuery(
+    ftsQuery: String,
+    limit: Int,
+    cursorDate: Long,
+    cursorId: String
+): RoomRawQuery = RoomRawQuery(
+    sql = """
+        SELECT income.*
+        FROM income
+        JOIN income_search_fts ON income_search_fts.transactionId = income.id
+        WHERE income_search_fts MATCH ?
+          AND (
+            income.date < ?
+            OR (income.date = ? AND income.id > ?)
+          )
+        ORDER BY income.date DESC, income.id ASC
+        LIMIT ?
+    """.trimIndent()
+) { statement ->
+    statement.bindText(1, ftsQuery)
+    statement.bindLong(2, cursorDate)
+    statement.bindLong(3, cursorDate)
+    statement.bindText(4, cursorId)
+    statement.bindLong(5, limit.toLong())
 }

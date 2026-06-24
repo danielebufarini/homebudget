@@ -3,6 +3,8 @@ package it.danielebufarini.spesify.data
 import it.danielebufarini.spesify.database.CategoryUsageCountRow
 import it.danielebufarini.spesify.database.Income
 import it.danielebufarini.spesify.database.SpesifyDatabase
+import it.danielebufarini.spesify.database.incomeSearchAfterQuery
+import it.danielebufarini.spesify.database.incomeSearchQuery
 import it.danielebufarini.spesify.database.refreshIncomeSearchRows
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -43,9 +45,11 @@ class IncomeRepository(
     fun searchIncomeCandidates(query: String, limit: Int, offset: Int = 0): Flow<List<Income>> {
         val ftsQuery = ftsSearchQuery(query) ?: return flowOf(emptyList())
         return incomeDao.searchIncomes(
-            ftsQuery = ftsQuery,
-            limit = limit.coerceAtLeast(1),
-            offset = offset.coerceAtLeast(0)
+            incomeSearchQuery(
+                ftsQuery = ftsQuery,
+                limit = limit.coerceAtLeast(1),
+                offset = offset.coerceAtLeast(0)
+            )
         ).distinctUntilChanged()
     }
 
@@ -64,16 +68,20 @@ class IncomeRepository(
         val safeLimit = limit.coerceAtLeast(1)
         val pageFlow = if (cursor == null) {
             incomeDao.searchIncomes(
-                ftsQuery = ftsQuery,
-                limit = safeLimit + 1,
-                offset = 0
+                incomeSearchQuery(
+                    ftsQuery = ftsQuery,
+                    limit = safeLimit + 1,
+                    offset = 0
+                )
             )
         } else {
             incomeDao.searchIncomesAfter(
-                ftsQuery = ftsQuery,
-                limit = safeLimit + 1,
-                cursorDate = cursor.date,
-                cursorId = cursor.id
+                incomeSearchAfterQuery(
+                    ftsQuery = ftsQuery,
+                    limit = safeLimit + 1,
+                    cursorDate = cursor.date,
+                    cursorId = cursor.id
+                )
             )
         }
         return pageFlow.map { incomes ->

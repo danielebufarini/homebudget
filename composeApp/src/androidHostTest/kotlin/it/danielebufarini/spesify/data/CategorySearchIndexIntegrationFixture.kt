@@ -1,7 +1,8 @@
 package it.danielebufarini.spesify.data
 
 import android.content.Context
-import androidx.room.Room
+import androidx.room3.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import it.danielebufarini.spesify.data.csv.CsvImportStore
 import it.danielebufarini.spesify.database.Category
@@ -30,6 +31,7 @@ internal class CategorySearchIndexFixture(testScope: TestScope) {
     val database: SpesifyDatabase = Room.inMemoryDatabaseBuilder<SpesifyDatabase>(
         context = ApplicationProvider.getApplicationContext<Context>()
     )
+        .setDriver(AndroidSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
         .build()
     val transactionRunner = DatabaseTransactionRunner(database)

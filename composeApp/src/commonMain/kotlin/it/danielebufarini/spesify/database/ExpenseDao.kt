@@ -1,8 +1,10 @@
 package it.danielebufarini.spesify.database
 
-import androidx.room.Dao
-import androidx.room.Query
-import androidx.room.Upsert
+import androidx.room3.Dao
+import androidx.room3.Query
+import androidx.room3.RawQuery
+import androidx.room3.RoomRawQuery
+import androidx.room3.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -201,42 +203,11 @@ interface ExpenseDao {
         offset: Int
     ): List<Expense>
 
-    @Query(
-        """
-        SELECT expense.*
-        FROM expense
-        JOIN expense_search_fts ON expense_search_fts.transactionId = expense.id
-        WHERE expense_search_fts MATCH :ftsQuery
-        ORDER BY expense.date DESC, expense.id ASC
-        LIMIT :limit OFFSET :offset
-        """
-    )
-    fun searchExpenses(
-        ftsQuery: String,
-        limit: Int,
-        offset: Int
-    ): Flow<List<Expense>>
+    @RawQuery(observedEntities = [Expense::class, Category::class])
+    fun searchExpenses(query: RoomRawQuery): Flow<List<Expense>>
 
-    @Query(
-        """
-        SELECT expense.*
-        FROM expense
-        JOIN expense_search_fts ON expense_search_fts.transactionId = expense.id
-        WHERE expense_search_fts MATCH :ftsQuery
-          AND (
-            expense.date < :cursorDate
-            OR (expense.date = :cursorDate AND expense.id > :cursorId)
-          )
-        ORDER BY expense.date DESC, expense.id ASC
-        LIMIT :limit
-        """
-    )
-    fun searchExpensesAfter(
-        ftsQuery: String,
-        limit: Int,
-        cursorDate: Long,
-        cursorId: String
-    ): Flow<List<Expense>>
+    @RawQuery(observedEntities = [Expense::class, Category::class])
+    fun searchExpensesAfter(query: RoomRawQuery): Flow<List<Expense>>
 
     @Query(
         """
@@ -289,4 +260,49 @@ interface ExpenseDao {
 
     @Query("DELETE FROM expense WHERE recurringSeriesId = :seriesId")
     suspend fun deleteRecurringExpenseSeries(seriesId: String)
+}
+
+internal fun expenseSearchQuery(
+    ftsQuery: String,
+    limit: Int,
+    offset: Int
+): RoomRawQuery = RoomRawQuery(
+    sql = """
+        SELECT expense.*
+        FROM expense
+        JOIN expense_search_fts ON expense_search_fts.transactionId = expense.id
+        WHERE expense_search_fts MATCH ?
+        ORDER BY expense.date DESC, expense.id ASC
+        LIMIT ? OFFSET ?
+    """.trimIndent()
+) { statement ->
+    statement.bindText(1, ftsQuery)
+    statement.bindLong(2, limit.toLong())
+    statement.bindLong(3, offset.toLong())
+}
+
+internal fun expenseSearchAfterQuery(
+    ftsQuery: String,
+    limit: Int,
+    cursorDate: Long,
+    cursorId: String
+): RoomRawQuery = RoomRawQuery(
+    sql = """
+        SELECT expense.*
+        FROM expense
+        JOIN expense_search_fts ON expense_search_fts.transactionId = expense.id
+        WHERE expense_search_fts MATCH ?
+          AND (
+            expense.date < ?
+            OR (expense.date = ? AND expense.id > ?)
+          )
+        ORDER BY expense.date DESC, expense.id ASC
+        LIMIT ?
+    """.trimIndent()
+) { statement ->
+    statement.bindText(1, ftsQuery)
+    statement.bindLong(2, cursorDate)
+    statement.bindLong(3, cursorDate)
+    statement.bindText(4, cursorId)
+    statement.bindLong(5, limit.toLong())
 }

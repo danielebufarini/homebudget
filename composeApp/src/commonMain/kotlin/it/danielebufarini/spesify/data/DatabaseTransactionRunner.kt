@@ -1,7 +1,7 @@
 package it.danielebufarini.spesify.data
 
-import androidx.room.immediateTransaction
-import androidx.room.useWriterConnection
+import androidx.room3.immediateTransaction
+import androidx.room3.useWriterConnection
 import it.danielebufarini.spesify.database.SpesifyDatabase
 
 class DatabaseTransactionRunner(

@@ -16,7 +16,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.skie)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.androidx.room)
+    alias(libs.plugins.androidx.room3)
 }
 
 abstract class GenerateBuildInfoTask : DefaultTask() {
@@ -127,7 +127,7 @@ kotlin {
                 implementation(libs.voyager.navigator)
                 implementation(libs.voyager.transitions)
                 implementation(libs.voyager.koin)
-                implementation(libs.androidx.room.runtime)
+                implementation(libs.androidx.room3.runtime)
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
@@ -158,12 +158,12 @@ compose {
 }
 
 dependencies {
-    add("kspAndroid", libs.androidx.room.compiler)
-    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
-    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspAndroid", libs.androidx.room3.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room3.compiler)
+    add("kspIosArm64", libs.androidx.room3.compiler)
 }
 
-room {
+room3 {
     schemaDirectory("$projectDir/schemas")
 }
 

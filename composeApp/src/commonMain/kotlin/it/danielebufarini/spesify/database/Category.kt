@@ -1,8 +1,8 @@
 package it.danielebufarini.spesify.database
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room3.ColumnInfo
+import androidx.room3.Entity
+import androidx.room3.PrimaryKey
 
 const val CATEGORY_TYPE_EXPENSE = "expense"
 const val CATEGORY_TYPE_INCOME = "income"

@@ -3,6 +3,8 @@ package it.danielebufarini.spesify.data
 import it.danielebufarini.spesify.database.CategoryUsageCountRow
 import it.danielebufarini.spesify.database.Expense
 import it.danielebufarini.spesify.database.SpesifyDatabase
+import it.danielebufarini.spesify.database.expenseSearchAfterQuery
+import it.danielebufarini.spesify.database.expenseSearchQuery
 import it.danielebufarini.spesify.database.refreshExpenseSearchRows
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -43,9 +45,11 @@ class ExpenseEntryRepository(
     fun searchExpenseCandidates(query: String, limit: Int, offset: Int = 0): Flow<List<Expense>> {
         val ftsQuery = ftsSearchQuery(query) ?: return flowOf(emptyList())
         return expenseDao.searchExpenses(
-            ftsQuery = ftsQuery,
-            limit = limit.coerceAtLeast(1),
-            offset = offset.coerceAtLeast(0)
+            expenseSearchQuery(
+                ftsQuery = ftsQuery,
+                limit = limit.coerceAtLeast(1),
+                offset = offset.coerceAtLeast(0)
+            )
         ).distinctUntilChanged()
     }
 
@@ -64,16 +68,20 @@ class ExpenseEntryRepository(
         val safeLimit = limit.coerceAtLeast(1)
         val pageFlow = if (cursor == null) {
             expenseDao.searchExpenses(
-                ftsQuery = ftsQuery,
-                limit = safeLimit + 1,
-                offset = 0
+                expenseSearchQuery(
+                    ftsQuery = ftsQuery,
+                    limit = safeLimit + 1,
+                    offset = 0
+                )
             )
         } else {
             expenseDao.searchExpensesAfter(
-                ftsQuery = ftsQuery,
-                limit = safeLimit + 1,
-                cursorDate = cursor.date,
-                cursorId = cursor.id
+                expenseSearchAfterQuery(
+                    ftsQuery = ftsQuery,
+                    limit = safeLimit + 1,
+                    cursorDate = cursor.date,
+                    cursorId = cursor.id
+                )
             )
         }
         return pageFlow.map { expenses ->
