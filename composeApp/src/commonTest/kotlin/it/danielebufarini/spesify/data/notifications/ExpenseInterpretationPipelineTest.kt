@@ -275,7 +275,7 @@ class ExpenseInterpretationPipelineTest {
         assertNotNull(candidate)
         assertEquals(1_234L, candidate.amountMinor)
         assertEquals("SUPERMERCATO TEST", candidate.merchant)
-        assertEquals("SUPERMERCATO TEST", candidate.description)
+        assertEquals("SUPERMERCATO TEST", candidate.merchantDescription)
         assertEquals("EUR", candidate.currency)
         assertEquals(InterpretationSource.Regex, candidate.source)
     }

@@ -14,6 +14,17 @@ enum SpesifyIntentTransactionKind: String, AppEnum {
     ]
 }
 
+private extension SpesifyIntentTransactionKind {
+    var sharedKind: TransactionKind {
+        switch self {
+        case .expense:
+            return .expense
+        case .income:
+            return .income
+        }
+    }
+}
+
 struct AddTransactionIntent: AppIntent {
     static let title: LocalizedStringResource = "Add Transaction"
     static let description = IntentDescription("Adds a single non-recurring expense or income to Spesify.")
@@ -69,22 +80,14 @@ struct AddTransactionIntent: AppIntent {
         let controller = IosAddTransactionIntentController()
         let dateMillis = date.map { $0.epochMilliseconds } ?? 0
         let result = try await controller.addTransaction(
-            kind: kind.rawValue,
+            kind: kind.sharedKind,
             amount: amountMinorUnits,
             categoryName: normalizedCategoryName,
             description: transactionDescription,
             dateMillis: dateMillis
         )
 
-        if result.isCreated {
-            return .result(dialog: "Transaction added to Spesify.")
-        }
-
-        if result.needsConfirmation {
-            return .result(dialog: IntentDialog(stringLiteral: result.message ?? "More information is needed before adding the transaction."))
-        }
-
-        return .result(dialog: IntentDialog(stringLiteral: result.message ?? "Unable to add the transaction."))
+        return .result(dialog: result.intentDialog)
     }
 }
 
@@ -258,7 +261,7 @@ struct ListCategoriesIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let result = try await IosCategoryManagementIntentController().listCategories(kind: kind.rawValue)
+        let result = try await IosCategoryManagementIntentController().listCategories(kind: kind.sharedKind)
         return .result(dialog: IntentDialog(stringLiteral: result.message))
     }
 }
@@ -297,11 +300,11 @@ struct AddCategoryIntent: AppIntent {
             return .result(dialog: IntentDialog(stringLiteral: "Please provide a category name."))
         }
         let result = try await IosCategoryManagementIntentController().addCategory(
-            kind: kind.rawValue,
+            kind: kind.sharedKind,
             name: trimmedName,
             iconKey: iconKey?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         )
-        return .result(dialog: result.dialog(defaultMessage: "Category added."))
+        return .result(dialog: result.intentDialog)
     }
 }
 
@@ -347,11 +350,11 @@ struct DeleteCategoryIntent: AppIntent {
             return .result(dialog: IntentDialog(stringLiteral: "Please specify the category that should receive existing transactions."))
         }
         let result = try await IosCategoryManagementIntentController().deleteCategory(
-            kind: kind.rawValue,
+            kind: kind.sharedKind,
             categoryName: source,
             moveToCategoryName: target
         )
-        return .result(dialog: result.dialog(defaultMessage: "Category deleted."))
+        return .result(dialog: result.intentDialog)
     }
 }
 
@@ -557,9 +560,29 @@ private extension IosFinancialQueryIntentResult {
     }
 }
 
-private extension IosCategoryCommandIntentResult {
-    func dialog(defaultMessage: String) -> IntentDialog {
-        IntentDialog(stringLiteral: message ?? defaultMessage)
+private extension AddTransactionResult {
+    var intentDialog: IntentDialog {
+        switch onEnum(of: self) {
+        case .created:
+            return IntentDialog(stringLiteral: "Transaction added to Spesify.")
+        case let .needsConfirmation(result):
+            return IntentDialog(stringLiteral: result.message)
+        case let .failed(result):
+            return IntentDialog(stringLiteral: result.message)
+        }
+    }
+}
+
+private extension CategoryCommandResult {
+    var intentDialog: IntentDialog {
+        switch onEnum(of: self) {
+        case let .success(result):
+            return IntentDialog(stringLiteral: result.message)
+        case let .needsConfirmation(result):
+            return IntentDialog(stringLiteral: result.message)
+        case let .failed(result):
+            return IntentDialog(stringLiteral: result.message)
+        }
     }
 }
 

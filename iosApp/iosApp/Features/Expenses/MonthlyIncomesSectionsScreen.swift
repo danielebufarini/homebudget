@@ -87,15 +87,12 @@ struct MonthlyIncomesSectionsContent: View {
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
         .toolbarBackground(.hidden, for: .navigationBar)
-        .onAppear {
+        .task {
             viewModel.updateGroupingMode(groupingMode)
-            viewModel.start()
+            await viewModel.observeSnapshots()
         }
         .onChange(of: groupingMode) { _, updatedMode in
             viewModel.updateGroupingMode(updatedMode)
-        }
-        .onDisappear {
-            viewModel.stop()
         }
         .overlay {
             if let pendingIncomeDeleteRow {

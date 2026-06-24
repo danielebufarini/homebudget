@@ -54,14 +54,11 @@ struct TransactionSearchSectionsRootView: View {
                 .buttonStyle(.glass)
             }
         }
-        .onAppear {
-            viewModel.start()
+        .task {
+            await viewModel.observeSnapshots()
         }
         .onChange(of: groupingMode) { _, updatedMode in
             viewModel.updateGroupingMode(updatedMode)
-        }
-        .onDisappear {
-            viewModel.stop()
         }
         .overlay {
             if let pendingExpenseDeleteRow {

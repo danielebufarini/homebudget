@@ -9,7 +9,7 @@ data class ExpenseTextCandidate(
     val source: InterpretationSource,
     val confidence: Float
 ) {
-    val description: String? get() = merchant
+    val merchantDescription: String? get() = merchant
 }
 
 class InterpretExpenseTextUseCase internal constructor(

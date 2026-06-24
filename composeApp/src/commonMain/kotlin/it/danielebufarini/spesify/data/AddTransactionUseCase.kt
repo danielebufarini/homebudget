@@ -34,7 +34,7 @@ data class AddTransactionCommand(
     val kind: TransactionKind,
     val amount: Long,
     val categoryName: String? = null,
-    val description: String? = null,
+    val note: String? = null,
     val dateMillis: Long? = null,
     val source: TransactionCreationSource = TransactionCreationSource.Manual
 )
@@ -70,7 +70,7 @@ class AddTransactionUseCase internal constructor(
         }
 
         val dateMillis = normalizeTransactionDate(command.dateMillis)
-        val description = command.description?.trim()?.takeIf(String::isNotEmpty)
+        val description = command.note?.trim()?.takeIf(String::isNotEmpty)
 
         return runCatching {
             val categories = loadCategories()
@@ -244,4 +244,3 @@ class AddTransactionUseCase internal constructor(
         data class NeedsConfirmation(val message: String) : CategoryResolution
     }
 }
-

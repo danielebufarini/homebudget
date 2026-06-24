@@ -65,7 +65,7 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
             return
         }
 
-        val merchant = interpretedCandidate.description
+        val merchant = interpretedCandidate.merchantDescription
         val textHash = rawText.sha256Hex()
         val dedupeKey = listOf(
             sourcePackage,

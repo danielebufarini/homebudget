@@ -82,7 +82,7 @@ class SpesifyTransactionAppFunctions {
                 kind = transactionKind,
                 amount = amountMinorUnits,
                 categoryName = categoryName,
-                description = description,
+                note = description,
                 dateMillis = dateMillis,
                 source = TransactionCreationSource.AndroidAppFunction
             )
