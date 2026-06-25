@@ -20,7 +20,6 @@ import it.danielebufarini.spesify.rememberAppMetadata
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import spesify.composeapp.generated.resources.Res
-import spesify.composeapp.generated.resources.about
 import spesify.composeapp.generated.resources.app_icon
 import spesify.composeapp.generated.resources.build_date_label
 import spesify.composeapp.generated.resources.close
@@ -28,7 +27,6 @@ import spesify.composeapp.generated.resources.close
 @Composable
 internal fun AboutDialog(onDismiss: () -> Unit) {
     val appMetadata = rememberAppMetadata()
-    val aboutLabel = stringResource(Res.string.about)
     val buildDateLabel = stringResource(Res.string.build_date_label)
     val closeLabel = stringResource(Res.string.close)
 
@@ -36,7 +34,7 @@ internal fun AboutDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = aboutLabel,
+                text = appMetadata.appName,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
@@ -53,11 +51,6 @@ internal fun AboutDialog(onDismiss: () -> Unit) {
                     modifier = Modifier
                         .size(112.dp)
                         .clip(RoundedCornerShape(24.dp))
-                )
-                Text(
-                    text = appMetadata.appName,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
                 )
                 Text(
                     text = appMetadata.version,

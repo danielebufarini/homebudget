@@ -111,7 +111,9 @@ internal fun DashboardScreenScaffold(
                                 modifier = Modifier.padding(end = 12.dp),
                                 openVoiceExpenseRequest = openVoiceExpenseRequest,
                                 voiceContentDescription = strings.voiceExpense,
-                                onVoiceExpense = null
+                                onVoiceExpense = null,
+                                addButtonSize = 42.dp,
+                                addIconSize = 26.dp
                             )
                         }
                     )
@@ -217,7 +219,9 @@ private fun IosDashboardTopBar(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 openVoiceExpenseRequest = openVoiceExpenseRequest,
                 voiceContentDescription = strings.voiceExpense,
-                onVoiceExpense = onOpenVoiceExpense
+                onVoiceExpense = onOpenVoiceExpense,
+                addButtonSize = 42.dp,
+                addIconSize = 26.dp
             )
         }
     }

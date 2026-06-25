@@ -102,6 +102,7 @@ internal fun AddIncomeEditorContent(
                     confirmEnabled = !isSaving && isAmountValid,
                     onCancel = onClose,
                     onConfirm = onSave,
+                    largeButtons = true,
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .navigationBarsPadding(),
