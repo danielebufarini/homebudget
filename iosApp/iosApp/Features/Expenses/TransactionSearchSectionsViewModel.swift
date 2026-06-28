@@ -20,7 +20,6 @@ final class TransactionSearchSectionsViewModel {
     @ObservationIgnored private var knownExpenseSectionIDs = Set<String>()
     @ObservationIgnored private var knownIncomeSectionIDs = Set<String>()
     @ObservationIgnored private var hasLoadedInitialExpansionState = false
-    @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     init(query: String, groupingMode: ExpenseGroupingMode) {
         observer = IosTransactionSearchObserver(
@@ -29,34 +28,19 @@ final class TransactionSearchSectionsViewModel {
         )
     }
 
-    deinit {
-        observationTask?.cancel()
-    }
-
-    func start() {
-        guard observationTask == nil else {
+    func observeSnapshots() async {
+        do {
+            try await observer.start()
+        } catch {
             return
         }
 
-        observationTask = Task { [weak self, observer] in
-            do {
-                try await observer.start()
-            } catch {
-                return
+        for await snapshot in observer.snapshots {
+            guard let snapshot else {
+                continue
             }
-
-            for await snapshot in observer.snapshots {
-                guard let self, let snapshot else {
-                    continue
-                }
-                apply(snapshot: snapshot)
-            }
+            apply(snapshot: snapshot)
         }
-    }
-
-    func stop() {
-        observationTask?.cancel()
-        observationTask = nil
     }
 
     func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {

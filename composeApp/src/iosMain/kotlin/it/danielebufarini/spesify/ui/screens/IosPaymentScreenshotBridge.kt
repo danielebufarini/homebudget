@@ -52,7 +52,7 @@ class IosPaymentScreenshotController {
     private fun ExpenseTextCandidate.toIosPaymentScreenshotExpenseCandidate(): IosPaymentScreenshotExpenseCandidate =
         IosPaymentScreenshotExpenseCandidate(
             amountInput = formatAmountInput(amountMinor),
-            descriptionText = description.orEmpty(),
+            descriptionText = merchantDescription.orEmpty(),
             dateMillis = dateMillis ?: 0L,
             categoryId = categoryId
         )

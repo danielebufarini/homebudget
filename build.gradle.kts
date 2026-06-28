@@ -8,9 +8,12 @@ plugins {
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.ksp) apply false
-    alias(libs.plugins.androidx.room) apply false
+    alias(libs.plugins.androidx.room3) apply false
     alias(libs.plugins.skie) apply false
 }
+
+extra["spesifyVersionCode"] = 1
+extra["spesifyVersionName"] = "1.0"
 
 val verifyUnitTests by tasks.registering {
     group = LifecycleBasePlugin.VERIFICATION_GROUP

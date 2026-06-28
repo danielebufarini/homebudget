@@ -12,6 +12,7 @@
     <string name="add_income">Aggiungi entrata</string>
     <string name="amount">Importo</string>
     <string name="amount_expression">Espressione</string>
+    <string name="about">Informazioni</string>
     <string name="calculated_amount">Importo</string>
     <string name="back">Indietro</string>
     <string name="backup">Backup completo cloud</string>
@@ -27,6 +28,7 @@
     <string name="cloud_backup_not_found">Nessun file di backup cloud trovato.</string>
     <string name="by_category">Per categoria</string>
     <string name="by_date">Per data</string>
+    <string name="build_date_label">Data build</string>
     <string name="calendar">Calendario</string>
     <string name="calculator">Calcolatrice</string>
     <string name="cancel">Annulla</string>
@@ -274,7 +276,7 @@
     <string name="category_default_2">Ristorante</string>
     <string name="category_default_3">Auto</string>
     <string name="category_default_4">Viaggi</string>
-    <string name="category_default_5">Sanità</string>
+    <string name="category_default_5">Salute</string>
     <string name="category_default_6">Personale</string>
     <string name="category_default_7">Altro</string>
 

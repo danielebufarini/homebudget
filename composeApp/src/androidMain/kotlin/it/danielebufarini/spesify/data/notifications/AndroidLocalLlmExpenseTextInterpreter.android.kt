@@ -9,7 +9,15 @@ class AndroidLocalLlmExpenseTextInterpreter(
     private val modelProvider: () -> GenerativeModel = { Generation.getClient() }
 ) : LocalExpenseTextLlmInterpreter {
 
-    override suspend fun interpret(text: String): String {
+    override suspend fun interpret(text: String): String =
+        interpret(text = text, moneyCandidates = emptyList())
+
+    override suspend fun interpret(
+        text: String,
+        moneyCandidates: List<MoneyCandidate>
+    ): String {
+        if (moneyCandidates.isEmpty()) return ""
+
         val model = modelProvider()
         val status = runCatching { model.checkStatus() }
             .onFailure { Log.w(TAG, "Local LLM status check failed", it) }
@@ -21,35 +29,58 @@ class AndroidLocalLlmExpenseTextInterpreter(
         }
 
         return runCatching {
-            model.generateContent(buildPrompt(text)).candidates.firstOrNull()?.text.orEmpty()
+            model.generateContent(
+                buildAndroidExpenseLlmPrompt(
+                    notificationText = text,
+                    moneyCandidates = moneyCandidates
+                )
+            ).candidates.firstOrNull()?.text.orEmpty()
         }.onFailure {
             Log.w(TAG, "Local LLM fallback failed", it)
         }.getOrNull().orEmpty()
     }
 
-    private fun buildPrompt(notificationText: String): String = """
-        You interpret one bank/card notification for a personal finance app.
-        The text was read locally on device. Return strict JSON only, with no Markdown.
-        Use this exact shape:
-        {"transactions":[{"isExpense":true,"amountMinor":1234,"currency":"EUR","merchant":"SUPERMERCATO TEST","confidence":0.86}]}
+    private companion object {
+        private const val TAG = "SpesifyLocalLlm"
+    }
+}
+
+internal fun buildAndroidExpenseLlmPrompt(
+    notificationText: String,
+    moneyCandidates: List<MoneyCandidate>
+): String {
+    if (moneyCandidates.isEmpty()) return ""
+
+    val candidates = moneyCandidates.joinToString(separator = "\n") { candidate ->
+        "- selectedAmountMinor=${candidate.amountMinor}, currency=${candidate.currency ?: "null"}, text=\"${candidate.originalText}\""
+    }
+
+    return """
+        You classify one bank or card notification for Spesify.
+
+        Return only valid JSON. No Markdown. No explanation.
+
+        Output shape:
+        {
+          "isExpense": true,
+          "selectedAmountMinor": null,
+          "currency": "EUR",
+          "merchant": null,
+          "confidence": 0.0
+        }
 
         Rules:
-        - Extract every distinct expense visible in the text.
-        - isExpense must be true only for card payments, debit card payments, POS purchases, online purchases, or other money spent by the user.
-        - Return an empty transactions array if the text is not an expense, is a refund, is an incoming transfer, is an income, or is ambiguous.
-        - Never use unrelated numbers such as time, date, battery percentage, or card suffixes as amounts.
-        - amountMinor must be a positive integer number of cents/minor units.
-        - Only use amounts that appear as money in the text, such as 12,34 EUR, EUR 12,34, €12,34, or 12,34 €.
-        - currency must be EUR when present.
-        - merchant may be null if unavailable.
-        - confidence must be between 0 and 1.
-        - Do not include any field not shown in the JSON shape.
+        - Choose selectedAmountMinor from the allowed candidates only.
+        - Do not parse, convert, or invent another amount.
+        - Return {"isExpense":false,"selectedAmountMinor":null,"currency":null,"merchant":null,"confidence":0.0} if uncertain.
+        - Return no expense for refunds, incoming transfers, salary, top-ups, or balance-only notifications.
+        - Ignore dates, times, card suffixes, phone numbers, balances, and percentages.
+        - merchant is the shop, company, payee, or merchant name. Use null if missing.
+
+        Allowed amount candidates:
+        $candidates
 
         Notification text:
         ${notificationText.trim()}
     """.trimIndent()
-
-    private companion object {
-        private const val TAG = "SpesifyLocalLlm"
-    }
 }

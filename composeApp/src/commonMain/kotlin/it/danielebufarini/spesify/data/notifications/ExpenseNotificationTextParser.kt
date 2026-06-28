@@ -15,7 +15,12 @@ class ExpenseNotificationTextParser {
     fun parse(rawText: String): ParsedExpenseNotification? = parseAll(rawText).firstOrNull()
 
     fun parseAll(rawText: String): List<ParsedExpenseNotification> {
-        val structured = structuredPaymentRegex.findAll(rawText)
+        if (ExpenseTextSafetyClassifier.isRejectedForExpense(rawText)) return emptyList()
+
+        val structured = sequenceOf(
+            finecoPaymentRegex.findAll(rawText),
+            structuredPaymentRegex.findAll(rawText)
+        ).flatten()
             .mapNotNull { match -> match.toStructuredPayment() }
             .toList()
             .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
@@ -37,13 +42,25 @@ class ExpenseNotificationTextParser {
     }
 
     fun monetaryAmountMinorEvidence(rawText: String): Set<Long> =
+        moneyCandidates(rawText).map { it.amountMinor }.toSet()
+
+    fun moneyCandidates(rawText: String): List<MoneyCandidate> =
         explicitMoneyRegex.findAll(rawText)
             .filterNot { it.hasUnsupportedCurrency(rawText) }
             .mapNotNull { match ->
-                match.amountGroupValue()
+                val amountMinor = match.amountGroupValue()
                     ?.let(::parsePositiveLocalizedAmountMinorOrNull)
+                    ?: return@mapNotNull null
+                MoneyCandidate(
+                    amountMinor = amountMinor,
+                    currency = SUPPORTED_NOTIFICATION_CURRENCY,
+                    originalText = match.value.trim(),
+                    startIndex = match.range.first,
+                    endIndex = match.range.last + 1
+                )
             }
-            .toSet()
+            .distinctBy { it.amountMinor to it.startIndex to it.endIndex }
+            .toList()
 
     private fun MatchResult.amountGroupValue(): String? = groups[1]?.value ?: groups[2]?.value
 
@@ -99,10 +116,13 @@ class ExpenseNotificationTextParser {
         private const val CURRENCY_CONTEXT_CHARS = 12
         private const val LOCALIZED_AMOUNT = "\\d+(?:[.,]\\d{3})*(?:[,.]\\d{1,2})?|\\d+"
         private val explicitMoneyRegex = Regex(
-            pattern = "(?i)(?<![\\d.,+-])(?:€\\s*|EUR\\s*|EURO(?:S)?\\s*)($LOCALIZED_AMOUNT)(?:\\s*(?:€|EUR|EURO(?:S)?))?(?![\\d.,])|(?<![\\d.,+-])($LOCALIZED_AMOUNT)\\s*(?:€|EUR|EURO(?:S)?)(?![\\d.,])"
+            pattern = "(?i)(?<![\\d.,+-])(?:€\\s*|EUR\\s*|EURO(?:S)?\\s*)($LOCALIZED_AMOUNT)(?:\\s*(?:€|EUR|EURO(?:S)?))?(?!\\d)|(?<![\\d.,+-])($LOCALIZED_AMOUNT)\\s*(?:€|EUR|EURO(?:S)?)(?!\\d)"
         )
         private val structuredPaymentRegex = Regex(
             pattern = "(?is)\\b(?:pagamento|payment)\\s+(?:di|of)\\s+($LOCALIZED_AMOUNT)\\s*(?:€|EUR|EURO(?:S)?)\\s+(?:presso|at)\\s+(.+?)(?=\\s+(?:con\\s+(?:la\\s+tua|una|il)?\\s*carta|with\\s+(?:your\\s+)?card|using\\s+(?:your\\s+)?card)\\b|\\n\\s*(?:Pagamento|Payment|È|E\\s+stata|Authorization|Autorizzazione)\\b|$)"
+        )
+        private val finecoPaymentRegex = Regex(
+            pattern = "(?is)\\bImporto:\\s*($LOCALIZED_AMOUNT)\\s*(?:€|EUR|EURO(?:S)?)\\s*,?\\s*per:\\s*(.+?)(?=\\.\\s*Info:|\\s+Info:|\\n|$)"
         )
         private val currencyRegex = Regex(pattern = "(?i)\\b(?:EUR|EURO(?:S)?|USD|GBP|CHF|CAD|AUD|JPY|CNY|SEK|NOK|DKK)\\b|€")
         private val merchantMarkers = listOf(

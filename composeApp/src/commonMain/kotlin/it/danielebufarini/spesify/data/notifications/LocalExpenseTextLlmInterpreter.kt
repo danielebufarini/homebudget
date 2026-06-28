@@ -9,4 +9,9 @@ package it.danielebufarini.spesify.data.notifications
  */
 interface LocalExpenseTextLlmInterpreter {
     suspend fun interpret(text: String): String
+
+    suspend fun interpret(
+        text: String,
+        moneyCandidates: List<MoneyCandidate>
+    ): String = interpret(text)
 }

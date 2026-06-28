@@ -9,7 +9,8 @@ class LlmExpenseJsonValidator(
         ignoreUnknownKeys = false
         isLenient = false
     },
-    private val evidenceParser: ExpenseNotificationTextParser = ExpenseNotificationTextParser()
+    private val evidenceParser: ExpenseNotificationTextParser = ExpenseNotificationTextParser(),
+    private val extractionValidator: ExpenseLlmExtractionValidator = ExpenseLlmExtractionValidator()
 ) {
     fun validate(
         rawJson: String,
@@ -26,21 +27,21 @@ class LlmExpenseJsonValidator(
         minConfidence: Float = DEFAULT_MIN_CONFIDENCE,
         ocrText: String? = null
     ): List<ExpenseTextInterpretation> {
-        val payload = rawJson.trim().takeIf { it.isNotBlank() } ?: return emptyList()
-        val decodedTransactions = decodeTransactions(payload) ?: return emptyList()
-        val monetaryEvidence = ocrText
-            ?.let(evidenceParser::monetaryAmountMinorEvidence)
-            .orEmpty()
+        val sourceText = ocrText ?: return emptyList()
+        val moneyCandidates = evidenceParser.moneyCandidates(sourceText)
+        return extractionValidator.validateAll(
+            extractions = decodeAll(rawJson),
+            moneyCandidates = moneyCandidates,
+            sourceText = sourceText,
+            minConfidence = minConfidence
+        )
+    }
 
-        return decodedTransactions
-            .mapNotNull { decoded ->
-                decoded.toInterpretation(
-                    minConfidence = minConfidence,
-                    monetaryEvidence = monetaryEvidence,
-                    monetaryEvidenceWasRequired = ocrText != null
-                )
-            }
-            .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
+    fun decodeAll(rawJson: String): List<ExpenseLlmExtraction> {
+        val payload = rawJson.trim().takeIf { it.isNotBlank() } ?: return emptyList()
+        return decodeTransactions(payload)
+            ?.mapNotNull { it.toExtraction() }
+            .orEmpty()
     }
 
     private fun decodeTransactions(rawJson: String): List<LlmExpenseJsonPayload>? {
@@ -67,32 +68,14 @@ class LlmExpenseJsonValidator(
             null
         }
 
-    private fun LlmExpenseJsonPayload.toInterpretation(
-        minConfidence: Float,
-        monetaryEvidence: Set<Long>,
-        monetaryEvidenceWasRequired: Boolean
-    ): ExpenseTextInterpretation? {
-        if (isExpense != true) return null
-        val amountMinor = amountMinor?.takeIf { it > 0L } ?: return null
-        if (monetaryEvidence.isNotEmpty() && amountMinor !in monetaryEvidence) return null
-        if (monetaryEvidence.isEmpty() && monetaryEvidenceWasRequired) return null
-
-        val currency = currency
-            ?.trim()
-            ?.uppercase()
-            ?.takeIf { it.isNotBlank() }
-            ?: SUPPORTED_CURRENCY
-        if (currency != SUPPORTED_CURRENCY) return null
-
-        val confidence = confidence?.takeIf { it in 0f..1f } ?: return null
-        if (confidence < minConfidence) return null
-
-        return ExpenseTextInterpretation(
-            amountMinor = amountMinor,
-            merchant = merchant?.trim()?.takeIf { it.isNotBlank() },
+    private fun LlmExpenseJsonPayload.toExtraction(): ExpenseLlmExtraction? {
+        val confidence = confidence ?: return null
+        return ExpenseLlmExtraction(
+            isExpense = isExpense ?: return null,
+            selectedAmountMinor = selectedAmountMinor ?: amountMinor,
             currency = currency,
-            confidence = confidence,
-            source = InterpretationSource.LocalLlm
+            merchant = merchant,
+            confidence = confidence
         )
     }
 
@@ -104,14 +87,15 @@ class LlmExpenseJsonValidator(
     @Serializable
     private data class LlmExpenseJsonPayload(
         val isExpense: Boolean? = null,
+        val selectedAmountMinor: Long? = null,
         val amountMinor: Long? = null,
+        val amountText: String? = null,
         val currency: String? = null,
         val merchant: String? = null,
         val confidence: Float? = null
     )
 
     private companion object {
-        private const val SUPPORTED_CURRENCY = "EUR"
         private const val DEFAULT_MIN_CONFIDENCE = 0.75f
     }
 }

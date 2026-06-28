@@ -3,7 +3,6 @@ import Foundation
 import PhotosUI
 import SwiftUI
 import Observation
-import UIKit
 
 @MainActor
 @Observable
@@ -38,7 +37,7 @@ final class PaymentScreenshotImportViewModel {
         statusMessage = appLocalized("Reading screenshot...")
         errorMessage = nil
 
-        Task { [weak self] in
+        Task { [weak self, ocrService, controller] in
             guard let self else {
                 return
             }
@@ -51,10 +50,19 @@ final class PaymentScreenshotImportViewModel {
                     throw PaymentScreenshotImportError.imageLoadFailed
                 }
 
+                let recognizedText = try await ocrService.recognizeText(in: image)
+                if let unavailableMessage = PaymentScreenshotLlmAvailability.unavailableImportMessage() {
+                    throw PaymentScreenshotLlmUnavailableError(message: unavailableMessage)
+                }
+
                 busyLabel = appLocalized("Preparing expense...")
                 statusMessage = appLocalized("Preparing expense...")
 
-                let prefills = try await candidates(from: image)
+                let candidateQueue = try await controller.interpretOcrTextQueue(rawText: recognizedText)
+                var prefills: [NativeExpenseEditorPrefill] = []
+                while let candidate = candidateQueue.nextCandidate() {
+                    prefills.append(candidate.nativePrefill)
+                }
 
                 guard !prefills.isEmpty else {
                     isBusy = false
@@ -75,36 +83,6 @@ final class PaymentScreenshotImportViewModel {
                 errorMessage = paymentScreenshotImportMessage(for: error)
             }
         }
-    }
-
-    func candidates(fromImageFileAt url: URL) async throws -> [NativeExpenseEditorPrefill] {
-        let data = try await Task.detached(priority: .userInitiated) {
-            let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            return try Data(contentsOf: url)
-        }.value
-
-        guard let image = UIImage(data: data) else {
-            throw PaymentScreenshotImportError.imageLoadFailed
-        }
-
-        return try await candidates(from: image)
-    }
-
-    private func candidates(from image: UIImage) async throws -> [NativeExpenseEditorPrefill] {
-        let recognizedText = try await ocrService.recognizeText(in: image)
-        let candidateQueue = try await controller.interpretOcrTextQueue(rawText: recognizedText)
-        var prefills: [NativeExpenseEditorPrefill] = []
-        while let candidate = candidateQueue.nextCandidate() {
-            prefills.append(candidate.nativePrefill)
-        }
-
-        return prefills
     }
 }
 
@@ -130,7 +108,7 @@ private extension IosPaymentScreenshotExpenseCandidate {
     }
 }
 
-func paymentScreenshotImportMessage(for error: Error) -> String {
+private func paymentScreenshotImportMessage(for error: Error) -> String {
     if let localizedError = error as? LocalizedError,
        let description = localizedError.errorDescription,
        !description.isEmpty {

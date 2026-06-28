@@ -12,6 +12,7 @@
     <string name="add_income">Add Income</string>
     <string name="amount">Amount</string>
     <string name="amount_expression">Expression</string>
+    <string name="about">About</string>
     <string name="calculated_amount">Amount</string>
     <string name="back">Back</string>
     <string name="backup">Full Cloud Backup</string>
@@ -27,6 +28,7 @@
     <string name="cloud_backup_not_found">No cloud backup file was found.</string>
     <string name="by_category">By Category</string>
     <string name="by_date">By Date</string>
+    <string name="build_date_label">Build date</string>
     <string name="calendar">Calendar</string>
     <string name="calculator">Calculator</string>
     <string name="cancel">Cancel</string>

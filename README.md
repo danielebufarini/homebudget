@@ -16,7 +16,7 @@ The shared module contains the domain model, persistence, repositories, resource
 - Google Drive AppData backup on Android
 - iCloud backup on iOS
 - Voice-assisted expense entry
-- iOS payment screenshot import with Apple Vision OCR, regex-first parsing, local fallback when available, and sequential review of multiple detected expenses
+- iOS payment screenshot import with Apple Vision OCR, Foundation Models availability checks, regex-first parsing, candidate-constrained local fallback, and sequential review of multiple detected expenses
 - Android notification-based expense detection for supported apps, with deterministic parsing, local Gemini Nano fallback, and explicit confirmation
 - Assistant and agent integrations for transaction entry, financial summaries, and category management
 - Android and iOS home screen widgets
@@ -44,8 +44,7 @@ The shared module contains the domain model, persistence, repositories, resource
 
 Current baseline:
 
-- JDK 21
-- Kotlin 2.3.21
+- Kotlin 2.4.0
 - Compose Multiplatform 1.11.1
 - Android Gradle Plugin 9.2.1
 - Android min SDK 31
@@ -139,6 +138,7 @@ App Intents and AppFunctions should remain thin adapters: they parse native para
 - Android starts from [MainActivity.kt](./androidApp/src/main/kotlin/it/danielebufarini/spesify/MainActivity.kt) and runs the shared Compose app.
 - iOS starts from [ContentView.swift](./iosApp/iosApp/App/ContentView.swift), uses SwiftUI `NavigationStack`, and hosts shared Compose through [MainViewController.kt](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/MainViewController.kt).
 - Native iOS expense screens use observer-backed SwiftUI view models and Kotlin bridge classes under [composeApp/src/iosMain](./composeApp/src/iosMain).
+- The native iOS transaction date picker uses a custom SwiftUI calendar whose weekday headers are ordered from `Calendar.current.firstWeekday`, so localized weekday names line up with the day grid.
 
 ### Backup and Transfer
 
@@ -168,17 +168,17 @@ Notification-based expense detection is Android-only and opt-in. The Android hos
 
 Supported financial app packages are fetched with Ktor from the remote JSON whitelist and cached locally with Jetpack DataStore. The sync runs through WorkManager periodically and can also be triggered at cold start when the cache is empty or stale. If the remote sync fails and there is no cached whitelist yet, the app bootstraps the cache from the bundled asset [android_banks_packages_list.json](./androidApp/src/main/assets/android_banks_packages_list.json). Existing cache data is preserved on sync failure.
 
-When Notification Listener access is enabled by the user, Spesify filters posted notifications by source package using the local whitelist, extracts notification text locally, and interprets candidate expense amounts and merchants through a shared pipeline. The pipeline runs the deterministic regex parser first and uses its high-confidence result directly. If regex parsing fails, produces low confidence, or finds an amount without a useful merchant, Android may fall back to the local Gemini Nano interpreter. The fallback is only attempted for whitelisted source packages, runs outside the notification listener callback, and normalizes strictly validated JSON into the same parsed candidate model used by regex.
+When Notification Listener access is enabled by the user, Spesify filters posted notifications by source package using the local whitelist, extracts notification text locally, and interprets candidate expense amounts and merchants through a shared pipeline. The pipeline runs the deterministic regex parser first and uses its high-confidence result directly. If regex parsing fails, produces low confidence, or finds an amount without a useful merchant, shared Kotlin extracts deterministic money candidates from explicit currency amounts before Android may fall back to the local Gemini Nano interpreter. Gemini receives the notification text and the allowed candidate list, then can only classify the text and select one `selectedAmountMinor` value from those candidates. The fallback is only attempted for whitelisted source packages, runs outside the notification listener callback, and normalizes strictly validated JSON into the same parsed candidate model used by regex.
 
-Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are used only transiently for local interpretation: they are not persisted, logged, or sent to external services. Parsed amounts are represented internally as `Long` minor units.
+Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are used only transiently for local interpretation: they are not persisted, logged, or sent to external services. Parsed amounts and LLM-selected candidates are represented internally as `Long` minor units.
 
 ### iOS Payment Screenshot Import
 
-Payment screenshot import is iOS-native, expense-oriented, and available from the dashboard and monthly expenses list input dock. It is intentionally not exposed from the income list dock, where the secondary dock action starts voice input directly instead of showing the screenshot import menu. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, and passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The iOS app also registers as an alternate document handler for image files, so compatible screenshots opened with Spesify through iOS document handoff use the same OCR and editable review flow without a Share Extension. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
+Payment screenshot import is iOS-native, expense-oriented, and available from the dashboard and monthly expenses list input dock. It is intentionally not exposed from the income list dock, where the secondary dock action starts voice input directly instead of showing the screenshot import menu. The SwiftUI flow lets the user pick an image from Photos, extracts text on-device with Apple Vision OCR, checks local Foundation Models availability and language support, then passes the transient OCR text into the shared `InterpretExpenseTextUseCase`. The OCR text is not persisted, logged, sent to analytics, or sent to external services.
 
-The shared interpretation pipeline can return multiple expense candidates from one OCR input. It first applies deterministic regex parsing, including payment-notification blocks such as `pagamento di <amount> EUR presso <merchant> con la tua carta` and `payment of <amount> EUR at <merchant> with your card`. When the regex result is incomplete or ambiguous, the local iOS fallback remains available through the platform LLM bridge and returns raw JSON for shared Kotlin validation.
+The shared interpretation pipeline can return multiple expense candidates from one OCR input. It first applies deterministic regex parsing, including payment-notification blocks such as `pagamento di <amount> EUR presso <merchant> con la tua carta`, `payment of <amount> EUR at <merchant> with your card`, and known bank formats such as Fineco `Importo: <amount> EUR, per: <merchant>`. When the regex result is incomplete or ambiguous, common Kotlin extracts deterministic money candidates and the local iOS fallback remains available through the platform LLM bridge. The Swift/Foundation Models adapter can use guided generation, but it receives only the OCR text plus an allowed amount-candidate list and returns raw JSON with `selectedAmountMinor` choices for shared Kotlin validation. Multiple payment notifications in one screenshot are treated as separate candidates, not as ambiguity by themselves.
 
-The Kotlin validator accepts only safe candidates: expenses with positive `Long` minor-unit amounts, EUR currency or safely inferred EUR, sufficient confidence, and an amount that appears in the OCR text as explicit monetary evidence such as `22,20 EUR`, `EUR 22,20`, or `€22,20`. Plain numbers from the lock screen or status bar, such as time, date, battery percentage, or card suffixes, are rejected as transaction amounts.
+The Kotlin validator is the safety boundary for both Android and iOS. It accepts only safe candidates: expenses with positive `Long` minor-unit amounts, EUR currency or safely inferred EUR, sufficient confidence, and a `selectedAmountMinor` that exactly matches one deterministic money candidate from the source text. Invented amounts, unsupported currencies, refunds, incoming transfers, salaries, top-ups, balance-only notifications, and plain numbers from the lock screen or status bar, such as time, date, battery percentage, phone numbers, or card suffixes, are rejected as transaction amounts. The shared pipeline allows up to 15 seconds for local LLM fallback work, and the iOS bridge allows up to 25 seconds for the on-device Foundation Models response before failing closed.
 
 When multiple candidates are found, iOS queues them in memory and opens the native expense editor one at a time. The user confirms, edits, or cancels each candidate before anything is saved.
 
@@ -187,6 +187,8 @@ When multiple candidates are found, iOS queues them in memory and opens the nati
 - Shared Compose strings: [values](./composeApp/src/commonMain/composeResources/values/strings.xml), [values-it](./composeApp/src/commonMain/composeResources/values-it/strings.xml)
 - Native iOS strings: [Localizable.xcstrings](./iosApp/iosApp/Localizable.xcstrings)
 - iOS widget strings: [en](./iosApp/SpesifyWidget/en.lproj/Localizable.strings), [it](./iosApp/SpesifyWidget/it.lproj/Localizable.strings)
+
+Native iOS localization also covers App Intent/App Shortcut metadata and payment screenshot import errors, including Foundation Models availability, Apple Intelligence enablement, model preparation, unsupported app language, OCR failure, and no-text cases.
 
 ## Build
 
@@ -251,16 +253,17 @@ Run the Android notification detection smoke checklist after changing the notifi
 Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room persistence, recurring transaction generation, iCloud backup, CSV transfer, or native SwiftUI transaction screens:
 
 1. Add an expense category in the native add/edit transaction flow, verify it is selected, then reopen the category picker and confirm it persists.
-2. Open monthly expenses and monthly incomes, switch grouping between category and date, expand/collapse sections, and delete one non-recurring item.
-3. Create or edit one recurring expense or income, navigate to a future month, then delete the series and verify the generated rows update consistently.
-4. Search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
-5. Export a CSV date range, verify the file content, import the file, and confirm success or skipped-row feedback.
-6. Launch an empty iOS install with an iCloud backup available, preview restore counts, restore, and verify dashboard data.
-7. Use voice entry to create or update a draft, save it, and verify the expense appears in the current month.
-8. From the monthly expenses screen, import a payment screenshot with one notification and verify the native editor is pre-filled with the correct amount and merchant.
-9. Import a payment screenshot with multiple payment notifications and verify the editor opens candidates sequentially, one transaction at a time.
-10. Import a screenshot that also contains lock-screen/status-bar numbers and verify time, date, battery percentage, and card suffixes are not accepted as transaction amounts.
-11. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
+2. Open the native transaction date picker and verify weekday headers match the day grid for the current locale and first-weekday setting.
+3. Open monthly expenses and monthly incomes, switch grouping between category and date, expand/collapse sections, and delete one non-recurring item.
+4. Create or edit one recurring expense or income, navigate to a future month, then delete the series and verify the generated rows update consistently.
+5. Search for a term with expense and income matches, load more results if available, switch grouping, and delete one result.
+6. Export a CSV date range, verify the file content, import the file, and confirm success or skipped-row feedback.
+7. Launch an empty iOS install with an iCloud backup available, preview restore counts, restore, and verify dashboard data.
+8. Use voice entry to create or update a draft, save it, and verify the expense appears in the current month.
+9. From the monthly expenses screen, import a payment screenshot with one notification and verify the native editor is pre-filled with the correct amount and merchant.
+10. Import a payment screenshot with multiple payment notifications and verify the editor opens candidates sequentially, one transaction at a time.
+11. Import a screenshot that also contains lock-screen/status-bar numbers and verify time, date, battery percentage, and card suffixes are not accepted as transaction amounts.
+12. Trigger app backgrounding or widget refresh, then confirm the iOS widget summary shows current month totals and updated timestamp.
 
 ## Setup Notes
 
@@ -288,9 +291,9 @@ Without this setup, local backup still works.
 
 ### iOS Payment Screenshot Import
 
-Payment screenshot import is exposed in-app and through iOS Document Handling for image files (`public.image`, `public.png`, `public.jpeg`, and `public.heic`). Spesify does not use a Share Extension for this path; when iOS hands the app an image document URL, the main app reads the file and runs the existing OCR, interpretation, and editable expense review flow.
+Payment screenshot import is an in-app flow exposed from the monthly expenses screen. It is not currently an iOS Share Sheet target; appearing in Photos as a share recipient would require a separate Share Extension.
 
-The local iOS LLM fallback is kept available through the platform bridge, but the app still builds and runs when Foundation Models are unavailable. In that case, regex parsing and shared validation remain active, and unsafe or invalid fallback output is ignored.
+The app still builds and runs when Foundation Models are unavailable, but the screenshot import flow checks availability after OCR and reports a localized error when the device is not eligible, Apple Intelligence is disabled, the model is still preparing, or the current app language is unsupported. The fallback bridge also fails closed: model errors or invalid output produce no import candidate rather than an unsafe transaction.
 
 ### iOS
 

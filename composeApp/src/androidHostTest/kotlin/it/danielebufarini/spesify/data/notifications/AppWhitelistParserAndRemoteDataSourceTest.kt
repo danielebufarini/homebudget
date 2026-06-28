@@ -1,11 +1,14 @@
 package it.danielebufarini.spesify.data.notifications
 
 import kotlinx.coroutines.test.runTest
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class AppWhitelistParserAndRemoteDataSourceTest {
 
     @Test

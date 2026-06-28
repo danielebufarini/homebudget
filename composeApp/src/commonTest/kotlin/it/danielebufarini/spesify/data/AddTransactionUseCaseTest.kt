@@ -46,7 +46,7 @@ class AddTransactionUseCaseTest {
             AddTransactionCommand(
                 kind = TransactionKind.Income,
                 amount = 120_000L,
-                description = "Salary",
+                note = "Salary",
                 source = TransactionCreationSource.IosAppIntent
             )
         )

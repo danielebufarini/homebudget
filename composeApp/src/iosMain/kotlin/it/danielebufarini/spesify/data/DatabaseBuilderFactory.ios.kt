@@ -2,8 +2,8 @@
 
 package it.danielebufarini.spesify.data
 
-import androidx.room.Room
-import androidx.room.RoomDatabase
+import androidx.room3.Room
+import androidx.room3.RoomDatabase
 import it.danielebufarini.spesify.database.SpesifyDatabase
 import it.danielebufarini.spesify.database.addSpesifyMigrations
 import kotlinx.cinterop.ExperimentalForeignApi

@@ -4,6 +4,9 @@ import co.touchlab.skie.configuration.FunctionInterop
 import co.touchlab.skie.configuration.SealedInterop
 import co.touchlab.skie.configuration.SuspendInterop
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,7 +16,50 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.skie)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.androidx.room)
+    alias(libs.plugins.androidx.room3)
+}
+
+abstract class GenerateBuildInfoTask : DefaultTask() {
+    @get:Input
+    abstract val appName: Property<String>
+
+    @get:Input
+    abstract val versionName: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val buildDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'")
+            .withZone(ZoneOffset.UTC)
+            .format(Instant.now())
+        val packageDir = File(outputDir.get().asFile, "it/danielebufarini/spesify").apply {
+            mkdirs()
+        }
+
+        File(packageDir, "GeneratedBuildInfo.kt").writeText(
+            """
+            package it.danielebufarini.spesify
+
+            internal object GeneratedBuildInfo {
+                const val APP_NAME = "${appName.get()}"
+                const val VERSION_NAME = "${versionName.get()}"
+                const val BUILD_DATE = "$buildDate"
+            }
+            """.trimIndent()
+        )
+    }
+}
+
+val spesifyVersionName = rootProject.extra["spesifyVersionName"] as String
+val generatedBuildInfoDir = layout.buildDirectory.dir("generated/source/buildInfo/commonMain/kotlin")
+
+val generateBuildInfo by tasks.registering(GenerateBuildInfoTask::class) {
+    appName.set("Spesify")
+    versionName.set(spesifyVersionName)
+    outputDir.set(generatedBuildInfoDir)
+    outputs.upToDateWhen { false }
 }
 
 kotlin {
@@ -63,27 +109,30 @@ kotlin {
             implementation(libs.ktor.client.android)
             implementation(libs.androidx.datastore.preferences)
         }
-        commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.material.icons.extended)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.koin.core)
-            implementation(libs.koin.compose)
-            implementation(libs.voyager.core)
-            implementation(libs.voyager.navigator)
-            implementation(libs.voyager.transitions)
-            implementation(libs.voyager.koin)
-            implementation(libs.androidx.room.runtime)
-            implementation(libs.androidx.sqlite.bundled)
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.datetime)
-            implementation(libs.kotlinx.serialization.json)
+        commonMain {
+            kotlin.srcDir(generatedBuildInfoDir)
+            dependencies {
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.material.icons.extended)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.components.resources)
+                implementation(libs.compose.uiToolingPreview)
+                implementation(libs.androidx.lifecycle.viewmodelCompose)
+                implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation(libs.koin.core)
+                implementation(libs.koin.compose)
+                implementation(libs.voyager.core)
+                implementation(libs.voyager.navigator)
+                implementation(libs.voyager.transitions)
+                implementation(libs.voyager.koin)
+                implementation(libs.androidx.room3.runtime)
+                implementation(libs.androidx.sqlite.bundled)
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.serialization.json)
+            }
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -96,6 +145,12 @@ kotlin {
     }
 }
 
+tasks.matching {
+    it.name.startsWith("compileKotlin") || it.name.startsWith("ksp")
+}.configureEach {
+    dependsOn(generateBuildInfo)
+}
+
 compose {
     resources {
         packageOfResClass = "spesify.composeapp.generated.resources"
@@ -103,12 +158,12 @@ compose {
 }
 
 dependencies {
-    add("kspAndroid", libs.androidx.room.compiler)
-    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
-    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspAndroid", libs.androidx.room3.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room3.compiler)
+    add("kspIosArm64", libs.androidx.room3.compiler)
 }
 
-room {
+room3 {
     schemaDirectory("$projectDir/schemas")
 }
 

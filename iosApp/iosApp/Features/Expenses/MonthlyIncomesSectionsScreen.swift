@@ -44,7 +44,6 @@ struct MonthlyIncomesSectionsContent: View {
     let topReservedInset: CGFloat?
     let headerAccessory: (() -> AnyView)?
     let bottomScrollClearance: CGFloat
-    @Binding private var isDeleteConfirmationPresented: Bool
     @Binding private var groupingMode: ExpenseGroupingMode
 
     @State private var viewModel: MonthlyIncomesSectionsViewModel
@@ -59,7 +58,6 @@ struct MonthlyIncomesSectionsContent: View {
         topReservedInset: CGFloat? = nil,
         headerAccessory: (() -> AnyView)? = nil,
         bottomScrollClearance: CGFloat = 0,
-        isDeleteConfirmationPresented: Binding<Bool> = .constant(false),
         groupingMode: Binding<ExpenseGroupingMode>
     ) {
         self.selectedMonth = selectedMonth
@@ -70,7 +68,6 @@ struct MonthlyIncomesSectionsContent: View {
         self.topReservedInset = topReservedInset
         self.headerAccessory = headerAccessory
         self.bottomScrollClearance = bottomScrollClearance
-        _isDeleteConfirmationPresented = isDeleteConfirmationPresented
         _groupingMode = groupingMode
         _viewModel = State(
             initialValue: MonthlyIncomesSectionsViewModel(
@@ -90,19 +87,12 @@ struct MonthlyIncomesSectionsContent: View {
         }
         .background(AppGlassBackdrop().ignoresSafeArea())
         .toolbarBackground(.hidden, for: .navigationBar)
-        .onAppear {
+        .task {
             viewModel.updateGroupingMode(groupingMode)
-            viewModel.start()
+            await viewModel.observeSnapshots()
         }
         .onChange(of: groupingMode) { _, updatedMode in
             viewModel.updateGroupingMode(updatedMode)
-        }
-        .onChange(of: pendingIncomeDeleteID) { _, _ in
-            syncDeleteConfirmationPresentation()
-        }
-        .onDisappear {
-            isDeleteConfirmationPresented = false
-            viewModel.stop()
         }
         .overlay {
             if let pendingIncomeDeleteRow {
@@ -250,9 +240,5 @@ struct MonthlyIncomesSectionsContent: View {
 
     private var pendingIncomeDeleteRow: GroupedExpenseRowModel? {
         viewModel.sections.row(withID: pendingIncomeDeleteID)
-    }
-
-    private func syncDeleteConfirmationPresentation() {
-        isDeleteConfirmationPresented = pendingIncomeDeleteRow != nil
     }
 }

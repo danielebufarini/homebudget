@@ -2,9 +2,9 @@
 
 package it.danielebufarini.spesify.database
 
-import androidx.room.Entity
-import androidx.room.Fts4
-import androidx.room.FtsOptions
+import androidx.room3.Entity
+import androidx.room3.Fts4
+import androidx.room3.FtsOptions
 import kotlin.native.ObjCName
 
 @Entity(tableName = "expense_search_fts")

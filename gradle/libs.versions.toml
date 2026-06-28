@@ -11,15 +11,15 @@ androidx-recyclerview = "1.4.0"
 androidx-work = "2.11.2"
 androidx-appfunctions = "1.0.0-alpha09"
 composeMultiplatform = "1.11.1"
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 material3 = "1.10.0-alpha05"
-koin = "4.2.1"
-koin-compose = "4.2.1"
+koin = "4.2.2"
+koin-compose = "4.2.2"
 voyager = "2.2.21-1.10.3"
-skie = "0.10.12"
+skie = "0.10.13"
 ksp = "2.3.9"
-room = "2.8.4"
-sqlite = "2.6.2"
+room = "3.0.0-rc01"
+sqlite = "2.7.0-rc01"
 kotlinx-coroutines = "1.11.0"
 kotlinx-datetime = "0.8.0"
 kotlinx-serialization = "1.11.0"
@@ -63,8 +63,8 @@ voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", vers
 voyager-koin = { module = "cafe.adriel.voyager:voyager-koin", version.ref = "voyager" }
 
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
-androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-room3-runtime = { module = "androidx.room3:room3-runtime", version.ref = "room" }
+androidx-room3-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -89,5 +89,5 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-androidx-room = { id = "androidx.room", version.ref = "room" }
+androidx-room3 = { id = "androidx.room3", version.ref = "room" }
 skie = { id = "co.touchlab.skie", version.ref = "skie" }

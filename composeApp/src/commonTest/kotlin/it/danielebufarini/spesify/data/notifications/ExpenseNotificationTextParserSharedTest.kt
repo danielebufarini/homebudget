@@ -19,6 +19,15 @@ class ExpenseNotificationTextParserSharedTest {
     }
 
     @Test
+    fun parse_extractsFinecoPaymentTextWithMerchant() {
+        val parsed = parser.parse(finecoNotification)
+
+        assertEquals(4_499L, parsed?.amountMinor)
+        assertEquals("Amazon.it", parsed?.merchant)
+        assertEquals("EUR", parsed?.currency)
+    }
+
+    @Test
     fun parseAll_extractsMultipleStructuredPaymentBlocks() {
         val parsed = parser.parseAll(
             """
@@ -54,6 +63,17 @@ class ExpenseNotificationTextParserSharedTest {
     }
 
     @Test
+    fun moneyCandidates_onlyIncludeExplicitMoneyAmountsFromFinecoText() {
+        val candidates = parser.moneyCandidates(finecoNotification)
+
+        assertEquals(1, candidates.size)
+        assertEquals(4_499L, candidates.single().amountMinor)
+        assertEquals("44,99 EUR", candidates.single().originalText)
+        assertTrue(31L !in candidates.map { it.amountMinor })
+        assertTrue(2_289_928_990L !in candidates.map { it.amountMinor })
+    }
+
+    @Test
     fun parse_normalizesDotDecimalAndIntegerAmounts() {
         assertEquals(1_234L, parser.parse("Pagamento carta 12.34 EUR")?.amountMinor)
         assertEquals(1_000L, parser.parse("Pagamento carta 10 EUR")?.amountMinor)
@@ -76,5 +96,21 @@ class ExpenseNotificationTextParserSharedTest {
 
         assertEquals(1_234L, parsed?.amountMinor)
         assertFalse(parsed.toString().contains(rawText))
+    }
+
+    @Test
+    fun parse_rejectsRefundsAndIncomingTransfers() {
+        assertNull(parser.parse("Rimborso carta 12,34 EUR da SUPERMERCATO TEST"))
+        assertNull(parser.parse("Bonifico ricevuto 12,34 EUR da MARIO ROSSI"))
+    }
+
+    private companion object {
+        private val finecoNotification = """
+            Fineco
+            ieri, 22:35
+            Autorizzato utilizzo Carta ***0031
+            Importo: 44,99 EUR, per: Amazon.it. Info:
+            0228992899
+        """.trimIndent()
     }
 }

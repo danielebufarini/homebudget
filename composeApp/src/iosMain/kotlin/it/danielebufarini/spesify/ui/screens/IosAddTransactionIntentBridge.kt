@@ -10,21 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.mp.KoinPlatformTools
 
-class IosAddTransactionIntentResult(
-    val status: String,
-    val transactionId: String?,
-    val message: String?,
-    val needsConfirmation: Boolean
-) {
-    val isCreated: Boolean get() = status == STATUS_CREATED
-
-    companion object {
-        const val STATUS_CREATED = "created"
-        const val STATUS_NEEDS_CONFIRMATION = "needs_confirmation"
-        const val STATUS_FAILED = "failed"
-    }
-}
-
 class IosAddTransactionIntentController {
     private val addTransactionUseCase: AddTransactionUseCase by lazy {
         if (KoinPlatformTools.defaultContext().getOrNull() == null) {
@@ -34,55 +19,23 @@ class IosAddTransactionIntentController {
     }
 
     suspend fun addTransaction(
-        kind: String,
+        kind: TransactionKind,
         amount: Long,
         categoryName: String?,
         description: String?,
         dateMillis: Long
-    ): IosAddTransactionIntentResult {
-        val transactionKind = TransactionKind.fromExternalValue(kind)
-            ?: return IosAddTransactionIntentResult(
-                status = IosAddTransactionIntentResult.STATUS_NEEDS_CONFIRMATION,
-                transactionId = null,
-                message = "Please choose expense or income.",
-                needsConfirmation = true
-            )
-
-        val result = withContext(Dispatchers.Default) {
+    ): AddTransactionResult {
+        return withContext(Dispatchers.Default) {
             addTransactionUseCase.execute(
                 AddTransactionCommand(
-                    kind = transactionKind,
+                    kind = kind,
                     amount = amount,
                     categoryName = categoryName,
-                    description = description,
+                    note = description,
                     dateMillis = dateMillis.takeIf { it > 0L },
                     source = TransactionCreationSource.IosAppIntent
                 )
             )
         }
-        return result.toIosIntentResult()
-    }
-}
-
-private fun AddTransactionResult.toIosIntentResult(): IosAddTransactionIntentResult {
-    return when (this) {
-        is AddTransactionResult.Created -> IosAddTransactionIntentResult(
-            status = IosAddTransactionIntentResult.STATUS_CREATED,
-            transactionId = transactionId,
-            message = "Transaction added.",
-            needsConfirmation = false
-        )
-        is AddTransactionResult.NeedsConfirmation -> IosAddTransactionIntentResult(
-            status = IosAddTransactionIntentResult.STATUS_NEEDS_CONFIRMATION,
-            transactionId = null,
-            message = message,
-            needsConfirmation = true
-        )
-        is AddTransactionResult.Failed -> IosAddTransactionIntentResult(
-            status = IosAddTransactionIntentResult.STATUS_FAILED,
-            transactionId = null,
-            message = message,
-            needsConfirmation = false
-        )
     }
 }

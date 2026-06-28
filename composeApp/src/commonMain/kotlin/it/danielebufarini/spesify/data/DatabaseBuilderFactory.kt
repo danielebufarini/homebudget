@@ -1,6 +1,6 @@
 package it.danielebufarini.spesify.data
 
-import androidx.room.RoomDatabase
+import androidx.room3.RoomDatabase
 import it.danielebufarini.spesify.database.SpesifyDatabase
 
 expect class DatabaseBuilderFactory {

@@ -6,13 +6,20 @@ import kotlinx.coroutines.withTimeout
 data class ExpenseInterpretationPipelineConfig(
     val highConfidenceThreshold: Float = 0.85f,
     val llmConfidenceThreshold: Float = 0.75f,
-    val llmTimeoutMillis: Long = 4_500L
+    val llmTimeoutMillis: Long = 15_000L
 )
 
 class ExpenseInterpretationPipeline(
     private val regexInterpreter: ExpenseTextInterpreter = RegexExpenseTextInterpreter(),
-    private val localLlmInterpreter: LocalExpenseTextLlmInterpreter? = null,
-    private val llmJsonValidator: LlmExpenseJsonValidator = LlmExpenseJsonValidator(),
+    localLlmInterpreter: LocalExpenseTextLlmInterpreter? = null,
+    llmJsonValidator: LlmExpenseJsonValidator = LlmExpenseJsonValidator(),
+    private val llmInterpreter: ExpenseTextLlmInterpreter? = localLlmInterpreter?.let {
+        JsonExpenseTextLlmInterpreter(
+            rawInterpreter = it,
+            jsonValidator = llmJsonValidator
+        )
+    },
+    private val llmExtractionValidator: ExpenseLlmExtractionValidator = ExpenseLlmExtractionValidator(),
     private val config: ExpenseInterpretationPipelineConfig = ExpenseInterpretationPipelineConfig(),
     private val evidenceParser: ExpenseNotificationTextParser = ExpenseNotificationTextParser()
 ) : ExpenseTextInterpreter {
@@ -40,13 +47,17 @@ class ExpenseInterpretationPipeline(
     ): List<ExpenseTextInterpretation> {
         val input = text.trim()
         if (input.isBlank()) return emptyList()
+        if (ExpenseTextSafetyClassifier.isRejectedForExpense(input)) return emptyList()
 
         val regexResults = regexInterpreter.interpretAll(input)
             .map { it.normalized() }
             .filter { it.hasValidAmount }
             .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
 
-        if (!shouldFallback(regexResults, input)) return regexResults
+        val highConfidenceRegexResults = regexResults.filter { it.isHighConfidence() }
+        if (highConfidenceRegexResults.isNotEmpty()) return highConfidenceRegexResults
+
+        if (!shouldFallback(regexResults)) return regexResults
 
         val llmResults = if (canUseLocalLlmFallback) {
             interpretAllWithLocalLlm(input)
@@ -62,28 +73,30 @@ class ExpenseInterpretationPipeline(
         }
     }
 
-    private fun shouldFallback(regexResults: List<ExpenseTextInterpretation>, text: String): Boolean {
+    private fun shouldFallback(regexResults: List<ExpenseTextInterpretation>): Boolean {
         if (regexResults.isEmpty()) return true
         if (regexResults.any { !it.hasValidAmount }) return true
         if (regexResults.any { it.confidence < config.highConfidenceThreshold }) return true
         if (regexResults.any { it.merchant.isNullOrBlank() }) return true
 
-        val monetaryAmountCount = evidenceParser.monetaryAmountMinorEvidence(text).size
-        if (monetaryAmountCount > regexResults.size) return true
-
         return false
     }
 
     private suspend fun interpretAllWithLocalLlm(text: String): List<ExpenseTextInterpretation> {
-        val interpreter = localLlmInterpreter ?: return emptyList()
+        val interpreter = llmInterpreter ?: return emptyList()
+        val moneyCandidates = evidenceParser.moneyCandidates(text)
+        if (moneyCandidates.isEmpty()) return emptyList()
+
         return try {
             withTimeout(config.llmTimeoutMillis) {
-                val rawJson = interpreter.interpret(text).trim()
-                if (rawJson.isBlank()) return@withTimeout emptyList()
-                llmJsonValidator.validateAll(
-                    rawJson = rawJson,
-                    minConfidence = config.llmConfidenceThreshold,
-                    ocrText = text
+                llmExtractionValidator.validateAll(
+                    extractions = interpreter.interpretAll(
+                        text = text,
+                        moneyCandidates = moneyCandidates
+                    ),
+                    moneyCandidates = moneyCandidates,
+                    sourceText = text,
+                    minConfidence = config.llmConfidenceThreshold
                 ).map { it.normalized() }
                     .filter { it.source == InterpretationSource.LocalLlm }
                     .filter { it.hasValidAmount }
@@ -97,6 +110,11 @@ class ExpenseInterpretationPipeline(
             emptyList()
         }
     }
+
+    private fun ExpenseTextInterpretation.isHighConfidence(): Boolean =
+        hasValidAmount &&
+            confidence >= config.highConfidenceThreshold &&
+            !merchant.isNullOrBlank()
 
     private fun ExpenseTextInterpretation.normalized(): ExpenseTextInterpretation {
         val normalizedMerchant = merchant?.trim()?.takeIf { it.isNotBlank() }

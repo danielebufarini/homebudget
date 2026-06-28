@@ -28,4 +28,40 @@ Se hai domande o suggerimenti sulla Privacy Policy, non esitare a contattarci.
 * **Sito Web:** http://www.github.com/danielebufarini
 
 ---
-*Ultimo aggiornamento: 8 Giugno 2026*
+*Ultimo aggiornamento: 24 Giugno 2026*
+
+
+
+---
+# Privacy Policy
+
+The **Spesify** app is a family budget management app developed by **Daniele Bufarini** as a free service. This service is provided “as is.”
+
+User privacy is a top priority. This page is intended to inform visitors and users about our policies regarding the collection, use, and disclosure of personal information.
+
+## 1. Collection and Use of Information
+The app **does not collect, store, or transmit** any type of personal data or sensitive information.
+* There are no tracking or analytics systems (such as Google Analytics, Firebase, etc.).
+* You are not required to create an account or register.
+* All financial data and expenses you enter are stored exclusively on your device.
+
+## 2. Cookies and Tracking
+This app does not use “cookies” and does not employ any third-party tracking technologies.
+
+## 3. Third-Party Services
+The app does not connect to third-party services that might collect information used to identify you.
+
+
+## 4. Data Security
+Since the app does not collect or store data on external servers, there is no risk that your personal information will be intercepted or compromised online. The security of the data you enter into the app depends solely on the security of your mobile device.
+
+## 5. Changes to This Privacy Policy
+This Privacy Policy may be updated from time to time. We recommend that you check this page periodically for any changes. Changes take effect immediately upon their publication on this page.
+
+## 6. Contact Us
+If you have any questions or suggestions regarding this Privacy Policy, please do not hesitate to contact us.
+
+* **Website:** http://www.github.com/danielebufarini
+
+---
+*Last updated: June 24, 2026*

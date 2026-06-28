@@ -2,9 +2,12 @@ package it.danielebufarini.spesify.data.notifications
 
 import android.app.Notification
 import android.os.Bundle
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@RunWith(RobolectricTestRunner::class)
 class NotificationTextExtractorTest {
     @Test
     fun extractsTitleTextAndBigTextWithoutDuplicates() {

@@ -1,12 +1,12 @@
 package it.danielebufarini.spesify.database
 
-import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
+import androidx.room3.RoomDatabase
+import androidx.room3.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 
 internal val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_expense_recurringSeriesId_date` " +
                 "ON `expense` (`recurringSeriesId`, `date`)"
@@ -19,7 +19,7 @@ internal val MIGRATION_1_2 = object : Migration(1, 2) {
 }
 
 internal val MIGRATION_2_3 = object : Migration(2, 3) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         migrateExpenseTable(connection)
         migrateIncomeTable(connection)
     }
@@ -27,7 +27,7 @@ internal val MIGRATION_2_3 = object : Migration(2, 3) {
 
 
 internal val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         connection.execSQL("ALTER TABLE `category` ADD COLUMN `color` TEXT NOT NULL DEFAULT '#6F45E9'")
         connection.execSQL("ALTER TABLE `category` ADD COLUMN `categoryType` TEXT NOT NULL DEFAULT 'expense'")
         connection.execSQL("ALTER TABLE `category` ADD COLUMN `isArchived` INTEGER NOT NULL DEFAULT 0")
@@ -36,13 +36,13 @@ internal val MIGRATION_3_4 = object : Migration(3, 4) {
 }
 
 internal val MIGRATION_4_5 = object : Migration(4, 5) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         migrateCategoryTableForSortOrder(connection)
     }
 }
 
 internal val MIGRATION_5_6 = object : Migration(5, 6) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         addStoredDateKeys(
             connection = connection,
             tableName = "expense",
@@ -69,7 +69,7 @@ internal val MIGRATION_5_6 = object : Migration(5, 6) {
 }
 
 internal val MIGRATION_6_7 = object : Migration(6, 7) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         createExpenseSearchTable(connection)
         createIncomeSearchTable(connection)
         populateExpenseSearchIndex(connection)
@@ -79,7 +79,7 @@ internal val MIGRATION_6_7 = object : Migration(6, 7) {
 
 
 internal val MIGRATION_7_8 = object : Migration(7, 8) {
-    override fun migrate(connection: SQLiteConnection) {
+    override suspend fun migrate(connection: SQLiteConnection) {
         connection.execSQL(
             """
             CREATE TABLE IF NOT EXISTS `recurring_transaction_rule` (

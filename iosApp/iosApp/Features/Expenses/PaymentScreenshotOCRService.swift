@@ -27,6 +27,40 @@ enum PaymentScreenshotOCRError: LocalizedError {
     }
 }
 
+struct PaymentScreenshotLlmUnavailableError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
+enum PaymentScreenshotLlmAvailability {
+    static func unavailableImportMessage(model: SystemLanguageModel = .default) -> String? {
+        switch model.availability {
+        case .available:
+            break
+        case let .unavailable(reason):
+            switch reason {
+            case .deviceNotEligible:
+                return appLocalized("Foundation Models are unavailable on this device.")
+            case .appleIntelligenceNotEnabled:
+                return appLocalized("Apple Intelligence must be enabled to import payment screenshots.")
+            case .modelNotReady:
+                return appLocalized("The on-device model is still preparing. Try again in a moment.")
+            @unknown default:
+                return appLocalized("Foundation Models are currently unavailable.")
+            }
+        }
+
+        guard model.supportsLocale() else {
+            return appLocalized("Apple Intelligence does not support this app language on this device.")
+        }
+
+        return nil
+    }
+}
+
 @MainActor
 final class VisionPaymentScreenshotOCRService: PaymentScreenshotOCRServicing {
     func recognizeText(in image: UIImage) async throws -> String {
@@ -80,10 +114,7 @@ final class VisionPaymentScreenshotOCRService: PaymentScreenshotOCRServicing {
         let preferredLanguages = ["it-IT", "en-US"]
 
         do {
-            let supportedLanguages = try VNRecognizeTextRequest.supportedRecognitionLanguages(
-                for: .accurate,
-                revision: request.revision
-            )
+            let supportedLanguages = try request.supportedRecognitionLanguages()
             let availableLanguages = preferredLanguages.filter { supportedLanguages.contains($0) }
             if !availableLanguages.isEmpty {
                 request.recognitionLanguages = availableLanguages
@@ -125,10 +156,10 @@ struct PaymentScreenshotLlmTransaction {
     @Guide(description: "True only when this item is a user expense or card/POS payment.")
     var isExpense: Bool
 
-    @Guide(description: "Positive integer amount in minor units/cents, for example 1234 for EUR 12.34. Use nil if no reliable monetary amount exists.")
-    var amountMinor: Int?
+    @Guide(description: "One selectedAmountMinor value copied exactly from the allowed candidate list. Use nil when none apply.")
+    var selectedAmountMinor: Int?
 
-    @Guide(description: "Use EUR when present. Use nil only if EUR is safely inferable from the OCR text.")
+    @Guide(description: "Currency for the selected candidate. Use EUR for EUR candidates, or nil when not an expense.")
     var currency: String?
 
     @Guide(description: "Merchant, payee, or short payment description. Use nil if unavailable.")
@@ -149,23 +180,56 @@ private struct PaymentScreenshotLlmCompletion: @unchecked Sendable {
     let complete: (String) -> Void
 }
 
+struct PaymentScreenshotMoneyCandidate: Sendable {
+    let amountMinor: Int64
+    let currency: String?
+    let originalText: String
+}
+
 final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseTextProvider, @unchecked Sendable {
     private let interpreter = FoundationModelsPaymentScreenshotLlmInterpreter()
 
-    func interpret(text: String, completion: @escaping (String) -> Void) {
+    func interpret(
+        text: String,
+        moneyCandidates: [MoneyCandidate],
+        completion: @escaping (String) -> Void
+    ) {
         let safeCompletion = PaymentScreenshotLlmCompletion(complete: completion)
+        let candidates = moneyCandidates.map {
+            PaymentScreenshotMoneyCandidate(
+                amountMinor: $0.amountMinor,
+                currency: $0.currency,
+                originalText: $0.originalText
+            )
+        }
         Task {
-            let json = (try? await interpreter.interpret(text: text)) ?? ""
-            safeCompletion.complete(json)
+            do {
+                let json = try await interpreter.interpret(
+                    text: text,
+                    moneyCandidates: candidates
+                )
+                safeCompletion.complete(json)
+            } catch {
+                safeCompletion.complete("")
+            }
         }
     }
 }
 
 final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable {
-    func interpret(text: String) async throws -> String {
+    func interpret(
+        text: String,
+        moneyCandidates: [PaymentScreenshotMoneyCandidate]
+    ) async throws -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty, SystemLanguageModel.default.isAvailable else {
+        guard !trimmedText.isEmpty else {
             return ""
+        }
+        guard !moneyCandidates.isEmpty else {
+            return ""
+        }
+        if let unavailableMessage = PaymentScreenshotLlmAvailability.unavailableImportMessage() {
+            throw PaymentScreenshotLlmUnavailableError(message: unavailableMessage)
         }
 
         let session = LanguageModelSession(
@@ -177,11 +241,12 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
 
             Rules:
             - Extract every distinct card payment/POS purchase/online purchase visible in the OCR text.
+            - If the screenshot contains multiple payment notifications, extract each reliable expense separately. Multiple notifications are not ambiguous by themselves.
             - Return an empty transactions array if the text is not an expense, is a refund, is an income, is an incoming transfer, or is ambiguous.
             - Never use lock-screen/status-bar numbers such as time, date, battery percentage, or card suffixes as amounts.
-            - amountMinor must be a positive integer number of cents/minor units. Example: EUR 12.34 becomes 1234.
-            - Only use amounts that appear as money in the OCR text, such as 12,34 EUR, EUR 12,34, €12,34, or 12,34 €.
-            - currency must be EUR when present. Leave it nil only when EUR is safely inferable.
+            - selectedAmountMinor must be one value from the allowed candidates list.
+            - Do not parse, convert, calculate, or invent another amount.
+            - currency must match the selected candidate.
             - merchant should be the merchant/payee/short description for that transaction, not the whole OCR text.
             - confidence must be between 0 and 1.
             """
@@ -191,6 +256,9 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
             generating: PaymentScreenshotLlmResponse.self
         ) {
             """
+            Allowed amount candidates:
+            \(Self.candidatesPrompt(moneyCandidates))
+
             OCR text:
             \(trimmedText)
             """
@@ -206,8 +274,8 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
                 "confidence": transaction.confidence
             ]
 
-            if let amountMinor = transaction.amountMinor {
-                payload["amountMinor"] = amountMinor
+            if let selectedAmountMinor = transaction.selectedAmountMinor {
+                payload["selectedAmountMinor"] = selectedAmountMinor
             }
             if let currency = transaction.currency?.trimmingCharacters(in: .whitespacesAndNewlines), !currency.isEmpty {
                 payload["currency"] = currency
@@ -230,5 +298,17 @@ final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable
         }
 
         return json
+    }
+
+    private static func candidatesPrompt(_ moneyCandidates: [PaymentScreenshotMoneyCandidate]) -> String {
+        moneyCandidates
+            .map { candidate in
+                let currency = candidate.currency ?? "null"
+                let originalText = candidate.originalText
+                    .replacingOccurrences(of: "\"", with: "\\\"")
+                    .replacingOccurrences(of: "\n", with: " ")
+                return "- selectedAmountMinor=\(candidate.amountMinor), currency=\(currency), text=\"\(originalText)\""
+            }
+            .joined(separator: "\n")
     }
 }
