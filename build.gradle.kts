@@ -12,8 +12,8 @@ plugins {
     alias(libs.plugins.skie) apply false
 }
 
-extra["spesifyVersionCode"] = 1
-extra["spesifyVersionName"] = "1.0"
+extra["spesifyVersionCode"] = 6
+extra["spesifyVersionName"] = "1.6.0"
 
 val verifyUnitTests by tasks.registering {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
