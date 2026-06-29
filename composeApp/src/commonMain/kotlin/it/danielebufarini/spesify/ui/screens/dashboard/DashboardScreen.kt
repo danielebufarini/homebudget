@@ -3,12 +3,12 @@ package it.danielebufarini.spesify.ui.screens.dashboard
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import it.danielebufarini.spesify.ui.screens.categories.CategoryExpensesScreen
 import it.danielebufarini.spesify.ui.screens.categories.management.CategoriesManagementScreen
 import it.danielebufarini.spesify.ui.screens.expenses.AddExpenseScreen
 import it.danielebufarini.spesify.ui.screens.expenses.DayExpensesScreen
 import it.danielebufarini.spesify.ui.screens.expenses.SharedExpensesScreen
 import it.danielebufarini.spesify.ui.screens.income.AddIncomeScreen
+import it.danielebufarini.spesify.ui.screens.recurring.RecurringExpensesScreen
 import it.danielebufarini.spesify.ui.screens.transactions.AddTransactionScreen
 import it.danielebufarini.spesify.ui.screens.transactions.MonthlyTransactionsScreen
 import it.danielebufarini.spesify.ui.screens.transactions.TransactionEditorKind
@@ -50,14 +50,8 @@ class DashboardScreen(
             onOpenSharedExpenses = { year, month ->
                 navigator?.push(SharedExpensesScreen(year = year, month = month))
             },
-            onOpenCategoryExpenses = { year, month, categoryName ->
-                navigator?.push(
-                    CategoryExpensesScreen(
-                        year = year,
-                        month = month,
-                        categoryName = categoryName
-                    )
-                )
+            onOpenRecurringExpenses = { year, month ->
+                navigator?.push(RecurringExpensesScreen(year = year, month = month))
             },
             onOpenExpenseDetails = { expenseId ->
                 navigator?.push(AddExpenseScreen(expenseId = expenseId, readOnly = false))

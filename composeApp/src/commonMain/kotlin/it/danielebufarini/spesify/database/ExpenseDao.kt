@@ -174,6 +174,18 @@ interface ExpenseDao {
     @Query(
         """
         SELECT * FROM expense
+        WHERE yearMonth = :yearMonth
+          AND recurringSeriesId IS NOT NULL
+        ORDER BY date ASC, id ASC
+        """
+    )
+    fun getRecurringExpensesForYearMonth(
+        yearMonth: Int
+    ): Flow<List<Expense>>
+
+    @Query(
+        """
+        SELECT * FROM expense
         WHERE date >= :startMillis
           AND date < :endMillis
         ORDER BY date DESC, id ASC

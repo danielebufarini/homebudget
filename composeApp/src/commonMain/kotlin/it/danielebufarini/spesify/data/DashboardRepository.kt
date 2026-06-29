@@ -112,6 +112,18 @@ class DashboardRepository(
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
+    fun getRecurringExpenseOverviewForMonth(
+        year: Int,
+        month: Int
+    ): Flow<RecurringExpenseOverview> {
+        return expenseDao.getRecurringExpensesForYearMonth(
+            yearMonth = yearMonthKey(year = year, month = month)
+        )
+            .map(::buildRecurringExpenseOverview)
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+    }
+
     suspend fun getWidgetMonthSummary(
         year: Int,
         month: Int

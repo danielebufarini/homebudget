@@ -13,6 +13,7 @@ import it.danielebufarini.spesify.ui.screens.expenses.MonthlyExpensesScreen
 import it.danielebufarini.spesify.ui.screens.expenses.SharedExpensesScreen
 import it.danielebufarini.spesify.ui.screens.income.AddIncomeScreen
 import it.danielebufarini.spesify.ui.screens.income.MonthlyIncomesScreen
+import it.danielebufarini.spesify.ui.screens.recurring.RecurringExpensesScreen
 import it.danielebufarini.spesify.ui.screens.transactions.AddTransactionScreen
 import it.danielebufarini.spesify.ui.screens.transactions.MonthlyTransactionsScreen
 import it.danielebufarini.spesify.ui.screens.transactions.TransactionEditorKind
@@ -33,7 +34,7 @@ fun DashboardContentViewController(
     onOpenSharedExpenses: (Int, Int) -> Unit,
     onOpenExpenseDetails: (String, Boolean) -> Unit,
     onOpenIncomeDetails: (String) -> Unit,
-    onOpenCategoryExpenses: (Int, Int, String) -> Unit,
+    onOpenRecurringExpenses: (Int, Int) -> Unit,
     onOpenTransactionSearch: (Int, Int, String) -> Unit
 ) = themedSpesifyComposeViewController {
     DashboardRoute(
@@ -50,7 +51,7 @@ fun DashboardContentViewController(
         onOpenMonthlyIncomes = onOpenMonthlyIncomes,
         onOpenMonthlyExpenses = onOpenMonthlyExpenses,
         onOpenSharedExpenses = onOpenSharedExpenses,
-        onOpenCategoryExpenses = onOpenCategoryExpenses,
+        onOpenRecurringExpenses = onOpenRecurringExpenses,
         onOpenExpenseDetails = { expenseId -> onOpenExpenseDetails(expenseId, false) },
         onOpenIncomeDetails = onOpenIncomeDetails,
         onOpenTransactionSearch = onOpenTransactionSearch
@@ -200,6 +201,19 @@ fun CategoryExpensesViewController(
         showNavigationChrome = false,
         onBack = {},
         onAddExpense = {},
+        onOpenExpense = onOpenExpense
+    )
+}
+
+fun RecurringExpensesViewController(
+    year: Int,
+    month: Int,
+    onClose: () -> Unit,
+    onOpenExpense: (String) -> Unit
+) = themedSpesifyComposeViewController {
+    RecurringExpensesScreen(year = year, month = month).RouteContent(
+        showNavigationChrome = false,
+        onBack = {},
         onOpenExpense = onOpenExpense
     )
 }

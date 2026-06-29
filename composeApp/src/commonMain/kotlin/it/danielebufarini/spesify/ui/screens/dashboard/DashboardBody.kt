@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.DashboardCardPage
 import it.danielebufarini.spesify.data.DashboardRecentTransaction
 import it.danielebufarini.spesify.database.Category
-import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.common.MonthCursor
 
 @Composable
@@ -21,6 +20,7 @@ internal fun DashboardBody(
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
     monthlySavingsAmount: Long,
+    recurringTotalAmount: Long,
     chartState: BalanceChartState,
     recentTransactions: List<DashboardRecentTransaction>,
     pinnedDashboardCard: DashboardCardPage?,
@@ -36,11 +36,9 @@ internal fun DashboardBody(
     onOpenMonthlyExpenses: () -> Unit,
     onOpenDayExpenses: (Int) -> Unit,
     onOpenSharedExpenses: () -> Unit,
-    onOpenCategoryExpenses: (String) -> Unit,
+    onOpenRecurringExpenses: () -> Unit,
     onOpenRecentTransaction: (DashboardRecentTransaction) -> Unit
 ) {
-    val resolveCategoryName = rememberCategoryNameResolver()
-
     Column(modifier = modifier) {
         if (showMonthHeaderCard) {
             DashboardMonthHeaderCard(
@@ -72,18 +70,14 @@ internal fun DashboardBody(
             selectedMonth = selectedMonth,
             summary = summary,
             monthlySavingsAmount = monthlySavingsAmount,
-            categoriesById = categoriesById,
+            recurringTotalAmount = recurringTotalAmount,
             onExpensesClick = onOpenMonthlyExpenses,
             onIncomeClick = onOpenMonthlyIncomes,
             onSharedClick = onOpenSharedExpenses,
             onHighestDayClick = {
                 summary.highestDayOfMonth?.let(onOpenDayExpenses)
             },
-            onTopCategoryClick = {
-                summary.topCategoryId
-                    ?.let { categoriesById[it] }
-                    ?.let { onOpenCategoryExpenses(resolveCategoryName(it.id, it.name)) }
-            }
+            onRecurringClick = onOpenRecurringExpenses
         )
 
         Spacer(Modifier.height(16.dp))

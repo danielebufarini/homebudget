@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -29,23 +26,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_EXPENSE
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_INCOME
 
@@ -217,82 +203,4 @@ private fun CategoryEditorTypeChip(
         border = null,
         modifier = modifier,
     )
-}
-
-@Composable
-internal fun CategoryNameEditorField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    iconKey: String,
-    accentColor: Color,
-    palette: CategoriesPalette,
-    focusRequester: FocusRequester,
-    onKeyboardDone: () -> Unit,
-    onFocused: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var isFocused by remember { mutableStateOf(false) }
-    val borderColor = if (isFocused) accentColor else palette.textMuted.copy(alpha = 0.35f)
-
-    Surface(
-        modifier = modifier.clickable {
-            focusRequester.requestFocus()
-            onFocused()
-        },
-        shape = RoundedCornerShape(16.dp),
-        color = palette.glassSurfaceSoft,
-        border = BorderStroke(1.dp, borderColor),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = iconForKey(iconKey),
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(24.dp),
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = label,
-                    color = if (isFocused) palette.textSecondary else palette.textMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester)
-                        .onFocusChanged { focusState ->
-                            isFocused = focusState.isFocused
-                            if (focusState.isFocused) {
-                                onFocused()
-                            }
-                        },
-                    singleLine = true,
-                    textStyle = TextStyle(
-                        color = palette.textPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    cursorBrush = SolidColor(accentColor),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { onKeyboardDone() }),
-                )
-            }
-            Text(
-                text = "${value.length} / 24",
-                color = palette.textSecondary,
-                fontSize = 12.sp,
-            )
-        }
-    }
 }

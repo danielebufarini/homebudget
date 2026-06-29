@@ -3,6 +3,7 @@ package it.danielebufarini.spesify.ui.screens.dashboard
 import it.danielebufarini.spesify.data.DashboardBalanceTrend
 import it.danielebufarini.spesify.data.DashboardReadRepository
 import it.danielebufarini.spesify.data.DashboardRecentTransaction
+import it.danielebufarini.spesify.data.RecurringExpenseOverview
 import it.danielebufarini.spesify.ui.screens.common.MonthCursor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +85,25 @@ internal class DashboardStateStore(
             scope = scope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = emptyList()
+        )
+
+    val recurringExpenseOverview: StateFlow<RecurringExpenseOverview> = monthCursor
+        .flatMapLatest { month ->
+            repository.getRecurringExpenseOverviewForMonth(
+                year = month.year,
+                month = month.month
+            )
+        }
+        .distinctUntilChanged()
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = scope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = RecurringExpenseOverview(
+                expenses = emptyList(),
+                totalAmount = 0L,
+                nextOccurrenceDate = null
+            )
         )
 
     fun selectPreviousMonth() {

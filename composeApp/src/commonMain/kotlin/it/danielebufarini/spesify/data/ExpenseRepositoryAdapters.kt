@@ -188,6 +188,9 @@ internal class ExpenseRepositoryDashboardReadAdapter(
     override fun getDashboardRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> =
         repository.getDashboardRecentTransactions(limit = limit)
 
+    override fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview> =
+        repository.getRecurringExpenseOverviewForMonth(year = year, month = month)
+
     override suspend fun getWidgetMonthSummary(year: Int, month: Int): WidgetMonthSummary =
         repository.getWidgetMonthSummary(year = year, month = month)
 }

@@ -46,14 +46,8 @@ struct DashboardRootView: View {
                 onOpenIncomeDetails: { incomeId in
                     path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
                 },
-                onOpenCategoryExpenses: { year, month, categoryName in
-                    path.append(
-                        Route.categoryExpenses(
-                            year: year.intValue,
-                            month: month.intValue,
-                            categoryName: categoryName
-                        )
-                    )
+                onOpenRecurringExpenses: { year, month in
+                    path.append(Route.recurringExpenses(year: year.intValue, month: month.intValue))
                 },
                 onOpenTransactionSearch: { year, month, query in
                     path.append(
@@ -163,6 +157,27 @@ struct TransactionSearchRootView: View {
             },
             onOpenIncome: { incomeId in
                 path.append(Route.addIncome(incomeId: incomeId, year: nil, month: nil))
+            }
+        )
+    }
+}
+
+struct RecurringExpensesRootView: View {
+    let year: Int
+    let month: Int
+    @Binding var path: NavigationPath
+
+    var body: some View {
+        RecurringExpensesSectionsScreen(
+            year: year,
+            month: month,
+            onClose: {
+                if !path.isEmpty {
+                    path.removeLast()
+                }
+            },
+            onOpenExpense: { expenseId in
+                path.append(Route.addExpense(expenseId: expenseId, readOnly: false))
             }
         )
     }

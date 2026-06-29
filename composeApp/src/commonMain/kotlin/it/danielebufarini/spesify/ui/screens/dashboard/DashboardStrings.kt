@@ -20,15 +20,16 @@ import spesify.composeapp.generated.resources.monthly_summary
 import spesify.composeapp.generated.resources.no_expenses_for_month
 import spesify.composeapp.generated.resources.no_expenses_in_period
 import spesify.composeapp.generated.resources.no_recent_transactions
+import spesify.composeapp.generated.resources.per_month
 import spesify.composeapp.generated.resources.pin_dashboard_card
 import spesify.composeapp.generated.resources.pinned_dashboard_card
 import spesify.composeapp.generated.resources.recent_transactions
+import spesify.composeapp.generated.resources.recurring
 import spesify.composeapp.generated.resources.savings
 import spesify.composeapp.generated.resources.search_transactions
 import spesify.composeapp.generated.resources.shared
 import spesify.composeapp.generated.resources.short_month_names
 import spesify.composeapp.generated.resources.this_month
-import spesify.composeapp.generated.resources.top_category
 import spesify.composeapp.generated.resources.unknown_category
 import spesify.composeapp.generated.resources.voice_expense
 
@@ -43,7 +44,8 @@ internal data class DashboardStrings(
     val income: String,
     val difference: String,
     val savings: String,
-    val topCategory: String,
+    val recurring: String,
+    val perMonth: String,
     val highestDay: String,
     val monthlySummary: String,
     val noExpensesForMonth: String,
@@ -78,7 +80,8 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         income = stringResource(Res.string.income),
         difference = stringResource(Res.string.difference),
         savings = stringResource(Res.string.savings),
-        topCategory = stringResource(Res.string.top_category),
+        recurring = stringResource(Res.string.recurring),
+        perMonth = stringResource(Res.string.per_month),
         highestDay = stringResource(Res.string.highest_day),
         monthlySummary = stringResource(Res.string.monthly_summary),
         noExpensesForMonth = stringResource(Res.string.no_expenses_for_month),

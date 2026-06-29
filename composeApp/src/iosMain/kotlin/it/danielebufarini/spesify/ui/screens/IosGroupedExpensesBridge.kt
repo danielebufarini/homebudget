@@ -73,6 +73,39 @@ class IosGroupedExpensesObserver(
         KoinPlatformTools.defaultContext().get().get()
 }
 
+class IosRecurringExpensesObserver(
+    private val year: Int,
+    private val month: Int
+) {
+    val snapshots = flow {
+        val repository = repository()
+        repository.seedStarterCategoriesIfEmpty()
+        val localization = loadIosRecurringLocalization()
+        emitAll(
+            combine(
+                repository.getRecurringExpenseOverviewForMonth(year = year, month = month),
+                repository.getAllCategories()
+            ) { overview, categories ->
+                val categoriesById = categories.associateBy { it.id }
+                val preparedExpenses = overview.expenses.map { expense ->
+                    prepareRecurringExpense(
+                        expense = expense,
+                        categoriesById = categoriesById,
+                        localization = localization
+                    )
+                }
+                buildRecurringExpensesSnapshot(
+                    preparedExpenses = preparedExpenses,
+                    localization = localization
+                )
+            }
+        )
+    }.flowOn(Dispatchers.Default)
+
+    private fun repository(): ExpenseRepository =
+        KoinPlatformTools.defaultContext().get().get()
+}
+
 class IosMonthlyIncomesObserver(
     private val year: Int,
     private val month: Int,

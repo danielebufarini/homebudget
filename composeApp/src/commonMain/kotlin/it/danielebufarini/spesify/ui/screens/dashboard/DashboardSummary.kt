@@ -23,8 +23,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.formatAmount
-import it.danielebufarini.spesify.database.Category
-import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.categories.CategoryLabel
 import it.danielebufarini.spesify.ui.screens.common.MonthCursor
 import it.danielebufarini.spesify.ui.screens.platform.PlatformCard
@@ -37,23 +35,20 @@ internal fun ExpenseSummary(
     selectedMonth: MonthCursor,
     summary: MonthlySummary,
     monthlySavingsAmount: Long,
-    categoriesById: Map<String, Category>,
+    recurringTotalAmount: Long,
     onExpensesClick: () -> Unit,
     onIncomeClick: () -> Unit,
     onSharedClick: () -> Unit,
     onHighestDayClick: () -> Unit,
-    onTopCategoryClick: () -> Unit
+    onRecurringClick: () -> Unit
 ) {
     val isIos = rememberIsIosPlatform()
-    val resolveCategoryName = rememberCategoryNameResolver()
     val colorScheme = MaterialTheme.colorScheme
-    val topCategory = summary.topCategoryId?.let(categoriesById::get)
-    val topCategoryIconKey = topCategory?.icon
-    val topCategoryValue = topCategory
-        ?.let { resolveCategoryName(it.id, it.name) }
-        ?: "-"
     val highestDayValue = remember(selectedMonth, summary.highestDayOfMonth, strings.weekdayNames) {
         summary.highestDayOfMonth?.let { selectedMonth.toDayLabel(it, strings.weekdayNames) } ?: "-"
+    }
+    val recurringValue = remember(recurringTotalAmount, strings.currencySymbol, strings.perMonth) {
+        "${formatAmount(recurringTotalAmount, strings.currencySymbol)} / ${strings.perMonth}"
     }
 
     val metricsRows = listOf(
@@ -79,13 +74,11 @@ internal fun ExpenseSummary(
             onClick = onIncomeClick
         ),
         SummaryMetricUi(
-            label = strings.topCategory,
-            value = topCategoryValue,
-            valueIconColorKey = summary.topCategoryId,
-            valueIconKey = topCategoryIconKey,
+            label = strings.recurring,
+            value = recurringValue,
             containerColor = colorScheme.errorContainer,
             contentColor = colorScheme.onErrorContainer,
-            onClick = if (summary.topCategoryId != null) onTopCategoryClick else null
+            onClick = onRecurringClick
         ),
         SummaryMetricUi(
             label = strings.highestDay,

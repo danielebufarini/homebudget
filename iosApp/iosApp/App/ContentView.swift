@@ -254,6 +254,13 @@ struct ContentView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.top, MonthNavigationHeaderLayout.topPadding)
                         }
+                    case let .recurringExpenses(year, month):
+                        RecurringExpensesRootView(
+                            year: Int(year),
+                            month: Int(month),
+                            path: $path
+                        )
+                        .toolbar(.hidden, for: .navigationBar)
                     case let .categoryExpenses(year, month, categoryName):
                         GroupedExpensesSectionsScreen(
                             kind: .category(name: categoryName),

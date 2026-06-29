@@ -25,6 +25,15 @@ class IosGroupedExpensesSnapshot(
     val sections: List<IosGroupedExpenseSection>
 )
 
+class IosRecurringExpensesSnapshot(
+    val totalAmountText: String,
+    val totalRecurringText: String,
+    val recurringExpensesText: String,
+    val emptyStateTitle: String,
+    val emptyStateDescription: String,
+    val rows: List<IosGroupedExpenseRow>
+)
+
 class IosIncomeRow(
     val id: String,
     val title: String,
@@ -104,6 +113,21 @@ internal data class IosGroupedLocalization(
     val noSearchResults: String,
     val unknownCategory: String,
     val noExpensesForCategoryThisMonthTemplate: String,
+    val shortMonthNames: List<String>,
+    val resolveCategoryName: (String, String) -> String
+)
+
+internal data class IosRecurringLocalization(
+    val currencySymbol: String,
+    val monthly: String,
+    val next: String,
+    val noRecurringExpenses: String,
+    val noRecurringExpensesDescription: String,
+    val perMonth: String,
+    val recurringExpenses: String,
+    val shared: String,
+    val totalRecurring: String,
+    val unknownCategory: String,
     val shortMonthNames: List<String>,
     val resolveCategoryName: (String, String) -> String
 )

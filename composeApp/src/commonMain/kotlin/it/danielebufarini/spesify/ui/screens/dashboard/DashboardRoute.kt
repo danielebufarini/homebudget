@@ -45,7 +45,7 @@ fun DashboardRoute(
     onOpenMonthlyIncomes: (Int, Int) -> Unit,
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
-    onOpenCategoryExpenses: (Int, Int, String) -> Unit,
+    onOpenRecurringExpenses: (Int, Int) -> Unit,
     onOpenExpenseDetails: (String) -> Unit = {},
     onOpenIncomeDetails: (String) -> Unit = {},
     onOpenTransactionSearch: (Int, Int, String) -> Unit = { _, _, _ -> }
@@ -92,6 +92,7 @@ fun DashboardRoute(
     val summary by dashboardStore.summary.collectAsState()
     val chartState by dashboardStore.chartState.collectAsState()
     val recentTransactions by dashboardStore.recentTransactions.collectAsState()
+    val recurringExpenseOverview by dashboardStore.recurringExpenseOverview.collectAsState()
 
     val monthlySavingsAmount = remember(summary.incomeAmount, summary.totalAmount) {
         subtractAmountsExact(summary.incomeAmount, summary.totalAmount)
@@ -105,6 +106,7 @@ fun DashboardRoute(
             selectedMonth = selectedMonth,
             summary = summary,
             monthlySavingsAmount = monthlySavingsAmount,
+            recurringTotalAmount = recurringExpenseOverview.totalAmount,
             chartState = chartState,
             recentTransactions = recentTransactions,
             pinnedDashboardCard = pinnedDashboardCard,
@@ -128,8 +130,8 @@ fun DashboardRoute(
             onOpenSharedExpenses = {
                 onOpenSharedExpenses(selectedMonth.year, selectedMonth.month)
             },
-            onOpenCategoryExpenses = { categoryName ->
-                onOpenCategoryExpenses(selectedMonth.year, selectedMonth.month, categoryName)
+            onOpenRecurringExpenses = {
+                onOpenRecurringExpenses(selectedMonth.year, selectedMonth.month)
             },
             onOpenRecentTransaction = { transaction ->
                 when (transaction.type) {

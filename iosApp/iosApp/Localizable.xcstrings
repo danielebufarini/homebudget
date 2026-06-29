@@ -184,22 +184,6 @@
         }
       }
     },
-    "Another payment screenshot is already being imported." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Another payment screenshot is already being imported."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un altro screenshot pagamento è già in importazione."
-          }
-        }
-      }
-    },
     "Amount" : {
       "localizations" : {
         "en" : {
@@ -212,6 +196,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importo"
+          }
+        }
+      }
+    },
+    "Another payment screenshot is already being imported." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another payment screenshot is already being imported."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un altro screenshot pagamento è già in importazione."
           }
         }
       }
@@ -1256,6 +1257,23 @@
         }
       }
     },
+    "I could not find a usable expense in this screenshot." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I could not find a usable expense in this screenshot."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non ho trovato una spesa utilizzabile in questo screenshot."
+          }
+        }
+      }
+    },
     "I could not match the spoken category to one of your categories." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1269,22 +1287,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Non ho trovato una categoria corrispondente tra le tue categorie."
-          }
-        }
-      }
-    },
-    "I could not find a usable expense in this screenshot." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I could not find a usable expense in this screenshot."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non ho trovato una spesa utilizzabile in questo screenshot."
           }
         }
       }
@@ -1799,6 +1801,23 @@
     "R" : {
 
     },
+    "Reading screenshot..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading screenshot..."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lettura screenshot..."
+          }
+        }
+      }
+    },
     "Ready to Save" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1850,18 +1869,19 @@
         }
       }
     },
-    "Reading screenshot..." : {
+    "Recurring" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reading screenshot..."
+            "value" : "Recurring"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lettura screenshot..."
+            "value" : "Ricorrenti"
           }
         }
       }
@@ -2554,6 +2574,7 @@
       }
     },
     "Unable to import this payment screenshot." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

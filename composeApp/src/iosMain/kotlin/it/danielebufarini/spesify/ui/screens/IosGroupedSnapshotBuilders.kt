@@ -18,14 +18,22 @@ import spesify.composeapp.generated.resources.category
 import spesify.composeapp.generated.resources.currency_symbol
 import spesify.composeapp.generated.resources.expense
 import spesify.composeapp.generated.resources.income
+import spesify.composeapp.generated.resources.monthly
+import spesify.composeapp.generated.resources.next
 import spesify.composeapp.generated.resources.no_expenses_for_category_this_month
 import spesify.composeapp.generated.resources.no_expenses_for_day
 import spesify.composeapp.generated.resources.no_expenses_for_month
 import spesify.composeapp.generated.resources.no_income_for_month
+import spesify.composeapp.generated.resources.no_recurring_expenses
+import spesify.composeapp.generated.resources.no_recurring_expenses_description
 import spesify.composeapp.generated.resources.no_search_results
 import spesify.composeapp.generated.resources.no_shared_expenses_for_month
+import spesify.composeapp.generated.resources.per_month
+import spesify.composeapp.generated.resources.recurring_expenses
+import spesify.composeapp.generated.resources.shared
 import spesify.composeapp.generated.resources.shared_expense
 import spesify.composeapp.generated.resources.short_month_names
+import spesify.composeapp.generated.resources.total_recurring
 import spesify.composeapp.generated.resources.unknown_category
 
 internal data class IosPreparedGroup<T>(
@@ -170,6 +178,46 @@ internal fun buildPreparedIncomesSnapshot(
     )
 }
 
+internal fun buildRecurringExpensesSnapshot(
+    preparedExpenses: List<PreparedIosExpense>,
+    localization: IosRecurringLocalization
+): IosRecurringExpensesSnapshot {
+    val sortedExpenses = preparedExpenses.sortedWith(
+        compareBy<PreparedIosExpense> { it.dateMillis }
+            .thenBy { it.id }
+    )
+    val rows = sortedExpenses.map { expense ->
+        val title = expense.description?.takeIf(String::isNotBlank) ?: expense.categoryName
+        val details = buildList {
+            add(expense.categoryName)
+            add(localization.monthly)
+            add("${localization.next}: ${expense.dateGroupTitleText}")
+            if (expense.isShared) {
+                add(localization.shared)
+            }
+        }.joinToString(" · ")
+
+        IosGroupedExpenseRow(
+            id = expense.id,
+            title = title,
+            subtitleText = details,
+            amountText = expense.amountText,
+            categoryColorKey = expense.categoryId,
+            categoryIconKey = expense.categoryIconKey,
+            recurringSeriesId = expense.recurringSeriesId
+        )
+    }
+
+    return IosRecurringExpensesSnapshot(
+        totalAmountText = "${formatAmount(sortedExpenses.sumAmountOf(PreparedIosExpense::amount), localization.currencySymbol)} / ${localization.perMonth}",
+        totalRecurringText = localization.totalRecurring,
+        recurringExpensesText = localization.recurringExpenses,
+        emptyStateTitle = localization.noRecurringExpenses,
+        emptyStateDescription = localization.noRecurringExpensesDescription,
+        rows = rows
+    )
+}
+
 internal fun buildSections(
     groupedExpenses: List<IosPreparedGroup<PreparedIosExpense>>,
     groupingMode: String,
@@ -233,6 +281,35 @@ internal fun prepareExpense(
     )
 }
 
+internal fun prepareRecurringExpense(
+    expense: Expense,
+    categoriesById: Map<String, Category>,
+    localization: IosRecurringLocalization
+): PreparedIosExpense {
+    val localDate = epochMillisToLocalDate(expense.date)
+    val category = categoriesById[expense.categoryId]
+    return PreparedIosExpense(
+        id = expense.id,
+        amount = expense.amount,
+        amountText = formatAmount(expense.amount, localization.currencySymbol),
+        categoryId = expense.categoryId,
+        categoryName = category
+            ?.let { localization.resolveCategoryName(it.id, it.name) }
+            ?: localization.unknownCategory,
+        categoryIconKey = category
+            ?.icon
+            ?.let(::normalizeCategoryIconKey),
+        description = expense.description,
+        recurringSeriesId = expense.recurringSeriesId,
+        dateText = formatExpenseDate(expense.date),
+        dateGroupTitleText = formatDateGroupTitle(expense.date, localization.shortMonthNames),
+        dateMillis = expense.date,
+        year = localDate.year,
+        month = localDate.month.ordinal + 1,
+        isShared = expense.isShared == 1L
+    )
+}
+
 internal fun prepareIncome(
     income: Income,
     categoriesById: Map<String, Category>,
@@ -279,6 +356,22 @@ internal suspend fun loadIosGroupedLocalization(): IosGroupedLocalization {
         resolveCategoryName = loadCategoryNameResolver()
     )
 }
+
+internal suspend fun loadIosRecurringLocalization(): IosRecurringLocalization =
+    IosRecurringLocalization(
+        currencySymbol = getString(Res.string.currency_symbol),
+        monthly = getString(Res.string.monthly),
+        next = getString(Res.string.next),
+        noRecurringExpenses = getString(Res.string.no_recurring_expenses),
+        noRecurringExpensesDescription = getString(Res.string.no_recurring_expenses_description),
+        perMonth = getString(Res.string.per_month),
+        recurringExpenses = getString(Res.string.recurring_expenses),
+        shared = getString(Res.string.shared),
+        totalRecurring = getString(Res.string.total_recurring),
+        unknownCategory = getString(Res.string.unknown_category),
+        shortMonthNames = getStringArray(Res.array.short_month_names),
+        resolveCategoryName = loadCategoryNameResolver()
+    )
 
 internal fun groupPreparedExpensesByMode(
     preparedExpenses: List<PreparedIosExpense>,

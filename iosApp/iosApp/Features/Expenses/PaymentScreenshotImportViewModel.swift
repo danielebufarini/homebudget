@@ -84,6 +84,37 @@ final class PaymentScreenshotImportViewModel {
             }
         }
     }
+
+    func candidates(fromImageFileAt url: URL) async throws -> [NativeExpenseEditorPrefill] {
+        let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScope {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+        guard let image = UIImage(data: data) else {
+            throw PaymentScreenshotImportError.imageLoadFailed
+        }
+
+        return try await candidates(from: image)
+    }
+
+    private func candidates(from image: UIImage) async throws -> [NativeExpenseEditorPrefill] {
+        let recognizedText = try await ocrService.recognizeText(in: image)
+        if let unavailableMessage = PaymentScreenshotLlmAvailability.unavailableImportMessage() {
+            throw PaymentScreenshotLlmUnavailableError(message: unavailableMessage)
+        }
+
+        let candidateQueue = try await controller.interpretOcrTextQueue(rawText: recognizedText)
+        var prefills: [NativeExpenseEditorPrefill] = []
+        while let candidate = candidateQueue.nextCandidate() {
+            prefills.append(candidate.nativePrefill)
+        }
+
+        return prefills
+    }
 }
 
 private enum PaymentScreenshotImportError: LocalizedError {
@@ -108,7 +139,7 @@ private extension IosPaymentScreenshotExpenseCandidate {
     }
 }
 
-private func paymentScreenshotImportMessage(for error: Error) -> String {
+func paymentScreenshotImportMessage(for error: Error) -> String {
     if let localizedError = error as? LocalizedError,
        let description = localizedError.errorDescription,
        !description.isEmpty {

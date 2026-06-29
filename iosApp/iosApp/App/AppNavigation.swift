@@ -30,6 +30,7 @@ enum Route: Hashable {
     case monthlyIncomes(year: Int, month: Int)
     case monthlyExpenses(year: Int, month: Int)
     case sharedExpenses(year: Int, month: Int)
+    case recurringExpenses(year: Int, month: Int)
     case categoryExpenses(year: Int, month: Int, categoryName: String)
     case transactionSearch(year: Int, month: Int, query: String)
 }

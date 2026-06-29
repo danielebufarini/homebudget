@@ -169,6 +169,10 @@ class ExpenseRepository(
         return dashboardRepository.getRecentTransactions(limit = limit)
     }
 
+    fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview> {
+        return dashboardRepository.getRecurringExpenseOverviewForMonth(year = year, month = month)
+    }
+
     suspend fun getWidgetMonthSummary(year: Int, month: Int): WidgetMonthSummary {
         return dashboardRepository.getWidgetMonthSummary(year = year, month = month)
     }

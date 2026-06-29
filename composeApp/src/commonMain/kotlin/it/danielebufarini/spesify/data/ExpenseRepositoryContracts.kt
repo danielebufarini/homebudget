@@ -123,6 +123,8 @@ internal interface DashboardReadRepository {
 
     fun getDashboardRecentTransactions(limit: Int = 15): Flow<List<DashboardRecentTransaction>>
 
+    fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview>
+
     suspend fun getWidgetMonthSummary(year: Int, month: Int): WidgetMonthSummary
 }
 
