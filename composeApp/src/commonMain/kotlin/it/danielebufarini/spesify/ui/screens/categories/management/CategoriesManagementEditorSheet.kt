@@ -194,41 +194,42 @@ internal fun CategoryEditorSheet(
                 )
             }
 
-            CategoryEditorIconPicker(
+            CategoryIconPicker(
                 label = chooseIconLabel,
-                selectedIconKey = iconKey,
+                iconKey = iconKey,
                 selectedColor = CategoryAccentPalette[selectedColorIndex],
                 palette = palette,
-                onIconSelected = { selectedIconKey ->
-                    iconKey = selectedIconKey
+                onIconKeyChange = {
+                    iconKey = it
                     dismissKeyboard()
                 },
                 onDismissKeyboard = ::dismissKeyboard,
             )
 
-            CategoryEditorColorPicker(
+            CategoryColorPicker(
                 label = chooseColorLabel,
-                selectedColorIndex = selectedColorIndex,
                 palette = palette,
-                onColorSelected = { index ->
-                    selectedColorIndex = index
+                selectedColorIndex = selectedColorIndex,
+                onColorIndexChange = {
+                    selectedColorIndex = it
                     dismissKeyboard()
                 },
                 onDismissKeyboard = ::dismissKeyboard,
             )
 
-            CategoryEditorTypeSelector(
+            CategoryTypePicker(
                 categoryType = categoryType,
-                selectedColor = CategoryAccentPalette[selectedColorIndex],
-                palette = palette,
                 expenseLabel = expenseLabel,
                 incomeLabel = incomeLabel,
-                onCategoryTypeChanged = { selectedType ->
-                    categoryType = selectedType
+                selectedColor = CategoryAccentPalette[selectedColorIndex],
+                palette = palette,
+                onCategoryTypeChange = {
+                    categoryType = it
                     dismissKeyboard()
                 },
                 onDismissKeyboard = ::dismissKeyboard,
             )
+
             CategoryEditorDeleteSection(
                 visible = category.id.isNotBlank(),
                 isUsedCategory = isUsedCategory,
@@ -265,4 +266,3 @@ internal fun CategoryEditorSheet(
         }
     }
 }
-

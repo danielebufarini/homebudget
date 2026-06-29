@@ -227,7 +227,7 @@ enum ExpenseEditorChromeLayout {
     static let topPadding: CGFloat = 12
     static let bottomPadding: CGFloat = 12
     static let headerHeight: CGFloat = 56
-    static let footerHeight: CGFloat = 86
+    static let footerHeight: CGFloat = 98
     static let interSectionSpacing: CGFloat = 16
     static var reservedTopInset: CGFloat { topPadding + headerHeight + interSectionSpacing }
     static var reservedBottomInset: CGFloat { bottomPadding + footerHeight + interSectionSpacing }
@@ -281,11 +281,17 @@ struct ExpenseEditorGlassFooter: View {
         AppGlassSheetActionBar {
             if showsSecondaryAction {
                 Button(appLocalized("Cancel"), action: onCancel)
+                    .font(.headline.weight(.semibold))
+                    .controlSize(.large)
                     .buttonStyle(.glass)
+                    .frame(minHeight: 52)
             }
 
             Button(confirmLabel, action: onConfirm)
+                .font(.headline.weight(.semibold))
+                .controlSize(.large)
                 .buttonStyle(.glassProminent)
+                .frame(minHeight: 52)
         }
         .padding(.bottom, ExpenseEditorChromeLayout.bottomPadding)
     }

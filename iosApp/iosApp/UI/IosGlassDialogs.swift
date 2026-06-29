@@ -164,26 +164,35 @@ struct TransactionInputDock: View {
     let onImportScreenshot: () -> Void
     private let bottomPadding: CGFloat
     private let secondaryActionStyle: SecondaryActionStyle
+    private let manualAddFrameWidth: CGFloat
+    private let manualAddActionHeight: CGFloat
+    private let manualAddIconSize: CGFloat
 
     init(
         onManualAdd: @escaping () -> Void,
         onVoiceInput: @escaping () -> Void,
         onImportScreenshot: @escaping () -> Void,
         bottomPadding: CGFloat = TransactionInputDockLayout.bottomPadding,
-        secondaryActionStyle: SecondaryActionStyle = .overflowMenu
+        secondaryActionStyle: SecondaryActionStyle = .overflowMenu,
+        manualAddFrameWidth: CGFloat = 50,
+        manualAddActionHeight: CGFloat = TransactionInputDockLayout.actionHeight,
+        manualAddIconSize: CGFloat = 15
     ) {
         self.onManualAdd = onManualAdd
         self.onVoiceInput = onVoiceInput
         self.onImportScreenshot = onImportScreenshot
         self.bottomPadding = bottomPadding
         self.secondaryActionStyle = secondaryActionStyle
+        self.manualAddFrameWidth = manualAddFrameWidth
+        self.manualAddActionHeight = manualAddActionHeight
+        self.manualAddIconSize = manualAddIconSize
     }
 
     var body: some View {
         HStack(spacing: 2) {
             Button(action: onManualAdd) {
-                AppGlassBottomQuickActionIcon(systemName: "plus")
-                    .frame(width: 50, height: TransactionInputDockLayout.actionHeight)
+                AppGlassBottomQuickActionIcon(systemName: "plus", iconSize: manualAddIconSize)
+                    .frame(width: manualAddFrameWidth, height: manualAddActionHeight)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(appLocalized("Add transaction"))
@@ -253,8 +262,12 @@ struct TransactionInputDock: View {
 
 private struct AppGlassBottomQuickActionIcon: View {
     let systemName: String
+    var iconSize: CGFloat = 15
 
     var body: some View {
-        AppGlassToolbarIcon(systemName: systemName)
+        Image(systemName: systemName)
+            .font(.system(size: iconSize, weight: .semibold))
+            .frame(width: 36, height: 36)
+            .contentShape(Circle())
     }
 }

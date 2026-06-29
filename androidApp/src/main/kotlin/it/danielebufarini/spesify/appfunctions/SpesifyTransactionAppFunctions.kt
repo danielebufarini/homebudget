@@ -325,4 +325,5 @@ class SpesifyTransactionAppFunctions {
             moveToCategoryNameOrId = moveToCategoryName
         ).toCategoryMutationResponse()
     }
+
 }

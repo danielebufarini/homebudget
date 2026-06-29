@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -20,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.ui.screens.platform.spesifyButtonColors
 
@@ -30,8 +32,16 @@ internal fun SoftActionBar(
     confirmEnabled: Boolean,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    largeButtons: Boolean = false
 ) {
+    val buttonContentPadding = if (largeButtons) {
+        PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+    } else {
+        ButtonDefaults.ContentPadding
+    }
+    val buttonMinHeight = if (largeButtons) 54.dp else null
+
     SoftDepthCard(
         modifier = modifier,
         contentPadding = PaddingValues(12.dp)
@@ -44,13 +54,17 @@ internal fun SoftActionBar(
             SoftSecondaryButton(
                 text = cancelLabel,
                 onClick = onCancel,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = buttonContentPadding,
+                minHeight = buttonMinHeight
             )
             SoftPrimaryButton(
                 text = confirmLabel,
                 enabled = confirmEnabled,
                 onClick = onConfirm,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = buttonContentPadding,
+                minHeight = buttonMinHeight
             )
         }
     }
@@ -62,7 +76,8 @@ internal fun SoftPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    contentPadding: PaddingValues = ButtonDefaults.ContentPadding
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    minHeight: Dp? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -78,10 +93,12 @@ internal fun SoftPrimaryButton(
         shape = RoundedCornerShape(22.dp),
         colors = spesifyButtonColors(),
         contentPadding = contentPadding,
-        modifier = modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        modifier = modifier
+            .then(if (minHeight != null) Modifier.heightIn(min = minHeight) else Modifier)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
     ) {
         Text(text)
     }
@@ -93,7 +110,8 @@ internal fun SoftSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    contentPadding: PaddingValues = ButtonDefaults.ContentPadding
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    minHeight: Dp? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -112,10 +130,12 @@ internal fun SoftSecondaryButton(
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
         contentPadding = contentPadding,
-        modifier = modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        modifier = modifier
+            .then(if (minHeight != null) Modifier.heightIn(min = minHeight) else Modifier)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
     ) {
         Text(text)
     }

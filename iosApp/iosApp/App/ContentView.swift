@@ -345,7 +345,10 @@ struct ContentView: View {
                 onImportScreenshot: {
                     showPaymentScreenshotImport = true
                 },
-                bottomPadding: TransactionInputDockLayout.dashboardBottomPadding
+                bottomPadding: TransactionInputDockLayout.dashboardBottomPadding,
+                manualAddFrameWidth: 58,
+                manualAddActionHeight: 52,
+                manualAddIconSize: 22
             )
         }
     }

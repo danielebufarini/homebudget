@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -31,7 +32,9 @@ internal fun BottomTransactionQuickActions(
     modifier: Modifier = Modifier,
     openVoiceExpenseRequest: Int = 0,
     voiceContentDescription: String? = null,
-    onVoiceExpense: (() -> Unit)? = null
+    onVoiceExpense: (() -> Unit)? = null,
+    addButtonSize: Dp = 34.dp,
+    addIconSize: Dp = 20.dp,
 ) {
     Surface(
         modifier = modifier,
@@ -52,7 +55,7 @@ internal fun BottomTransactionQuickActions(
         ) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(addButtonSize)
                     .clip(CircleShape)
                     .clickable(onClick = onAddTransaction),
                 contentAlignment = Alignment.Center
@@ -60,7 +63,7 @@ internal fun BottomTransactionQuickActions(
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = addContentDescription,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(addIconSize)
                 )
             }
 
