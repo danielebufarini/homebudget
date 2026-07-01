@@ -142,6 +142,9 @@ enum TransactionInputDockLayout {
     static let bottomPadding: CGFloat = 12
     static let dashboardBottomPadding: CGFloat = 6
     static let dashboardVerticalOffset: CGFloat = 24
+    static let dashboardManualAddFrameWidth: CGFloat = 58
+    static let dashboardManualAddActionHeight: CGFloat = 52
+    static let dashboardManualAddIconSize: CGFloat = 22
     static let contentVerticalPadding: CGFloat = 4
 
     static var overlayHeight: CGFloat {

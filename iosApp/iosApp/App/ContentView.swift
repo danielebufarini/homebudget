@@ -353,9 +353,9 @@ struct ContentView: View {
                     showPaymentScreenshotImport = true
                 },
                 bottomPadding: TransactionInputDockLayout.dashboardBottomPadding,
-                manualAddFrameWidth: 58,
-                manualAddActionHeight: 52,
-                manualAddIconSize: 22
+                manualAddFrameWidth: TransactionInputDockLayout.dashboardManualAddFrameWidth,
+                manualAddActionHeight: TransactionInputDockLayout.dashboardManualAddActionHeight,
+                manualAddIconSize: TransactionInputDockLayout.dashboardManualAddIconSize
             )
         }
     }

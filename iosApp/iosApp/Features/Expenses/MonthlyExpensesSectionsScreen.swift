@@ -114,8 +114,14 @@ struct MonthlyTransactionsRootView: View {
                 onImportScreenshot: {
                     showPaymentScreenshotImport = true
                 },
-                secondaryActionStyle: selectedKind == .income ? .directVoice : .overflowMenu
+                bottomPadding: TransactionInputDockLayout.dashboardBottomPadding,
+                secondaryActionStyle: selectedKind == .income ? .directVoice : .overflowMenu,
+                manualAddFrameWidth: TransactionInputDockLayout.dashboardManualAddFrameWidth,
+                manualAddActionHeight: TransactionInputDockLayout.dashboardManualAddActionHeight,
+                manualAddIconSize: TransactionInputDockLayout.dashboardManualAddIconSize
             )
+            .ignoresSafeArea(edges: .bottom)
+            .offset(y: TransactionInputDockLayout.dashboardVerticalOffset)
         }
         .sheet(isPresented: $showPaymentScreenshotImport) {
             PaymentScreenshotImportSheet(
