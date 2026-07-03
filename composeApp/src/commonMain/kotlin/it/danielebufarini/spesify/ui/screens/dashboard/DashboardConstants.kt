@@ -3,6 +3,8 @@ package it.danielebufarini.spesify.ui.screens.dashboard
 import androidx.compose.ui.graphics.Color
 
 internal const val BALANCE_CHART_MONTH_COUNT = 6
+internal const val DASHBOARD_RECENT_TRANSACTIONS_COLLAPSED_LIMIT = 15
+internal const val DASHBOARD_RECENT_TRANSACTIONS_EXPANDED_LIMIT = 50
 
 internal val chartPalette: List<Color> = listOf(
     Color(0xFF006874),

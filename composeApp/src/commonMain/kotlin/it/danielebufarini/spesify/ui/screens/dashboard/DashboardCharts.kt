@@ -16,6 +16,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,8 +47,12 @@ internal fun DashboardCharts(
     balanceChartState: BalanceChartState,
     categoryTotals: List<CategoryTotal>,
     recentTransactions: List<DashboardRecentTransaction>,
+    recentTransactionsFilter: DashboardRecentTransactionFilter,
     pinnedDashboardCard: DashboardCardPage?,
     onPinDashboardCard: (DashboardCardPage?) -> Unit,
+    onExpandRecentTransactions: () -> Unit,
+    onCollapseRecentTransactions: () -> Unit,
+    onRecentTransactionsFilterChange: (DashboardRecentTransactionFilter) -> Unit,
     categoriesById: Map<String, Category>,
     onOpenRecentTransaction: (DashboardRecentTransaction) -> Unit
 ) {
@@ -108,12 +113,31 @@ internal fun DashboardCharts(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                Text(
-                    text = currentPage.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
+                Row(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = currentPage.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center
+                    )
+
+                    if (currentPage.page == DashboardCardPage.RecentTransactions) {
+                        IconButton(
+                            onClick = onExpandRecentTransactions,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.OpenInFull,
+                                contentDescription = strings.expandRecentTransactions,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
                 IconButton(
                     onClick = {
                         onPinDashboardCard(if (currentPagePinned) null else currentPage.page)
@@ -151,6 +175,11 @@ internal fun DashboardCharts(
                         strings = strings,
                         transactions = recentTransactions,
                         categoriesById = categoriesById,
+                        expanded = false,
+                        filter = recentTransactionsFilter,
+                        onExpand = onExpandRecentTransactions,
+                        onCollapse = onCollapseRecentTransactions,
+                        onFilterChange = onRecentTransactionsFilterChange,
                         onOpenTransaction = onOpenRecentTransaction
                     )
                 }

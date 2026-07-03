@@ -38,6 +38,7 @@ internal fun DashboardScreenScaffold(
     openVoiceExpenseRequest: Int = 0,
     selectedMonth: MonthCursor,
     totalAmount: Long,
+    showTopBar: Boolean = true,
     showFab: Boolean,
     showQuickActions: Boolean = true,
     reserveQuickActionsSpace: Boolean = showQuickActions,
@@ -65,58 +66,60 @@ internal fun DashboardScreenScaffold(
 
         Scaffold(
             topBar = {
-                if (isIos) {
-                    IosDashboardTopBar(
-                        strings = strings,
-                        openVoiceExpenseRequest = openVoiceExpenseRequest,
-                        selectedMonth = selectedMonth,
-                        totalAmount = totalAmount,
-                        onOpenMenu = {
-                            showNavigationRail = true
-                            onNavigationDrawerVisibilityChange(true)
-                        },
-                        onOpenAddExpense = onOpenAddExpense,
-                        onOpenVoiceExpense = onOpenVoiceExpense,
-                        showQuickActions = showQuickActions,
-                        reserveQuickActionsSpace = reserveQuickActionsSpace,
-                        onPreviousMonth = onPreviousMonth,
-                        onNextMonth = onNextMonth
-                    )
-                } else {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            DashboardMonthHeader(
-                                selectedMonth = selectedMonth,
-                                totalAmount = totalAmount,
-                                currencySymbol = strings.currencySymbol,
-                                onPreviousMonth = onPreviousMonth,
-                                onNextMonth = onNextMonth
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { showNavigationRail = true },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Menu,
-                                    contentDescription = strings.dashboard
+                if (showTopBar) {
+                    if (isIos) {
+                        IosDashboardTopBar(
+                            strings = strings,
+                            openVoiceExpenseRequest = openVoiceExpenseRequest,
+                            selectedMonth = selectedMonth,
+                            totalAmount = totalAmount,
+                            onOpenMenu = {
+                                showNavigationRail = true
+                                onNavigationDrawerVisibilityChange(true)
+                            },
+                            onOpenAddExpense = onOpenAddExpense,
+                            onOpenVoiceExpense = onOpenVoiceExpense,
+                            showQuickActions = showQuickActions,
+                            reserveQuickActionsSpace = reserveQuickActionsSpace,
+                            onPreviousMonth = onPreviousMonth,
+                            onNextMonth = onNextMonth
+                        )
+                    } else {
+                        CenterAlignedTopAppBar(
+                            title = {
+                                DashboardMonthHeader(
+                                    selectedMonth = selectedMonth,
+                                    totalAmount = totalAmount,
+                                    currencySymbol = strings.currencySymbol,
+                                    onPreviousMonth = onPreviousMonth,
+                                    onNextMonth = onNextMonth
+                                )
+                            },
+                            navigationIcon = {
+                                IconButton(
+                                    onClick = { showNavigationRail = true },
+                                    modifier = Modifier.padding(start = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Menu,
+                                        contentDescription = strings.dashboard
+                                    )
+                                }
+                            },
+                            actions = {
+                                BottomTransactionQuickActions(
+                                    addContentDescription = strings.addExpense,
+                                    onAddTransaction = onOpenAddExpense,
+                                    modifier = Modifier.padding(end = 12.dp),
+                                    openVoiceExpenseRequest = openVoiceExpenseRequest,
+                                    voiceContentDescription = strings.voiceExpense,
+                                    onVoiceExpense = null,
+                                    addButtonSize = 42.dp,
+                                    addIconSize = 26.dp
                                 )
                             }
-                        },
-                        actions = {
-                            BottomTransactionQuickActions(
-                                addContentDescription = strings.addExpense,
-                                onAddTransaction = onOpenAddExpense,
-                                modifier = Modifier.padding(end = 12.dp),
-                                openVoiceExpenseRequest = openVoiceExpenseRequest,
-                                voiceContentDescription = strings.voiceExpense,
-                                onVoiceExpense = null,
-                                addButtonSize = 42.dp,
-                                addIconSize = 26.dp
-                            )
-                        }
-                    )
+                        )
+                    }
                 }
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }

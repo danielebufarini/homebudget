@@ -78,7 +78,7 @@ internal class DashboardStateStore(
         )
 
     val recentTransactions: StateFlow<List<DashboardRecentTransaction>> = repository
-        .getDashboardRecentTransactions()
+        .getDashboardRecentTransactions(limit = DASHBOARD_RECENT_TRANSACTIONS_EXPANDED_LIMIT)
         .distinctUntilChanged()
         .flowOn(Dispatchers.Default)
         .stateIn(

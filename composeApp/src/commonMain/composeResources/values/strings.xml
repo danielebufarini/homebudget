@@ -106,6 +106,9 @@
     <string name="csv_transfer_note">Not suitable for full app restore.</string>
     <string name="dashboard">Dashboard</string>
     <string name="dashboard_search_placeholder">Search transactions...</string>
+    <string name="all_transactions">All</string>
+    <string name="expand_recent_transactions">Expand recent transactions</string>
+    <string name="collapse_recent_transactions">Collapse recent transactions</string>
     <string name="date">Date</string>
     <string name="details">Details</string>
     <string name="delete">Delete</string>

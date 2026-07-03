@@ -23,8 +23,13 @@ internal fun DashboardBody(
     recurringTotalAmount: Long,
     chartState: BalanceChartState,
     recentTransactions: List<DashboardRecentTransaction>,
+    recentTransactionsExpanded: Boolean,
+    recentTransactionsFilter: DashboardRecentTransactionFilter,
     pinnedDashboardCard: DashboardCardPage?,
     onPinDashboardCard: (DashboardCardPage?) -> Unit,
+    onExpandRecentTransactions: () -> Unit,
+    onCollapseRecentTransactions: () -> Unit,
+    onRecentTransactionsFilterChange: (DashboardRecentTransactionFilter) -> Unit,
     categoriesById: Map<String, Category>,
     showTransactionSearch: Boolean,
     searchQuery: String,
@@ -39,6 +44,22 @@ internal fun DashboardBody(
     onOpenRecurringExpenses: () -> Unit,
     onOpenRecentTransaction: (DashboardRecentTransaction) -> Unit
 ) {
+    if (recentTransactionsExpanded) {
+        RecentTransactionsPage(
+            strings = strings,
+            transactions = recentTransactions,
+            categoriesById = categoriesById,
+            expanded = true,
+            filter = recentTransactionsFilter,
+            onExpand = onExpandRecentTransactions,
+            onCollapse = onCollapseRecentTransactions,
+            onFilterChange = onRecentTransactionsFilterChange,
+            onOpenTransaction = onOpenRecentTransaction,
+            modifier = modifier
+        )
+        return
+    }
+
     Column(modifier = modifier) {
         if (showMonthHeaderCard) {
             DashboardMonthHeaderCard(
@@ -90,8 +111,12 @@ internal fun DashboardBody(
             balanceChartState = chartState,
             categoryTotals = summary.categoryTotals,
             recentTransactions = recentTransactions,
+            recentTransactionsFilter = recentTransactionsFilter,
             pinnedDashboardCard = pinnedDashboardCard,
             onPinDashboardCard = onPinDashboardCard,
+            onExpandRecentTransactions = onExpandRecentTransactions,
+            onCollapseRecentTransactions = onCollapseRecentTransactions,
+            onRecentTransactionsFilterChange = onRecentTransactionsFilterChange,
             categoriesById = categoriesById,
             onOpenRecentTransaction = onOpenRecentTransaction
         )

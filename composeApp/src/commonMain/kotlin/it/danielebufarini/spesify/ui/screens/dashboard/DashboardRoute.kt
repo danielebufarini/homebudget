@@ -80,6 +80,16 @@ fun DashboardRoute(
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    var recentTransactionsExpanded by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var recentTransactionsFilter by rememberSaveable {
+        mutableStateOf(DashboardRecentTransactionFilter.All)
+    }
+    val collapseRecentTransactions = {
+        recentTransactionsExpanded = false
+        recentTransactionsFilter = DashboardRecentTransactionFilter.All
+    }
     val submitSearch = {
         val trimmedQuery = searchQuery.trim()
         if (trimmedQuery.isNotEmpty()) {
@@ -109,8 +119,13 @@ fun DashboardRoute(
             recurringTotalAmount = recurringExpenseOverview.totalAmount,
             chartState = chartState,
             recentTransactions = recentTransactions,
+            recentTransactionsExpanded = recentTransactionsExpanded,
+            recentTransactionsFilter = recentTransactionsFilter,
             pinnedDashboardCard = pinnedDashboardCard,
             onPinDashboardCard = dashboardPreferencesStore::pinDashboardCard,
+            onExpandRecentTransactions = { recentTransactionsExpanded = true },
+            onCollapseRecentTransactions = collapseRecentTransactions,
+            onRecentTransactionsFilterChange = { recentTransactionsFilter = it },
             categoriesById = categoriesById,
             showTransactionSearch = showTransactionSearch,
             searchQuery = searchQuery,
@@ -148,6 +163,7 @@ fun DashboardRoute(
             openVoiceExpenseRequest = openVoiceExpenseRequest,
             selectedMonth = selectedMonth,
             totalAmount = summary.totalAmount,
+            showTopBar = !recentTransactionsExpanded,
             showFab = showFab,
             showQuickActions = showQuickActions,
             reserveQuickActionsSpace = reserveQuickActionsSpace,
