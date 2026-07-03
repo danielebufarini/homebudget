@@ -178,7 +178,7 @@ struct TransactionSearchSectionsRootView: View {
             Color.clear
                 .frame(height: MonthlyTransactionsHeaderLayout.groupingTopSpacing)
 
-            ExpenseGroupingMenuControl(selection: $groupingMode)
+            ExpenseGroupingCarousel(selection: $groupingMode)
                 .padding(.horizontal, MonthNavigationHeaderLayout.horizontalPadding + 16)
         }
     }

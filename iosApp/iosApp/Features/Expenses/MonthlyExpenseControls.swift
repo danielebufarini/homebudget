@@ -1,62 +1,77 @@
 import SwiftUI
 
-struct ExpenseGroupingMenuControl: View {
+struct ExpenseGroupingCarousel: View {
     @Binding var selection: ExpenseGroupingMode
+    @Namespace private var selectionNamespace
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(appLocalized("Grouped by"))
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-
-            Menu {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
                 groupingButton(title: appLocalized("Category"), mode: .byCategory)
                 groupingButton(title: appLocalized("Date"), mode: .byDate)
-            } label: {
-                HStack(spacing: 6) {
-                    Text(selectedTitle)
-                        .font(.subheadline.weight(.semibold))
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.bold))
-                }
-                .foregroundStyle(AppThemePalette.onSurface)
-                .padding(.horizontal, 14)
-                .frame(height: 40)
-                .appDashboardChromeSurface(cornerRadius: 18)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .frame(minHeight: 44)
-            .accessibilityLabel(appLocalized("Grouped by"))
-            .accessibilityValue(selectedTitle)
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .background(
+            AppThemePalette.chromeSurface.opacity(0.34),
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(AppThemePalette.chromeStroke.opacity(0.58), lineWidth: 1)
         }
         .frame(minHeight: MonthlyTransactionsHeaderLayout.groupingHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var selectedTitle: String {
-        switch selection {
-        case .byCategory:
-            return appLocalized("Category")
-        case .byDate:
-            return appLocalized("Date")
+    private func groupingButton(title: String, mode: ExpenseGroupingMode) -> some View {
+        let isSelected = selection == mode
+
+        return Button {
+            select(mode)
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                .foregroundStyle(isSelected ? AppThemePalette.onSurface : AppThemePalette.onSurface.opacity(0.66))
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 78, minHeight: 40)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 19, style: .continuous)
+                            .fill(AppThemePalette.chromeSurface.opacity(0.84))
+                            .matchedGeometryEffect(id: "selected-expense-grouping-mode", in: selectionNamespace)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                                    .stroke(AppThemePalette.chromeStroke, lineWidth: 1)
+                            }
+                    }
+                }
+                .contentShape(Rectangle())
+                .animation(.easeInOut(duration: 0.18), value: isSelected)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(appLocalized("View transactions by %@", title))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    @ViewBuilder
-    private func groupingButton(title: String, mode: ExpenseGroupingMode) -> some View {
-        Button {
-            selection = mode
-        } label: {
-            if selection == mode {
-                Label(title, systemImage: "checkmark")
-            } else {
-                Text(title)
-            }
+    private func select(_ mode: ExpenseGroupingMode) {
+        guard selection != mode else {
+            return
         }
+
+        withAnimation(.easeInOut(duration: 0.18)) {
+            selection = mode
+        }
+
+        playSelectionHaptic()
+    }
+
+    private func playSelectionHaptic() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.45)
     }
 }
 

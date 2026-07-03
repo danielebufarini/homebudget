@@ -29,6 +29,7 @@ import it.danielebufarini.spesify.data.monthBounds
 import it.danielebufarini.spesify.database.Category
 import it.danielebufarini.spesify.database.Income
 import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
+import it.danielebufarini.spesify.ui.screens.ExpenseGroupingMode
 import it.danielebufarini.spesify.ui.screens.TransactionSearchResults
 import it.danielebufarini.spesify.ui.screens.buildGroupedIncomesState
 import it.danielebufarini.spesify.ui.screens.collectAsFlowLoadState
@@ -52,9 +53,9 @@ import org.koin.compose.koinInject
 import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.add_income
 import spesify.composeapp.generated.resources.back
-import spesify.composeapp.generated.resources.by_category
-import spesify.composeapp.generated.resources.by_date
+import spesify.composeapp.generated.resources.category
 import spesify.composeapp.generated.resources.currency_symbol
+import spesify.composeapp.generated.resources.date
 import spesify.composeapp.generated.resources.delete
 import spesify.composeapp.generated.resources.delete_item_confirmation_message
 import spesify.composeapp.generated.resources.delete_recurring_item_confirmation_message
@@ -85,8 +86,8 @@ private fun rememberMonthlyIncomeStrings(): MonthlyIncomeStrings =
     MonthlyIncomeStrings(
         addIncome = stringResource(Res.string.add_income),
         back = stringResource(Res.string.back),
-        byCategory = stringResource(Res.string.by_category),
-        byDate = stringResource(Res.string.by_date),
+        byCategory = stringResource(Res.string.category),
+        byDate = stringResource(Res.string.date),
         currencySymbol = stringResource(Res.string.currency_symbol),
         delete = stringResource(Res.string.delete),
         deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),
@@ -128,12 +129,15 @@ class MonthlyIncomesScreen(
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun RouteContent(
+    internal fun RouteContent(
         initialMonth: MonthCursor,
         showNavigationChrome: Boolean,
         onBack: () -> Unit,
         onAddIncome: (Int, Int) -> Unit,
-        onOpenIncome: (String) -> Unit
+        onOpenIncome: (String) -> Unit,
+        externalGroupingMode: ExpenseGroupingMode? = null,
+        onExternalGroupingModeChange: ((ExpenseGroupingMode) -> Unit)? = null,
+        showGroupingControls: Boolean = true
     ) {
         val categoryRepository: CategoryManagementRepository = koinInject()
         val incomeReadRepository: IncomeReadRepository = koinInject()
@@ -151,6 +155,8 @@ class MonthlyIncomesScreen(
             initialMonth = initialMonth,
             searchQuery = searchQuery,
         )
+        val groupingMode = externalGroupingMode ?: routeState.groupingMode
+        val onGroupingModeChange = onExternalGroupingModeChange ?: routeState::selectGroupingMode
         var pendingIncomeDelete by remember { mutableStateOf<Income?>(null) }
         val (monthStartMillis, monthEndMillis) = remember(routeState.selectedMonth) {
             monthBounds(routeState.selectedMonth.year, routeState.selectedMonth.month)
@@ -191,7 +197,7 @@ class MonthlyIncomesScreen(
         val groupedIncomesFlow = remember(
             incomesFlow,
             categoriesFlow,
-            routeState.groupingMode,
+            groupingMode,
             resolveCategoryName,
             unknownCategoryLabel,
             shortMonthNamesList,
@@ -203,7 +209,7 @@ class MonthlyIncomesScreen(
                 val groupedState = buildGroupedIncomesState(
                     incomes = incomeResults.items,
                     categoriesById = categoriesById,
-                    groupingMode = routeState.groupingMode,
+                    groupingMode = groupingMode,
                     resolveCategoryName = { category: Category ->
                         resolveCategoryName(category.id, category.name)
                     },
@@ -268,8 +274,9 @@ class MonthlyIncomesScreen(
                     padding = padding,
                     sections = incomeSections,
                     categoriesById = categoriesById,
-                    groupingMode = routeState.groupingMode,
-                    onGroupingModeChange = routeState::selectGroupingMode,
+                    groupingMode = groupingMode,
+                    onGroupingModeChange = onGroupingModeChange,
+                    showGroupingControls = showGroupingControls,
                     showNavigationChrome = showNavigationChrome,
                     isIos = isIos,
                     strings = strings,
@@ -288,8 +295,9 @@ class MonthlyIncomesScreen(
                     padding = PaddingValues(0.dp),
                     sections = incomeSections,
                     categoriesById = categoriesById,
-                    groupingMode = routeState.groupingMode,
-                    onGroupingModeChange = routeState::selectGroupingMode,
+                    groupingMode = groupingMode,
+                    onGroupingModeChange = onGroupingModeChange,
+                    showGroupingControls = showGroupingControls,
                     showNavigationChrome = showNavigationChrome,
                     isIos = isIos,
                     strings = strings,

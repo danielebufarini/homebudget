@@ -139,6 +139,7 @@
     <string name="savings">Risparmio</string>
     <string name="search_results">Risultati ricerca</string>
     <string name="search_transactions">Cerca transazioni</string>
+    <string name="transaction_view_mode_content_description">Visualizza transazioni per %1$s</string>
     <string name="no_search_results">Nessun movimento trovato</string>
     <string name="load_more_search_results">Carica altri risultati</string>
     <string name="import_action">Importa</string>

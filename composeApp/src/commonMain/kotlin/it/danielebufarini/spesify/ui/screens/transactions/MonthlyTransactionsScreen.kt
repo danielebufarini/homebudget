@@ -27,6 +27,7 @@ import it.danielebufarini.spesify.ui.screens.TransactionTotals
 import it.danielebufarini.spesify.ui.screens.common.MonthCursor
 import it.danielebufarini.spesify.ui.screens.common.MonthNavigationTitle
 import it.danielebufarini.spesify.ui.screens.expenses.AddExpenseScreen
+import it.danielebufarini.spesify.ui.screens.expenses.GroupingModeButtons
 import it.danielebufarini.spesify.ui.screens.expenses.MonthlyExpensesScreen
 import it.danielebufarini.spesify.ui.screens.income.AddIncomeScreen
 import it.danielebufarini.spesify.ui.screens.income.MonthlyIncomesScreen
@@ -42,7 +43,9 @@ import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.add_expense
 import spesify.composeapp.generated.resources.add_income
 import spesify.composeapp.generated.resources.back
+import spesify.composeapp.generated.resources.category
 import spesify.composeapp.generated.resources.currency_symbol
+import spesify.composeapp.generated.resources.date
 import spesify.composeapp.generated.resources.expense
 import spesify.composeapp.generated.resources.expenses
 import spesify.composeapp.generated.resources.income
@@ -96,7 +99,9 @@ class MonthlyTransactionsScreen(
         val addExpenseLabel = stringResource(Res.string.add_expense)
         val addIncomeLabel = stringResource(Res.string.add_income)
         val backLabel = stringResource(Res.string.back)
+        val categoryLabel = stringResource(Res.string.category)
         val currencySymbol = stringResource(Res.string.currency_symbol)
+        val dateLabel = stringResource(Res.string.date)
         val expenseLabel = stringResource(Res.string.expense)
         val expensesLabel = stringResource(Res.string.expenses)
         val incomeLabel = stringResource(Res.string.income)
@@ -212,6 +217,16 @@ class MonthlyTransactionsScreen(
                         .padding(bottom = 6.dp),
                 )
 
+                GroupingModeButtons(
+                    groupingMode = routeState.groupingMode,
+                    onGroupingModeChange = routeState::selectGroupingMode,
+                    byCategoryLabel = categoryLabel,
+                    byDateLabel = dateLabel,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 8.dp),
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -234,6 +249,9 @@ class MonthlyTransactionsScreen(
                             onBack = onBack,
                             onAddExpense = onAddExpense,
                             onOpenExpense = onOpenExpense,
+                            externalGroupingMode = routeState.groupingMode,
+                            onExternalGroupingModeChange = routeState::selectGroupingMode,
+                            showGroupingControls = false,
                         )
 
                         TransactionEditorKind.Income -> MonthlyIncomesScreen(
@@ -248,6 +266,9 @@ class MonthlyTransactionsScreen(
                             onBack = onBack,
                             onAddIncome = onAddIncome,
                             onOpenIncome = onOpenIncome,
+                            externalGroupingMode = routeState.groupingMode,
+                            onExternalGroupingModeChange = routeState::selectGroupingMode,
+                            showGroupingControls = false,
                         )
                     }
                 }

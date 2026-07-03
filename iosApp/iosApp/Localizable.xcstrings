@@ -1189,23 +1189,6 @@
     "Get Monthly Income" : {
 
     },
-    "Grouped by" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grouped by"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raggruppa per"
-          }
-        }
-      }
-    },
     "Health & Wellness" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2807,6 +2790,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inserimento vocale"
+          }
+        }
+      }
+    },
+    "View transactions by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View transactions by %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visualizza transazioni per %@"
           }
         }
       }

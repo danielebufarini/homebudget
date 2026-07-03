@@ -1,25 +1,36 @@
 package it.danielebufarini.spesify.ui.screens.expenses
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.ui.screens.ExpenseGroupingMode
-import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
-import it.danielebufarini.spesify.ui.screens.platform.spesifyFilledTonalButtonColors
-import it.danielebufarini.spesify.ui.screens.platform.spesifyOutlinedButtonColors
+import org.jetbrains.compose.resources.stringResource
+import spesify.composeapp.generated.resources.Res
+import spesify.composeapp.generated.resources.transaction_view_mode_content_description
 
 @Composable
 internal fun GroupingModeButtons(
@@ -29,127 +40,114 @@ internal fun GroupingModeButtons(
     byDateLabel: String,
     modifier: Modifier = Modifier
 ) {
-    if (!rememberIsIosPlatform()) {
-        AndroidGroupingModeSegmentedButtons(
-            groupingMode = groupingMode,
-            onGroupingModeChange = onGroupingModeChange,
-            byCategoryLabel = byCategoryLabel,
-            byDateLabel = byDateLabel,
-            modifier = modifier
-        )
-        return
-    }
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GroupingModeButton(
-            label = byCategoryLabel,
-            selected = groupingMode == ExpenseGroupingMode.ByCategory,
-            onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
-        )
-        GroupingModeButton(
-            label = byDateLabel,
-            selected = groupingMode == ExpenseGroupingMode.ByDate,
-            onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
-        )
-    }
+    TransactionViewModeCarousel(
+        selectedMode = groupingMode,
+        modes = listOf(
+            ExpenseGroupingMode.ByCategory to byCategoryLabel,
+            ExpenseGroupingMode.ByDate to byDateLabel
+        ),
+        onModeSelected = onGroupingModeChange,
+        modifier = modifier
+    )
 }
 
 @Composable
-private fun AndroidGroupingModeSegmentedButtons(
-    groupingMode: ExpenseGroupingMode,
-    onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
-    byCategoryLabel: String,
-    byDateLabel: String,
+internal fun TransactionViewModeCarousel(
+    selectedMode: ExpenseGroupingMode,
+    modes: List<Pair<ExpenseGroupingMode, String>>,
+    onModeSelected: (ExpenseGroupingMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.68f),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.28f),
         tonalElevation = 0.dp,
-        shadowElevation = 16.dp,
+        shadowElevation = 0.dp,
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
         )
     ) {
         Row(
-            modifier = Modifier.padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 4.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AndroidGroupingModeButton(
-                label = byCategoryLabel,
-                selected = groupingMode == ExpenseGroupingMode.ByCategory,
-                onClick = { onGroupingModeChange(ExpenseGroupingMode.ByCategory) }
-            )
-            AndroidGroupingModeButton(
-                label = byDateLabel,
-                selected = groupingMode == ExpenseGroupingMode.ByDate,
-                onClick = { onGroupingModeChange(ExpenseGroupingMode.ByDate) }
-            )
+            modes.forEach { (mode, label) ->
+                TransactionViewModeCarouselItem(
+                    label = label,
+                    selected = selectedMode == mode,
+                    onClick = { onModeSelected(mode) }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AndroidGroupingModeButton(
+private fun TransactionViewModeCarouselItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    if (selected) {
-        FilledTonalButton(
-            onClick = onClick,
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f),
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-        ) {
-            Text(label)
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.50f),
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-        ) {
-            Text(label)
-        }
-    }
-}
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.70f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "TransactionViewModeContainerColor"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "TransactionViewModeContentColor"
+    )
+    val accessibilityLabel = stringResource(
+        Res.string.transaction_view_mode_content_description,
+        label
+    )
 
-@Composable
-private fun GroupingModeButton(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    if (selected) {
-        FilledTonalButton(
-            onClick = onClick,
-            colors = spesifyFilledTonalButtonColors(),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Text(label)
+    Surface(
+        modifier = Modifier
+            .animateContentSize(animationSpec = tween(durationMillis = 180))
+            .defaultMinSize(minWidth = 72.dp, minHeight = 40.dp)
+            .selectable(
+                selected = selected,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                role = Role.Button,
+                onClick = onClick
+            )
+            .semantics {
+                contentDescription = accessibilityLabel
+            },
+        shape = RoundedCornerShape(19.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f))
+        } else {
+            null
         }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            colors = spesifyOutlinedButtonColors(),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Text(label)
-        }
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1,
+            color = contentColor
+        )
     }
 }

@@ -139,6 +139,7 @@
     <string name="savings">Savings</string>
     <string name="search_results">Search results</string>
     <string name="search_transactions">Search transactions</string>
+    <string name="transaction_view_mode_content_description">View transactions by %1$s</string>
     <string name="no_search_results">No matching transactions</string>
     <string name="load_more_search_results">Load more results</string>
     <string name="import_action">Import</string>

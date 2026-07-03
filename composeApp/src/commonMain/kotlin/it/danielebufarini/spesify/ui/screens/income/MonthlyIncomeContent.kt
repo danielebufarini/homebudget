@@ -91,6 +91,7 @@ internal fun MonthlyIncomeContent(
     categoriesById: Map<String, Category>,
     groupingMode: ExpenseGroupingMode,
     onGroupingModeChange: (ExpenseGroupingMode) -> Unit,
+    showGroupingControls: Boolean,
     showNavigationChrome: Boolean,
     isIos: Boolean,
     strings: MonthlyIncomeStrings,
@@ -102,7 +103,7 @@ internal fun MonthlyIncomeContent(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
-    val showFloatingBottomControls = !isIos
+    val showFloatingBottomControls = showGroupingControls && !isIos
     val bottomControlClearance = if (showFloatingBottomControls) 88.dp else 0.dp
     val listContentPadding = edgeToEdgeListContentPadding(
         scaffoldPadding = padding,

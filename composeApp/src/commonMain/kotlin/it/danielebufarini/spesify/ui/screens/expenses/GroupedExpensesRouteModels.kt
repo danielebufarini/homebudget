@@ -11,9 +11,9 @@ import org.jetbrains.compose.resources.stringResource
 import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.add_expense
 import spesify.composeapp.generated.resources.back
-import spesify.composeapp.generated.resources.by_category
-import spesify.composeapp.generated.resources.by_date
+import spesify.composeapp.generated.resources.category
 import spesify.composeapp.generated.resources.currency_symbol
+import spesify.composeapp.generated.resources.date
 import spesify.composeapp.generated.resources.delete
 import spesify.composeapp.generated.resources.delete_item_confirmation_message
 import spesify.composeapp.generated.resources.delete_recurring_item_confirmation_message
@@ -60,6 +60,7 @@ internal data class GroupedExpensesScaffoldState(
 internal data class GroupedExpensesContentState(
     val routeData: GroupedExpensesRouteData,
     val groupingMode: ExpenseGroupingMode,
+    val showGroupingControls: Boolean,
     val showFloatingBottomControls: Boolean,
     val monthSwipeEnabled: Boolean,
     val emptyStateText: String,
@@ -85,8 +86,8 @@ internal fun rememberGroupedExpenseStrings(): GroupedExpenseStrings =
     GroupedExpenseStrings(
         addExpense = stringResource(Res.string.add_expense),
         back = stringResource(Res.string.back),
-        byCategory = stringResource(Res.string.by_category),
-        byDate = stringResource(Res.string.by_date),
+        byCategory = stringResource(Res.string.category),
+        byDate = stringResource(Res.string.date),
         currencySymbol = stringResource(Res.string.currency_symbol),
         delete = stringResource(Res.string.delete),
         deleteItemConfirmationMessageTemplate = stringResource(Res.string.delete_item_confirmation_message),

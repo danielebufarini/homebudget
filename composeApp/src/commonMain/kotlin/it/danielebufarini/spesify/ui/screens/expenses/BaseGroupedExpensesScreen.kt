@@ -112,11 +112,14 @@ abstract class BaseGroupedExpensesScreen(
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun RouteContent(
+    internal fun RouteContent(
         showNavigationChrome: Boolean,
         onBack: () -> Unit,
         onAddExpense: () -> Unit,
-        onOpenExpense: (String) -> Unit
+        onOpenExpense: (String) -> Unit,
+        externalGroupingMode: ExpenseGroupingMode? = null,
+        onExternalGroupingModeChange: ((ExpenseGroupingMode) -> Unit)? = null,
+        showGroupingControls: Boolean = true
     ) {
         val categoryRepository: CategoryManagementRepository = koinInject()
         val expenseReadRepository: ExpenseReadRepository = koinInject()
@@ -137,6 +140,8 @@ abstract class BaseGroupedExpensesScreen(
             initialMonth = MonthCursor(year, month),
             searchQuery = searchQuery,
         )
+        val groupingMode = externalGroupingMode ?: routeState.groupingMode
+        val onGroupingModeChange = onExternalGroupingModeChange ?: routeState::selectGroupingMode
         var pendingExpenseDelete by remember { mutableStateOf<Expense?>(null) }
         val searchPaging = transactionSearchPaging(
             searchQuery = searchQuery,
@@ -152,7 +157,7 @@ abstract class BaseGroupedExpensesScreen(
             categoryRepository = categoryRepository,
             expenseReadRepository = expenseReadRepository,
             selectedMonth = routeState.selectedMonth,
-            groupingMode = routeState.groupingMode,
+            groupingMode = groupingMode,
             searchPaging = searchPaging,
             shortMonthNames = shortMonthNamesList,
             strings = strings,
@@ -173,7 +178,7 @@ abstract class BaseGroupedExpensesScreen(
             onAddExpense = onAddExpense,
             onOpenExpense = onOpenExpense,
             onDeleteExpense = deleteExpenseAction,
-            onGroupingModeChange = routeState::selectGroupingMode,
+            onGroupingModeChange = onGroupingModeChange,
             onLoadMoreSearchResults = searchPaging.loadMoreSearchResults,
             onPreviousMonth = routeState::previousMonth,
             onNextMonth = routeState::nextMonth
@@ -192,7 +197,8 @@ abstract class BaseGroupedExpensesScreen(
         )
         val contentState = GroupedExpensesContentState(
             routeData = routeData,
-            groupingMode = routeState.groupingMode,
+            groupingMode = groupingMode,
+            showGroupingControls = showGroupingControls,
             showFloatingBottomControls = showNavigationChrome && !isIos,
             monthSwipeEnabled = showNavigationChrome && showMonthNavigationControls(),
             emptyStateText = emptyStateText,
@@ -226,7 +232,7 @@ abstract class BaseGroupedExpensesScreen(
             ExpenseDeleteDialog(
                 expense = expense,
                 categoriesById = routeData.categoriesById,
-                isGroupedByDate = routeState.groupingMode == ExpenseGroupingMode.ByDate,
+                isGroupedByDate = groupingMode == ExpenseGroupingMode.ByDate,
                 expenseFallbackTitle = expenseFallbackTitle,
                 strings = strings,
                 resolveCategoryName = { category ->

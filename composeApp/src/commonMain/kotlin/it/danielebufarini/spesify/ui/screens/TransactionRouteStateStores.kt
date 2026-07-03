@@ -94,6 +94,7 @@ internal fun rememberGroupedTransactionRouteState(
 internal class MonthlyTransactionsRouteState private constructor(
     selectedMonth: MonthCursor,
     selectedKind: TransactionEditorKind,
+    groupingMode: ExpenseGroupingMode,
     searchPageCount: Int,
 ) {
     constructor(
@@ -102,6 +103,7 @@ internal class MonthlyTransactionsRouteState private constructor(
     ) : this(
         selectedMonth = initialMonth,
         selectedKind = initialKind,
+        groupingMode = ExpenseGroupingMode.ByCategory,
         searchPageCount = 1,
     )
 
@@ -109,6 +111,9 @@ internal class MonthlyTransactionsRouteState private constructor(
         private set
 
     var selectedKind by mutableStateOf(selectedKind)
+        private set
+
+    var groupingMode by mutableStateOf(groupingMode)
         private set
 
     var searchPageCount by mutableIntStateOf(searchPageCount.coerceAtLeast(1))
@@ -119,6 +124,10 @@ internal class MonthlyTransactionsRouteState private constructor(
 
         selectedKind = kind
         searchPageCount = 1
+    }
+
+    fun selectGroupingMode(mode: ExpenseGroupingMode) {
+        groupingMode = mode
     }
 
     fun previousMonth() {
@@ -140,6 +149,7 @@ internal class MonthlyTransactionsRouteState private constructor(
                     state.selectedMonth.year,
                     state.selectedMonth.month,
                     state.selectedKind.name,
+                    state.groupingMode.name,
                     state.searchPageCount,
                 )
             },
@@ -150,7 +160,8 @@ internal class MonthlyTransactionsRouteState private constructor(
                         month = restored.getOrNull(1) as? Int ?: 1,
                     ),
                     selectedKind = transactionEditorKindOrDefault(restored.getOrNull(2) as? String),
-                    searchPageCount = restored.getOrNull(3) as? Int ?: 1,
+                    groupingMode = expenseGroupingModeOrDefault(restored.getOrNull(3) as? String),
+                    searchPageCount = restored.getOrNull(4) as? Int ?: 1,
                 )
             },
         )

@@ -75,7 +75,8 @@ internal fun GroupedExpensesRouteContent(
     actions: GroupedExpensesRouteActions,
     resolveCategoryName: (Category) -> String,
 ) {
-    val bottomControlClearance = if (state.showFloatingBottomControls) 88.dp else 0.dp
+    val showFloatingGroupingControls = state.showGroupingControls && state.showFloatingBottomControls
+    val bottomControlClearance = if (showFloatingGroupingControls) 88.dp else 0.dp
     val listContentPadding = edgeToEdgeListContentPadding(
         scaffoldPadding = padding,
         bottom = 16.dp + bottomControlClearance
@@ -109,7 +110,7 @@ internal fun GroupedExpensesRouteContent(
             byDateLabel = state.strings.byDate,
             groupsExpandedByDefault = state.groupsExpandedByDefault,
             sectionStyle = state.sectionStyle,
-            showGroupingControls = !state.showFloatingBottomControls,
+            showGroupingControls = state.showGroupingControls && !state.showFloatingBottomControls,
             listContentPadding = listContentPadding,
             bottomControlsBottomPadding = bottomControlsPadding,
             loadMoreSearchResultsLabel = state.strings.loadMoreSearchResults,
@@ -118,7 +119,7 @@ internal fun GroupedExpensesRouteContent(
             isLoading = state.routeData.isLoading
         )
 
-        if (state.showFloatingBottomControls) {
+        if (showFloatingGroupingControls) {
             GroupingModeButtons(
                 groupingMode = state.groupingMode,
                 onGroupingModeChange = actions.onGroupingModeChange,
