@@ -7,12 +7,16 @@ import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.add_expense
 import spesify.composeapp.generated.resources.all_transactions
 import spesify.composeapp.generated.resources.balance_chart
+import spesify.composeapp.generated.resources.collapse_balance_chart
+import spesify.composeapp.generated.resources.collapse_category_breakdown
 import spesify.composeapp.generated.resources.collapse_recent_transactions
 import spesify.composeapp.generated.resources.cumulative_balance
 import spesify.composeapp.generated.resources.currency_symbol
 import spesify.composeapp.generated.resources.dashboard
 import spesify.composeapp.generated.resources.dashboard_search_placeholder
 import spesify.composeapp.generated.resources.difference
+import spesify.composeapp.generated.resources.expand_balance_chart
+import spesify.composeapp.generated.resources.expand_category_breakdown
 import spesify.composeapp.generated.resources.expand_recent_transactions
 import spesify.composeapp.generated.resources.expenses
 import spesify.composeapp.generated.resources.expenses_by_category
@@ -56,6 +60,10 @@ internal data class DashboardStrings(
     val recentTransactions: String,
     val noRecentTransactions: String,
     val allTransactions: String,
+    val expandBalanceChart: String,
+    val collapseBalanceChart: String,
+    val expandCategoryBreakdown: String,
+    val collapseCategoryBreakdown: String,
     val expandRecentTransactions: String,
     val collapseRecentTransactions: String,
     val pinDashboardCard: String,
@@ -95,6 +103,10 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         recentTransactions = stringResource(Res.string.recent_transactions),
         noRecentTransactions = stringResource(Res.string.no_recent_transactions),
         allTransactions = stringResource(Res.string.all_transactions),
+        expandBalanceChart = stringResource(Res.string.expand_balance_chart),
+        collapseBalanceChart = stringResource(Res.string.collapse_balance_chart),
+        expandCategoryBreakdown = stringResource(Res.string.expand_category_breakdown),
+        collapseCategoryBreakdown = stringResource(Res.string.collapse_category_breakdown),
         expandRecentTransactions = stringResource(Res.string.expand_recent_transactions),
         collapseRecentTransactions = stringResource(Res.string.collapse_recent_transactions),
         pinDashboardCard = stringResource(Res.string.pin_dashboard_card),

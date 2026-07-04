@@ -65,6 +65,8 @@ abstract class BaseGroupedExpensesScreen(
     protected open fun centerAlignedTitle(): Boolean = false
     protected open fun groupsExpandedByDefault(): Boolean = false
     protected open fun includeCategory(categoryName: String): Boolean = true
+    protected open fun includeCategory(categoryId: String?, categoryName: String): Boolean =
+        includeCategory(categoryName)
     protected open fun canDeleteExpense(): Boolean = true
     protected open fun canAddExpense(): Boolean = false
     protected open fun showMonthNavigationControls(): Boolean = true
@@ -319,6 +321,7 @@ abstract class BaseGroupedExpensesScreen(
                     groupingMode = groupingMode,
                     includeExpense = ::includeExpense,
                     includeCategory = ::includeCategory,
+                    includeCategoryWithId = ::includeCategory,
                     resolveCategoryName = { category ->
                         resolveCategoryName(category.id, category.name)
                     },

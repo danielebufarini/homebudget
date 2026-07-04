@@ -9,6 +9,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +47,8 @@ fun DashboardRoute(
     onOpenMonthlyExpenses: (Int, Int) -> Unit,
     onOpenSharedExpenses: (Int, Int) -> Unit,
     onOpenRecurringExpenses: (Int, Int) -> Unit,
+    onBalanceChartExpansionChange: (Boolean) -> Unit = {},
+    onOpenCategoryTransactions: (Int, Int, String?, String) -> Unit = { _, _, _, _ -> },
     onOpenExpenseDetails: (String) -> Unit = {},
     onOpenIncomeDetails: (String) -> Unit = {},
     onOpenTransactionSearch: (Int, Int, String) -> Unit = { _, _, _ -> }
@@ -80,6 +83,12 @@ fun DashboardRoute(
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    var balanceChartExpanded by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var categoryBreakdownExpanded by rememberSaveable {
+        mutableStateOf(false)
+    }
     var recentTransactionsExpanded by rememberSaveable {
         mutableStateOf(false)
     }
@@ -107,6 +116,11 @@ fun DashboardRoute(
     val monthlySavingsAmount = remember(summary.incomeAmount, summary.totalAmount) {
         subtractAmountsExact(summary.incomeAmount, summary.totalAmount)
     }
+    DisposableEffect(Unit) {
+        onDispose {
+            onBalanceChartExpansionChange(false)
+        }
+    }
 
     val dashboardBody: @Composable (Modifier) -> Unit = { modifier ->
         DashboardBody(
@@ -119,11 +133,35 @@ fun DashboardRoute(
             recurringTotalAmount = recurringExpenseOverview.totalAmount,
             chartState = chartState,
             recentTransactions = recentTransactions,
+            balanceChartExpanded = balanceChartExpanded,
+            categoryBreakdownExpanded = categoryBreakdownExpanded,
             recentTransactionsExpanded = recentTransactionsExpanded,
             recentTransactionsFilter = recentTransactionsFilter,
             pinnedDashboardCard = pinnedDashboardCard,
             onPinDashboardCard = dashboardPreferencesStore::pinDashboardCard,
-            onExpandRecentTransactions = { recentTransactionsExpanded = true },
+            onExpandBalanceChart = {
+                categoryBreakdownExpanded = false
+                recentTransactionsExpanded = false
+                balanceChartExpanded = true
+                onBalanceChartExpansionChange(true)
+            },
+            onCollapseBalanceChart = {
+                balanceChartExpanded = false
+                onBalanceChartExpansionChange(false)
+            },
+            onExpandCategoryBreakdown = {
+                balanceChartExpanded = false
+                onBalanceChartExpansionChange(false)
+                recentTransactionsExpanded = false
+                categoryBreakdownExpanded = true
+            },
+            onCollapseCategoryBreakdown = { categoryBreakdownExpanded = false },
+            onExpandRecentTransactions = {
+                balanceChartExpanded = false
+                onBalanceChartExpansionChange(false)
+                categoryBreakdownExpanded = false
+                recentTransactionsExpanded = true
+            },
             onCollapseRecentTransactions = collapseRecentTransactions,
             onRecentTransactionsFilterChange = { recentTransactionsFilter = it },
             categoriesById = categoriesById,
@@ -148,6 +186,14 @@ fun DashboardRoute(
             onOpenRecurringExpenses = {
                 onOpenRecurringExpenses(selectedMonth.year, selectedMonth.month)
             },
+            onOpenCategoryTransactions = { categoryId, categoryName ->
+                onOpenCategoryTransactions(
+                    selectedMonth.year,
+                    selectedMonth.month,
+                    categoryId,
+                    categoryName
+                )
+            },
             onOpenRecentTransaction = { transaction ->
                 when (transaction.type) {
                     DashboardRecentTransactionType.Expense -> onOpenExpenseDetails(transaction.id)
@@ -163,7 +209,7 @@ fun DashboardRoute(
             openVoiceExpenseRequest = openVoiceExpenseRequest,
             selectedMonth = selectedMonth,
             totalAmount = summary.totalAmount,
-            showTopBar = !recentTransactionsExpanded,
+            showTopBar = !balanceChartExpanded && !categoryBreakdownExpanded && !recentTransactionsExpanded,
             showFab = showFab,
             showQuickActions = showQuickActions,
             reserveQuickActionsSpace = reserveQuickActionsSpace,

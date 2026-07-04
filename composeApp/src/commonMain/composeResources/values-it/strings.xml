@@ -107,6 +107,10 @@
     <string name="dashboard">Riepilogo</string>
     <string name="dashboard_search_placeholder">Cerca transazioni...</string>
     <string name="all_transactions">Tutte</string>
+    <string name="expand_balance_chart">Espandi grafico saldo cumulativo</string>
+    <string name="collapse_balance_chart">Comprimi grafico saldo cumulativo</string>
+    <string name="expand_category_breakdown">Espandi categorie principali</string>
+    <string name="collapse_category_breakdown">Comprimi categorie principali</string>
     <string name="expand_recent_transactions">Espandi movimenti recenti</string>
     <string name="collapse_recent_transactions">Comprimi movimenti recenti</string>
     <string name="date">Data</string>

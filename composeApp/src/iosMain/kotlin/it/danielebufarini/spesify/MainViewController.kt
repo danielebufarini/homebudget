@@ -35,6 +35,8 @@ fun DashboardContentViewController(
     onOpenExpenseDetails: (String, Boolean) -> Unit,
     onOpenIncomeDetails: (String) -> Unit,
     onOpenRecurringExpenses: (Int, Int) -> Unit,
+    onBalanceChartExpansionChange: (Boolean) -> Unit,
+    onOpenCategoryTransactions: (Int, Int, String?, String) -> Unit,
     onOpenTransactionSearch: (Int, Int, String) -> Unit
 ) = themedSpesifyComposeViewController {
     DashboardRoute(
@@ -52,6 +54,8 @@ fun DashboardContentViewController(
         onOpenMonthlyExpenses = onOpenMonthlyExpenses,
         onOpenSharedExpenses = onOpenSharedExpenses,
         onOpenRecurringExpenses = onOpenRecurringExpenses,
+        onBalanceChartExpansionChange = onBalanceChartExpansionChange,
+        onOpenCategoryTransactions = onOpenCategoryTransactions,
         onOpenExpenseDetails = { expenseId -> onOpenExpenseDetails(expenseId, false) },
         onOpenIncomeDetails = onOpenIncomeDetails,
         onOpenTransactionSearch = onOpenTransactionSearch

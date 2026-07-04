@@ -83,6 +83,7 @@ internal fun buildGroupedExpensesState(
     groupingMode: ExpenseGroupingMode,
     includeExpense: (Expense) -> Boolean,
     includeCategory: (String) -> Boolean,
+    includeCategoryWithId: (String?, String) -> Boolean = { _, categoryName -> includeCategory(categoryName) },
     resolveCategoryName: (Category) -> String,
     unknownCategoryLabel: String,
     shortMonthNames: List<String>,
@@ -99,7 +100,7 @@ internal fun buildGroupedExpensesState(
             ?: unknownCategoryLabel
         if (
             !includeExpense(expense) ||
-            !includeCategory(categoryLabel) ||
+            !includeCategoryWithId(expense.categoryId, categoryLabel) ||
             !expense.matchesTransactionSearch(searchTokens, categoryLabel, currencySymbol)
         ) {
             return@forEach

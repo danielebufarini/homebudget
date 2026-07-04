@@ -14,7 +14,8 @@ import spesify.composeapp.generated.resources.no_expenses_for_category_this_mont
 class CategoryExpensesScreen(
     year: Int,
     month: Int,
-    private val categoryName: String
+    private val categoryName: String,
+    private val categoryId: String? = null
 ) : BaseGroupedExpensesScreen(year, month) {
 
     @Composable
@@ -29,7 +30,11 @@ class CategoryExpensesScreen(
 
     override fun includeExpense(expense: Expense): Boolean = true
 
-    override fun includeCategory(categoryName: String): Boolean = categoryName == this.categoryName
+    override fun includeCategory(categoryId: String?, categoryName: String): Boolean {
+        return this.categoryId
+            ?.let { selectedCategoryId -> categoryId == selectedCategoryId }
+            ?: (categoryName == this.categoryName)
+    }
 
     override fun groupsExpandedByDefault(): Boolean = true
 

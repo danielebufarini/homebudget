@@ -3,6 +3,7 @@ package it.danielebufarini.spesify.ui.screens.dashboard
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import it.danielebufarini.spesify.ui.screens.categories.CategoryExpensesScreen
 import it.danielebufarini.spesify.ui.screens.categories.management.CategoriesManagementScreen
 import it.danielebufarini.spesify.ui.screens.expenses.AddExpenseScreen
 import it.danielebufarini.spesify.ui.screens.expenses.DayExpensesScreen
@@ -52,6 +53,16 @@ class DashboardScreen(
             },
             onOpenRecurringExpenses = { year, month ->
                 navigator?.push(RecurringExpensesScreen(year = year, month = month))
+            },
+            onOpenCategoryTransactions = { year, month, categoryId, categoryName ->
+                navigator?.push(
+                    CategoryExpensesScreen(
+                        year = year,
+                        month = month,
+                        categoryName = categoryName,
+                        categoryId = categoryId
+                    )
+                )
             },
             onOpenExpenseDetails = { expenseId ->
                 navigator?.push(AddExpenseScreen(expenseId = expenseId, readOnly = false))

@@ -50,10 +50,15 @@ internal fun DashboardCharts(
     recentTransactionsFilter: DashboardRecentTransactionFilter,
     pinnedDashboardCard: DashboardCardPage?,
     onPinDashboardCard: (DashboardCardPage?) -> Unit,
+    onExpandBalanceChart: () -> Unit,
+    onCollapseBalanceChart: () -> Unit,
+    onExpandCategoryBreakdown: () -> Unit,
+    onCollapseCategoryBreakdown: () -> Unit,
     onExpandRecentTransactions: () -> Unit,
     onCollapseRecentTransactions: () -> Unit,
     onRecentTransactionsFilterChange: (DashboardRecentTransactionFilter) -> Unit,
     categoriesById: Map<String, Category>,
+    onOpenCategoryTransactions: (String?, String) -> Unit,
     onOpenRecentTransaction: (DashboardRecentTransaction) -> Unit
 ) {
     val pages = remember(strings.balanceChart, strings.expensesByCategory, strings.recentTransactions) {
@@ -109,13 +114,36 @@ internal fun DashboardCharts(
             }
 
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
+                val expandAction = when (currentPage.page) {
+                    DashboardCardPage.Balance -> onExpandBalanceChart
+                    DashboardCardPage.ExpensesByCategory -> onExpandCategoryBreakdown
+                    DashboardCardPage.RecentTransactions -> onExpandRecentTransactions
+                }
+                val expandContentDescription = when (currentPage.page) {
+                    DashboardCardPage.Balance -> strings.expandBalanceChart
+                    DashboardCardPage.ExpensesByCategory -> strings.expandCategoryBreakdown
+                    DashboardCardPage.RecentTransactions -> strings.expandRecentTransactions
+                }
+
+                IconButton(
+                    onClick = expandAction,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 16.dp)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.OpenInFull,
+                        contentDescription = expandContentDescription,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Row(
                     modifier = Modifier.align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -123,19 +151,6 @@ internal fun DashboardCharts(
                         style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center
                     )
-
-                    if (currentPage.page == DashboardCardPage.RecentTransactions) {
-                        IconButton(
-                            onClick = onExpandRecentTransactions,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.OpenInFull,
-                                contentDescription = strings.expandRecentTransactions,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
 
                 IconButton(
@@ -144,6 +159,7 @@ internal fun DashboardCharts(
                     },
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp)
                         .size(36.dp)
                 ) {
                     Icon(
@@ -165,11 +181,20 @@ internal fun DashboardCharts(
 
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (pages[page].page) {
-                    DashboardCardPage.Balance -> BalanceChartPage(strings = strings, state = balanceChartState)
+                    DashboardCardPage.Balance -> BalanceChartPage(
+                        strings = strings,
+                        state = balanceChartState,
+                        expanded = false,
+                        onCollapse = onCollapseBalanceChart
+                    )
                     DashboardCardPage.ExpensesByCategory -> CategoryBreakdownPage(
                         strings = strings,
                         categoryTotals = categoryTotals,
-                        categoriesById = categoriesById
+                        categoriesById = categoriesById,
+                        expanded = false,
+                        onExpand = onExpandCategoryBreakdown,
+                        onCollapse = onCollapseCategoryBreakdown,
+                        onOpenCategoryTransactions = onOpenCategoryTransactions
                     )
                     DashboardCardPage.RecentTransactions -> RecentTransactionsPage(
                         strings = strings,

@@ -49,6 +49,18 @@ struct DashboardRootView: View {
                 onOpenRecurringExpenses: { year, month in
                     path.append(Route.recurringExpenses(year: year.intValue, month: month.intValue))
                 },
+                onBalanceChartExpansionChange: { isExpanded in
+                    AppOrientationController.setDashboardBalanceExpanded(isExpanded.boolValue)
+                },
+                onOpenCategoryTransactions: { year, month, _, categoryName in
+                    path.append(
+                        Route.categoryExpenses(
+                            year: year.intValue,
+                            month: month.intValue,
+                            categoryName: categoryName
+                        )
+                    )
+                },
                 onOpenTransactionSearch: { year, month, query in
                     path.append(
                         Route.transactionSearch(

@@ -15,6 +15,7 @@ private struct PendingStartupRestore {
 
 @main
 struct iOSApp: App {
+    @UIApplicationDelegateAdaptor(AppOrientationController.self) private var orientationController
     @Environment(\.scenePhase) private var scenePhase
     @State private var didStartStartupRestore = false
     @State private var isStartupReady = false
