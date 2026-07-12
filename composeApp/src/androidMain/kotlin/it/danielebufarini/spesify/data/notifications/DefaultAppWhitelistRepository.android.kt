@@ -103,6 +103,6 @@ internal class DefaultAppWhitelistRepository(
 
     private companion object {
         const val TAG = "SpesifyNotifDetect"
-        const val FINECO_TEST_PACKAGE = "it.fineco.mobile"
+        const val FINECO_TEST_PACKAGE = "com.fineco.it"
     }
 }

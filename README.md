@@ -244,7 +244,7 @@ Run the Android notification detection smoke checklist after changing the notifi
 
 1. Install the Android app, enable Notification Listener access for Spesify, and allow app notifications on Android 13+.
 2. Open Spesify once so the whitelist cache can be populated from the remote source or bundled fallback.
-3. Post a notification from a whitelisted test package, such as `it.fineco.mobile`, with text like `Pagamento carta 12,34 EUR presso SUPERMERCATO TEST`.
+3. Post a notification from a whitelisted test package, such as `com.fineco.it`, with text like `Pagamento carta 12,34 EUR presso SUPERMERCATO TEST`.
 4. Verify the confirmation notification appears, `Ignora` dismisses without saving, `Modifica` opens the pre-filled expense editor, and `Conferma` saves exactly one expense.
 5. Verify notifications from non-whitelisted packages are ignored and do not trigger the local LLM fallback.
 6. Post a whitelisted notification that regex cannot fully parse, then verify the local fallback does not block the listener and either produces a validated confirmation candidate or safely ignores the notification when Gemini Nano is unavailable or validation fails.

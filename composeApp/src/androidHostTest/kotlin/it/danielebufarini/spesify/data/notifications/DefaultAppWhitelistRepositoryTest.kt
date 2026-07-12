@@ -19,7 +19,7 @@ class DefaultAppWhitelistRepositoryTest {
         val cache = InMemoryAppWhitelistCache()
         val repository = DefaultAppWhitelistRepository(
             remoteDataSource = FakeAppWhitelistRemoteDataSource(
-                apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco"))
+                apps = listOf(WhitelistedApp("com.fineco.it", "Fineco"))
             ),
             cache = cache,
             clock = FixedClock(nowMillis = 10_000L)
@@ -28,7 +28,7 @@ class DefaultAppWhitelistRepositoryTest {
         val result = repository.refreshWhitelist()
 
         assertTrue(result.isSuccess)
-        assertEquals(setOf("it.fineco.mobile"), repository.getWhitelistedPackages())
+        assertEquals(setOf("com.fineco.it"), repository.getWhitelistedPackages())
         assertEquals(10_000L, cache.readSnapshot().lastSuccessfulSyncMillis)
     }
 
@@ -65,7 +65,7 @@ class DefaultAppWhitelistRepositoryTest {
             ),
             cache = cache,
             fallbackDataSource = FakeAppWhitelistFallbackDataSource(
-                apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco"))
+                apps = listOf(WhitelistedApp("com.fineco.it", "Fineco"))
             ),
             clock = FixedClock(nowMillis = 10_000L)
         )
@@ -73,7 +73,7 @@ class DefaultAppWhitelistRepositoryTest {
         val result = repository.refreshWhitelist()
 
         assertTrue(result.isSuccess)
-        assertEquals(setOf("it.fineco.mobile"), repository.getWhitelistedPackages())
+        assertEquals(setOf("com.fineco.it"), repository.getWhitelistedPackages())
         assertEquals(10_000L, cache.readSnapshot().lastSuccessfulSyncMillis)
     }
 
@@ -91,7 +91,7 @@ class DefaultAppWhitelistRepositoryTest {
             ),
             cache = cache,
             fallbackDataSource = FakeAppWhitelistFallbackDataSource(
-                apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco"))
+                apps = listOf(WhitelistedApp("com.fineco.it", "Fineco"))
             ),
             clock = FixedClock(nowMillis = 10_000L)
         )
@@ -141,7 +141,7 @@ class DefaultAppWhitelistRepositoryTest {
             remoteDataSource = FakeAppWhitelistRemoteDataSource(),
             cache = InMemoryAppWhitelistCache(
                 AppWhitelistCacheSnapshot(
-                    apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco")),
+                    apps = listOf(WhitelistedApp("com.fineco.it", "Fineco")),
                     lastSuccessfulSyncMillis = 1_000L
                 )
             ),
@@ -158,7 +158,7 @@ class DefaultAppWhitelistRepositoryTest {
             remoteDataSource = FakeAppWhitelistRemoteDataSource(),
             cache = InMemoryAppWhitelistCache(
                 AppWhitelistCacheSnapshot(
-                    apps = listOf(WhitelistedApp("it.fineco.mobile", "Fineco")),
+                    apps = listOf(WhitelistedApp("com.fineco.it", "Fineco")),
                     lastSuccessfulSyncMillis = 4_000L
                 )
             ),
@@ -169,7 +169,7 @@ class DefaultAppWhitelistRepositoryTest {
         val state = repository.observeWhitelistState().first()
 
         assertFalse(state.isStale)
-        assertEquals(listOf(WhitelistedApp("it.fineco.mobile", "Fineco")), state.apps)
+        assertEquals(listOf(WhitelistedApp("com.fineco.it", "Fineco")), state.apps)
         assertEquals(4_000L, state.lastSuccessfulSyncMillis)
     }
 }

@@ -16,7 +16,7 @@ class AppWhitelistParserAndRemoteDataSourceTest {
         val apps = parseWhitelistedAppsJson(
             """
             [
-              { "packageName": "it.fineco.mobile", "bankName": "Fineco" },
+              { "packageName": "com.fineco.it", "bankName": "Fineco" },
               { "packageName": "com.unicredit", "bankName": "UniCredit" }
             ]
             """.trimIndent()
@@ -25,7 +25,7 @@ class AppWhitelistParserAndRemoteDataSourceTest {
         assertEquals(
             listOf(
                 WhitelistedApp(packageName = "com.unicredit", bankName = "UniCredit"),
-                WhitelistedApp(packageName = "it.fineco.mobile", bankName = "Fineco")
+                WhitelistedApp(packageName = "com.fineco.it", bankName = "Fineco")
             ),
             apps
         )
@@ -52,13 +52,13 @@ class AppWhitelistParserAndRemoteDataSourceTest {
                 AppWhitelistHttpResponse(
                     statusCode = 200,
                     contentType = "application/json; charset=utf-8",
-                    body = """[{ "packageName": "it.fineco.mobile", "bankName": "Fineco" }]"""
+                    body = """[{ "packageName": "com.fineco.it", "bankName": "Fineco" }]"""
                 )
             }
         )
 
         assertEquals(
-            listOf(WhitelistedApp(packageName = "it.fineco.mobile", bankName = "Fineco")),
+            listOf(WhitelistedApp(packageName = "com.fineco.it", bankName = "Fineco")),
             dataSource.fetchWhitelist()
         )
     }
@@ -70,13 +70,13 @@ class AppWhitelistParserAndRemoteDataSourceTest {
                 AppWhitelistHttpResponse(
                     statusCode = 200,
                     contentType = "text/plain; charset=utf-8",
-                    body = """[{ "packageName": "it.fineco.mobile", "bankName": "Fineco" }]"""
+                    body = """[{ "packageName": "com.fineco.it", "bankName": "Fineco" }]"""
                 )
             }
         )
 
         assertEquals(
-            listOf(WhitelistedApp(packageName = "it.fineco.mobile", bankName = "Fineco")),
+            listOf(WhitelistedApp(packageName = "com.fineco.it", bankName = "Fineco")),
             dataSource.fetchWhitelist()
         )
     }
