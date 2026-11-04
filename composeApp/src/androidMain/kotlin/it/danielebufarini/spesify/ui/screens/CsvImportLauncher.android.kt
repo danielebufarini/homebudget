@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.platform
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -56,7 +58,7 @@ internal actual fun rememberCsvImportLauncher(
         }
 
         scope.launch {
-            runCatching {
+            runCatchingCancellable {
                 val csvText = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         inputStream.readUtf8TextWithLimit(MAX_CSV_IMPORT_BYTES)

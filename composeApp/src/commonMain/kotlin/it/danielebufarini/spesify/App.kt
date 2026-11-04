@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
@@ -59,7 +61,7 @@ fun App(
     val restoreFailedMessage = stringResource(Res.string.backup_restore_failed)
 
     LaunchedEffect(startupRestore, recurringTransactionService) {
-        startupUiState = runCatching {
+        startupUiState = runCatchingCancellable {
             when (val state = startupRestore.prepare()) {
                 StartupRestoreState.Ready -> {
                     recurringTransactionService.ensureRecurringTransactionsGeneratedThroughDefaultWindow()
@@ -150,7 +152,7 @@ fun App(
                             onClick = {
                                 scope.launch {
                                     startupUiState = AppStartupUiState.Loading
-                                    startupUiState = runCatching {
+                                    startupUiState = runCatchingCancellable {
                                         startupRestore.restorePending()
                                         recurringTransactionService.ensureRecurringTransactionsGeneratedThroughDefaultWindow()
                                         AppStartupUiState.Ready
@@ -170,7 +172,7 @@ fun App(
                         TextButton(
                             onClick = {
                                 scope.launch {
-                                    runCatching {
+                                    runCatchingCancellable {
                                         startupRestore.skipPending()
                                         recurringTransactionService.ensureRecurringTransactionsGeneratedThroughDefaultWindow()
                                     }

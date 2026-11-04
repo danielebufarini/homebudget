@@ -72,5 +72,6 @@ struct PaymentScreenshotImportSheet: View {
             bannerPresenter.show(message, style: .error)
             viewModel.errorMessage = nil
         }
+        .onDisappear { viewModel.dispose() }
     }
 }

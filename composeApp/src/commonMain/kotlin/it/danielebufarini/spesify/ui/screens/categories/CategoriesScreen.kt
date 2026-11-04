@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.categories
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -242,7 +244,7 @@ class CategoriesScreen : Screen {
                 initialIconKey = editingCategory?.icon ?: DEFAULT_CATEGORY_ICON_KEY,
                 onConfirm = { name, iconKey ->
                     scope.launch {
-                        runCatching {
+                        runCatchingCancellable {
                             if (editingCategory == null) {
                                 repository.insertCategory(
                                     id = buildCategoryId(),
@@ -276,7 +278,7 @@ class CategoriesScreen : Screen {
                 onDelete = {
                     categoryPendingDelete = null
                     scope.launch {
-                        runCatching {
+                        runCatchingCancellable {
                             repository.deleteCategory(category.id)
                         }.onFailure {
                             snackbarHostState.showSnackbar(unableToDeleteCategoryLabel)

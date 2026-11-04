@@ -55,7 +55,7 @@ class CategoryAgentUseCase internal constructor(
         kind: TransactionKind? = null,
         includeArchived: Boolean = false
     ): CategoryListResult {
-        return runCatching {
+        return runCatchingCancellable {
             categoryRepository.seedStarterCategoriesIfEmpty()
             val categories = categoryRepository.getAllCategoriesSnapshot()
                 .filter { category ->
@@ -93,7 +93,7 @@ class CategoryAgentUseCase internal constructor(
             return CategoryCommandResult.NeedsConfirmation("Please provide a category name.")
         }
 
-        return runCatching {
+        return runCatchingCancellable {
             categoryRepository.seedStarterCategoriesIfEmpty()
             val existing = categoryRepository.getAllCategoriesSnapshot()
             val duplicate = existing.firstOrNull { category ->
@@ -101,7 +101,7 @@ class CategoryAgentUseCase internal constructor(
                     category.name.matchesCategoryQuery(trimmedName)
             }
             if (duplicate != null) {
-                return@runCatching CategoryCommandResult.NeedsConfirmation(
+                return@runCatchingCancellable CategoryCommandResult.NeedsConfirmation(
                     "Category '$trimmedName' already exists as ${duplicate.name}."
                 )
             }
@@ -141,7 +141,7 @@ class CategoryAgentUseCase internal constructor(
             )
         }
 
-        return runCatching {
+        return runCatchingCancellable {
             categoryRepository.seedStarterCategoriesIfEmpty()
             val categories = categoryRepository.getAllCategoriesSnapshot()
             val sourceResolution = resolveCategory(
@@ -151,11 +151,11 @@ class CategoryAgentUseCase internal constructor(
                 role = "category to delete"
             )
             if (sourceResolution is AgentCategoryResolution.NeedsConfirmation) {
-                return@runCatching CategoryCommandResult.NeedsConfirmation(sourceResolution.message)
+                return@runCatchingCancellable CategoryCommandResult.NeedsConfirmation(sourceResolution.message)
             }
             val source = (sourceResolution as AgentCategoryResolution.Resolved).category
             val sourceKind = source.toTransactionKind()
-                ?: return@runCatching CategoryCommandResult.Failed("Category '${source.name}' has an unsupported type.")
+                ?: return@runCatchingCancellable CategoryCommandResult.Failed("Category '${source.name}' has an unsupported type.")
 
             val targetResolution = resolveCategory(
                 categories = categories,
@@ -164,12 +164,12 @@ class CategoryAgentUseCase internal constructor(
                 role = "replacement category"
             )
             if (targetResolution is AgentCategoryResolution.NeedsConfirmation) {
-                return@runCatching CategoryCommandResult.NeedsConfirmation(targetResolution.message)
+                return@runCatchingCancellable CategoryCommandResult.NeedsConfirmation(targetResolution.message)
             }
             val target = (targetResolution as AgentCategoryResolution.Resolved).category
 
             if (source.id == target.id) {
-                return@runCatching CategoryCommandResult.NeedsConfirmation(
+                return@runCatchingCancellable CategoryCommandResult.NeedsConfirmation(
                     "Choose a different category to receive transactions before deleting '${source.name}'."
                 )
             }

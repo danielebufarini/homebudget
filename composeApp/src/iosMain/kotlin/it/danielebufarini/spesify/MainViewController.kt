@@ -2,7 +2,7 @@ package it.danielebufarini.spesify
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.ComposeUIViewController
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import it.danielebufarini.spesify.ui.screens.categories.CategoryExpensesScreen
 import it.danielebufarini.spesify.ui.screens.categories.management.CategoriesManagementRoute
 import it.danielebufarini.spesify.ui.screens.common.MonthCursor
@@ -18,7 +18,6 @@ import it.danielebufarini.spesify.ui.screens.transactions.AddTransactionScreen
 import it.danielebufarini.spesify.ui.screens.transactions.MonthlyTransactionsScreen
 import it.danielebufarini.spesify.ui.screens.transactions.TransactionEditorKind
 import it.danielebufarini.spesify.ui.theme.AppTheme
-import org.koin.mp.KoinPlatformTools
 
 fun MainViewController() = spesifyComposeViewController { App() }
 
@@ -226,7 +225,7 @@ private fun spesifyComposeViewController(
     content: @Composable () -> Unit
 ) = ComposeUIViewController(
     configure = {
-        ensureKoinStarted()
+        iosKoin()
     }
 ) {
     content()
@@ -237,11 +236,5 @@ private fun themedSpesifyComposeViewController(
 ) = spesifyComposeViewController {
     AppTheme {
         content()
-    }
-}
-
-private fun ensureKoinStarted() {
-    if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-        initKoin()
     }
 }

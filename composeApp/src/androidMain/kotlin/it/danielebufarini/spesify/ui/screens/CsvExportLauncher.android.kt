@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.platform
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -107,7 +109,7 @@ internal actual fun rememberCsvExportLauncher(
         }
 
         scope.launch {
-            val result = runCatching {
+            val result = runCatchingCancellable {
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                         outputStream.write(exportFile.content.encodeToByteArray())
@@ -166,7 +168,7 @@ internal actual fun rememberCsvExportLauncher(
                                     }
 
                                     scope.launch {
-                                        val exportFile = runCatching {
+                                        val exportFile = runCatchingCancellable {
                                             withContext(Dispatchers.Default) {
                                                 exportBudgetItemsToCsv(
                                                     repository = repository,

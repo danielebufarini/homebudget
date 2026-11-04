@@ -44,13 +44,16 @@ The shared module contains the domain model, persistence, repositories, resource
 
 Current baseline:
 
-- Kotlin 2.4.0
-- Compose Multiplatform 1.11.1
-- Android Gradle Plugin 9.2.1
+- Kotlin 2.4.20
+- Compose Multiplatform 1.12.2
+- Android Gradle Plugin 9.5.0 / Gradle 9.6.0
+- Xcode 27.1 / Swift 6.4 compiler, Swift 6 language mode
 - Android min SDK 31
 - Android compile/target SDK 37
 
 Dependency versions are defined in [gradle/libs.versions.toml](./gradle/libs.versions.toml).
+
+AGP 9.5.0 and Xcode 27.1 are outside the [published KMP 2.4.20 compatibility range](https://kotlinlang.org/docs/multiplatform/multiplatform-compatibility-guide.html). Keep the project pins and verify Android/iOS Debug and Release builds when changing compiler plugins or interop.
 
 ## Project Layout
 
@@ -114,6 +117,7 @@ Koin is the composition root.
 Spesify exposes selected finance actions through native system integration points while keeping business logic in shared Kotlin code.
 
 - Shared transaction creation: [AddTransactionUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/AddTransactionUseCase.kt)
+- Shared editor operations: [TransactionEditorService.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/TransactionEditorService.kt), used by Compose/native editors, voice persistence and assistant transaction creation; ingress adapters retain their parsing, category resolution and description policies.
 - Shared financial queries: [FinancialQueryUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/FinancialQueryUseCase.kt)
 - Shared category management: [CategoryAgentUseCase.kt](./composeApp/src/commonMain/kotlin/it/danielebufarini/spesify/data/CategoryAgentUseCase.kt)
 - iOS bridge: [composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/ui/screens](./composeApp/src/iosMain/kotlin/it/danielebufarini/spesify/ui/screens)
@@ -129,8 +133,9 @@ Supported actions:
 - Request the current balance, matching the dashboard cumulative balance through the current calendar month.
 - List existing expense or income categories using compact, human-readable output for Shortcuts/Siri and structured data for Android agents.
 - Add an explicit expense or income category.
+- Delete a category after moving its transactions to a required replacement category of the same type.
 
-App Intents and AppFunctions should remain thin adapters: they parse native parameters, call the shared use cases, and return display-ready results without duplicating persistence or validation logic. Android AppFunctions expose flat primitive parameters for easier ADB and agent invocation. Destructive category deletion is intentionally not exposed through assistant/agent integrations.
+App Intents and AppFunctions should remain thin adapters: they parse native parameters, call the shared use cases, and return display-ready results without duplicating persistence or validation logic. Android AppFunctions expose flat primitive parameters for easier ADB and agent invocation. Category deletion requires an explicit replacement; transaction creation never creates categories implicitly.
 
 ### UI and Navigation
 
@@ -233,6 +238,20 @@ Run the local verification suite:
 - `:androidApp:assembleDebug`
 - `:composeApp:compileKotlinIosSimulatorArm64`
 
+Run the native Swift unit and UI tests with the shared `Refactoring` scheme (choose an installed iOS 27 simulator):
+
+```sh
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme Refactoring \
+  -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' \
+  -derivedDataPath build/refactoring-ios CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO test
+```
+
+`SpesifyTests` uses Swift Testing for native voice parsing helpers. `SpesifyUITests` uses XCTest to check the dashboard entry control in English and Italian. Simulator test runners need ad hoc signing; reserve `CODE_SIGNING_ALLOWED=NO` for build-only checks. The shared `iosApp` scheme preserves existing build commands; `Refactoring` avoids collisions with local user schemes named `iosApp`.
+
+Run Kotlin/Native common and iOS-specific tests with `./gradlew :composeApp:iosSimulatorArm64Test`. This includes concurrent cold Koin bootstrap coverage; the Android host tests cover the specialized repository contracts against Room, including recurrence, rollback, search index updates and widget refresh after commit.
+
+The [refactoring action plan](./docs/ai/action-plan/kotlin-2.4.20-swift-6.4-refactoring-action-plan.md) records current gate results. The known whitelist ordering test remains enabled and failing; do not report `verifyAll` as passing while that failure remains.
+
 Run the assistant integration smoke checks after changing App Intents, AppFunctions, transaction creation, financial queries, category management, or amount/date parsing:
 
 1. iOS: delete and reinstall the app, open it once, recreate the Shortcuts actions, then add one expense using a standard amount such as `55.56`.
@@ -276,6 +295,8 @@ The feature remains inactive when the required access is missing. It only proces
 ### Android AppFunctions
 
 AppFunctions are wired in the Android host app and backed by shared Kotlin use cases. They require an Android version that exposes the `app_function` system service; older devices can still build and run the app, but cannot execute AppFunctions through system agents or `adb shell cmd app_function`.
+
+The beta01 runtime includes the service API. KSP generates `SpesifyAppFunctionService` from `SpesifyTransactionAppFunctions` and packages `assets/spesify_app_functions.xml`; the manifest registers that service with `BIND_APP_FUNCTION_SERVICE` and the matching metadata asset. The adapter uses the existing Koin graph. Function identifiers retain the `it.danielebufarini.spesify.appfunctions.SpesifyTransactionAppFunctions#` prefix; only application parameters appear in generated metadata.
 
 For ADB smoke tests, pass flat JSON parameters and wrap the full command in `adb shell "..."` when the JSON contains quotes, for example `--parameters '{\"kind\":\"expense\",\"amount\":\"12.50\"}'`.
 

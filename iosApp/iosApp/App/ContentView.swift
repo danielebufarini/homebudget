@@ -4,8 +4,6 @@ import UniformTypeIdentifiers
 
 
 struct ContentView: View {
-    nonisolated static let maxCsvImportBytes = 5 * 1024 * 1024
-
     @State var path = NavigationPath()
     @State var showVoiceExpenseSheet = false
     @State var voiceExpenseAutoStartRequest = 0
@@ -19,10 +17,7 @@ struct ContentView: View {
     @State var csvExportFilename = "budget.csv"
     @State var csvExportStartDate = Calendar.current.date(byAdding: .day, value: -29, to: Date()) ?? Date()
     @State var csvExportEndDate = Date()
-    @State var csvImportController = IosCsvImportController()
-    @State var csvExportController = IosCsvExportController()
-    @State var documentPaymentScreenshotImporter = PaymentScreenshotImportViewModel()
-    @State var isProcessingDocumentPaymentScreenshot = false
+    @State var transferModel = ContentTransferViewModel()
     @State private var dashboardNavigationDrawerOpen = false
     @Binding var pendingOpenURL: PendingOpenURL?
 
@@ -83,7 +78,10 @@ struct ContentView: View {
                     CsvExportSheet(
                         startDate: $csvExportStartDate,
                         endDate: $csvExportEndDate,
-                        onCancel: { showCsvExportSheet = false },
+                        onCancel: {
+                            transferModel.cancelCsvExport()
+                            showCsvExportSheet = false
+                        },
                         onExport: exportCsv
                     )
                     .appGlassSheetPresentation(detents: [.large])
@@ -296,7 +294,7 @@ struct ContentView: View {
                 }
         }
         .overlay {
-            if isProcessingDocumentPaymentScreenshot {
+            if transferModel.isProcessingScreenshot {
                 documentPaymentScreenshotProgressOverlay
             }
         }
@@ -308,6 +306,23 @@ struct ContentView: View {
         .appGlassHostedScreenChrome()
         .dismissesKeyboardOnTap()
         .restoresInteractivePopGesture()
+        .onAppear { transferModel.start() }
+        .onDisappear { transferModel.stop() }
+        .onChange(of: transferModel.feedback?.id) { _, _ in
+            guard let feedback = transferModel.feedback else { return }
+            showCsvFeedback(feedback.message, style: feedback.style)
+        }
+        .onChange(of: transferModel.exportedCsv?.id) { _, _ in
+            guard let exported = transferModel.exportedCsv else { return }
+            csvExportFilename = exported.fileName
+            csvExportDocument = CsvExportDocument(text: exported.content)
+            showCsvExportSheet = false
+            showCsvExporter = true
+        }
+        .onChange(of: transferModel.screenshot?.id) { _, _ in
+            guard let screenshot = transferModel.screenshot else { return }
+            handlePaymentScreenshotCandidates(screenshot.prefills)
+        }
     }
 
     @ToolbarContentBuilder
@@ -336,7 +351,7 @@ struct ContentView: View {
         }
 
         let remaining = Array(prefills.dropFirst())
-        DispatchQueue.main.async {
+        presentAfterMenuDismiss {
             path.append(Route.addPrefilledExpense(first, remaining: remaining))
         }
     }

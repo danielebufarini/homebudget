@@ -32,19 +32,48 @@ final class NativeTransactionEditorViewModel {
     var recurringSeriesId: String?
 
     private let incomeId: String?
-    private let editorController = IosNativeTransactionEditorController()
+    private let editorController: any NativeTransactionEditing
     private let categoriesController = IosCategoriesController()
+    private let categoryWriter: any NativeCategoryWriting
+    private let writeTasks: ApplicationWriteTasks
+    private let refreshWidget: @MainActor () -> Void
     @ObservationIgnored private var hasStarted = false
     @ObservationIgnored private var categoriesTask: Task<Void, Never>?
+    @ObservationIgnored private(set) var loadingTask: Task<Void, Never>?
+    @ObservationIgnored private(set) var savingTask: Task<Void, Never>?
+    @ObservationIgnored private(set) var categoryWriteTask: Task<Void, Never>?
+    @ObservationIgnored private var lifecycleGeneration = 0
+    @ObservationIgnored private var categoriesGeneration = 0
+    @ObservationIgnored private var isStopped = false
 
-    init(initialKind: AddTransactionKind, initialYear: Int?, initialMonth: Int?) {
+    init(
+        initialKind: AddTransactionKind, initialYear: Int?, initialMonth: Int?,
+        editorController: any NativeTransactionEditing = IosNativeTransactionEditorController(),
+        categoryWriter: (any NativeCategoryWriting)? = nil,
+        writeTasks: ApplicationWriteTasks = .shared,
+        refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
+    ) {
+        self.editorController = editorController
+        self.categoryWriter = categoryWriter ?? categoriesController
+        self.writeTasks = writeTasks
+        self.refreshWidget = refreshWidget
         incomeId = nil
         selectedKind = initialKind
         selectedDate = Self.initialDate(year: initialYear, month: initialMonth)
         isLoading = false
     }
 
-    init(prefilledExpense: NativeExpenseEditorPrefill) {
+    init(
+        prefilledExpense: NativeExpenseEditorPrefill,
+        editorController: any NativeTransactionEditing = IosNativeTransactionEditorController(),
+        categoryWriter: (any NativeCategoryWriting)? = nil,
+        writeTasks: ApplicationWriteTasks = .shared,
+        refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
+    ) {
+        self.editorController = editorController
+        self.categoryWriter = categoryWriter ?? categoriesController
+        self.writeTasks = writeTasks
+        self.refreshWidget = refreshWidget
         incomeId = nil
         selectedKind = .expense
         selectedDate = Self.date(fromMillis: prefilledExpense.dateMillis) ?? Date()
@@ -54,7 +83,16 @@ final class NativeTransactionEditorViewModel {
         isLoading = false
     }
 
-    init(incomeId: String) {
+    init(
+        incomeId: String, editorController: any NativeTransactionEditing = IosNativeTransactionEditorController(),
+        categoryWriter: (any NativeCategoryWriting)? = nil,
+        writeTasks: ApplicationWriteTasks = .shared,
+        refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
+    ) {
+        self.editorController = editorController
+        self.categoryWriter = categoryWriter ?? categoriesController
+        self.writeTasks = writeTasks
+        self.refreshWidget = refreshWidget
         self.incomeId = incomeId
         selectedKind = .income
         selectedDate = Date()
@@ -63,13 +101,18 @@ final class NativeTransactionEditorViewModel {
 
     deinit {
         categoriesTask?.cancel()
+        loadingTask?.cancel()
+        savingTask?.cancel()
+        categoryWriteTask?.cancel()
     }
 
     func start() {
+        isStopped = false
         if hasStarted {
             if categoriesTask == nil {
                 reloadCategories()
             }
+            if isLoading { loadIncomeIfNeeded() }
             return
         }
 
@@ -79,8 +122,14 @@ final class NativeTransactionEditorViewModel {
     }
 
     func stop() {
+        isStopped = true
+        lifecycleGeneration += 1
         categoriesTask?.cancel()
         categoriesTask = nil
+        loadingTask?.cancel()
+        savingTask?.cancel()
+        categoryWriteTask?.cancel()
+        isSaving = false
     }
 
     var selectedCategory: NativeExpenseCategory? {
@@ -142,65 +191,53 @@ final class NativeTransactionEditorViewModel {
     }
 
     func save(onComplete: @escaping (String?) -> Void) {
-        isSaving = true
+        guard !isStopped, !isSaving else { return }
         let dateMillis = Int64(selectedDate.timeIntervalSince1970 * 1000.0)
+        let amount = self.amount
+        let selectedCategoryId = self.selectedCategoryId
+        let description = self.description
+        let isShared = self.isShared
+        let isRecurringMonthly = self.isRecurringMonthly
+        let installmentCount = self.installmentCount
+        let incomeId = self.incomeId
 
         switch selectedKind {
         case .expense:
-            Task { [weak self, editorController] in
-                guard let self else {
-                    return
-                }
-
-                do {
-                    let result = try await editorController.saveExpense(
-                        amountInput: amount,
-                        dateMillis: dateMillis,
-                        categoryId: selectedCategoryId,
-                        description: description,
-                        isShared: isShared,
-                        isRecurringMonthly: isRecurringMonthly,
-                        installmentCount: Int32(installmentCount)
-                    )
-                    completeSave(result: result, onComplete: onComplete)
-                } catch {
-                    isSaving = false
-                    onComplete(error.localizedDescription)
-                }
+            performWrite(onComplete: onComplete) { [editorController] in
+                NativeEditorWriteOutcome(try await editorController.saveExpense(
+                    amountInput: amount,
+                    dateMillis: dateMillis,
+                    categoryId: selectedCategoryId,
+                    description: description,
+                    isShared: isShared,
+                    isRecurringMonthly: isRecurringMonthly,
+                    installmentCount: Int32(installmentCount)
+                ))
             }
         case .income:
-            Task { [weak self, editorController] in
-                guard let self else {
-                    return
+            performWrite(onComplete: onComplete) { [editorController] in
+                let categoryId = selectedCategoryId.isEmpty ? nil : selectedCategoryId
+                let result: IosNativeTransactionEditorResult
+                if let incomeId {
+                    result = try await editorController.saveExistingIncome(
+                        incomeId: incomeId,
+                        amountInput: amount,
+                        dateMillis: dateMillis,
+                        categoryId: categoryId,
+                        description: description,
+                        isRecurringMonthly: isRecurringMonthly,
+                        updateWholeSeries: false
+                    )
+                } else {
+                    result = try await editorController.saveIncome(
+                        amountInput: amount,
+                        dateMillis: dateMillis,
+                        categoryId: categoryId,
+                        description: description,
+                        isRecurringMonthly: isRecurringMonthly
+                    )
                 }
-
-                do {
-                    let categoryId = selectedCategoryId.isEmpty ? nil : selectedCategoryId
-                    let result: IosNativeTransactionEditorResult
-                    if let incomeId {
-                        result = try await editorController.saveExistingIncome(
-                            incomeId: incomeId,
-                            amountInput: amount,
-                            dateMillis: dateMillis,
-                            categoryId: categoryId,
-                            description: description,
-                            isRecurringMonthly: isRecurringMonthly,
-                            updateWholeSeries: false
-                        )
-                    } else {
-                        result = try await editorController.saveIncome(
-                            amountInput: amount,
-                            dateMillis: dateMillis,
-                            categoryId: categoryId,
-                            description: description,
-                            isRecurringMonthly: isRecurringMonthly
-                        )
-                    }
-                    completeSave(result: result, onComplete: onComplete)
-                } catch {
-                    isSaving = false
-                    onComplete(error.localizedDescription)
-                }
+                return NativeEditorWriteOutcome(result)
             }
         }
     }
@@ -211,69 +248,83 @@ final class NativeTransactionEditorViewModel {
             return
         }
 
-        isSaving = true
+        guard !isStopped, !isSaving else { return }
         let dateMillis = Int64(selectedDate.timeIntervalSince1970 * 1000.0)
-        Task { [weak self, editorController] in
-            guard let self else {
-                return
-            }
-
-            do {
-                let result = try await editorController.saveExistingIncome(
-                    incomeId: incomeId,
-                    amountInput: amount,
-                    dateMillis: dateMillis,
-                    categoryId: selectedCategoryId.isEmpty ? nil : selectedCategoryId,
-                    description: description,
-                    isRecurringMonthly: isRecurringMonthly,
-                    updateWholeSeries: updateWholeSeries
-                )
-                completeSave(result: result, onComplete: onComplete)
-            } catch {
-                isSaving = false
-                onComplete(error.localizedDescription)
-            }
+        let amount = self.amount
+        let selectedCategoryId = self.selectedCategoryId
+        let description = self.description
+        let isRecurringMonthly = self.isRecurringMonthly
+        performWrite(onComplete: onComplete) { [editorController] in
+            NativeEditorWriteOutcome(try await editorController.saveExistingIncome(
+                incomeId: incomeId,
+                amountInput: amount,
+                dateMillis: dateMillis,
+                categoryId: selectedCategoryId.isEmpty ? nil : selectedCategoryId,
+                description: description,
+                isRecurringMonthly: isRecurringMonthly,
+                updateWholeSeries: updateWholeSeries
+            ))
         }
     }
 
     func deleteIncome(deleteWholeSeries: Bool, onComplete: @escaping (String?) -> Void) {
-        guard let incomeId else {
-            return
+        guard let incomeId, !isStopped, !isSaving else { return }
+        performWrite(onComplete: onComplete) { [editorController] in
+            NativeEditorWriteOutcome(try await editorController.deleteIncome(
+                incomeId: incomeId,
+                deleteWholeSeries: deleteWholeSeries
+            ))
         }
+    }
 
+    private func performWrite(
+        onComplete: @escaping (String?) -> Void,
+        operation: @escaping @MainActor () async throws -> NativeEditorWriteOutcome
+    ) {
         isSaving = true
-        Task { [weak self, editorController] in
-            guard let self else {
-                return
-            }
-
+        let generation = lifecycleGeneration
+        let worker = writeTasks.perform { [refreshWidget] in
+            let result = try await operation()
+            if result.isSuccess { refreshWidget() }
+            return result
+        }
+        savingTask = Task { [weak self] in
             do {
-                let result = try await editorController.deleteIncome(
-                    incomeId: incomeId,
-                    deleteWholeSeries: deleteWholeSeries
-                )
+                let result = try await worker.value
+                guard let self, !Task.isCancelled, !isStopped, generation == lifecycleGeneration else { return }
                 completeSave(result: result, onComplete: onComplete)
             } catch {
+                guard let self, !isStopped, generation == lifecycleGeneration else { return }
                 isSaving = false
+                guard !Task.isCancelled, !(error is CancellationError) else { return }
                 onComplete(error.localizedDescription)
             }
         }
     }
 
     func insertCategory(name: String, iconKey: String, onComplete: @escaping (String?) -> Void) {
+        guard !isStopped else { return }
+        categoryWriteTask?.cancel()
+        let generation = lifecycleGeneration
         let categoryType = selectedKind.categoryType
-        Task { [weak self, categoriesController] in
+        let worker = writeTasks.perform { [categoryWriter, refreshWidget] in
+            let categoryId = try await categoryWriter.insertCategoryAndReturnIdForCategoryType(
+                name: name, iconKey: iconKey, categoryType: categoryType
+            )
+            if categoryId != nil { refreshWidget() }
+            return categoryId
+        }
+        categoryWriteTask = Task { [weak self] in
             let categoryId: String?
             do {
-                categoryId = try await categoriesController.insertCategoryAndReturnIdForCategoryType(
-                    name: name,
-                    iconKey: iconKey,
-                    categoryType: categoryType
-                )
+                categoryId = try await worker.value
+            } catch is CancellationError {
+                return
             } catch {
                 categoryId = nil
             }
-            guard let self else {
+            guard let self, !Task.isCancelled, !isStopped, generation == lifecycleGeneration,
+                  selectedKind.categoryType == categoryType else {
                 return
             }
 
@@ -285,11 +336,14 @@ final class NativeTransactionEditorViewModel {
     }
 
     private func reloadCategories() {
+        guard !isStopped else { return }
         categoriesTask?.cancel()
+        categoriesGeneration += 1
+        let generation = categoriesGeneration
         let categoryType = selectedKind.categoryType
         categoriesTask = Task { [weak self, categoriesController] in
             for await snapshot in categoriesController.snapshotsForCategoryType(categoryType: categoryType) {
-                guard let self else {
+                guard let self, !Task.isCancelled, !isStopped, generation == categoriesGeneration else {
                     return
                 }
                 categories = snapshot.categories.map {
@@ -304,12 +358,13 @@ final class NativeTransactionEditorViewModel {
             return
         }
 
-        Task { [weak self, editorController] in
-            guard let self else {
-                return
-            }
-
-            guard let snapshot = try? await editorController.loadIncome(id: incomeId) else {
+        loadingTask?.cancel()
+        let generation = lifecycleGeneration
+        loadingTask = Task { [weak self, editorController] in
+            guard !Task.isCancelled else { return }
+            let snapshot = try? await editorController.loadIncome(id: incomeId)
+            guard let self, !Task.isCancelled, !isStopped, generation == lifecycleGeneration else { return }
+            guard let snapshot else {
                 isLoading = false
                 didFailToLoad = true
                 return
@@ -327,7 +382,7 @@ final class NativeTransactionEditorViewModel {
     }
 
     private func completeSave(
-        result: IosNativeTransactionEditorResult,
+        result: NativeEditorWriteOutcome,
         onComplete: @escaping (String?) -> Void
     ) {
         isSaving = false

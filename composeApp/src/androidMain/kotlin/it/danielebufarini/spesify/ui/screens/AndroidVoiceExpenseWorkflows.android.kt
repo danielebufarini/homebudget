@@ -1,8 +1,11 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.GenerativeModel
 import it.danielebufarini.spesify.data.ExpenseRepository
+import it.danielebufarini.spesify.data.TransactionEditorService
 import it.danielebufarini.spesify.database.Category
 
 // High-level Android voice-expense orchestration steps used by the dialog UI.
@@ -26,7 +29,7 @@ internal suspend fun checkAndroidVoiceExpenseAvailability(
     generativeModel: GenerativeModel,
     uiStrings: AndroidVoiceExpenseUiStrings
 ): AndroidVoiceExpenseAvailabilityCheckResult {
-    return runCatching {
+    return runCatchingCancellable {
         generativeModel.checkStatus()
     }.fold(
         onSuccess = { status ->
@@ -52,7 +55,7 @@ internal suspend fun buildAndroidVoiceExpenseDraft(
     availability: Int?,
     uiStrings: AndroidVoiceExpenseUiStrings
 ): AndroidVoiceExpenseDraftBuildResult {
-    return runCatching {
+    return runCatchingCancellable {
         val snapshot = loadAndroidVoiceExpenseSnapshot(
             repository = repository,
             resolveCategoryName = resolveCategoryName
@@ -91,12 +94,14 @@ internal suspend fun buildAndroidVoiceExpenseDraft(
 
 internal suspend fun commitAndroidVoiceExpenseDraft(
     draft: AndroidVoiceExpenseDraft,
+    editorService: TransactionEditorService,
     repository: ExpenseRepository,
     uiStrings: AndroidVoiceExpenseUiStrings
 ): AndroidVoiceExpenseDraftCommitResult {
-    return runCatching {
+    return runCatchingCancellable {
         persistAndroidVoiceExpenseDraft(
             draft = draft,
+            editorService = editorService,
             repository = repository,
             uiStrings = uiStrings
         )

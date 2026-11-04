@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
+import kotlinx.coroutines.CancellationException
+
 import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -42,6 +44,8 @@ internal class KtorAppWhitelistRemoteDataSource(
     override suspend fun fetchWhitelist(): List<WhitelistedApp> {
         val response = try {
             transport.get(url)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: AppWhitelistSyncException) {
             throw error
         } catch (error: Exception) {

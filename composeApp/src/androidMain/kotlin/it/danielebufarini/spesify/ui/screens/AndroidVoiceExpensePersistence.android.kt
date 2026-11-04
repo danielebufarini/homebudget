@@ -2,7 +2,10 @@ package it.danielebufarini.spesify.ui.screens
 
 import it.danielebufarini.spesify.data.ExpenseRepository
 import it.danielebufarini.spesify.data.IdGenerator
-import it.danielebufarini.spesify.data.PendingExpense
+import it.danielebufarini.spesify.data.EditorItem
+import it.danielebufarini.spesify.data.SaveExpenseCommand
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.requireSuccess
 import it.danielebufarini.spesify.data.formatAmountInput
 import it.danielebufarini.spesify.data.parseAmountInput
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_EXPENSE
@@ -58,7 +61,8 @@ internal suspend fun loadAndroidVoiceExpenseSnapshot(
 internal suspend fun persistAndroidVoiceExpenseDraft(
     draft: AndroidVoiceExpenseDraft,
     repository: ExpenseRepository,
-    uiStrings: AndroidVoiceExpenseUiStrings
+    uiStrings: AndroidVoiceExpenseUiStrings,
+    editorService: TransactionEditorService
 ) {
     val amount = parseAmountInput(draft.amountInput)
         ?: error(uiStrings.voiceExpenseInvalidAmount)
@@ -66,46 +70,20 @@ internal suspend fun persistAndroidVoiceExpenseDraft(
         uiStrings.voiceExpenseValueAmountPositive
     }
 
-    when (draft.action) {
-        AndroidVoiceExpenseActionKind.Create -> {
-            repository.insertExpenses(
-                expenses = listOf(
-                    PendingExpense(
-                        id = buildAndroidVoiceExpenseId(),
-                        amount = amount,
-                        date = draft.date,
-                        categoryId = draft.categoryId,
-                        description = draft.description?.takeIf { it.isNotBlank() },
-                        isShared = draft.isShared,
-                        recurringSeriesId = null
-                    )
-                )
-            )
-        }
-
+    val item = when (draft.action) {
+        AndroidVoiceExpenseActionKind.Create -> EditorItem.New(buildAndroidVoiceExpenseId())
         AndroidVoiceExpenseActionKind.Update -> {
             val expenseId = draft.expenseId ?: error(uiStrings.expenseIdMissing)
             val existingExpense = repository.getExpenseById(expenseId) ?: error(uiStrings.expenseNotFound)
-            repository.insertExpenses(
-                expenses = listOf(
-                    PendingExpense(
-                        id = existingExpense.id,
-                        amount = amount,
-                        date = draft.date,
-                        categoryId = draft.categoryId,
-                        description = draft.description?.takeIf { it.isNotBlank() },
-                        isShared = draft.isShared,
-                        recurringSeriesId = existingExpense.recurringSeriesId
-                    )
-                )
-            )
+            EditorItem.Existing(existingExpense.id, existingExpense.recurringSeriesId)
         }
-
         AndroidVoiceExpenseActionKind.NeedClarification,
-        AndroidVoiceExpenseActionKind.Ignore -> {
-            error(uiStrings.nothingToSave)
-        }
+        AndroidVoiceExpenseActionKind.Ignore -> error(uiStrings.nothingToSave)
     }
+    editorService.execute(SaveExpenseCommand(
+        item = item, amount = amount, date = draft.date, categoryId = draft.categoryId,
+        description = draft.description?.takeIf { it.isNotBlank() }, isShared = draft.isShared
+    )).requireSuccess()
 }
 
 internal fun buildAndroidVoiceExpenseId(): String = IdGenerator.newId("voice-expense")

@@ -1,17 +1,23 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
+import it.danielebufarini.spesify.data.DeleteTransactionCommand
+import it.danielebufarini.spesify.data.EditorDeletion
+import it.danielebufarini.spesify.data.EditorItem
+import it.danielebufarini.spesify.data.EditorMutationScope
 import it.danielebufarini.spesify.data.ExpenseRepository
-import it.danielebufarini.spesify.data.IdGenerator
-import it.danielebufarini.spesify.data.PendingIncome
-import it.danielebufarini.spesify.data.buildPendingExpenses
-import it.danielebufarini.spesify.data.buildRecurringMonthlyExpenses
-import it.danielebufarini.spesify.data.buildRecurringMonthlyIncomes
+import it.danielebufarini.spesify.data.ExpenseSchedule
+import it.danielebufarini.spesify.data.SaveExpenseCommand
+import it.danielebufarini.spesify.data.SaveIncomeCommand
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.TransactionKind
 import it.danielebufarini.spesify.data.evaluateAmountExpressionInput
 import it.danielebufarini.spesify.data.formatAmountInput
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.data.requireSuccess
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosNativeTransactionEditorResult(
     val isSuccess: Boolean,
@@ -30,9 +36,10 @@ class IosNativeIncomeEditorSnapshot(
 
 class IosNativeTransactionEditorController {
     private val repository: ExpenseRepository by lazy {
-        ensureIosNativeTransactionEditorKoinStarted()
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
     }
+
+    private val editorService: TransactionEditorService by lazy { iosKoin().get() }
 
     suspend fun loadIncome(id: String): IosNativeIncomeEditorSnapshot? {
         val income = withContext(Dispatchers.Default) {
@@ -72,29 +79,12 @@ class IosNativeTransactionEditorController {
         }
 
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                val expenses = if (isRecurringMonthly) {
-                    buildRecurringMonthlyExpenses(
-                        amount = parsedAmount,
-                        firstDate = dateMillis,
-                        categoryId = categoryId,
-                        description = description,
-                        isShared = isShared,
-                        recurringSeriesId = buildIosRecurringExpenseSeriesId(),
-                        idProvider = ::buildIosExpenseId
-                    )
-                } else {
-                    buildPendingExpenses(
-                        amount = parsedAmount,
-                        firstDate = dateMillis,
-                        installments = installmentCount,
-                        categoryId = categoryId,
-                        description = description,
-                        isShared = isShared,
-                        idProvider = ::buildIosExpenseId
-                    )
-                }
-                repository.insertExpenses(expenses)
+            runCatchingCancellable {
+                editorService.execute(SaveExpenseCommand(
+                    item = EditorItem.New(), amount = parsedAmount, date = dateMillis, categoryId = categoryId,
+                    description = description.ifBlank { null }, isShared = isShared,
+                    schedule = if (isRecurringMonthly) ExpenseSchedule.Monthly else ExpenseSchedule.Installments(installmentCount)
+                )).requireSuccess()
             }
         }
 
@@ -122,29 +112,11 @@ class IosNativeTransactionEditorController {
 
         val normalizedCategoryId = categoryId?.takeIf { it.isNotBlank() }
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                val incomes = if (isRecurringMonthly) {
-                    buildRecurringMonthlyIncomes(
-                        amount = parsedAmount,
-                        firstDate = dateMillis,
-                        description = description,
-                        categoryId = normalizedCategoryId,
-                        recurringSeriesId = buildIosRecurringIncomeSeriesId(),
-                        idProvider = ::buildIosIncomeId
-                    )
-                } else {
-                    listOf(
-                        PendingIncome(
-                            id = buildIosIncomeId(),
-                            amount = parsedAmount,
-                            date = dateMillis,
-                            description = description.ifBlank { null },
-                            categoryId = normalizedCategoryId,
-                            recurringSeriesId = null
-                        )
-                    )
-                }
-                repository.insertIncomes(incomes)
+            runCatchingCancellable {
+                editorService.execute(SaveIncomeCommand(
+                    item = EditorItem.New(), amount = parsedAmount, date = dateMillis, categoryId = normalizedCategoryId,
+                    description = description.ifBlank { null }, recurringMonthly = isRecurringMonthly
+                )).requireSuccess()
             }
         }
 
@@ -175,67 +147,15 @@ class IosNativeTransactionEditorController {
         val normalizedCategoryId = categoryId?.takeIf { it.isNotBlank() }
         val normalizedDescription = description.ifBlank { null }
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 val existingIncome = repository.getIncomeById(incomeId)
                     ?: error("income-not-found")
-                val recurringSeriesId = existingIncome.recurringSeriesId
-
-                when {
-                    recurringSeriesId != null && updateWholeSeries -> {
-                        repository.updateRecurringIncomeSeries(
-                            anchorIncomeId = existingIncome.id,
-                            seriesId = recurringSeriesId,
-                            amount = parsedAmount,
-                            date = dateMillis,
-                            description = normalizedDescription,
-                            categoryId = normalizedCategoryId
-                        )
-                    }
-
-                    recurringSeriesId != null -> {
-                        repository.insertIncomes(
-                            listOf(
-                                PendingIncome(
-                                    id = existingIncome.id,
-                                    amount = parsedAmount,
-                                    date = dateMillis,
-                                    description = normalizedDescription,
-                                    categoryId = normalizedCategoryId,
-                                    recurringSeriesId = recurringSeriesId
-                                )
-                            )
-                        )
-                    }
-
-                    isRecurringMonthly -> {
-                        val incomes = buildRecurringMonthlyIncomes(
-                            amount = parsedAmount,
-                            firstDate = dateMillis,
-                            description = normalizedDescription,
-                            categoryId = normalizedCategoryId,
-                            recurringSeriesId = buildIosRecurringIncomeSeriesId(),
-                            idProvider = ::buildIosIncomeId
-                        ).mapIndexed { index, income ->
-                            if (index == 0) income.copy(id = existingIncome.id) else income
-                        }
-                        repository.insertIncomes(incomes)
-                    }
-
-                    else -> {
-                        repository.insertIncomes(
-                            listOf(
-                                PendingIncome(
-                                    id = existingIncome.id,
-                                    amount = parsedAmount,
-                                    date = dateMillis,
-                                    description = normalizedDescription,
-                                    categoryId = normalizedCategoryId,
-                                    recurringSeriesId = null
-                                )
-                            )
-                        )
-                    }
-                }
+                editorService.execute(SaveIncomeCommand(
+                    item = EditorItem.Existing(existingIncome.id, existingIncome.recurringSeriesId),
+                    amount = parsedAmount, date = dateMillis, categoryId = normalizedCategoryId,
+                    description = normalizedDescription, recurringMonthly = isRecurringMonthly,
+                    scope = if (updateWholeSeries) EditorMutationScope.Series else EditorMutationScope.Single
+                )).requireSuccess()
             }
         }
 
@@ -251,15 +171,13 @@ class IosNativeTransactionEditorController {
         deleteWholeSeries: Boolean
     ): IosNativeTransactionEditorResult {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 val existingIncome = repository.getIncomeById(incomeId)
                     ?: error("income-not-found")
-                val recurringSeriesId = existingIncome.recurringSeriesId
-                if (deleteWholeSeries && recurringSeriesId != null) {
-                    repository.deleteRecurringIncomeSeries(recurringSeriesId)
-                } else {
-                    repository.deleteIncome(incomeId)
-                }
+                val target = if (deleteWholeSeries && existingIncome.recurringSeriesId != null) {
+                    EditorDeletion.Series(existingIncome.recurringSeriesId)
+                } else EditorDeletion.Single(incomeId)
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Income, target)).requireSuccess()
             }
         }
 
@@ -271,17 +189,3 @@ class IosNativeTransactionEditorController {
     }
 
 }
-
-private fun ensureIosNativeTransactionEditorKoinStarted() {
-    if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-        initKoin()
-    }
-}
-
-private fun buildIosExpenseId(): String = IdGenerator.newId("expense")
-
-private fun buildIosIncomeId(): String = IdGenerator.newId("income")
-
-private fun buildIosRecurringExpenseSeriesId(): String = IdGenerator.newId("recurring-expense")
-
-private fun buildIosRecurringIncomeSeriesId(): String = IdGenerator.newId("recurring-income")

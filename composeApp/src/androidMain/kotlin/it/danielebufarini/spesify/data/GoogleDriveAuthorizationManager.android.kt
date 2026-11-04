@@ -90,7 +90,7 @@ class GoogleDriveAuthorizationManager(
     }
 
     suspend fun beginManualAuthorization(activity: Activity): DriveAuthorizationResult {
-        runCatching {
+        runCatchingCancellable {
             attemptReturningUserGoogleSignIn(activity)
         }
 
@@ -117,7 +117,7 @@ class GoogleDriveAuthorizationManager(
             return DriveAuthorizationResult.Failed(null)
         }
 
-        return runCatching {
+        return runCatchingCancellable {
             Identity.getAuthorizationClient(appContext)
                 .getAuthorizationResultFromIntent(data)
         }.fold(
@@ -167,7 +167,7 @@ class GoogleDriveAuthorizationManager(
     }
 
     private suspend fun requestDriveAuthorizationSilently(): AuthorizationResult? {
-        return runCatching {
+        return runCatchingCancellable {
             Identity.getAuthorizationClient(appContext)
                 .authorize(buildAuthorizationRequest())
                 .awaitResult()
@@ -175,7 +175,7 @@ class GoogleDriveAuthorizationManager(
     }
 
     private suspend fun requestDriveAuthorization(activity: Activity): AuthorizationResult? {
-        return runCatching {
+        return runCatchingCancellable {
             Identity.getAuthorizationClient(activity)
                 .authorize(buildAuthorizationRequest())
                 .awaitResult()

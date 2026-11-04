@@ -4,10 +4,9 @@ import it.danielebufarini.spesify.data.CategoryAgentUseCase
 import it.danielebufarini.spesify.data.CategoryCommandResult
 import it.danielebufarini.spesify.data.CategoryListResult
 import it.danielebufarini.spesify.data.TransactionKind
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosCategoryListIntentResult(
     val status: String,
@@ -23,10 +22,7 @@ class IosCategoryListIntentResult(
 
 class IosCategoryManagementIntentController {
     private val categoryAgentUseCase: CategoryAgentUseCase by lazy {
-        if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-            initKoin()
-        }
-        KoinPlatformTools.defaultContext().get().get<CategoryAgentUseCase>()
+        iosKoin().get<CategoryAgentUseCase>()
     }
 
     suspend fun listCategories(kind: TransactionKind): IosCategoryListIntentResult {

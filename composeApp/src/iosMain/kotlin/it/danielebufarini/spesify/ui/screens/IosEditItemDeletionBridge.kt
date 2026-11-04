@@ -1,10 +1,16 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.ExpenseRepository
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.DeleteTransactionCommand
+import it.danielebufarini.spesify.data.TransactionKind
+import it.danielebufarini.spesify.data.EditorDeletion
+import it.danielebufarini.spesify.data.requireSuccess
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosExpenseDeletionMetadata(
     val id: String,
@@ -18,11 +24,10 @@ class IosIncomeDeletionMetadata(
 
 class IosEditItemDeletionController {
     private val repository: ExpenseRepository by lazy {
-        if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-            initKoin()
-        }
-        KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+        iosKoin().get<ExpenseRepository>()
     }
+
+    private val editorService: TransactionEditorService by lazy { iosKoin().get() }
 
     suspend fun loadExpenseMetadata(id: String): IosExpenseDeletionMetadata? {
         val expense = withContext(Dispatchers.Default) {
@@ -50,8 +55,8 @@ class IosEditItemDeletionController {
 
     suspend fun deleteExpense(id: String): IosBooleanResult {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                repository.deleteExpense(id)
+            runCatchingCancellable {
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Expense, EditorDeletion.Single(id))).requireSuccess()
             }
         }
         return IosBooleanResult(result.isSuccess)
@@ -59,8 +64,8 @@ class IosEditItemDeletionController {
 
     suspend fun deleteRecurringExpenseSeries(seriesId: String): IosBooleanResult {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                repository.deleteRecurringExpenseSeries(seriesId)
+            runCatchingCancellable {
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Expense, EditorDeletion.Series(seriesId))).requireSuccess()
             }
         }
         return IosBooleanResult(result.isSuccess)
@@ -68,8 +73,8 @@ class IosEditItemDeletionController {
 
     suspend fun deleteIncome(id: String): IosBooleanResult {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                repository.deleteIncome(id)
+            runCatchingCancellable {
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Income, EditorDeletion.Single(id))).requireSuccess()
             }
         }
         return IosBooleanResult(result.isSuccess)
@@ -77,8 +82,8 @@ class IosEditItemDeletionController {
 
     suspend fun deleteRecurringIncomeSeries(seriesId: String): IosBooleanResult {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                repository.deleteRecurringIncomeSeries(seriesId)
+            runCatchingCancellable {
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Income, EditorDeletion.Series(seriesId))).requireSuccess()
             }
         }
         return IosBooleanResult(result.isSuccess)

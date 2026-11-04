@@ -5,44 +5,22 @@ import Foundation
 enum CloudBackupBackgroundTasks {
     static let identifier = "it.danielebufarini.spesify.cloudsync"
 
-    private final class CancellationState: @unchecked Sendable {
-        private let lock = NSLock()
-        private var cancelled = false
+    /// BGTask is an Objective-C system lease without Sendable conformance. The immutable reference
+    /// is transferred only through this adapter; the job reserves completion once under its mutex,
+    /// and the sole setTaskCompleted call runs on MainActor. No mutable application state crosses it.
+    private final class BackgroundTaskCompletion: @unchecked Sendable {
+        private let task: BGProcessingTask
 
-        func cancel() {
-            lock.lock()
-            cancelled = true
-            lock.unlock()
-        }
+        init(task: BGProcessingTask) { self.task = task }
 
-        var isCancelled: Bool {
-            lock.lock()
-            let value = cancelled
-            lock.unlock()
-            return value
+        func complete(success: Bool) async {
+            await MainActor.run { task.setTaskCompleted(success: success) }
         }
     }
 
-    private final class BackgroundTaskCompletion: @unchecked Sendable {
-        private let lock = NSLock()
-        private let task: BGProcessingTask
-        private var didComplete = false
-
-        init(task: BGProcessingTask) {
-            self.task = task
-        }
-
-        func complete(success: Bool) {
-            lock.lock()
-            guard !didComplete else {
-                lock.unlock()
-                return
-            }
-            didComplete = true
-            lock.unlock()
-
-            task.setTaskCompleted(success: success)
-        }
+    private struct ExportError: LocalizedError {
+        let message: String?
+        var errorDescription: String? { message }
     }
 
     static func register() {
@@ -71,46 +49,21 @@ enum CloudBackupBackgroundTasks {
 
     private static func handle(_ task: BGProcessingTask) {
         schedule()
-        let cancellationState = CancellationState()
         let completion = BackgroundTaskCompletion(task: task)
-        let backupTask = Task {
-            let success = await performCloudBackup(cancellationState: cancellationState)
-            guard !Task.isCancelled else {
-                return
-            }
-            completion.complete(success: success)
-        }
-
-        task.expirationHandler = {
-            cancellationState.cancel()
-            backupTask.cancel()
-            completion.complete(success: false)
-        }
-    }
-
-    private static func performCloudBackup(cancellationState: CancellationState) async -> Bool {
-        guard !cancellationState.isCancelled else {
-            return false
-        }
-
-        let controller = IosBackupExportController()
-        guard !cancellationState.isCancelled,
-              !Task.isCancelled,
-              let result = try? await controller.exportBackup(),
-              result.errorMessage == nil,
-              let content = result.content else {
-            return false
-        }
-
-        guard !cancellationState.isCancelled, !Task.isCancelled else {
-            return false
-        }
-
-        do {
-            try ICloudBackupStore.writeBackupSync(text: content)
-            return !cancellationState.isCancelled && !Task.isCancelled
-        } catch {
-            return false
-        }
+        let job = CloudBackupJob(
+            export: {
+                let result = try await IosBackupExportController().exportBackup()
+                guard result.errorMessage == nil, let content = result.content else {
+                    throw ExportError(message: result.errorMessage)
+                }
+                return content
+            },
+            archive: ICloudBackupStore.archive,
+            reportCompletion: { success in await completion.complete(success: success) }
+        )
+        // Install expiry before starting work. A pre-start expiry wins the job's terminal state
+        // and prevents export; the worker is owned before it can pass its first active-state check.
+        task.expirationHandler = { job.expire() }
+        job.start()
     }
 }

@@ -16,18 +16,19 @@ import it.danielebufarini.spesify.data.DatabaseTransactionRunner
 import it.danielebufarini.spesify.data.ExpenseEntryRepository
 import it.danielebufarini.spesify.data.ExpenseReadRepository
 import it.danielebufarini.spesify.data.ExpenseRepository
-import it.danielebufarini.spesify.data.ExpenseRepositoryBudgetDataReplacementAdapter
-import it.danielebufarini.spesify.data.ExpenseRepositoryCategoryManagementAdapter
-import it.danielebufarini.spesify.data.ExpenseRepositoryDashboardReadAdapter
-import it.danielebufarini.spesify.data.ExpenseRepositoryIncomeReadAdapter
-import it.danielebufarini.spesify.data.ExpenseRepositoryReadAdapter
-import it.danielebufarini.spesify.data.ExpenseRepositoryTransactionWriteAdapter
+import it.danielebufarini.spesify.data.BudgetDataReplacementRepositoryAdapter
+import it.danielebufarini.spesify.data.CategoryManagementRepositoryAdapter
+import it.danielebufarini.spesify.data.DashboardReadRepositoryAdapter
+import it.danielebufarini.spesify.data.IncomeReadRepositoryAdapter
+import it.danielebufarini.spesify.data.ExpenseReadRepositoryAdapter
+import it.danielebufarini.spesify.data.TransactionWriteRepositoryAdapter
 import it.danielebufarini.spesify.data.FinancialQueryUseCase
 import it.danielebufarini.spesify.data.IncomeReadRepository
 import it.danielebufarini.spesify.data.IncomeRepository
 import it.danielebufarini.spesify.data.PersistentWriteScope
 import it.danielebufarini.spesify.data.RecurringTransactionService
 import it.danielebufarini.spesify.data.TransactionWriteRepository
+import it.danielebufarini.spesify.data.TransactionEditorService
 import it.danielebufarini.spesify.data.WidgetRefreshCoordinator
 import it.danielebufarini.spesify.data.notifications.ExpenseInterpretationPipeline
 import it.danielebufarini.spesify.data.notifications.InterpretExpenseTextUseCase
@@ -56,7 +57,8 @@ val sharedModule = module {
     single { IncomeRepository(get(), get(), get()) }
     single { DashboardRepository(get()) }
     single { RecurringTransactionService(get(), get(), get()) }
-    single { AddTransactionUseCase(get<CategoryManagementRepository>(), get<TransactionWriteRepository>()) }
+    single { TransactionEditorService(get()) }
+    single { AddTransactionUseCase(get<CategoryManagementRepository>(), get<TransactionWriteRepository>(), get()) }
     single { CategoryAgentUseCase(get<CategoryManagementRepository>()) }
     single { FinancialQueryUseCase(get(), get()) }
     single { RegexExpenseTextInterpreter() }
@@ -71,12 +73,12 @@ val sharedModule = module {
     single { InterpretExpenseTextUseCase(get()) }
     single { DataReplacementService(get(), get(), get()) }
     single { ExpenseRepository(get(), get(), get(), get(), get(), get()) }
-    single<CategoryManagementRepository> { ExpenseRepositoryCategoryManagementAdapter(get()) }
-    single<ExpenseReadRepository> { ExpenseRepositoryReadAdapter(get()) }
-    single<IncomeReadRepository> { ExpenseRepositoryIncomeReadAdapter(get()) }
-    single<DashboardReadRepository> { ExpenseRepositoryDashboardReadAdapter(get()) }
-    single<TransactionWriteRepository> { ExpenseRepositoryTransactionWriteAdapter(get()) }
-    single<BudgetDataReplacementRepository> { ExpenseRepositoryBudgetDataReplacementAdapter(get()) }
+    single<CategoryManagementRepository> { CategoryManagementRepositoryAdapter(get()) }
+    single<ExpenseReadRepository> { ExpenseReadRepositoryAdapter(get()) }
+    single<IncomeReadRepository> { IncomeReadRepositoryAdapter(get()) }
+    single<DashboardReadRepository> { DashboardReadRepositoryAdapter(get()) }
+    single<TransactionWriteRepository> { TransactionWriteRepositoryAdapter(get(), get(), get()) }
+    single<BudgetDataReplacementRepository> { BudgetDataReplacementRepositoryAdapter(get()) }
     single { BackupRestoreService(get()) }
     single { CloudSyncService(get()) }
 }

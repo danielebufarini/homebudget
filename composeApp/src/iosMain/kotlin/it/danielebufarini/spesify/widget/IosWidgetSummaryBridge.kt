@@ -1,8 +1,10 @@
 package it.danielebufarini.spesify.widget
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.ExpenseRepository
 import it.danielebufarini.spesify.data.formatAmount
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
@@ -10,7 +12,6 @@ import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.getStringArray
-import org.koin.mp.KoinPlatformTools
 import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.currency_symbol
 import spesify.composeapp.generated.resources.full_month_names
@@ -30,17 +31,14 @@ class IosWidgetSummaryResult(
 
 class IosWidgetSummaryController {
     private val repository: ExpenseRepository by lazy {
-        if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-            initKoin()
-        }
-        KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+        iosKoin().get<ExpenseRepository>()
     }
 
     suspend fun loadCurrentMonthSummary(): IosWidgetSummaryResult {
         val monthNames = getStringArray(Res.array.full_month_names)
         val currencySymbol = getString(Res.string.currency_symbol)
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 val now = Clock.System.now()
                 val localDate = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
                 val summary = repository.getWidgetMonthSummary(

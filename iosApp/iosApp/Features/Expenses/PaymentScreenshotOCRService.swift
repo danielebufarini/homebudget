@@ -1,7 +1,7 @@
 @preconcurrency import ComposeApp
-@preconcurrency import ImageIO
-@preconcurrency import UIKit
-@preconcurrency import Vision
+import ImageIO
+import UIKit
+import Vision
 import Foundation
 import FoundationModels
 
@@ -64,63 +64,42 @@ enum PaymentScreenshotLlmAvailability {
 @MainActor
 final class VisionPaymentScreenshotOCRService: PaymentScreenshotOCRServicing {
     func recognizeText(in image: UIImage) async throws -> String {
+        try Task.checkCancellation()
         guard let imageData = image.pngData() ?? image.jpegData(compressionQuality: 1.0) else {
             throw PaymentScreenshotOCRError.imageCannotBeRead
         }
 
-        let orientationRawValue = CGImagePropertyOrientation(image.imageOrientation).rawValue
-
-        return try await Task.detached(priority: .userInitiated) {
-            do {
-                guard
-                    let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
-                    let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
-                else {
-                    throw PaymentScreenshotOCRError.imageCannotBeRead
-                }
-
-                let request = VNRecognizeTextRequest()
-                request.recognitionLevel = .accurate
-                request.usesLanguageCorrection = true
-                Self.applyPreferredRecognitionLanguages(to: request)
-
-                let orientation = CGImagePropertyOrientation(rawValue: orientationRawValue) ?? .up
-                let handler = VNImageRequestHandler(
-                    cgImage: cgImage,
-                    orientation: orientation,
-                    options: [:]
-                )
-                try handler.perform([request])
-
-                let lines = (request.results ?? [])
-                    .compactMap { $0.topCandidates(1).first?.string.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .filter { !$0.isEmpty }
-
-                let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else {
-                    throw PaymentScreenshotOCRError.noText
-                }
-
-                return text
-            } catch let error as PaymentScreenshotOCRError {
-                throw error
-            } catch {
-                throw PaymentScreenshotOCRError.recognitionFailed
-            }
-        }.value
+        return try await Self.recognizeText(data: imageData, orientation: CGImagePropertyOrientation(image.imageOrientation))
     }
 
-    nonisolated private static func applyPreferredRecognitionLanguages(to request: VNRecognizeTextRequest) {
-        let preferredLanguages = ["it-IT", "en-US"]
-
+    @concurrent
+    private static func recognizeText(data: Data, orientation: CGImagePropertyOrientation) async throws -> String {
         do {
-            let supportedLanguages = try request.supportedRecognitionLanguages()
+            try Task.checkCancellation()
+            var request = RecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            let preferredLanguages = [Locale.Language(identifier: "it-IT"), Locale.Language(identifier: "en-US")]
+            let supportedLanguages = request.supportedRecognitionLanguages
             let availableLanguages = preferredLanguages.filter { supportedLanguages.contains($0) }
-            if !availableLanguages.isEmpty {
-                request.recognitionLanguages = availableLanguages
-            }
+            if !availableLanguages.isEmpty { request.recognitionLanguages = availableLanguages }
+
+            // Vision owns execution in the caller's task; cancellation no longer leaves a detached worker.
+            let observations = try await request.perform(on: data, orientation: orientation)
+            try Task.checkCancellation()
+            let lines = observations.compactMap {
+                $0.topCandidates(1).first?.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.filter { !$0.isEmpty }
+            let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { throw PaymentScreenshotOCRError.noText }
+            return text
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as PaymentScreenshotOCRError {
+            throw error
         } catch {
-            request.recognitionLanguages = preferredLanguages
+            try Task.checkCancellation()
+            throw PaymentScreenshotOCRError.recognitionFailed
         }
     }
 }
@@ -176,47 +155,49 @@ struct PaymentScreenshotLlmResponse {
 }
 
 
-private struct PaymentScreenshotLlmCompletion: @unchecked Sendable {
-    let complete: (String) -> Void
-}
-
 struct PaymentScreenshotMoneyCandidate: Sendable {
     let amountMinor: Int64
     let currency: String?
     let originalText: String
 }
 
-final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseTextProvider, @unchecked Sendable {
-    private let interpreter = FoundationModelsPaymentScreenshotLlmInterpreter()
+final class FoundationModelsPaymentScreenshotLlmProvider: IosLocalLlmExpenseTextProvider, Sendable {
+    typealias Interpretation = @Sendable (String, [PaymentScreenshotMoneyCandidate]) async throws -> String
+    private let interpretation: Interpretation
+
+    init(interpretation: @escaping Interpretation = { text, candidates in
+        try await FoundationModelsPaymentScreenshotLlmInterpreter().interpret(text: text, moneyCandidates: candidates)
+    }) {
+        self.interpretation = interpretation
+    }
 
     func interpret(
         text: String,
         moneyCandidates: [MoneyCandidate],
         completion: @escaping (String) -> Void
-    ) {
-        let safeCompletion = PaymentScreenshotLlmCompletion(complete: completion)
+    ) -> any IosLocalLlmExpenseTextRequest {
+        let request = PaymentScreenshotLlmRequest(completion: completion)
         let candidates = moneyCandidates.map {
             PaymentScreenshotMoneyCandidate(
-                amountMinor: $0.amountMinor,
-                currency: $0.currency,
-                originalText: $0.originalText
+                amountMinor: $0.amountMinor, currency: $0.currency, originalText: $0.originalText
             )
         }
-        Task {
+        let task = Task { [interpretation] in
             do {
-                let json = try await interpreter.interpret(
-                    text: text,
-                    moneyCandidates: candidates
-                )
-                safeCompletion.complete(json)
+                try Task.checkCancellation()
+                let json = try await interpretation(text, candidates)
+                try Task.checkCancellation()
+                request.finish(json)
             } catch {
-                safeCompletion.complete("")
+                request.finish("")
             }
         }
+        request.attach(task)
+        return request
     }
 }
 
-final class FoundationModelsPaymentScreenshotLlmInterpreter: @unchecked Sendable {
+struct FoundationModelsPaymentScreenshotLlmInterpreter: Sendable {
     func interpret(
         text: String,
         moneyCandidates: [PaymentScreenshotMoneyCandidate]

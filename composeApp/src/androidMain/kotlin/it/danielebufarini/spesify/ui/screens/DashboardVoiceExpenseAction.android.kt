@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.transactions
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import it.danielebufarini.spesify.data.ExpenseRepository
+import it.danielebufarini.spesify.data.TransactionEditorService
 import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.AndroidVoiceExpenseActionKind
 import it.danielebufarini.spesify.ui.screens.AndroidVoiceExpenseDraft
@@ -52,6 +55,7 @@ import org.koin.compose.koinInject
 internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, modifier: Modifier) {
 
     val repository: ExpenseRepository = koinInject()
+    val editorService: TransactionEditorService = koinInject()
     val scope = rememberCoroutineScope()
     val generativeModel = remember { Generation.getClient() }
     val resolveCategoryName = rememberCategoryNameResolver()
@@ -262,6 +266,7 @@ internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, mo
                                 isSaving = true
                                 val draftCommitResult = commitAndroidVoiceExpenseDraft(
                                     draft = currentDraft,
+                                    editorService = editorService,
                                     repository = repository,
                                     uiStrings = uiStrings
                                 )
@@ -290,7 +295,7 @@ internal actual fun DashboardVoiceExpenseAction(openVoiceExpenseRequest: Int, mo
                             scope.launch {
                                 isDownloading = true
                                 statusMessage = uiStrings.voiceExpenseModelDownloading
-                                runCatching {
+                                runCatchingCancellable {
                                     generativeModel.download().collect()
                                     refreshAvailability()
                                 }.onSuccess {

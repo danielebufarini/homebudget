@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.di.iosKoin
+
 import it.danielebufarini.spesify.data.ExpenseRepository
 import it.danielebufarini.spesify.data.monthBounds
 import kotlinx.coroutines.Dispatchers
@@ -8,7 +10,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import org.koin.mp.KoinPlatformTools
 
 class IosGroupedExpensesObserver(
     private val year: Int,
@@ -40,11 +41,7 @@ class IosGroupedExpensesObserver(
             ) { expenses, categories, currentGroupingMode ->
                 val categoriesById = categories.associateBy { it.id }
                 val preparedExpenses = expenses.map { expense ->
-                    prepareExpense(
-                        expense = expense,
-                        categoriesById = categoriesById,
-                        localization = localization
-                    )
+                    with(localization) { prepareExpense(expense = expense, categoriesById = categoriesById) }
                 }
                 buildSnapshotsCache(
                     preparedExpenses = preparedExpenses,
@@ -70,7 +67,7 @@ class IosGroupedExpensesObserver(
     }
 
     private fun repository(): ExpenseRepository =
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
 }
 
 class IosRecurringExpensesObserver(
@@ -88,11 +85,7 @@ class IosRecurringExpensesObserver(
             ) { overview, categories ->
                 val categoriesById = categories.associateBy { it.id }
                 val preparedExpenses = overview.expenses.map { expense ->
-                    prepareRecurringExpense(
-                        expense = expense,
-                        categoriesById = categoriesById,
-                        localization = localization
-                    )
+                    with(localization) { prepareRecurringExpense(expense = expense, categoriesById = categoriesById) }
                 }
                 buildRecurringExpensesSnapshot(
                     preparedExpenses = preparedExpenses,
@@ -103,7 +96,7 @@ class IosRecurringExpensesObserver(
     }.flowOn(Dispatchers.Default)
 
     private fun repository(): ExpenseRepository =
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
 }
 
 class IosMonthlyIncomesObserver(
@@ -151,5 +144,5 @@ class IosMonthlyIncomesObserver(
     }
 
     private fun repository(): ExpenseRepository =
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
 }

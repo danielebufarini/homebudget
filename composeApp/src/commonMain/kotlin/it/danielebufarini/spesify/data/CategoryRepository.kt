@@ -88,6 +88,24 @@ class CategoryRepository(
         }
     }
 
+    internal suspend fun updateCategoryPreservingUnspecifiedFields(
+        id: String,
+        name: String,
+        icon: String,
+        color: String?,
+        categoryType: String?
+    ) {
+        val existingCategory = getCategoryById(id)
+            ?: error("Category $id not found")
+        updateCategory(
+            id = id,
+            name = name,
+            icon = icon,
+            color = color ?: existingCategory.color,
+            categoryType = categoryType ?: existingCategory.categoryType
+        )
+    }
+
     suspend fun setCategoryArchived(id: String, isArchived: Boolean) {
         categoryDao.setCategoryArchived(
             id = id,

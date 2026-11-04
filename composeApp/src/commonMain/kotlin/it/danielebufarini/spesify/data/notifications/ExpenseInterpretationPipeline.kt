@@ -1,7 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class ExpenseInterpretationPipelineConfig(
     val highConfidenceThreshold: Float = 0.85f,
@@ -88,7 +88,7 @@ class ExpenseInterpretationPipeline(
         if (moneyCandidates.isEmpty()) return emptyList()
 
         return try {
-            withTimeout(config.llmTimeoutMillis) {
+            withTimeoutOrNull(config.llmTimeoutMillis) {
                 llmExtractionValidator.validateAll(
                     extractions = interpreter.interpretAll(
                         text = text,
@@ -103,9 +103,9 @@ class ExpenseInterpretationPipeline(
                     .filter { it.confidence >= config.llmConfidenceThreshold }
                     .filter { it.currency == SUPPORTED_CURRENCY }
                     .distinctBy { it.amountMinor to it.merchant.orEmpty().uppercase() }
-            }
-        } catch (_: TimeoutCancellationException) {
-            emptyList()
+            }.orEmpty()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Throwable) {
             emptyList()
         }

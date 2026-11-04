@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
+import kotlinx.coroutines.CancellationException
+
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,8 @@ internal class AssetsAppWhitelistFallbackDataSource(
                     reader.readText()
                 }
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: Exception) {
             Log.e(TAG, "Bundled whitelist fallback could not be read asset=$assetFileName", error)
             throw AppWhitelistSyncException.BundledFallbackUnavailable(error)

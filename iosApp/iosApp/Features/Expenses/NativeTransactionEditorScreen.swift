@@ -282,9 +282,10 @@ struct NativeTransactionEditorScreen: View {
                 onCancel: onClose,
                 onConfirm: saveTransaction,
                 confirmLabel: viewModel.isEditingIncome ? appLocalized("Update") : appLocalized("Save"),
-                showsSecondaryAction: true
+                showsSecondaryAction: true,
+                confirmEnabled: viewModel.hasValidAmount
             )
-            .disabled(viewModel.isSaving || viewModel.isLoading || viewModel.didFailToLoad || !viewModel.hasValidAmount)
+            .disabled(viewModel.isSaving || viewModel.isLoading || viewModel.didFailToLoad)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }

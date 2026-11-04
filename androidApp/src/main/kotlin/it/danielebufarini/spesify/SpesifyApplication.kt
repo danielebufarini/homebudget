@@ -5,6 +5,7 @@ import it.danielebufarini.spesify.data.notifications.AppWhitelistRepository
 import it.danielebufarini.spesify.di.initKoin
 import it.danielebufarini.spesify.notificationsync.AppWhitelistSyncScheduler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -32,7 +33,7 @@ class SpesifyApplication : Application(), KoinComponent {
                     context = this@SpesifyApplication,
                     repository = appWhitelistRepository
                 )
-            }
+            }.onFailure { if (it is CancellationException) throw it }
         }
     }
 }

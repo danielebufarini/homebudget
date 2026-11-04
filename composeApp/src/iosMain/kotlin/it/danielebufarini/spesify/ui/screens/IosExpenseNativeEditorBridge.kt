@@ -1,15 +1,22 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
+import it.danielebufarini.spesify.data.DeleteTransactionCommand
+import it.danielebufarini.spesify.data.EditorDeletion
+import it.danielebufarini.spesify.data.EditorItem
+import it.danielebufarini.spesify.data.EditorMutationScope
 import it.danielebufarini.spesify.data.ExpenseRepository
-import it.danielebufarini.spesify.data.IdGenerator
-import it.danielebufarini.spesify.data.PendingExpense
-import it.danielebufarini.spesify.data.buildRecurringMonthlyExpensesFromExistingExpense
+import it.danielebufarini.spesify.data.ExpenseSchedule
+import it.danielebufarini.spesify.data.SaveExpenseCommand
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.TransactionKind
 import it.danielebufarini.spesify.data.evaluateAmountExpressionInput
 import it.danielebufarini.spesify.data.formatAmountInput
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.data.requireSuccess
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosExpenseEditorSnapshot(
     val id: String,
@@ -29,9 +36,10 @@ class IosExpenseEditorOperationResult(
 
 class IosExpenseEditorController {
     private val repository: ExpenseRepository by lazy {
-        ensureIosExpenseEditorKoinStarted()
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
     }
+
+    private val editorService: TransactionEditorService by lazy { iosKoin().get() }
 
     suspend fun loadExpense(id: String): IosExpenseEditorSnapshot? {
         val expense = withContext(Dispatchers.Default) {
@@ -74,72 +82,16 @@ class IosExpenseEditorController {
         }
 
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 val existingExpense = repository.getExpenseById(expenseId)
                     ?: error("expense-not-found")
-                val normalizedDescription = description.ifBlank { null }
-                val recurringSeriesId = existingExpense.recurringSeriesId
-
-                when {
-                    recurringSeriesId != null && updateWholeSeries -> {
-                        repository.updateRecurringExpenseSeries(
-                            anchorExpenseId = existingExpense.id,
-                            seriesId = recurringSeriesId,
-                            amount = parsedAmount,
-                            date = dateMillis,
-                            categoryId = categoryId,
-                            description = normalizedDescription,
-                            isShared = isShared
-                        )
-                    }
-
-                    recurringSeriesId != null -> {
-                        repository.insertExpenses(
-                            listOf(
-                                PendingExpense(
-                                    id = existingExpense.id,
-                                    amount = parsedAmount,
-                                    date = dateMillis,
-                                    categoryId = categoryId,
-                                    description = normalizedDescription,
-                                    isShared = isShared,
-                                    recurringSeriesId = recurringSeriesId
-                                )
-                            )
-                        )
-                    }
-
-                    isRecurringMonthly -> {
-                        repository.insertExpenses(
-                            buildRecurringMonthlyExpensesFromExistingExpense(
-                                existingExpenseId = existingExpense.id,
-                                amount = parsedAmount,
-                                firstDate = dateMillis,
-                                categoryId = categoryId,
-                                description = description,
-                                isShared = isShared,
-                                recurringSeriesId = buildIosRecurringExpenseSeriesId(),
-                                idProvider = ::buildIosExpenseId
-                            )
-                        )
-                    }
-
-                    else -> {
-                        repository.insertExpenses(
-                            listOf(
-                                PendingExpense(
-                                    id = existingExpense.id,
-                                    amount = parsedAmount,
-                                    date = dateMillis,
-                                    categoryId = categoryId,
-                                    description = normalizedDescription,
-                                    isShared = isShared,
-                                    recurringSeriesId = null
-                                )
-                            )
-                        )
-                    }
-                }
+                editorService.execute(SaveExpenseCommand(
+                    item = EditorItem.Existing(existingExpense.id, existingExpense.recurringSeriesId),
+                    amount = parsedAmount, date = dateMillis, categoryId = categoryId,
+                    description = description.ifBlank { null }, isShared = isShared,
+                    schedule = if (isRecurringMonthly) ExpenseSchedule.Monthly else ExpenseSchedule.Single,
+                    scope = if (updateWholeSeries) EditorMutationScope.Series else EditorMutationScope.Single
+                )).requireSuccess()
             }
         }
 
@@ -155,15 +107,13 @@ class IosExpenseEditorController {
         deleteWholeSeries: Boolean
     ): IosExpenseEditorOperationResult {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 val existingExpense = repository.getExpenseById(expenseId)
                     ?: error("expense-not-found")
-                val recurringSeriesId = existingExpense.recurringSeriesId
-                if (deleteWholeSeries && recurringSeriesId != null) {
-                    repository.deleteRecurringExpenseSeries(recurringSeriesId)
-                } else {
-                    repository.deleteExpense(expenseId)
-                }
+                val target = if (deleteWholeSeries && existingExpense.recurringSeriesId != null) {
+                    EditorDeletion.Series(existingExpense.recurringSeriesId)
+                } else EditorDeletion.Single(expenseId)
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Expense, target)).requireSuccess()
             }
         }
 
@@ -175,13 +125,3 @@ class IosExpenseEditorController {
     }
 
 }
-
-private fun ensureIosExpenseEditorKoinStarted() {
-    if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-        initKoin()
-    }
-}
-
-private fun buildIosExpenseId(): String = IdGenerator.newId("expense")
-
-private fun buildIosRecurringExpenseSeriesId(): String = IdGenerator.newId("recurring-expense")

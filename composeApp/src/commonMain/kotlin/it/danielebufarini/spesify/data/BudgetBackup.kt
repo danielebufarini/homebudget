@@ -279,11 +279,14 @@ private fun BudgetBackupSnapshot.toCounters() = BudgetBackupCounters(
     version = version
 )
 
+@OptIn(ExperimentalStdlibApi::class)
 private fun <T> ensureUniqueIds(
     items: List<T>,
     itemType: String,
     idSelector: (T) -> String
 ) {
+    if (items.allDistinctBy(idSelector)) return
+
     val duplicates = items.groupingBy(idSelector)
         .eachCount()
         .filterValues { it > 1 }

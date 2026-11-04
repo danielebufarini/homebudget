@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -25,7 +27,7 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val notification = sbn ?: return
         serviceScope.launch {
-            runCatching { processNotification(notification) }
+            runCatchingCancellable { processNotification(notification) }
                 .onFailure { error ->
                     Log.w(TAG, "Notification candidate processing failed", error)
                 }

@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.IdGenerator
 import it.danielebufarini.spesify.data.PendingExpense
 import it.danielebufarini.spesify.data.TransactionWriteRepository
@@ -28,7 +30,7 @@ internal class ExpenseNotificationActionHandler(
             ?: return ExpenseNotificationConfirmResult.NeedsReview
         if (data.amountMinor <= 0L) return ExpenseNotificationConfirmResult.NeedsReview
 
-        return runCatching {
+        return runCatchingCancellable {
             transactionWriteRepository.insertExpenses(
                 expenses = listOf(
                     PendingExpense(

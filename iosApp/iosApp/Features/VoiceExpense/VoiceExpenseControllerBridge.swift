@@ -3,15 +3,15 @@ import Foundation
 
 // Thin Swift mapping around the Kotlin iOS voice-expense async controller.
 
-extension IosVoiceExpenseController {
-    func loadSnapshotData() async -> VoiceExpenseSnapshotData? {
-        guard let snapshot = try? await loadSnapshot() else {
+extension IosVoiceExpenseController: VoiceExpenseControlling {
+    func loadSnapshotData() async throws -> VoiceExpenseSnapshotData? {
+        guard let snapshot = try await loadSnapshot() else {
             return nil
         }
         return buildVoiceExpenseSnapshotData(from: snapshot)
     }
 
-    func persist(draft: VoiceExpenseDraft) async -> (success: Bool, message: String?) {
+    func persist(draft: VoiceExpenseDraft) async throws -> (success: Bool, message: String?) {
         do {
             switch draft.intent {
             case .create:
@@ -42,6 +42,8 @@ extension IosVoiceExpenseController {
             case .ignore:
                 return (false, appLocalized("No usable expense command was found."))
             }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             return (false, error.localizedDescription)
         }

@@ -67,7 +67,7 @@ struct VoiceExpenseInterpretation {
     @Guide(description: "Existing expense id to update. Use nil for new expenses, clarification, or ignored commands.")
     var expenseId: String?
 
-    @Guide(description: "Expense amount in euros with two decimal digits, for example 12.50. Use nil when clarification is needed, the command is ignored, or the amount is unchanged in an update.")
+    @Guide(description: "Expense amount in euros with two decimal digits. Combine separately spoken euros and cents, including when the word cents is omitted after euros and; preserve both components. Use nil when clarification is needed, the command is ignored, or the amount is unchanged in an update.")
     var amount: String?
 
     @Guide(description: "Category id from the provided categories. Use nil when clarification is needed, the command is ignored, or the category is unchanged in an update.")
@@ -76,7 +76,7 @@ struct VoiceExpenseInterpretation {
     @Guide(description: "Category name that exactly matches one of the provided categories whenever possible. Use nil when clarification is needed, the command is ignored, or the category is unchanged in an update.")
     var categoryName: String?
 
-    @Guide(description: "Short expense description. Use nil when omitted, unchanged, or not applicable.")
+    @Guide(description: "Short expense description in the user's language. When the user explicitly dictates a description or note, copy that wording faithfully without translating or replacing it with a generic summary. Use nil when omitted, unchanged, or not applicable.")
     var description: String?
 
     @Guide(description: "Date in yyyy-MM-dd format. Resolve relative dates like yesterday, today, and tomorrow to a concrete date. For new expenses with no spoken date, use today's date. For updates with no spoken date, use nil.")

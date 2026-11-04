@@ -1,18 +1,18 @@
 package it.danielebufarini.spesify.ui.screens
 
-import it.danielebufarini.spesify.data.DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE
-import it.danielebufarini.spesify.data.ExpenseRepository
 import it.danielebufarini.spesify.data.TransactionPageCursor
 import it.danielebufarini.spesify.data.formatAmount
 import it.danielebufarini.spesify.data.sumAmountOf
 import it.danielebufarini.spesify.database.Category
 import it.danielebufarini.spesify.database.Expense
 import it.danielebufarini.spesify.database.Income
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import org.koin.mp.KoinPlatformTools
 
 class IosTransactionSearchSnapshot(
     val expenseSnapshot: IosGroupedExpensesSnapshot,
@@ -21,10 +21,16 @@ class IosTransactionSearchSnapshot(
     val canLoadMoreIncomeResults: Boolean
 )
 
-class IosTransactionSearchObserver(
+class IosTransactionSearchObserver internal constructor(
     private val query: String,
-    initialGroupingMode: String
+    initialGroupingMode: String,
+    private val source: IosTransactionSearchDataSource,
+    private val loadLocalization: suspend () -> IosGroupedLocalization
 ) {
+    constructor(query: String, initialGroupingMode: String) : this(
+        query, initialGroupingMode, RepositoryIosTransactionSearchDataSource(), ::loadIosGroupedLocalization
+    )
+    private val mutationMutex = Mutex()
     private val snapshotState = MutableStateFlow<IosTransactionSearchSnapshot?>(null)
     private var groupingMode = initialGroupingMode
     private var expenseCursor: TransactionPageCursor? = null
@@ -37,104 +43,81 @@ class IosTransactionSearchObserver(
     private var localization: IosGroupedLocalization? = null
     private var canLoadMoreExpenseResults = false
     private var canLoadMoreIncomeResults = false
-    private var isLoadingPage = false
     private var hasStarted = false
 
     val snapshots: StateFlow<IosTransactionSearchSnapshot?> = snapshotState.asStateFlow()
 
-    suspend fun start() {
+    suspend fun start() = mutationMutex.withLock {
         if (hasStarted) {
-            return
+            return@withLock
         }
-
+        source.seedCategories()
+        localization = loadLocalization()
+        latestCategories = source.categories()
+        loadNextPage()
         hasStarted = true
-        val repository = repository()
-        repository.seedStarterCategoriesIfEmpty()
-        localization = loadIosGroupedLocalization()
-        latestCategories = repository.getAllCategories().first()
-        loadNextPage(repository)
     }
 
-    suspend fun setGroupingMode(groupingMode: String) {
+    suspend fun setGroupingMode(groupingMode: String) = mutationMutex.withLock {
         if (this.groupingMode != groupingMode) {
             this.groupingMode = groupingMode
             publishSnapshot()
         }
     }
 
-    suspend fun loadMoreResults() {
-        loadNextPage(repository())
+    suspend fun loadMoreResults() = mutationMutex.withLock {
+        if (hasStarted) loadNextPage()
     }
 
-    suspend fun deleteExpense(id: String) {
-        repository().deleteExpense(id)
+    suspend fun deleteExpense(id: String) = mutationMutex.withLock {
+        source.deleteExpense(id)
         loadedExpenses = loadedExpenses.filterNot { it.id == id }
         publishSnapshot()
     }
 
-    suspend fun deleteIncome(id: String) {
-        repository().deleteIncome(id)
+    suspend fun deleteIncome(id: String) = mutationMutex.withLock {
+        source.deleteIncome(id)
         loadedIncomes = loadedIncomes.filterNot { it.id == id }
         publishSnapshot()
     }
 
-    suspend fun deleteRecurringExpenseSeries(seriesId: String) {
-        repository().deleteRecurringExpenseSeries(seriesId)
+    suspend fun deleteRecurringExpenseSeries(seriesId: String) = mutationMutex.withLock {
+        source.deleteExpenseSeries(seriesId)
         loadedExpenses = loadedExpenses.filterNot { it.recurringSeriesId == seriesId }
         publishSnapshot()
     }
 
-    suspend fun deleteRecurringIncomeSeries(seriesId: String) {
-        repository().deleteRecurringIncomeSeries(seriesId)
+    suspend fun deleteRecurringIncomeSeries(seriesId: String) = mutationMutex.withLock {
+        source.deleteIncomeSeries(seriesId)
         loadedIncomes = loadedIncomes.filterNot { it.recurringSeriesId == seriesId }
         publishSnapshot()
     }
 
-    private suspend fun loadNextPage(repository: ExpenseRepository) {
-        if (!hasStarted || isLoadingPage) {
-            return
+    private suspend fun loadNextPage() {
+        val shouldLoadExpenses = !hasLoadedExpensePage || canLoadMoreExpenseResults
+        val shouldLoadIncomes = !hasLoadedIncomePage || canLoadMoreIncomeResults
+        if (!shouldLoadExpenses && !shouldLoadIncomes) return
+
+        // Fetch before committing either cursor: a cancelled mixed page must not expose half its rows.
+        val expensePage = if (shouldLoadExpenses) source.expenses(query, expenseCursor) else null
+        val incomePage = if (shouldLoadIncomes) source.incomes(query, incomeCursor) else null
+        currentCoroutineContext().ensureActive()
+        if (expensePage != null) {
+            loadedExpenses = (loadedExpenses + expensePage.items).distinctBy(Expense::id)
+            expenseCursor = expensePage.nextCursor
+            canLoadMoreExpenseResults = expensePage.canLoadMore
+            hasLoadedExpensePage = true
         }
-
-        isLoadingPage = true
-        try {
-            val shouldLoadExpenses = !hasLoadedExpensePage || canLoadMoreExpenseResults
-            val shouldLoadIncomes = !hasLoadedIncomePage || canLoadMoreIncomeResults
-
-            if (!shouldLoadExpenses && !shouldLoadIncomes) {
-                return
-            }
-
-            if (shouldLoadExpenses) {
-                val nextExpensePage = repository.searchExpenseCandidatePage(
-                    query = query,
-                    limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
-                    cursor = expenseCursor
-                ).first()
-                loadedExpenses = (loadedExpenses + nextExpensePage.items).distinctBy(Expense::id)
-                expenseCursor = nextExpensePage.nextCursor
-                canLoadMoreExpenseResults = nextExpensePage.canLoadMore
-                hasLoadedExpensePage = true
-            }
-
-            if (shouldLoadIncomes) {
-                val nextIncomePage = repository.searchIncomeCandidatePage(
-                    query = query,
-                    limit = DEFAULT_TRANSACTION_SEARCH_PAGE_SIZE,
-                    cursor = incomeCursor
-                ).first()
-                loadedIncomes = (loadedIncomes + nextIncomePage.items).distinctBy(Income::id)
-                incomeCursor = nextIncomePage.nextCursor
-                canLoadMoreIncomeResults = nextIncomePage.canLoadMore
-                hasLoadedIncomePage = true
-            }
-
-            publishSnapshot()
-        } finally {
-            isLoadingPage = false
+        if (incomePage != null) {
+            loadedIncomes = (loadedIncomes + incomePage.items).distinctBy(Income::id)
+            incomeCursor = incomePage.nextCursor
+            canLoadMoreIncomeResults = incomePage.canLoadMore
+            hasLoadedIncomePage = true
         }
+        publishSnapshot()
     }
 
-    private suspend fun publishSnapshot() {
+    private fun publishSnapshot() {
         val localization = localization ?: return
         val snapshot = buildTransactionSearchSnapshot(
             query = query,
@@ -149,8 +132,6 @@ class IosTransactionSearchObserver(
         snapshotState.value = snapshot
     }
 
-    private fun repository(): ExpenseRepository =
-        KoinPlatformTools.defaultContext().get().get()
 }
 
 private fun buildTransactionSearchSnapshot(
@@ -174,11 +155,7 @@ private fun buildTransactionSearchSnapshot(
             expense.matchesTransactionSearch(searchTokens, categoryLabel, localization.currencySymbol)
         }
         .map { expense ->
-            prepareExpense(
-                expense = expense,
-                categoriesById = categoriesById,
-                localization = localization
-            )
+            with(localization) { prepareExpense(expense = expense, categoriesById = categoriesById) }
         }
         .toList()
     val preparedIncomes = incomes
@@ -191,11 +168,7 @@ private fun buildTransactionSearchSnapshot(
             income.matchesTransactionSearch(searchTokens, categoryLabel, localization.currencySymbol)
         }
         .map { income ->
-            prepareIncome(
-                income = income,
-                categoriesById = categoriesById,
-                localization = localization
-            )
+            with(localization) { prepareIncome(income = income, categoriesById = categoriesById) }
         }
         .toList()
 

@@ -66,7 +66,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.appfunctions)
-    implementation(libs.androidx.appfunctions.service)
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.koin.core)
     debugImplementation(libs.compose.uiTooling)

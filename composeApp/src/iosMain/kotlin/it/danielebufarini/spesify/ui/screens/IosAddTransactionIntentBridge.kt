@@ -5,17 +5,13 @@ import it.danielebufarini.spesify.data.AddTransactionResult
 import it.danielebufarini.spesify.data.AddTransactionUseCase
 import it.danielebufarini.spesify.data.TransactionCreationSource
 import it.danielebufarini.spesify.data.TransactionKind
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosAddTransactionIntentController {
     private val addTransactionUseCase: AddTransactionUseCase by lazy {
-        if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-            initKoin()
-        }
-        KoinPlatformTools.defaultContext().get().get<AddTransactionUseCase>()
+        iosKoin().get<AddTransactionUseCase>()
     }
 
     suspend fun addTransaction(

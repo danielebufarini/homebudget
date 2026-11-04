@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DashboardStateStore(
@@ -26,11 +27,11 @@ internal class DashboardStateStore(
     initialMonth: MonthCursor,
     scope: CoroutineScope
 ) {
-    private val monthCursor = MutableStateFlow(initialMonth)
+    private val monthSelection = MonthSelection(initialMonth)
 
-    val selectedMonth: StateFlow<MonthCursor> = monthCursor.asStateFlow()
+    val selectedMonth: StateFlow<MonthCursor> = monthSelection.readOnly
 
-    val summary: StateFlow<MonthlySummary> = monthCursor
+    val summary: StateFlow<MonthlySummary> = selectedMonth
         .flatMapLatest { month ->
             repository.getDashboardMonthSummary(
                 year = month.year,
@@ -46,7 +47,7 @@ internal class DashboardStateStore(
             initialValue = emptyDashboardMonthSummary().toUiMonthlySummary()
         )
 
-    private val balanceTrend: SharedFlow<Pair<MonthCursor, DashboardBalanceTrend>> = monthCursor
+    private val balanceTrend: SharedFlow<Pair<MonthCursor, DashboardBalanceTrend>> = selectedMonth
         .flatMapLatest { month ->
             repository.getDashboardBalanceTrend(
                 selectedYear = month.year,
@@ -87,7 +88,7 @@ internal class DashboardStateStore(
             initialValue = emptyList()
         )
 
-    val recurringExpenseOverview: StateFlow<RecurringExpenseOverview> = monthCursor
+    val recurringExpenseOverview: StateFlow<RecurringExpenseOverview> = selectedMonth
         .flatMapLatest { month ->
             repository.getRecurringExpenseOverviewForMonth(
                 year = month.year,
@@ -107,10 +108,27 @@ internal class DashboardStateStore(
         )
 
     fun selectPreviousMonth() {
-        monthCursor.value = monthCursor.value.previous()
+        monthSelection.previous()
     }
 
     fun selectNextMonth() {
-        monthCursor.value = monthCursor.value.next()
+        monthSelection.next()
+    }
+
+    // Explicit fields require a non-private property. This private owner keeps the mutable
+    // implementation inaccessible while selectedMonth retains its read-only runtime wrapper.
+    private class MonthSelection(initialMonth: MonthCursor) {
+        val current: StateFlow<MonthCursor>
+            field = MutableStateFlow(initialMonth)
+
+        val readOnly: StateFlow<MonthCursor> = current.asStateFlow()
+
+        fun previous() {
+            current.update { it.previous() }
+        }
+
+        fun next() {
+            current.update { it.next() }
+        }
     }
 }

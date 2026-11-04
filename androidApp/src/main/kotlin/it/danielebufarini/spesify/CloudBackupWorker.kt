@@ -7,6 +7,7 @@ import it.danielebufarini.spesify.data.AndroidCloudBackupStore
 import it.danielebufarini.spesify.data.CloudSyncService
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlinx.coroutines.CancellationException
 
 class CloudBackupWorker(
     appContext: Context,
@@ -22,7 +23,7 @@ class CloudBackupWorker(
             cloudBackupStore.writeBackupFile(backup)
         }.fold(
             onSuccess = { Result.success() },
-            onFailure = { Result.retry() }
+            onFailure = { if (it is CancellationException) throw it else Result.retry() }
         )
     }
 }

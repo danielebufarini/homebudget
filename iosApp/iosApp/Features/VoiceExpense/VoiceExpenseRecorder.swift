@@ -3,15 +3,31 @@ import Speech
 
 // Speech framework recorder and transcription capture for iOS voice expense input.
 
-final class VoiceExpenseRecorder: @unchecked Sendable {
+@MainActor
+final class VoiceExpenseRecorder: VoiceExpenseRecording {
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let recognizer = SFSpeechRecognizer(locale: .current)
     private var currentTranscript = ""
+    private var generation = 0
+    private var tapInstalled = false
+    private var sessionIsActive = false
+    private let requestPermissions: @Sendable () async throws -> Void
 
-    func start(onTranscript: @escaping @MainActor @Sendable (String) -> Void) async throws {
+    init(requestPermissions: @escaping @Sendable () async throws -> Void = VoiceExpenseRecorder.requestRecordingPermissions) {
+        self.requestPermissions = requestPermissions
+    }
+
+    func start(
+        onTranscript: @escaping @MainActor @Sendable (String) -> Void,
+        onFailure: @escaping @MainActor @Sendable (String) -> Void
+    ) async throws {
+        stop()
+        let requestGeneration = generation
         try await requestPermissions()
+        try Task.checkCancellation()
+        guard requestGeneration == generation else { throw CancellationError() }
 
         guard let recognizer else {
             throw VoiceExpenseError.transcriptionUnavailable
@@ -21,75 +37,78 @@ final class VoiceExpenseRecorder: @unchecked Sendable {
             throw VoiceExpenseError.transcriptionUnavailable
         }
 
-        stop()
-
         currentTranscript = ""
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        if recognizer.supportsOnDeviceRecognition {
-            request.requiresOnDeviceRecognition = true
-        }
-        recognitionRequest = request
-
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
-
-        let inputNode = audioEngine.inputNode
-        let inputFormat = inputNode.inputFormat(forBus: 0)
-        let outputFormat = inputNode.outputFormat(forBus: 0)
-        let format = validRecordingFormat(primary: inputFormat, secondary: outputFormat)
-        guard let format else {
-            throw VoiceExpenseError.microphoneUnavailable
-        }
-        inputNode.removeTap(onBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-            request.append(buffer)
-        }
-
-        audioEngine.prepare()
-        try audioEngine.start()
-
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else {
-                return
+        do {
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            if recognizer.supportsOnDeviceRecognition {
+                request.requiresOnDeviceRecognition = true
             }
+            recognitionRequest = request
 
-            if let result {
-                let transcript = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
-                Task { @MainActor in
-                    self.currentTranscript = transcript
-                    onTranscript(transcript)
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            sessionIsActive = true
+
+            let inputNode = audioEngine.inputNode
+            let inputFormat = inputNode.inputFormat(forBus: 0)
+            let outputFormat = inputNode.outputFormat(forBus: 0)
+            let format = validRecordingFormat(primary: inputFormat, secondary: outputFormat)
+            guard let format else {
+                throw VoiceExpenseError.microphoneUnavailable
+            }
+            VoiceExpenseAudioTap.install(on: inputNode, format: format, request: request)
+            tapInstalled = true
+
+            audioEngine.prepare()
+            try audioEngine.start()
+
+            recognitionTask = recognizer.recognitionTask(with: request) { @Sendable [weak self] result, error in
+                // Extract values before crossing executors; Speech result/error objects stay on their callback.
+                let transcript = result?.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                let failureMessage = error?.localizedDescription
+                Task { @MainActor [weak self] in
+                    guard let self, requestGeneration == self.generation else { return }
+                    if let transcript {
+                        self.currentTranscript = transcript
+                        onTranscript(transcript)
+                    }
+                    if let failureMessage {
+                        self.stop()
+                        onFailure(failureMessage)
+                    }
                 }
             }
-
-            if error != nil {
-                Task { @MainActor in
-                    self.stop()
-                }
-            }
+        } catch {
+            stop()
+            throw error
         }
     }
 
     @discardableResult
     func stop() -> String {
+        generation += 1
         audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        if tapInstalled {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
+        }
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         recognitionRequest = nil
         recognitionTask = nil
 
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-            // Keep cleanup best-effort.
+        if sessionIsActive {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            sessionIsActive = false
         }
 
         return currentTranscript
     }
 
-    private nonisolated func requestPermissions() async throws {
+    private nonisolated static func requestRecordingPermissions() async throws {
+        try Task.checkCancellation()
         let speechAuthorized = await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status == .authorized)
@@ -99,6 +118,8 @@ final class VoiceExpenseRecorder: @unchecked Sendable {
             throw VoiceExpenseError.speechPermissionDenied
         }
 
+        try Task.checkCancellation()
+
         let micAuthorized = await withCheckedContinuation { continuation in
             AVAudioApplication.requestRecordPermission { granted in
                 continuation.resume(returning: granted)
@@ -107,6 +128,7 @@ final class VoiceExpenseRecorder: @unchecked Sendable {
         guard micAuthorized else {
             throw VoiceExpenseError.microphonePermissionDenied
         }
+        try Task.checkCancellation()
     }
 
     private func validRecordingFormat(

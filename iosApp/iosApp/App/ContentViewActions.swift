@@ -1,195 +1,45 @@
-@preconcurrency import ComposeApp
 import SwiftUI
 import UniformTypeIdentifiers
 
-private enum CsvImportReadError: LocalizedError {
-    case fileTooLarge
-
-    var errorDescription: String? {
-        switch self {
-        case .fileTooLarge:
-            return appLocalized("Unable to import the CSV file")
-        }
-    }
-}
-
 extension ContentView {
     func consumePendingOpenURLIfNeeded() {
-        guard let pendingOpenURL else {
-            return
-        }
-
+        guard let pendingOpenURL else { return }
         self.pendingOpenURL = nil
         handleIncomingURL(pendingOpenURL.url)
     }
 
     func handleIncomingURL(_ url: URL) {
         if url.isFileURL {
-            handlePaymentScreenshotDocument(url)
+            transferModel.importScreenshot(from: url)
             return
         }
-
-        guard url.scheme == "spesify" else {
-            return
-        }
-
+        guard url.scheme == "spesify" else { return }
         switch url.host {
         case "add-expense":
             path.append(Route.addTransaction(initialKind: .expense, year: nil, month: nil))
         case "voice-expense":
             startVoiceExpense()
-        default:
-            break
+        default: break
         }
-    }
-
-    private func handlePaymentScreenshotDocument(_ url: URL) {
-        guard isSupportedPaymentScreenshotDocument(url) else {
-            showCsvFeedback(appLocalized("Unable to import this payment screenshot."), style: .error)
-            return
-        }
-
-        guard !isProcessingDocumentPaymentScreenshot else {
-            showCsvFeedback(appLocalized("Another payment screenshot is already being imported."), style: .error)
-            return
-        }
-
-        isProcessingDocumentPaymentScreenshot = true
-        Task { @MainActor in
-            defer {
-                isProcessingDocumentPaymentScreenshot = false
-            }
-
-            do {
-                let prefills = try await documentPaymentScreenshotImporter.candidates(fromImageFileAt: url)
-                guard !prefills.isEmpty else {
-                    showCsvFeedback(
-                        appLocalized("I could not find a usable expense in this screenshot."),
-                        style: .error
-                    )
-                    return
-                }
-
-                handlePaymentScreenshotCandidates(prefills)
-            } catch {
-                showCsvFeedback(paymentScreenshotImportMessage(for: error), style: .error)
-            }
-        }
-    }
-
-    private func isSupportedPaymentScreenshotDocument(_ url: URL) -> Bool {
-        if let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType,
-           contentType.conforms(to: .image) {
-            return true
-        }
-
-        guard let fallbackType = UTType(filenameExtension: url.pathExtension) else {
-            return false
-        }
-
-        return fallbackType.conforms(to: .image)
     }
 
     func handleCsvSelection(result: Result<URL, Error>) {
         switch result {
-        case let .success(url):
-            Task {
-                do {
-                    let text = try await readCsvText(from: url)
-                    await MainActor.run {
-                        importCsv(text: text)
-                    }
-                } catch {
-                    await MainActor.run {
-                        showCsvFeedback(error.localizedDescription, style: .error)
-                    }
-                }
-            }
+        case let .success(url): transferModel.importCsv(from: url)
         case let .failure(error):
+            transferModel.cancelCsvImport()
             showCsvFeedback(error.localizedDescription, style: .error)
-        }
-    }
-
-    func readCsvText(from url: URL) async throws -> String {
-        try await Task.detached(priority: .userInitiated) {
-            let didAccessSecurityScope = url.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScope {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            if let fileSize = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-               fileSize > Self.maxCsvImportBytes {
-                throw CsvImportReadError.fileTooLarge
-            }
-
-            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
-            guard data.count <= Self.maxCsvImportBytes else {
-                throw CsvImportReadError.fileTooLarge
-            }
-
-            return String(decoding: data, as: UTF8.self)
-        }.value
-    }
-
-    @MainActor
-    func importCsv(text: String) {
-        guard !text.isEmpty else {
-            showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)
-            return
-        }
-
-        Task { @MainActor [csvImportController] in
-            guard let result = try? await csvImportController.importCsv(text: text) else {
-                showCsvFeedback(appLocalized("Unable to import the CSV file"), style: .error)
-                return
-            }
-
-            if let successMessage = result.successMessage {
-                SpesifyWidgetSummaryRefresher.shared.refresh()
-                showCsvFeedback(successMessage, style: .success)
-            } else if let errorMessage = result.errorMessage {
-                showCsvFeedback(errorMessage, style: .error)
-            }
         }
     }
 
     func exportCsv(startDate: Date, endDate: Date) {
-        let normalizedStartDate = Calendar.current.startOfDay(for: startDate)
-        let normalizedEndDate = Calendar.current.startOfDay(for: endDate)
-
-        guard normalizedStartDate <= normalizedEndDate else {
-            showCsvFeedback(appLocalized("Start date must be on or before end date"), style: .error)
-            return
-        }
-
-        Task { @MainActor [csvExportController] in
-            let result = try? await csvExportController.exportCsv(
-                startDateMillis: Int64(normalizedStartDate.timeIntervalSince1970 * 1000),
-                endDateMillis: Int64(normalizedEndDate.timeIntervalSince1970 * 1000)
-            )
-
-            if let fileName = result?.fileName, let content = result?.content {
-                csvExportFilename = fileName
-                csvExportDocument = CsvExportDocument(text: content)
-                showCsvExportSheet = false
-                showCsvExporter = true
-            } else {
-                showCsvFeedback(
-                    result?.errorMessage ?? appLocalized("Unable to export the CSV file"),
-                    style: .error
-                )
-            }
-        }
+        transferModel.exportCsv(startDate: startDate, endDate: endDate)
     }
 
     func handleCsvExport(result: Result<URL, Error>) {
         switch result {
-        case .success:
-            showCsvFeedback(appLocalized("CSV file exported"), style: .success)
-        case let .failure(error):
-            showCsvFeedback(error.localizedDescription, style: .error)
+        case .success: showCsvFeedback(appLocalized("CSV file exported"), style: .success)
+        case let .failure(error): showCsvFeedback(error.localizedDescription, style: .error)
         }
     }
 
@@ -198,9 +48,7 @@ extension ContentView {
         bannerPresenter.show(message, style: style)
     }
 
-    var activeImportAllowedContentTypes: [UTType] {
-        [.commaSeparatedText, .plainText, .text]
-    }
+    var activeImportAllowedContentTypes: [UTType] { [.commaSeparatedText, .plainText, .text] }
 
     func handleImportSelection(result: Result<URL, Error>) {
         activeImportPicker = nil
@@ -208,10 +56,6 @@ extension ContentView {
     }
 
     func presentAfterMenuDismiss(_ action: @escaping @MainActor () -> Void) {
-        DispatchQueue.main.async {
-            Task { @MainActor in
-                action()
-            }
-        }
+        transferModel.presentAfterMenuDismiss(action)
     }
 }

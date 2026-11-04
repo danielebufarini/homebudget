@@ -2,11 +2,13 @@
 
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.ExpenseRepository
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosVoiceExpenseCategory(
     val id: String,
@@ -35,16 +37,14 @@ class IosVoiceExpensePersistResult(
 )
 
 class IosVoiceExpenseController {
+    private val editorService: TransactionEditorService by lazy { iosKoin().get() }
     private val repository: ExpenseRepository by lazy {
-        if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-            initKoin()
-        }
-        KoinPlatformTools.defaultContext().get().get<ExpenseRepository>()
+        iosKoin().get<ExpenseRepository>()
     }
 
     suspend fun loadSnapshot(): IosVoiceExpenseSnapshot? {
         val result = withContext(Dispatchers.Default) {
-            runCatching { loadIosVoiceExpenseSnapshot(repository) }
+            runCatchingCancellable { loadIosVoiceExpenseSnapshot(repository) }
         }
         return result.getOrNull()
     }
@@ -58,7 +58,7 @@ class IosVoiceExpenseController {
     ): IosVoiceExpensePersistResult {
         val result = withContext(Dispatchers.Default) {
             createIosVoiceExpense(
-                repository = repository,
+                editorService = editorService,
                 amountInput = amountInput,
                 categoryId = categoryId,
                 description = description,
@@ -80,6 +80,7 @@ class IosVoiceExpenseController {
         val result = withContext(Dispatchers.Default) {
             updateIosVoiceExpense(
                 repository = repository,
+                editorService = editorService,
                 expenseId = expenseId,
                 amountInput = amountInput,
                 categoryId = categoryId,

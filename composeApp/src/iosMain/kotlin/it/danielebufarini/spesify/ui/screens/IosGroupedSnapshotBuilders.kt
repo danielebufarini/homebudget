@@ -117,11 +117,7 @@ internal fun buildMonthlyIncomesSnapshot(
             localDate.year == year && localDate.month.ordinal + 1 == month
         }
         .map { income ->
-            prepareIncome(
-                income = income,
-                categoriesById = categoriesById,
-                localization = localization
-            )
+            with(localization) { prepareIncome(income = income, categoriesById = categoriesById) }
         }
         .toList()
 
@@ -253,10 +249,10 @@ internal fun buildSections(
     }
 }
 
+context(localization: IosGroupedLocalization)
 internal fun prepareExpense(
     expense: Expense,
-    categoriesById: Map<String, Category>,
-    localization: IosGroupedLocalization
+    categoriesById: Map<String, Category>
 ): PreparedIosExpense {
     val localDate = epochMillisToLocalDate(expense.date)
     return PreparedIosExpense(
@@ -281,10 +277,10 @@ internal fun prepareExpense(
     )
 }
 
+context(localization: IosRecurringLocalization)
 internal fun prepareRecurringExpense(
     expense: Expense,
-    categoriesById: Map<String, Category>,
-    localization: IosRecurringLocalization
+    categoriesById: Map<String, Category>
 ): PreparedIosExpense {
     val localDate = epochMillisToLocalDate(expense.date)
     val category = categoriesById[expense.categoryId]
@@ -310,10 +306,10 @@ internal fun prepareRecurringExpense(
     )
 }
 
+context(localization: IosGroupedLocalization)
 internal fun prepareIncome(
     income: Income,
-    categoriesById: Map<String, Category>,
-    localization: IosGroupedLocalization
+    categoriesById: Map<String, Category>
 ): PreparedIosIncome {
     val localDate = epochMillisToLocalDate(income.date)
     val category = income.categoryId?.let(categoriesById::get)

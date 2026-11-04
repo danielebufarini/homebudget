@@ -40,14 +40,14 @@ final class GroupedExpensesSectionsViewModel {
     }
 
     func deleteExpense(_ expenseID: String) {
-        Task { [observer] in
-            try? await observer.deleteExpense(id: expenseID)
+        ApplicationWriteTasks.shared.launch { [observer] in
+            try await observer.deleteExpense(id: expenseID)
         }
     }
 
     func deleteRecurringExpenseSeries(_ seriesID: String) {
-        Task { [observer] in
-            try? await observer.deleteRecurringExpenseSeries(seriesId: seriesID)
+        ApplicationWriteTasks.shared.launch { [observer] in
+            try await observer.deleteRecurringExpenseSeries(seriesId: seriesID)
         }
     }
 
@@ -101,14 +101,14 @@ final class MonthlyIncomesSectionsViewModel {
     }
 
     func deleteIncome(_ incomeID: String) {
-        Task { [observer] in
-            try? await observer.deleteIncome(id: incomeID)
+        ApplicationWriteTasks.shared.launch { [observer] in
+            try await observer.deleteIncome(id: incomeID)
         }
     }
 
     func deleteRecurringIncomeSeries(_ seriesID: String) {
-        Task { [observer] in
-            try? await observer.deleteRecurringIncomeSeries(seriesId: seriesID)
+        ApplicationWriteTasks.shared.launch { [observer] in
+            try await observer.deleteRecurringIncomeSeries(seriesId: seriesID)
         }
     }
 

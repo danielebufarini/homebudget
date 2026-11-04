@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.expenses
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import it.danielebufarini.spesify.data.CategoryManagementRepository
@@ -42,7 +44,7 @@ internal fun AddExpenseSheetsAndDialogs(
             initialIconKey = DEFAULT_CATEGORY_ICON_KEY,
             onConfirm = { name, iconKey ->
                 scopeLaunch {
-                    runCatching {
+                    runCatchingCancellable {
                         val categoryId = buildCategoryId()
                         withContext(Dispatchers.Default) {
                             repository.insertCategory(

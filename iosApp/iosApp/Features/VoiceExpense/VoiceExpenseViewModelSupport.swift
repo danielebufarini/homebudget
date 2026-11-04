@@ -46,13 +46,6 @@ func voiceExpenseUnderstandingMessage() -> String {
     appLocalized("Understanding expense...")
 }
 
-func voiceExpenseAvailabilityStatusMessage(
-    snapshotLoaded: Bool,
-    availability: SystemLanguageModel.Availability
-) -> String? {
-    snapshotLoaded && SystemLanguageModel.default.isAvailable ? nil : availabilityMessage(for: availability)
-}
-
 func buildVoiceExpenseDraft(
     from interpretation: VoiceExpenseInterpretation,
     transcript: String,

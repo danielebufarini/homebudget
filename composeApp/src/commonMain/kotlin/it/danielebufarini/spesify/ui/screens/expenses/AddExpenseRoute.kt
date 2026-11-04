@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.expenses
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -14,13 +16,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.CategoryManagementRepository
+import it.danielebufarini.spesify.data.DeleteTransactionCommand
+import it.danielebufarini.spesify.data.EditorDeletion
+import it.danielebufarini.spesify.data.EditorItem
+import it.danielebufarini.spesify.data.EditorMutationScope
 import it.danielebufarini.spesify.data.ExpenseReadRepository
-import it.danielebufarini.spesify.data.PendingExpense
-import it.danielebufarini.spesify.data.TransactionWriteRepository
-import it.danielebufarini.spesify.data.buildPendingExpenses
-import it.danielebufarini.spesify.data.buildRecurringMonthlyExpenses
-import it.danielebufarini.spesify.data.buildRecurringMonthlyExpensesFromExistingExpense
+import it.danielebufarini.spesify.data.ExpenseSchedule
+import it.danielebufarini.spesify.data.SaveExpenseCommand
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.TransactionKind
 import it.danielebufarini.spesify.data.evaluateAmountExpressionInput
+import it.danielebufarini.spesify.data.requireSuccess
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_EXPENSE
 import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.categories.EnsureStarterCategoriesSeeded
@@ -28,12 +34,12 @@ import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
 import it.danielebufarini.spesify.ui.screens.platform.rememberPlatformDatePicker
 import it.danielebufarini.spesify.ui.screens.transactions.ExpenseEditorPrefill
 import it.danielebufarini.spesify.ui.screens.transactions.rememberTransactionEditorFormState
+import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
-import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +53,7 @@ internal fun AddExpenseRoute(
 ) {
     val categoryRepository: CategoryManagementRepository = koinInject()
     val expenseReadRepository: ExpenseReadRepository = koinInject()
-    val transactionWriteRepository: TransactionWriteRepository = koinInject()
+    val editorService: TransactionEditorService = koinInject()
     val labels = addExpenseRouteLabels()
     val isIos = rememberIsIosPlatform()
     val useIosTransactionFloatingChrome = isIos && useHostedFloatingChrome
@@ -108,34 +114,14 @@ internal fun AddExpenseRoute(
 
     suspend fun saveExpenseUpdate(updateWholeSeries: Boolean, payload: PendingRecurringExpenseUpdate) {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                val currentExpenseId = expenseId ?: return@runCatching
+            runCatchingCancellable {
+                val currentId = expenseId ?: return@runCatchingCancellable
                 val seriesId = editorState.recurringSeriesId
-                if (updateWholeSeries && !seriesId.isNullOrBlank()) {
-                    transactionWriteRepository.updateRecurringExpenseSeries(
-                        anchorExpenseId = currentExpenseId,
-                        seriesId = seriesId,
-                        amount = payload.amount,
-                        date = payload.date,
-                        categoryId = payload.categoryId,
-                        description = payload.description,
-                        isShared = payload.isShared,
-                    )
-                } else {
-                    transactionWriteRepository.insertExpenses(
-                        expenses = listOf(
-                            PendingExpense(
-                                id = currentExpenseId,
-                                amount = payload.amount,
-                                date = payload.date,
-                                categoryId = payload.categoryId,
-                                description = payload.description,
-                                isShared = payload.isShared,
-                                recurringSeriesId = editorState.recurringSeriesId,
-                            ),
-                        ),
-                    )
-                }
+                editorService.execute(SaveExpenseCommand(
+                    item = EditorItem.Existing(currentId, seriesId), amount = payload.amount, date = payload.date,
+                    categoryId = payload.categoryId, description = payload.description, isShared = payload.isShared,
+                    scope = if (updateWholeSeries && !seriesId.isNullOrBlank()) EditorMutationScope.Series else EditorMutationScope.Single
+                )).requireSuccess()
             }
         }
         result.onSuccess {
@@ -149,14 +135,13 @@ internal fun AddExpenseRoute(
 
     suspend fun deleteExpense(deleteWholeSeries: Boolean) {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                val currentExpenseId = expenseId ?: return@runCatching
+            runCatchingCancellable {
+                val currentId = expenseId ?: return@runCatchingCancellable
                 val seriesId = editorState.recurringSeriesId
-                if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
-                    transactionWriteRepository.deleteRecurringExpenseSeries(seriesId)
-                } else {
-                    transactionWriteRepository.deleteExpense(currentExpenseId)
-                }
+                val target = if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
+                    EditorDeletion.Series(seriesId)
+                } else EditorDeletion.Single(currentId)
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Expense, target)).requireSuccess()
             }
         }
         result.onSuccess {
@@ -201,7 +186,7 @@ internal fun AddExpenseRoute(
                 else -> {
                     editorState.isSaving = true
                     saveExpense(
-                        repository = transactionWriteRepository,
+                        editorService = editorService,
                         expenseId = expenseId,
                         amount = parsedAmount,
                         date = expenseDate,
@@ -307,7 +292,7 @@ internal fun AddExpenseRoute(
 }
 
 private suspend fun saveExpense(
-    repository: TransactionWriteRepository,
+    editorService: TransactionEditorService,
     expenseId: String?,
     amount: Long,
     date: Long,
@@ -323,49 +308,13 @@ private suspend fun saveExpense(
 ) {
     val normalizedDescription = description.ifBlank { null }
     val result = withContext(Dispatchers.Default) {
-        runCatching {
-            val expenses = when {
-                expenseId == null && isRecurringMonthly -> buildRecurringMonthlyExpenses(
-                    amount = amount,
-                    firstDate = date,
-                    categoryId = categoryId,
-                    description = description,
-                    isShared = isShared,
-                    recurringSeriesId = buildRecurringExpenseSeriesId(),
-                    idProvider = ::buildExpenseId,
-                )
-                expenseId == null -> buildPendingExpenses(
-                    amount = amount,
-                    firstDate = date,
-                    installments = installmentCount,
-                    categoryId = categoryId,
-                    description = description,
-                    isShared = isShared,
-                    idProvider = ::buildExpenseId,
-                )
-                isRecurringMonthly -> buildRecurringMonthlyExpensesFromExistingExpense(
-                    existingExpenseId = expenseId,
-                    amount = amount,
-                    firstDate = date,
-                    categoryId = categoryId,
-                    description = description,
-                    isShared = isShared,
-                    recurringSeriesId = buildRecurringExpenseSeriesId(),
-                    idProvider = ::buildExpenseId,
-                )
-                else -> listOf(
-                    PendingExpense(
-                        id = expenseId,
-                        amount = amount,
-                        date = date,
-                        categoryId = categoryId,
-                        description = normalizedDescription,
-                        isShared = isShared,
-                        recurringSeriesId = recurringSeriesId,
-                    ),
-                )
-            }
-            repository.insertExpenses(expenses = expenses)
+        runCatchingCancellable {
+val item = expenseId?.let { EditorItem.Existing(it, recurringSeriesId) } ?: EditorItem.New()
+editorService.execute(SaveExpenseCommand(
+    item = item, amount = amount, date = date, categoryId = categoryId,
+    description = normalizedDescription, isShared = isShared,
+    schedule = if (isRecurringMonthly) ExpenseSchedule.Monthly else ExpenseSchedule.Installments(installmentCount)
+)).requireSuccess()
         }
     }
     result.onSuccess {

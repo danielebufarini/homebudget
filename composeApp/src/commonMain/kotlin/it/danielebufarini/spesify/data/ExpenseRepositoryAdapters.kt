@@ -6,8 +6,8 @@ import it.danielebufarini.spesify.database.Expense
 import it.danielebufarini.spesify.database.Income
 import kotlinx.coroutines.flow.Flow
 
-internal class ExpenseRepositoryCategoryManagementAdapter(
-    private val repository: ExpenseRepository
+internal class CategoryManagementRepositoryAdapter(
+    private val repository: CategoryRepository
 ) : CategoryManagementRepository {
     override fun getAllCategories(): Flow<List<Category>> = repository.getAllCategories()
 
@@ -41,7 +41,7 @@ internal class ExpenseRepositoryCategoryManagementAdapter(
         color: String?,
         categoryType: String?
     ) {
-        repository.updateCategory(
+        repository.updateCategoryPreservingUnspecifiedFields(
             id = id,
             name = name,
             icon = icon,
@@ -77,8 +77,8 @@ internal class ExpenseRepositoryCategoryManagementAdapter(
     }
 }
 
-internal class ExpenseRepositoryReadAdapter(
-    private val repository: ExpenseRepository
+internal class ExpenseReadRepositoryAdapter(
+    private val repository: ExpenseEntryRepository
 ) : ExpenseReadRepository {
     override fun getAllExpenses(): Flow<List<Expense>> = repository.getAllExpenses()
 
@@ -124,8 +124,8 @@ internal class ExpenseRepositoryReadAdapter(
         repository.getExpenseById(id)
 }
 
-internal class ExpenseRepositoryIncomeReadAdapter(
-    private val repository: ExpenseRepository
+internal class IncomeReadRepositoryAdapter(
+    private val repository: IncomeRepository
 ) : IncomeReadRepository {
     override fun getAllIncomes(): Flow<List<Income>> = repository.getAllIncomes()
 
@@ -168,8 +168,8 @@ internal class ExpenseRepositoryIncomeReadAdapter(
         repository.getIncomeById(id)
 }
 
-internal class ExpenseRepositoryDashboardReadAdapter(
-    private val repository: ExpenseRepository
+internal class DashboardReadRepositoryAdapter(
+    private val repository: DashboardRepository
 ) : DashboardReadRepository {
     override fun getDashboardMonthSummary(year: Int, month: Int): Flow<DashboardMonthSummary> =
         repository.getDashboardMonthSummary(year = year, month = month)
@@ -186,7 +186,7 @@ internal class ExpenseRepositoryDashboardReadAdapter(
         )
 
     override fun getDashboardRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> =
-        repository.getDashboardRecentTransactions(limit = limit)
+        repository.getRecentTransactions(limit = limit)
 
     override fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview> =
         repository.getRecurringExpenseOverviewForMonth(year = year, month = month)
@@ -195,23 +195,25 @@ internal class ExpenseRepositoryDashboardReadAdapter(
         repository.getWidgetMonthSummary(year = year, month = month)
 }
 
-internal class ExpenseRepositoryTransactionWriteAdapter(
-    private val repository: ExpenseRepository
+internal class TransactionWriteRepositoryAdapter(
+    private val expenseRepository: ExpenseEntryRepository,
+    private val incomeRepository: IncomeRepository,
+    private val recurringTransactionService: RecurringTransactionService
 ) : TransactionWriteRepository {
     override suspend fun deleteExpense(id: String) {
-        repository.deleteExpense(id)
+        expenseRepository.deleteExpense(id)
     }
 
     override suspend fun deleteRecurringExpenseSeries(seriesId: String) {
-        repository.deleteRecurringExpenseSeries(seriesId)
+        expenseRepository.deleteRecurringExpenseSeries(seriesId)
     }
 
     override suspend fun deleteIncome(id: String) {
-        repository.deleteIncome(id)
+        incomeRepository.deleteIncome(id)
     }
 
     override suspend fun deleteRecurringIncomeSeries(seriesId: String) {
-        repository.deleteRecurringIncomeSeries(seriesId)
+        incomeRepository.deleteRecurringIncomeSeries(seriesId)
     }
 
     override suspend fun insertIncome(
@@ -222,7 +224,7 @@ internal class ExpenseRepositoryTransactionWriteAdapter(
         categoryId: String?,
         recurringSeriesId: String?
     ) {
-        repository.insertIncome(
+        incomeRepository.insertIncome(
             id = id,
             amount = amount,
             date = date,
@@ -233,7 +235,7 @@ internal class ExpenseRepositoryTransactionWriteAdapter(
     }
 
     override suspend fun insertIncomes(incomes: List<PendingIncome>) {
-        repository.insertIncomes(incomes)
+        incomeRepository.insertIncomes(incomes)
     }
 
     override suspend fun updateRecurringIncomeSeries(
@@ -244,7 +246,7 @@ internal class ExpenseRepositoryTransactionWriteAdapter(
         description: String?,
         categoryId: String?
     ) {
-        repository.updateRecurringIncomeSeries(
+        recurringTransactionService.updateRecurringIncomeSeries(
             anchorIncomeId = anchorIncomeId,
             seriesId = seriesId,
             amount = amount,
@@ -255,7 +257,7 @@ internal class ExpenseRepositoryTransactionWriteAdapter(
     }
 
     override suspend fun insertExpenses(expenses: List<PendingExpense>) {
-        repository.insertExpenses(expenses)
+        expenseRepository.insertExpenses(expenses)
     }
 
     override suspend fun updateRecurringExpenseSeries(
@@ -267,7 +269,7 @@ internal class ExpenseRepositoryTransactionWriteAdapter(
         description: String?,
         isShared: Boolean
     ) {
-        repository.updateRecurringExpenseSeries(
+        recurringTransactionService.updateRecurringExpenseSeries(
             anchorExpenseId = anchorExpenseId,
             seriesId = seriesId,
             amount = amount,
@@ -279,8 +281,8 @@ internal class ExpenseRepositoryTransactionWriteAdapter(
     }
 }
 
-internal class ExpenseRepositoryBudgetDataReplacementAdapter(
-    private val repository: ExpenseRepository
+internal class BudgetDataReplacementRepositoryAdapter(
+    private val repository: DataReplacementService
 ) : BudgetDataReplacementRepository {
     override suspend fun replaceAllData(
         categories: List<RestoredCategory>,

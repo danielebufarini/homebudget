@@ -3,10 +3,9 @@ package it.danielebufarini.spesify.ui.screens
 import it.danielebufarini.spesify.data.formatAmountInput
 import it.danielebufarini.spesify.data.notifications.ExpenseTextCandidate
 import it.danielebufarini.spesify.data.notifications.InterpretExpenseTextUseCase
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosPaymentScreenshotExpenseCandidate(
     val amountInput: String,
@@ -29,8 +28,7 @@ class IosPaymentScreenshotExpenseCandidateQueue(
 
 class IosPaymentScreenshotController {
     private val interpretExpenseTextUseCase: InterpretExpenseTextUseCase by lazy {
-        ensureIosPaymentScreenshotKoinStarted()
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
     }
 
     suspend fun interpretOcrText(rawText: String): IosPaymentScreenshotExpenseCandidate? =
@@ -56,10 +54,4 @@ class IosPaymentScreenshotController {
             dateMillis = dateMillis ?: 0L,
             categoryId = categoryId
         )
-}
-
-private fun ensureIosPaymentScreenshotKoinStarted() {
-    if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-        initKoin()
-    }
 }

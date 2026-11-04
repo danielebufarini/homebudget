@@ -13,6 +13,7 @@ func parseExpenseIntent(
     let locale = Locale.current
     let languageCode = locale.identifier
     let languageName = locale.localizedString(forIdentifier: languageCode) ?? languageCode
+    let expensesText = try voiceExpensePromptExpensesText(expenses)
 
     let session = LanguageModelSession(
         model: SystemLanguageModel.default,
@@ -22,7 +23,8 @@ func parseExpenseIntent(
     )
 
     let response = try await session.respond(
-        generating: VoiceExpenseInterpretation.self
+        generating: VoiceExpenseInterpretation.self,
+        options: GenerationOptions(samplingMode: .greedy)
     ) {
         buildVoiceExpensePromptContext(
             currentDate: today,
@@ -30,7 +32,7 @@ func parseExpenseIntent(
             currentLanguageCode: languageCode,
             transcript: transcript,
             categoriesText: voiceExpensePromptCategoriesText(categories),
-            expensesText: voiceExpensePromptExpensesText(expenses)
+            expensesText: expensesText
         )
     }
 
@@ -46,17 +48,30 @@ private func voiceExpensePromptCategoriesText(_ categories: [VoiceExpenseCategor
     return text.isEmpty ? "- none" : text
 }
 
-private func voiceExpensePromptExpensesText(_ expenses: [VoiceExpenseCandidate]) -> String {
-    let text = expenses
-    .lazy
-    .map { expense in
-        let dateText = voiceExpenseISODateFormatter.string(from: expense.date)
-        let description = expense.description.ifEmptyNil ?? "none"
-        let shared = expense.isShared ? "yes" : "no"
-
-        return "- id=\(expense.id), amount=\(expense.amountInput), date=\(dateText), categoryId=\(expense.categoryId), categoryName=\(expense.categoryName), shared=\(shared), description=\(description)"
+func voiceExpensePromptExpensesText(_ expenses: [VoiceExpenseCandidate]) throws -> String {
+    guard !expenses.isEmpty else { return "- none" }
+    // State the field names once. Repeating seven labels for every recent expense can exhaust
+    // the native model's context before generation. Keep every candidate, real ID and value;
+    // JSON escaping also keeps description newlines/quotes inside their own field.
+    struct Table: Encodable {
+        let fields: [String]
+        let rows: [[String]]
     }
-    .joined(separator: "\n")
-
-    return text.isEmpty ? "- none" : text
+    let table = Table(
+        fields: ["id", "amount", "date", "categoryId", "categoryName", "shared", "description"],
+        rows: expenses.map { expense in
+            [
+                expense.id,
+                expense.amountInput,
+                voiceExpenseISODateFormatter.string(from: expense.date),
+                expense.categoryId,
+                expense.categoryName,
+                expense.isShared ? "yes" : "no",
+                expense.description.ifEmptyNil ?? "none"
+            ]
+        }
+    )
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+    return String(decoding: try encoder.encode(table), as: UTF8.self)
 }

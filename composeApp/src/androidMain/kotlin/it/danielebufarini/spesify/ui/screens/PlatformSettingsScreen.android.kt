@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.platform
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import android.app.Activity
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -136,7 +138,7 @@ private fun AndroidSettingsRoute() {
             val explicitResult = result.data?.let { authorizationManager.completeManualAuthorization(it) }
             when (explicitResult) {
                 DriveAuthorizationResult.Authorized -> {
-                    runCatching { runImmediateCloudSync() }
+                    runCatchingCancellable { runImmediateCloudSync() }
                     refreshSnapshot()
                 }
                 is DriveAuthorizationResult.Failed,
@@ -144,7 +146,7 @@ private fun AndroidSettingsRoute() {
                 null -> {
                     refreshSnapshot()
                     if (authorizationSnapshot?.state == DriveAuthorizationState.Authorized) {
-                        runCatching { runImmediateCloudSync() }
+                        runCatchingCancellable { runImmediateCloudSync() }
                     } else {
                         authorizationManager.setDriveBackupEnabled(false)
                         val message = when {
@@ -271,7 +273,7 @@ private fun AndroidSettingsRoute() {
 
                                 when (val authorizationResult = authorizationManager.beginManualAuthorization(hostActivity)) {
                                     DriveAuthorizationResult.Authorized -> {
-                                        runCatching { runImmediateCloudSync() }
+                                        runCatchingCancellable { runImmediateCloudSync() }
                                         refreshSnapshot()
                                         isBusy = false
                                     }

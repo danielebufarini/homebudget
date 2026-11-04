@@ -1,14 +1,19 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.ExpenseRepository
-import it.danielebufarini.spesify.data.PendingExpense
+import it.danielebufarini.spesify.data.EditorItem
+import it.danielebufarini.spesify.data.SaveExpenseCommand
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.requireSuccess
 import it.danielebufarini.spesify.localization.unableToSaveExpenseMessage
 import org.jetbrains.compose.resources.getString
 import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.expense_not_found
 
 internal suspend fun createIosVoiceExpense(
-    repository: ExpenseRepository,
+    editorService: TransactionEditorService,
     amountInput: String,
     categoryId: String,
     description: String?,
@@ -19,24 +24,22 @@ internal suspend fun createIosVoiceExpense(
         amountInput = amountInput,
         categoryId = categoryId
     ) { amount ->
-        repository.insertExpenses(
-            listOf(
-                PendingExpense(
-                    id = buildIosVoiceExpenseId(),
+        editorService.execute(
+                SaveExpenseCommand(
+                    item = EditorItem.New(buildIosVoiceExpenseId()),
                     amount = amount,
                     date = normalizeIosVoiceExpenseDate(date),
                     categoryId = categoryId,
                     description = description?.takeIf(String::isNotBlank),
-                    isShared = isShared,
-                    recurringSeriesId = null
+                    isShared = isShared
                 )
-            )
-        )
+        ).requireSuccess()
     }
 }
 
 internal suspend fun updateIosVoiceExpense(
     repository: ExpenseRepository,
+    editorService: TransactionEditorService,
     expenseId: String,
     amountInput: String,
     categoryId: String,
@@ -50,19 +53,16 @@ internal suspend fun updateIosVoiceExpense(
     ) { amount ->
         val existingExpense = repository.getExpenseById(expenseId)
             ?: error(getString(Res.string.expense_not_found))
-        repository.insertExpenses(
-            listOf(
-                PendingExpense(
-                    id = existingExpense.id,
+        editorService.execute(
+                SaveExpenseCommand(
+                    item = EditorItem.Existing(existingExpense.id, existingExpense.recurringSeriesId),
                     amount = amount,
                     date = normalizeIosVoiceExpenseDate(date),
                     categoryId = categoryId,
                     description = description?.takeIf(String::isNotBlank),
-                    isShared = isShared,
-                    recurringSeriesId = existingExpense.recurringSeriesId
+                    isShared = isShared
                 )
-            )
-        )
+        ).requireSuccess()
     }
 }
 
@@ -77,7 +77,7 @@ private suspend fun runIosVoiceExpenseSave(
     )
     if (error != null) return false to error
     val amount = parsedAmount ?: return false to getString(Res.string.expense_not_found)
-    return runCatching { block(amount) }
+    return runCatchingCancellable { block(amount) }
         .fold(
             onSuccess = { true to null },
             onFailure = { false to (it.message ?: unableToSaveExpenseMessage()) }

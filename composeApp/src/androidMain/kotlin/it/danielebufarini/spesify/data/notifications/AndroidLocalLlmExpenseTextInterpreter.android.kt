@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import android.util.Log
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
@@ -19,7 +21,7 @@ class AndroidLocalLlmExpenseTextInterpreter(
         if (moneyCandidates.isEmpty()) return ""
 
         val model = modelProvider()
-        val status = runCatching { model.checkStatus() }
+        val status = runCatchingCancellable { model.checkStatus() }
             .onFailure { Log.w(TAG, "Local LLM status check failed", it) }
             .getOrNull()
 
@@ -28,7 +30,7 @@ class AndroidLocalLlmExpenseTextInterpreter(
             return ""
         }
 
-        return runCatching {
+        return runCatchingCancellable {
             model.generateContent(
                 buildAndroidExpenseLlmPrompt(
                     notificationText = text,

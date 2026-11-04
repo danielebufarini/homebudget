@@ -2,24 +2,11 @@
 import BackgroundTasks
 import SwiftUI
 
-private struct StartupRestorePreview: Sendable {
-    let categoriesCount: Int
-    let expensesCount: Int
-    let incomesCount: Int
-}
-
-private struct PendingStartupRestore {
-    let text: String
-    let preview: StartupRestorePreview
-}
-
 @main
 struct iOSApp: App {
     @UIApplicationDelegateAdaptor(AppOrientationController.self) private var orientationController
     @Environment(\.scenePhase) private var scenePhase
-    @State private var didStartStartupRestore = false
-    @State private var isStartupReady = false
-    @State private var pendingStartupRestore: PendingStartupRestore?
+    @State private var startupRestore = StartupRestoreCoordinator()
     @State private var pendingOpenURL: PendingOpenURL?
 
     init() {
@@ -33,7 +20,7 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if isStartupReady {
+                if startupRestore.isReady {
                     ContentView(pendingOpenURL: $pendingOpenURL)
                 } else {
                     ProgressView()
@@ -41,27 +28,25 @@ struct iOSApp: App {
                 }
             }
             .task {
-                await completeStartupRestoreIfNeeded()
+                await startupRestore.prepareIfNeeded()
             }
             .alert(
                 appLocalized("Restore Backup"),
                 isPresented: Binding(
-                    get: { pendingStartupRestore != nil },
+                    get: { startupRestore.pendingRestore != nil },
                     set: { isPresented in
-                        if !isPresented && isStartupReady {
-                            pendingStartupRestore = nil
+                        if !isPresented && startupRestore.isReady {
+                            startupRestore.pendingRestore = nil
                         }
                     }
                 ),
-                presenting: pendingStartupRestore
+                presenting: startupRestore.pendingRestore
             ) { pendingRestore in
                 Button(appLocalized("Cancel"), role: .cancel) {
-                    skipStartupRestore()
+                    startupRestore.skipRestore()
                 }
                 Button(appLocalized("Restore")) {
-                    Task {
-                        await confirmStartupRestore(pendingRestore)
-                    }
+                    startupRestore.confirmRestore(pendingRestore)
                 }
             } message: { pendingRestore in
                 Text(
@@ -85,108 +70,4 @@ struct iOSApp: App {
         }
     }
 
-    @MainActor
-    private func completeStartupRestoreIfNeeded() async {
-        guard !didStartStartupRestore else {
-            return
-        }
-
-        didStartStartupRestore = true
-        defer {
-            if pendingStartupRestore == nil {
-                isStartupReady = true
-            }
-        }
-
-        if await startupRestoreMarkerExists() {
-            return
-        }
-
-        let controller = IosBackupRestoreController()
-        let isRestoreTargetEmpty = (try? await controller.isRestoreTargetEmpty())?.isSuccess == true
-
-        guard isRestoreTargetEmpty else {
-            await markStartupRestoreCompleted()
-            return
-        }
-
-        do {
-            let text = try await ICloudBackupStore.readBackup()
-            let restoreResult = try? await controller.prepareRestore(text: text)
-            let preview = restoreResult?.counters.map {
-                StartupRestorePreview(
-                    categoriesCount: Int($0.categoriesCount),
-                    expensesCount: Int($0.expensesCount),
-                    incomesCount: Int($0.incomesCount)
-                )
-            }
-
-            if let preview {
-                pendingStartupRestore = PendingStartupRestore(
-                    text: text,
-                    preview: preview
-                )
-            }
-        } catch {
-            return
-        }
-    }
-
-    @MainActor
-    private func confirmStartupRestore(_ pendingRestore: PendingStartupRestore) async {
-        pendingStartupRestore = nil
-        let controller = IosBackupRestoreController()
-        let restoreResult = try? await controller.restoreBackup(text: pendingRestore.text)
-        let restored = restoreResult?.counters != nil
-
-        if restored {
-            await markStartupRestoreCompleted()
-            SpesifyWidgetSummaryRefresher.shared.refresh()
-        }
-        isStartupReady = true
-    }
-
-    @MainActor
-    private func skipStartupRestore() {
-        pendingStartupRestore = nil
-        Task {
-            await markStartupRestoreCompleted()
-            await MainActor.run {
-                isStartupReady = true
-            }
-        }
-    }
-
-    private func startupRestoreMarkerExists() async -> Bool {
-        await Task.detached(priority: .utility) {
-            guard let url = Self.startupRestoreMarkerURL() else {
-                return false
-            }
-            return FileManager.default.fileExists(atPath: url.path)
-        }.value
-    }
-
-    private func markStartupRestoreCompleted() async {
-        await Task.detached(priority: .utility) {
-            guard let url = Self.startupRestoreMarkerURL() else {
-                return
-            }
-
-            let directory = url.deletingLastPathComponent()
-            try? FileManager.default.createDirectory(
-                at: directory,
-                withIntermediateDirectories: true
-            )
-            FileManager.default.createFile(
-                atPath: url.path,
-                contents: Data("completed".utf8)
-            )
-        }.value
-    }
-
-    nonisolated private static func startupRestoreMarkerURL() -> URL? {
-        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
-            .first?
-            .appendingPathComponent("startup-restore/completed.marker", isDirectory: false)
-    }
 }

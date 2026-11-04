@@ -34,7 +34,8 @@ fun buildVoiceExpensePromptInstructions(outputContract: String): String {
         - The shared flag must be false only when the user clearly says the expense is not shared.
         - If sharing is not mentioned, use false for create and null/nil for update.
         - The description should be short and useful.
-        - Omit unnecessary details from the description.
+        - If the user explicitly dictates a description or note, copy that text faithfully into description in the same language, preserving its names and details. Do not replace it with a generic summary.
+        - Omit unnecessary details only when the user has not explicitly specified the description.
         - The summary should be a short user-facing summary.
         - For needClarification, the summary must briefly ask for the missing or ambiguous information.
         - For ignore, the summary must briefly say that no usable expense command was found.

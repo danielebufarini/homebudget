@@ -1,12 +1,13 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.BudgetBackupCounters
 import it.danielebufarini.spesify.data.CloudSyncService
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
-import org.koin.mp.KoinPlatformTools
 import spesify.composeapp.generated.resources.Res
 import spesify.composeapp.generated.resources.backup_restore_failed
 import spesify.composeapp.generated.resources.backup_restore_invalid
@@ -18,16 +19,13 @@ class IosBackupRestoreResult(
 
 class IosBackupRestoreController {
     private val cloudSyncService: CloudSyncService by lazy {
-        if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-            initKoin()
-        }
-        KoinPlatformTools.defaultContext().get().get<CloudSyncService>()
+        iosKoin().get<CloudSyncService>()
     }
 
     suspend fun prepareRestore(text: String): IosBackupRestoreResult {
         val fallbackMessage = getString(Res.string.backup_restore_invalid)
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 cloudSyncService.previewRestore(text)
             }
         }
@@ -39,7 +37,7 @@ class IosBackupRestoreController {
 
     suspend fun isRestoreTargetEmpty(): IosBooleanResult {
         val isEmpty = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 cloudSyncService.isRestoreTargetEmpty()
             }.getOrDefault(false)
         }
@@ -49,7 +47,7 @@ class IosBackupRestoreController {
     suspend fun restoreBackup(text: String): IosBackupRestoreResult {
         val fallbackMessage = getString(Res.string.backup_restore_failed)
         val result = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 cloudSyncService.restoreFromBackup(text)
             }
         }

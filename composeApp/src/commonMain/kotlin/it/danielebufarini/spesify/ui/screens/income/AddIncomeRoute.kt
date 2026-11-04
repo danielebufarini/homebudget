@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.ui.screens.income
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -14,11 +16,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.CategoryManagementRepository
+import it.danielebufarini.spesify.data.DeleteTransactionCommand
+import it.danielebufarini.spesify.data.EditorDeletion
+import it.danielebufarini.spesify.data.EditorItem
+import it.danielebufarini.spesify.data.EditorMutationScope
 import it.danielebufarini.spesify.data.IncomeReadRepository
-import it.danielebufarini.spesify.data.PendingIncome
-import it.danielebufarini.spesify.data.TransactionWriteRepository
-import it.danielebufarini.spesify.data.buildRecurringMonthlyIncomes
+import it.danielebufarini.spesify.data.SaveIncomeCommand
+import it.danielebufarini.spesify.data.TransactionEditorService
+import it.danielebufarini.spesify.data.TransactionKind
 import it.danielebufarini.spesify.data.evaluateAmountExpressionInput
+import it.danielebufarini.spesify.data.requireSuccess
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_INCOME
 import it.danielebufarini.spesify.localization.rememberCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.expenses.clearActiveIosExpenseEditorSaveHandler
@@ -26,12 +33,12 @@ import it.danielebufarini.spesify.ui.screens.expenses.setActiveIosExpenseEditorS
 import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
 import it.danielebufarini.spesify.ui.screens.platform.rememberPlatformDatePicker
 import it.danielebufarini.spesify.ui.screens.transactions.rememberTransactionEditorFormState
+import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
-import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +52,7 @@ internal fun AddIncomeRoute(
 ) {
     val categoryRepository: CategoryManagementRepository = koinInject()
     val incomeReadRepository: IncomeReadRepository = koinInject()
-    val transactionWriteRepository: TransactionWriteRepository = koinInject()
+    val editorService: TransactionEditorService = koinInject()
     val labels = addIncomeRouteLabels()
     val isIos = rememberIsIosPlatform()
     val useIosHostedFloatingChrome = isIos && useHostedFloatingChrome
@@ -98,32 +105,14 @@ internal fun AddIncomeRoute(
 
     suspend fun saveIncomeUpdate(updateWholeSeries: Boolean, payload: PendingRecurringIncomeUpdate) {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                val currentIncomeId = incomeId ?: return@runCatching
+            runCatchingCancellable {
+                val currentId = incomeId ?: return@runCatchingCancellable
                 val seriesId = editorState.recurringSeriesId
-                if (updateWholeSeries && !seriesId.isNullOrBlank()) {
-                    transactionWriteRepository.updateRecurringIncomeSeries(
-                        anchorIncomeId = currentIncomeId,
-                        seriesId = seriesId,
-                        amount = payload.amount,
-                        date = payload.date,
-                        description = payload.description,
-                        categoryId = payload.categoryId,
-                    )
-                } else {
-                    transactionWriteRepository.insertIncomes(
-                        incomes = listOf(
-                            PendingIncome(
-                                id = currentIncomeId,
-                                amount = payload.amount,
-                                date = payload.date,
-                                description = payload.description,
-                                categoryId = payload.categoryId,
-                                recurringSeriesId = editorState.recurringSeriesId,
-                            ),
-                        ),
-                    )
-                }
+                editorService.execute(SaveIncomeCommand(
+                    item = EditorItem.Existing(currentId, seriesId), amount = payload.amount, date = payload.date,
+                    categoryId = payload.categoryId, description = payload.description,
+                    scope = if (updateWholeSeries && !seriesId.isNullOrBlank()) EditorMutationScope.Series else EditorMutationScope.Single
+                )).requireSuccess()
             }
         }
         result.onSuccess {
@@ -137,14 +126,13 @@ internal fun AddIncomeRoute(
 
     suspend fun deleteIncome(deleteWholeSeries: Boolean) {
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                val currentIncomeId = incomeId ?: return@runCatching
+            runCatchingCancellable {
+                val currentId = incomeId ?: return@runCatchingCancellable
                 val seriesId = editorState.recurringSeriesId
-                if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
-                    transactionWriteRepository.deleteRecurringIncomeSeries(seriesId)
-                } else {
-                    transactionWriteRepository.deleteIncome(currentIncomeId)
-                }
+                val target = if (deleteWholeSeries && !seriesId.isNullOrBlank()) {
+                    EditorDeletion.Series(seriesId)
+                } else EditorDeletion.Single(currentId)
+                editorService.execute(DeleteTransactionCommand(TransactionKind.Income, target)).requireSuccess()
             }
         }
         result.onSuccess {
@@ -190,7 +178,7 @@ internal fun AddIncomeRoute(
 
             editorState.isSaving = true
             saveIncome(
-                repository = transactionWriteRepository,
+                editorService = editorService,
                 incomeId = incomeId,
                 amount = parsedAmount,
                 date = editorState.selectedDateMillis ?: fallbackDateMillis,
@@ -281,7 +269,7 @@ internal fun AddIncomeRoute(
 }
 
 private suspend fun saveIncome(
-    repository: TransactionWriteRepository,
+    editorService: TransactionEditorService,
     incomeId: String?,
     amount: Long,
     date: Long,
@@ -293,29 +281,13 @@ private suspend fun saveIncome(
     unableToSaveIncomeLabel: String,
 ) {
     val result = withContext(Dispatchers.Default) {
-        runCatching {
-            val incomes = if (incomeId == null && isRecurringMonthly) {
-                buildRecurringMonthlyIncomes(
-                    amount = amount,
-                    firstDate = date,
-                    description = description.trim(),
-                    categoryId = categoryId,
-                    recurringSeriesId = buildRecurringIncomeSeriesId(),
-                    idProvider = ::buildIncomeId,
-                )
-            } else {
-                listOf(
-                    PendingIncome(
-                        id = incomeId ?: buildIncomeId(),
-                        amount = amount,
-                        date = date,
-                        description = description.trim().ifBlank { null },
-                        categoryId = categoryId,
-                        recurringSeriesId = null,
-                    ),
-                )
-            }
-            repository.insertIncomes(incomes = incomes)
+        runCatchingCancellable {
+editorService.execute(SaveIncomeCommand(
+    item = incomeId?.let { EditorItem.Existing(it) } ?: EditorItem.New(),
+    amount = amount, date = date, categoryId = categoryId,
+    description = description.trim().ifBlank { null },
+    recurringMonthly = incomeId == null && isRecurringMonthly
+)).requireSuccess()
         }
     }
     result.onSuccess {

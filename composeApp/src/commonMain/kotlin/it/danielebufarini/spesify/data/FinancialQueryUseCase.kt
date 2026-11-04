@@ -135,7 +135,7 @@ class FinancialQueryUseCase internal constructor(
     }
 
     suspend fun getCurrentBalance(): FinancialQueryResult {
-        return runCatching {
+        return runCatchingCancellable {
             val currentMonth = currentMonthKey()
             val balanceTrend = dashboardRepository.getDashboardBalanceTrend(
                 selectedYear = currentMonth.year,
@@ -188,7 +188,7 @@ class FinancialQueryUseCase internal constructor(
         startInclusiveMillis: Long,
         endExclusiveMillis: Long
     ): FinancialQueryResult {
-        return runCatching {
+        return runCatchingCancellable {
             FinancialQueryResult.success(
                 amount = expenseDao.getExpensesSnapshotBetween(
                     startMillis = startInclusiveMillis,
@@ -208,7 +208,7 @@ class FinancialQueryUseCase internal constructor(
         startInclusiveMillis: Long,
         endExclusiveMillis: Long
     ): FinancialQueryResult {
-        return runCatching {
+        return runCatchingCancellable {
             FinancialQueryResult.success(
                 amount = incomeDao.getIncomesSnapshotBetween(
                     startMillis = startInclusiveMillis,

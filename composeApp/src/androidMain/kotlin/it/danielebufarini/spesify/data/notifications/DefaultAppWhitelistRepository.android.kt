@@ -1,5 +1,7 @@
 package it.danielebufarini.spesify.data.notifications
 
+import kotlinx.coroutines.CancellationException
+
 import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -25,6 +27,8 @@ internal class DefaultAppWhitelistRepository(
             storeWhitelist(apps)
             Log.d(TAG, "Whitelist refresh stored remote count=${apps.size}")
             Result.success(Unit)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (remoteError: Throwable) {
             Log.e(
                 TAG,
@@ -69,6 +73,8 @@ internal class DefaultAppWhitelistRepository(
                 "Bundled whitelist fallback stored count=${fallbackApps.size} finecoPresent=${fallbackApps.any { it.packageName == FINECO_TEST_PACKAGE }}"
             )
             Result.success(Unit)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (fallbackError: Throwable) {
             remoteError.addSuppressed(fallbackError)
             Log.e(

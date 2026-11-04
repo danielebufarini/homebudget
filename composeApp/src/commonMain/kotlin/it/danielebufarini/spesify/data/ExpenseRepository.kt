@@ -49,14 +49,12 @@ class ExpenseRepository(
         color: String? = null,
         categoryType: String? = null
     ) {
-        val existingCategory = categoryRepository.getCategoryById(id)
-            ?: error("Category $id not found")
-        categoryRepository.updateCategory(
+        categoryRepository.updateCategoryPreservingUnspecifiedFields(
             id = id,
             name = name,
             icon = icon,
-            color = color ?: existingCategory.color,
-            categoryType = categoryType ?: existingCategory.categoryType
+            color = color,
+            categoryType = categoryType
         )
     }
 

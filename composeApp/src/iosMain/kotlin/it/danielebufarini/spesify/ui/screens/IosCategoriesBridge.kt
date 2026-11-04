@@ -1,8 +1,10 @@
 package it.danielebufarini.spesify.ui.screens
 
+import it.danielebufarini.spesify.data.runCatchingCancellable
+
 import it.danielebufarini.spesify.data.ExpenseRepository
 import it.danielebufarini.spesify.database.CATEGORY_TYPE_EXPENSE
-import it.danielebufarini.spesify.di.initKoin
+import it.danielebufarini.spesify.di.iosKoin
 import it.danielebufarini.spesify.localization.loadCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.categories.buildCategoryId
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +13,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import org.koin.mp.KoinPlatformTools
 
 class IosCategoryItem(
     val id: String,
@@ -29,8 +30,7 @@ class IosBooleanResult(
 
 class IosCategoriesController {
     private val repository: ExpenseRepository by lazy {
-        ensureIosCategoriesKoinStarted()
-        KoinPlatformTools.defaultContext().get().get()
+        iosKoin().get()
     }
 
     fun snapshots() = snapshotsForCategoryType(CATEGORY_TYPE_EXPENSE)
@@ -82,7 +82,7 @@ class IosCategoriesController {
 
         val categoryId = buildCategoryId()
         val success = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 repository.insertCategory(
                     id = categoryId,
                     name = trimmedName,
@@ -101,7 +101,7 @@ class IosCategoriesController {
         }
 
         val success = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 repository.updateCategory(
                     id = id,
                     name = trimmedName,
@@ -114,16 +114,10 @@ class IosCategoriesController {
 
     suspend fun deleteCategory(id: String): IosBooleanResult {
         val success = withContext(Dispatchers.Default) {
-            runCatching {
+            runCatchingCancellable {
                 repository.deleteCategory(id)
             }.isSuccess
         }
         return IosBooleanResult(success)
-    }
-}
-
-private fun ensureIosCategoriesKoinStarted() {
-    if (KoinPlatformTools.defaultContext().getOrNull() == null) {
-        initKoin()
     }
 }

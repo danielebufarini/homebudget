@@ -62,7 +62,8 @@ sealed interface AddTransactionResult {
 
 class AddTransactionUseCase internal constructor(
     private val categoryRepository: CategoryManagementRepository,
-    private val transactionWriteRepository: TransactionWriteRepository
+    transactionWriteRepository: TransactionWriteRepository,
+    private val editorService: TransactionEditorService = TransactionEditorService(transactionWriteRepository)
 ) {
     suspend fun execute(command: AddTransactionCommand): AddTransactionResult {
         if (command.amount <= 0L) {
@@ -72,7 +73,7 @@ class AddTransactionUseCase internal constructor(
         val dateMillis = normalizeTransactionDate(command.dateMillis)
         val description = command.note?.trim()?.takeIf(String::isNotEmpty)
 
-        return runCatching {
+        return runCatchingCancellable {
             val categories = loadCategories()
             when (command.kind) {
                 TransactionKind.Expense -> createExpense(
@@ -116,19 +117,10 @@ class AddTransactionUseCase internal constructor(
         }
         val resolvedCategory = (category as CategoryResolution.Resolved).category
         val id = buildAgentTransactionId(command.kind, command.source)
-        transactionWriteRepository.insertExpenses(
-            listOf(
-                PendingExpense(
-                    id = id,
-                    amount = command.amount,
-                    date = dateMillis,
-                    categoryId = resolvedCategory.id,
-                    description = description,
-                    isShared = false,
-                    recurringSeriesId = null
-                )
-            )
-        )
+        editorService.execute(SaveExpenseCommand(
+            item = EditorItem.New(id), amount = command.amount, date = dateMillis,
+            categoryId = resolvedCategory.id, description = description, isShared = false
+        )).requireSuccess()
         return AddTransactionResult.Created(
             transactionId = id,
             kind = command.kind,
@@ -155,18 +147,10 @@ class AddTransactionUseCase internal constructor(
         }
         val categoryId = (categoryResolution as? CategoryResolution.Resolved)?.category?.id
         val id = buildAgentTransactionId(command.kind, command.source)
-        transactionWriteRepository.insertIncomes(
-            listOf(
-                PendingIncome(
-                    id = id,
-                    amount = command.amount,
-                    date = dateMillis,
-                    description = description,
-                    recurringSeriesId = null,
-                    categoryId = categoryId
-                )
-            )
-        )
+        editorService.execute(SaveIncomeCommand(
+            item = EditorItem.New(id), amount = command.amount, date = dateMillis,
+            categoryId = categoryId, description = description
+        )).requireSuccess()
         return AddTransactionResult.Created(
             transactionId = id,
             kind = command.kind,

@@ -276,6 +276,7 @@ struct ExpenseEditorGlassFooter: View {
     let onConfirm: () -> Void
     let confirmLabel: String
     let showsSecondaryAction: Bool
+    var confirmEnabled: Bool = true
 
     var body: some View {
         AppGlassSheetActionBar {
@@ -292,6 +293,7 @@ struct ExpenseEditorGlassFooter: View {
                 .controlSize(.large)
                 .buttonStyle(.glassProminent)
                 .frame(minHeight: 52)
+                .disabled(!confirmEnabled)
         }
         .padding(.bottom, ExpenseEditorChromeLayout.bottomPadding)
     }
