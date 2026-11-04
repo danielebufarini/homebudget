@@ -16,16 +16,16 @@ class AppWhitelistParserAndRemoteDataSourceTest {
         val apps = parseWhitelistedAppsJson(
             """
             [
-              { "packageName": "com.fineco.it", "bankName": "Fineco" },
-              { "packageName": "com.unicredit", "bankName": "UniCredit" }
+              { "packageName": "com.unicredit", "bankName": "UniCredit" },
+              { "packageName": "com.fineco.it", "bankName": "Fineco" }
             ]
             """.trimIndent()
         )
 
         assertEquals(
             listOf(
-                WhitelistedApp(packageName = "com.unicredit", bankName = "UniCredit"),
-                WhitelistedApp(packageName = "com.fineco.it", bankName = "Fineco")
+                WhitelistedApp(packageName = "com.fineco.it", bankName = "Fineco"),
+                WhitelistedApp(packageName = "com.unicredit", bankName = "UniCredit")
             ),
             apps
         )
