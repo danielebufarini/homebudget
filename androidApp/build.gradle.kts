@@ -46,14 +46,24 @@ android {
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
 
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-        }
+    lint {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
+    }
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -70,5 +80,5 @@ dependencies {
     implementation(libs.koin.core)
     debugImplementation(libs.compose.uiTooling)
     ksp(libs.androidx.appfunctions.compiler)
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

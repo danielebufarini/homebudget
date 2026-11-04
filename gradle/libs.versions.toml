@@ -32,8 +32,10 @@ google-drive-api = "v3-rev20260624-2.0.0"
 googleid = "1.2.1"
 androidx-test-core = "1.7.0"
 robolectric = "4.17"
+desugar-jdk-libs = "2.1.5"
 
 [libraries]
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }

@@ -12,10 +12,10 @@ plugins {
     alias(libs.plugins.skie) apply false
 }
 
-extra["spesifyVersionCode"] = 6
-extra["spesifyVersionName"] = "1.6.0"
+extra["spesifyVersionCode"] = 8
+extra["spesifyVersionName"] = "1.8.0"
 
-val verifyUnitTests by tasks.registering {
+val verifyUnitTests = tasks.register("verifyUnitTests") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     description = "Runs the shared and Android unit test suite."
     dependsOn(
@@ -24,13 +24,13 @@ val verifyUnitTests by tasks.registering {
     )
 }
 
-val verifyAndroidDebug by tasks.registering {
+val verifyAndroidDebug = tasks.register("verifyAndroidDebug") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     description = "Builds the Android debug application."
     dependsOn(":androidApp:assembleDebug")
 }
 
-val verifyIosSimulatorArm64Framework by tasks.registering {
+val verifyIosSimulatorArm64Framework = tasks.register("verifyIosSimulatorArm64Framework") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     description = "Compiles the iOS simulator ARM64 Kotlin framework."
     dependsOn(":composeApp:compileKotlinIosSimulatorArm64")

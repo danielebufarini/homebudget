@@ -55,7 +55,7 @@ abstract class GenerateBuildInfoTask : DefaultTask() {
 val spesifyVersionName = rootProject.extra["spesifyVersionName"] as String
 val generatedBuildInfoDir = layout.buildDirectory.dir("generated/source/buildInfo/commonMain/kotlin")
 
-val generateBuildInfo by tasks.registering(GenerateBuildInfoTask::class) {
+val generateBuildInfo = tasks.register<GenerateBuildInfoTask>("generateBuildInfo") {
     appName.set("Spesify")
     versionName.set(spesifyVersionName)
     outputDir.set(generatedBuildInfoDir)
@@ -63,6 +63,8 @@ val generateBuildInfo by tasks.registering(GenerateBuildInfoTask::class) {
 }
 
 kotlin {
+    jvmToolchain(25)
+
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
@@ -75,7 +77,10 @@ kotlin {
         }
         withHostTest {}
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
+            jvmTarget.set(JvmTarget.JVM_25)
+        }
+        lint {
+            toolchain.languageVersion.set(JavaLanguageVersion.of(25))
         }
     }
 
