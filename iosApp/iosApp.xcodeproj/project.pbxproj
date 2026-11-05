@@ -33,6 +33,13 @@
 			remoteGlobalIDString = 1E55858A6559A08CD51F2001;
 			remoteInfo = iosApp;
 		};
+		6D1000000000000000000006 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E55858A6559A08CD51F2001;
+			remoteInfo = iosApp;
+		};
 		6B2000000000000000000006 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
@@ -62,6 +69,7 @@
 		0EEC63C2493FB5B124983070 /* Spesify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spesify.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A1000000000000000000001 /* SpesifyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpesifyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B1000000000000000000001 /* SpesifyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpesifyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D1000000000000000000001 /* SkieInteropTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkieInteropTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B2000000000000000000001 /* SpesifyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpesifyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -129,6 +137,11 @@
 			path = SpesifyTests;
 			sourceTree = "<group>";
 		};
+		6D1000000000000000000002 /* SkieInteropTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SkieInteropTests;
+			sourceTree = "<group>";
+		};
 		6B2000000000000000000002 /* SpesifyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SpesifyUITests;
@@ -165,6 +178,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6D1000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6B2000000000000000000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -181,6 +201,7 @@
 				0EEC63C2493FB5B124983070 /* Spesify.app */,
 				6B2000000000000000000001 /* SpesifyUITests.xctest */,
 				6B1000000000000000000001 /* SpesifyTests.xctest */,
+				6D1000000000000000000001 /* SkieInteropTests.xctest */,
 				6A1000000000000000000001 /* SpesifyWidgetExtension.appex */,
 				6C1000000000000000000001 /* SpesifyShareExtension.appex */,
 			);
@@ -196,6 +217,7 @@
 				6C1000000000000000000002 /* SpesifyShare */,
 				6C2000000000000000000002 /* SharedScreenshotImport */,
 				6B1000000000000000000002 /* SpesifyTests */,
+				6D1000000000000000000002 /* SkieInteropTests */,
 				6B2000000000000000000002 /* SpesifyUITests */,
 				3D1ACA2AD3EFD2A65F1E75D4 /* Products */,
 			);
@@ -295,6 +317,27 @@
 			productReference = 6B1000000000000000000001 /* SpesifyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		6D1000000000000000000008 /* SkieInteropTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6D1000000000000000000009 /* Build configuration list for PBXNativeTarget "SkieInteropTests" */;
+			buildPhases = (
+				6D1000000000000000000003 /* Sources */,
+				6D1000000000000000000004 /* Frameworks */,
+				6D1000000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6D1000000000000000000007 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6D1000000000000000000002 /* SkieInteropTests */,
+			);
+			name = SkieInteropTests;
+			productName = SkieInteropTests;
+			productReference = 6D1000000000000000000001 /* SkieInteropTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		6B2000000000000000000008 /* SpesifyUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6B2000000000000000000009 /* Build configuration list for PBXNativeTarget "SpesifyUITests" */;
@@ -360,6 +403,10 @@
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = 1E55858A6559A08CD51F2001;
 					};
+					6D1000000000000000000008 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 1E55858A6559A08CD51F2001;
+					};
 					6B2000000000000000000008 = {
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = 1E55858A6559A08CD51F2001;
@@ -383,6 +430,7 @@
 			targets = (
 				6B2000000000000000000008 /* SpesifyUITests */,
 				6B1000000000000000000008 /* SpesifyTests */,
+				6D1000000000000000000008 /* SkieInteropTests */,
 				1E55858A6559A08CD51F2001 /* iosApp */,
 				6A1000000000000000000007 /* SpesifyWidgetExtension */,
 				6C1000000000000000000007 /* SpesifyShareExtension */,
@@ -406,6 +454,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6B1000000000000000000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D1000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -446,7 +501,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\ncd \"$SRCROOT/..\"\n\necho \"Building Kotlin framework for $CONFIGURATION/$PLATFORM_NAME ($ARCHS)\"\n./gradlew \\\n  --console=plain \\\n  --no-configuration-cache \\\n  --no-watch-fs \\\n  -Pcompose.ios.resources.platform=\"$PLATFORM_NAME\" \\\n  -Pcompose.ios.resources.archs=\"$ARCHS\" \\\n  :composeApp:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "set -euo pipefail\n\ncd \"$SRCROOT/..\"\n\necho \"Building Kotlin framework for $CONFIGURATION/$PLATFORM_NAME ($ARCHS)\"\n./gradlew \\\n  -Pspesify.skieInteropTests=\"${SPESIFY_SKIE_INTEROP_TESTS:-false}\" \\\n  --console=plain \\\n  --no-configuration-cache \\\n  --no-watch-fs \\\n  -Pcompose.ios.resources.platform=\"$PLATFORM_NAME\" \\\n  -Pcompose.ios.resources.archs=\"$ARCHS\" \\\n  :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -466,6 +521,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6B1000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D1000000000000000000003 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -503,6 +565,11 @@
 			isa = PBXTargetDependency;
 			target = 1E55858A6559A08CD51F2001 /* iosApp */;
 			targetProxy = 6B1000000000000000000006 /* PBXContainerItemProxy */;
+		};
+		6D1000000000000000000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E55858A6559A08CD51F2001 /* iosApp */;
+			targetProxy = 6D1000000000000000000006 /* PBXContainerItemProxy */;
 		};
 		6B2000000000000000000007 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -741,6 +808,28 @@
 			};
 			name = Debug;
 		};
+		6D100000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SkieInteropTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spesify.app/Spesify";
+			};
+			name = Debug;
+		};
 		6B100000000000000000000B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -754,6 +843,28 @@
 					"@loader_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SpesifyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spesify.app/Spesify";
+			};
+			name = Release;
+		};
+		6D100000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SkieInteropTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -943,6 +1054,15 @@
 			buildConfigurations = (
 				6B100000000000000000000A /* Debug */,
 				6B100000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6D1000000000000000000009 /* Build configuration list for PBXNativeTarget "SkieInteropTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6D100000000000000000000A /* Debug */,
+				6D100000000000000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

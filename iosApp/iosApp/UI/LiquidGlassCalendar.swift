@@ -17,11 +17,11 @@ private struct IosNativeDatePickerHostModifier: ViewModifier {
                 LiquidGlassDatePickerSheet(
                     initialDate: request.initialDate,
                     onCancel: {
-                        IosNativeDatePickerBridgeKt.cancelIosNativeDatePickerRequest(requestId: request.id)
+                        cancelIosNativeDatePickerRequest(requestId: request.id)
                         self.request = nil
                     },
                     onConfirm: { selectedDate in
-                        IosNativeDatePickerBridgeKt.completeIosNativeDatePickerRequest(
+                        completeIosNativeDatePickerRequest(
                             requestId: request.id,
                             selectedDateMillis: Int64(selectedDate.timeIntervalSince1970 * 1000.0)
                         )

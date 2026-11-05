@@ -53,6 +53,10 @@ abstract class GenerateBuildInfoTask : DefaultTask() {
 }
 
 val spesifyVersionName = rootProject.extra["spesifyVersionName"] as String
+val skieInteropTests = providers.gradleProperty("spesify.skieInteropTests").orNull == "true"
+if (skieInteropTests) {
+    layout.buildDirectory.set(layout.projectDirectory.dir("build/skie-interop"))
+}
 val generatedBuildInfoDir = layout.buildDirectory.dir("generated/source/buildInfo/commonMain/kotlin")
 
 val generateBuildInfo = tasks.register<GenerateBuildInfoTask>("generateBuildInfo") {
@@ -96,7 +100,17 @@ kotlin {
         }
     }
 
+    if (skieInteropTests) {
+        applyDefaultHierarchyTemplate()
+    }
+
     sourceSets {
+        if (skieInteropTests) {
+            val skieInteropMain by creating {
+                dependsOn(getByName("iosMain"))
+            }
+            getByName("iosSimulatorArm64Main").dependsOn(skieInteropMain)
+        }
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)

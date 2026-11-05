@@ -61,7 +61,7 @@ struct NativeExpenseEditorScreen: View {
                         AppGlassSheetSection(title: appLocalized("Expense Details"), spacing: 14) {
                             NativeExpensePickerRow(
                                 label: appLocalized("Category"),
-                                value: viewModel.selectedCategory?.name ?? appLocalized("Select Category"),
+                                value: viewModel.categoryValue,
                                 iconKey: viewModel.selectedCategory?.iconKey ?? "category",
                                 colorKey: viewModel.selectedCategoryId,
                                 enabled: !readOnly,
@@ -248,6 +248,14 @@ struct NativeExpenseEditorScreen: View {
                         }
                     )
                 }
+            }
+        }
+        .overlay {
+            if !showRecurringDeleteDialog && !showRecurringSaveDialog && viewModel.categoriesReadState.showsError {
+                SnapshotReadErrorDialog(
+                    onRetry: viewModel.retryCategories,
+                    onClose: { viewModel.categoriesReadState.showsError = false }
+                )
             }
         }
         .onAppear {

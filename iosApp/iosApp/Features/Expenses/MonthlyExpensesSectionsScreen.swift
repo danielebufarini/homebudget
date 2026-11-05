@@ -1,3 +1,4 @@
+import ComposeApp
 import SwiftUI
 
 struct GroupedExpensesSectionsScreen: View {
@@ -37,7 +38,7 @@ struct GroupedExpensesSectionsScreen: View {
             headerTitle: headerTitle,
             headerAmountDescriptor: headerAmountDescriptor
         )
-        .id("\(kind.screenType)-\(selectedMonth.id)")
+        .id("\(kind.screenID)-\(selectedMonth.id)")
         .toolbarBackground(.hidden, for: .navigationBar)
     }
 

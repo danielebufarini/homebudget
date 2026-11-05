@@ -66,7 +66,7 @@ class IosTransactionSearchConcurrencyTest {
         val observer = observer(source)
         observer.start()
         val loading = async { observer.loadMoreResults() }
-        val grouping = async { observer.setGroupingMode("date") }
+        val grouping = async { observer.setGroupingMode(ExpenseGroupingMode.ByDate) }
         loading.await(); grouping.await()
         observer.loadMoreResults()
         assertEquals(setOf("expense1", "expense2"), observer.expenseIds().toSet())
@@ -78,7 +78,7 @@ class IosTransactionSearchConcurrencyTest {
 }
 
 private fun IosTransactionSearchObserver.expenseIds() = snapshots.value?.expenseSnapshot?.sections.orEmpty().flatMap { it.rows.map { row -> row.id } }
-private fun observer(source: IosTransactionSearchDataSource) = IosTransactionSearchObserver("query", "category", source) {
+private fun observer(source: IosTransactionSearchDataSource) = IosTransactionSearchObserver("query", ExpenseGroupingMode.ByCategory, source) {
     IosGroupedLocalization(
         currencySymbol = "€", expense = "Expense", income = "Income", sharedExpense = "Shared", category = "Category",
         noExpensesForDay = "Empty", noExpensesForMonth = "Empty", noSharedExpensesForMonth = "Empty",

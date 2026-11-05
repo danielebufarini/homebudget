@@ -1,5 +1,9 @@
 package it.danielebufarini.spesify.ui.screens
 
+enum class IosGroupedExpensesScreenType {
+    Monthly, Shared, Category, Day
+}
+
 class IosGroupedExpenseRow(
     val id: String,
     val title: String,
@@ -62,7 +66,7 @@ class IosMonthlyIncomesSnapshot(
 internal data class GroupedExpensesCacheKey(
     val year: Int,
     val month: Int,
-    val screenType: String,
+    val screenType: IosGroupedExpensesScreenType,
     val categoryName: String?,
     val dayOfMonth: Int? = null
 )
@@ -136,8 +140,8 @@ internal data class IosGroupedSnapshotsCache(
     val byCategory: IosGroupedExpensesSnapshot,
     val byDate: IosGroupedExpensesSnapshot
 ) {
-    fun snapshotFor(groupingMode: String): IosGroupedExpensesSnapshot = when (groupingMode) {
-        "date" -> byDate
-        else -> byCategory
+    fun snapshotFor(groupingMode: ExpenseGroupingMode): IosGroupedExpensesSnapshot = when (groupingMode) {
+        ExpenseGroupingMode.ByDate -> byDate
+        ExpenseGroupingMode.ByCategory -> byCategory
     }
 }

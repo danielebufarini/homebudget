@@ -32,8 +32,17 @@ val verifyAndroidDebug = tasks.register("verifyAndroidDebug") {
 
 val verifyIosSimulatorArm64Framework = tasks.register("verifyIosSimulatorArm64Framework") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
-    description = "Compiles the iOS simulator ARM64 Kotlin framework."
-    dependsOn(":composeApp:compileKotlinIosSimulatorArm64")
+    description = "Links the Debug and Release iOS simulator ARM64 frameworks, including SKIE."
+    dependsOn(
+        ":composeApp:linkDebugFrameworkIosSimulatorArm64",
+        ":composeApp:linkReleaseFrameworkIosSimulatorArm64"
+    )
+}
+
+project(":composeApp") {
+    tasks.matching { it.name == "linkReleaseFrameworkIosSimulatorArm64" }.configureEach {
+        mustRunAfter(":composeApp:linkDebugFrameworkIosSimulatorArm64")
+    }
 }
 
 tasks.register("verifyAll") {

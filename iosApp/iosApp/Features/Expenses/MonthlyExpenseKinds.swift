@@ -7,16 +7,25 @@ enum GroupedExpensesKind: Hashable {
     case category(name: String)
     case day(day: Int)
 
-    var screenType: String {
+    var screenType: IosGroupedExpensesScreenType {
         switch self {
         case .monthly:
-            return "monthly"
+            return .monthly
         case .shared:
-            return "shared"
+            return .shared
         case .category:
-            return "category"
+            return .category
         case .day:
-            return "day"
+            return .day
+        }
+    }
+
+    var screenID: String {
+        switch screenType {
+        case .monthly: return "monthly"
+        case .shared: return "shared"
+        case .category: return "category"
+        case .day: return "day"
         }
     }
 
@@ -53,20 +62,6 @@ enum GroupedExpensesKind: Hashable {
             return false
         case .monthly, .shared, .category:
             return true
-        }
-    }
-}
-
-enum ExpenseGroupingMode: String, Hashable {
-    case byCategory
-    case byDate
-
-    var bridgeValue: String {
-        switch self {
-        case .byCategory:
-            return "category"
-        case .byDate:
-            return "date"
         }
     }
 }

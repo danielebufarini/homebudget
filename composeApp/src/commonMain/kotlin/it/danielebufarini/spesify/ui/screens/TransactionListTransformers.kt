@@ -11,7 +11,7 @@ import it.danielebufarini.spesify.ui.screens.expenses.epochMillisToLocalDate
 import it.danielebufarini.spesify.ui.screens.expenses.formatExpenseDate
 import it.danielebufarini.spesify.ui.screens.expenses.formatExpenseDateGroupTitle
 
-internal enum class ExpenseGroupingMode {
+enum class ExpenseGroupingMode {
     ByCategory,
     ByDate
 }

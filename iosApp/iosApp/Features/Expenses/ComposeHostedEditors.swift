@@ -56,14 +56,14 @@ struct TransactionEditorRootView: View {
         KotlinViewControllerHost(constrainToSafeArea: false) {
             switch selectedKind {
             case .expense:
-                MainViewControllerKt.AddExpenseViewController(
+                AddExpenseViewController(
                     expenseId: nil,
                     readOnly: false,
                     useHostedFloatingChrome: true,
                     onClose: onClose
                 )
             case .income:
-                MainViewControllerKt.AddIncomeViewController(
+                AddIncomeViewController(
                     incomeId: nil,
                     initialYear: initialYear.map(kotlinInt),
                     initialMonth: initialMonth.map(kotlinInt),
@@ -98,7 +98,7 @@ struct TransactionEditorRootView: View {
         ExpenseEditorGlassFooter(
             onCancel: onClose,
             onConfirm: {
-                IosExpenseEditorBridgeKt.performIosExpenseEditorSave()
+                performIosExpenseEditorSave()
             },
             confirmLabel: confirmLabel,
             showsSecondaryAction: true
@@ -134,7 +134,7 @@ struct ExpenseEditorRootView: View {
 
     var body: some View {
         KotlinViewControllerHost(constrainToSafeArea: !usesHostedGlassChrome) {
-            MainViewControllerKt.AddExpenseViewController(
+            AddExpenseViewController(
                 expenseId: expenseId,
                 readOnly: readOnly,
                 useHostedFloatingChrome: false,
@@ -186,7 +186,7 @@ struct ExpenseEditorRootView: View {
                     ExpenseEditorGlassFooter(
                         onCancel: onClose,
                         onConfirm: {
-                            IosExpenseEditorBridgeKt.performIosExpenseEditorSave()
+                            performIosExpenseEditorSave()
                         },
                         confirmLabel: expenseId == nil ? appLocalized("Save Expense") : appLocalized("Update Expense"),
                         showsSecondaryAction: true
@@ -309,7 +309,7 @@ struct IncomeEditorRootView: View {
 
     var body: some View {
         KotlinViewControllerHost {
-            MainViewControllerKt.AddIncomeViewController(
+            AddIncomeViewController(
                 incomeId: incomeId,
                 initialYear: initialYear.map(kotlinInt),
                 initialMonth: initialMonth.map(kotlinInt),

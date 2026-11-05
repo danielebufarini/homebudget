@@ -14,6 +14,8 @@ final class NativeTransactionEditorViewModel {
             selectedCategoryId = ""
             isShared = false
             installmentCount = 1
+            categories = []
+            categoriesReadState.resetForNewSource()
             reloadCategories()
         }
     }
@@ -30,30 +32,31 @@ final class NativeTransactionEditorViewModel {
     var isLoading: Bool
     var didFailToLoad = false
     var recurringSeriesId: String?
+    let categoriesReadState = SnapshotReadState()
 
     private let incomeId: String?
     private let editorController: any NativeTransactionEditing
-    private let categoriesController = IosCategoriesController()
+    private let categoriesController: IosCategoriesController
     private let categoryWriter: any NativeCategoryWriting
     private let writeTasks: ApplicationWriteTasks
     private let refreshWidget: @MainActor () -> Void
     @ObservationIgnored private var hasStarted = false
-    @ObservationIgnored private var categoriesTask: Task<Void, Never>?
     @ObservationIgnored private(set) var loadingTask: Task<Void, Never>?
     @ObservationIgnored private(set) var savingTask: Task<Void, Never>?
     @ObservationIgnored private(set) var categoryWriteTask: Task<Void, Never>?
     @ObservationIgnored private var lifecycleGeneration = 0
-    @ObservationIgnored private var categoriesGeneration = 0
     @ObservationIgnored private var isStopped = false
 
     init(
         initialKind: AddTransactionKind, initialYear: Int?, initialMonth: Int?,
         editorController: any NativeTransactionEditing = IosNativeTransactionEditorController(),
+        categoriesController: IosCategoriesController = IosCategoriesController(),
         categoryWriter: (any NativeCategoryWriting)? = nil,
         writeTasks: ApplicationWriteTasks = .shared,
         refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
     ) {
         self.editorController = editorController
+        self.categoriesController = categoriesController
         self.categoryWriter = categoryWriter ?? categoriesController
         self.writeTasks = writeTasks
         self.refreshWidget = refreshWidget
@@ -66,11 +69,13 @@ final class NativeTransactionEditorViewModel {
     init(
         prefilledExpense: NativeExpenseEditorPrefill,
         editorController: any NativeTransactionEditing = IosNativeTransactionEditorController(),
+        categoriesController: IosCategoriesController = IosCategoriesController(),
         categoryWriter: (any NativeCategoryWriting)? = nil,
         writeTasks: ApplicationWriteTasks = .shared,
         refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
     ) {
         self.editorController = editorController
+        self.categoriesController = categoriesController
         self.categoryWriter = categoryWriter ?? categoriesController
         self.writeTasks = writeTasks
         self.refreshWidget = refreshWidget
@@ -85,11 +90,13 @@ final class NativeTransactionEditorViewModel {
 
     init(
         incomeId: String, editorController: any NativeTransactionEditing = IosNativeTransactionEditorController(),
+        categoriesController: IosCategoriesController = IosCategoriesController(),
         categoryWriter: (any NativeCategoryWriting)? = nil,
         writeTasks: ApplicationWriteTasks = .shared,
         refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
     ) {
         self.editorController = editorController
+        self.categoriesController = categoriesController
         self.categoryWriter = categoryWriter ?? categoriesController
         self.writeTasks = writeTasks
         self.refreshWidget = refreshWidget
@@ -100,7 +107,6 @@ final class NativeTransactionEditorViewModel {
     }
 
     deinit {
-        categoriesTask?.cancel()
         loadingTask?.cancel()
         savingTask?.cancel()
         categoryWriteTask?.cancel()
@@ -109,7 +115,7 @@ final class NativeTransactionEditorViewModel {
     func start() {
         isStopped = false
         if hasStarted {
-            if categoriesTask == nil {
+            if categoriesReadState.task == nil || categoriesReadState.isStopped {
                 reloadCategories()
             }
             if isLoading { loadIncomeIfNeeded() }
@@ -124,8 +130,7 @@ final class NativeTransactionEditorViewModel {
     func stop() {
         isStopped = true
         lifecycleGeneration += 1
-        categoriesTask?.cancel()
-        categoriesTask = nil
+        categoriesReadState.stop()
         loadingTask?.cancel()
         savingTask?.cancel()
         categoryWriteTask?.cancel()
@@ -144,7 +149,8 @@ final class NativeTransactionEditorViewModel {
     }
 
     var categoryValue: String {
-        selectedCategory?.name ?? appLocalized("Select Category")
+        if categoriesReadState.isUnavailable { return appLocalized("Data unavailable") }
+        return selectedCategory?.name ?? appLocalized("Select Category")
     }
 
     var isIncome: Bool {
@@ -168,7 +174,7 @@ final class NativeTransactionEditorViewModel {
     }
 
     var recurringMonthlyYears: Int {
-        Int(ExpenseInstallmentsKt.RECURRING_MONTHLY_OCCURRENCES / 12)
+        Int(RECURRING_MONTHLY_OCCURRENCES / 12)
     }
 
     var hasValidAmount: Bool {
@@ -335,19 +341,27 @@ final class NativeTransactionEditorViewModel {
         }
     }
 
+    func retryCategories() {
+        reloadCategories()
+    }
+
     private func reloadCategories() {
         guard !isStopped else { return }
-        categoriesTask?.cancel()
-        categoriesGeneration += 1
-        let generation = categoriesGeneration
+        let lifecycle = lifecycleGeneration
         let categoryType = selectedKind.categoryType
-        categoriesTask = Task { [weak self, categoriesController] in
-            for await snapshot in categoriesController.snapshotsForCategoryType(categoryType: categoryType) {
-                guard let self, !Task.isCancelled, !isStopped, generation == categoriesGeneration else {
-                    return
-                }
-                categories = snapshot.categories.map {
-                    NativeExpenseCategory(id: $0.id, name: $0.name, iconKey: $0.iconKey)
+        categoriesReadState.start { [weak self, categoriesController] generation in
+            for await state in categoriesController.statesForCategoryType(categoryType: categoryType) {
+                guard let self, !isStopped, lifecycle == lifecycleGeneration,
+                      selectedKind.categoryType == categoryType,
+                      categoriesReadState.accepts(generation) else { return }
+                switch onEnum(of: state) {
+                case let .data(data):
+                    categories = data.snapshot.categories.map {
+                        NativeExpenseCategory(id: $0.id, name: $0.name, iconKey: $0.iconKey)
+                    }
+                    categoriesReadState.receivedData()
+                case .failed:
+                    categoriesReadState.receivedFailure()
                 }
             }
         }

@@ -1,3 +1,4 @@
+import ComposeApp
 import SwiftUI
 
 struct MonthlyIncomesSectionsScreen: View {
@@ -94,18 +95,24 @@ struct MonthlyIncomesSectionsContent: View {
         .onChange(of: groupingMode) { _, updatedMode in
             viewModel.updateGroupingMode(updatedMode)
         }
+        .onDisappear { viewModel.stop() }
         .overlay {
             if let pendingIncomeDeleteRow {
                 AppGlassDialogOverlay {
                     incomeDeleteDialog(for: pendingIncomeDeleteRow)
                 }
+            } else if viewModel.readState.showsError {
+                SnapshotReadErrorDialog(
+                    onRetry: viewModel.retry,
+                    onClose: { viewModel.readState.showsError = false }
+                )
             }
         }
     }
 
     private var sectionList: some View {
         List {
-            if !viewModel.hasLoadedSnapshot {
+            if viewModel.readState.isLoading {
                 loadingSection
             } else if viewModel.sections.isEmpty {
                 emptySection

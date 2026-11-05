@@ -1,3 +1,4 @@
+import ComposeApp
 @preconcurrency import ComposeApp
 import SwiftUI
 import Observation

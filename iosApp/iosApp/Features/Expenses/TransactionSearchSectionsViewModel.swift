@@ -32,7 +32,7 @@ final class TransactionSearchSectionsViewModel {
     init(query: String, groupingMode: ExpenseGroupingMode) {
         observer = IosTransactionSearchObserver(
             query: query,
-            initialGroupingMode: groupingMode.bridgeValue
+            initialGroupingMode: groupingMode
         )
     }
 
@@ -63,7 +63,7 @@ final class TransactionSearchSectionsViewModel {
         groupingTask?.cancel()
         groupingTask = Task { [observer] in
             guard !Task.isCancelled else { return }
-            try? await observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+            try? await observer.setGroupingMode(groupingMode: groupingMode)
         }
     }
 

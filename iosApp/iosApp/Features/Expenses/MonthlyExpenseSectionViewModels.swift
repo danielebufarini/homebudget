@@ -9,6 +9,7 @@ final class GroupedExpensesSectionsViewModel {
     var emptyStateText = appLocalized("No expenses for this month")
     var sections: [GroupedExpenseSectionModel] = []
     var expandedSectionIDs = Set<String>()
+    let readState = SnapshotReadState()
 
     private let observer: IosGroupedExpensesObserver
     @ObservationIgnored private var expansionState: GroupedSectionExpansionState
@@ -18,15 +19,16 @@ final class GroupedExpensesSectionsViewModel {
         month: Int,
         kind: GroupedExpensesKind,
         groupingMode: ExpenseGroupingMode,
-        expandsSectionsInitially: Bool = true
+        expandsSectionsInitially: Bool = true,
+        observer: IosGroupedExpensesObserver? = nil
     ) {
-        observer = IosGroupedExpensesObserver(
+        self.observer = observer ?? IosGroupedExpensesObserver(
             year: Int32(year),
             month: Int32(month),
             screenType: kind.screenType,
             categoryName: kind.categoryName,
             dayOfMonth: kind.dayOfMonth,
-            initialGroupingMode: groupingMode.bridgeValue
+            initialGroupingMode: groupingMode
         )
         expansionState = GroupedSectionExpansionState(
             strategy: NewSectionsExpansionStrategy(expandsInitially: expandsSectionsInitially)
@@ -34,8 +36,33 @@ final class GroupedExpensesSectionsViewModel {
     }
 
     func observeSnapshots() async {
-        for await snapshot in observer.snapshots {
-            apply(snapshot: snapshot)
+        startObservation()
+        await readState.wait()
+    }
+
+    func retry() {
+        guard !readState.isStopped else { return }
+        startObservation()
+    }
+
+    func stop() { readState.stop() }
+
+    private func startObservation() {
+        readState.start { [weak self, observer] generation in
+            for await state in observer.states {
+                guard let self, readState.accepts(generation) else { return }
+                switch onEnum(of: state) {
+                case let .data(data):
+                    apply(snapshot: data.snapshot)
+                    readState.receivedData()
+                case .failed:
+                    readState.receivedFailure()
+                    if !readState.hasLoadedData {
+                        totalAmountText = appLocalized("Amount unavailable")
+                        emptyStateText = appLocalized("Data unavailable")
+                    }
+                }
+            }
         }
     }
 
@@ -52,7 +79,7 @@ final class GroupedExpensesSectionsViewModel {
     }
 
     func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
-        observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+        observer.setGroupingMode(groupingMode: groupingMode)
     }
 
     private func apply(snapshot: IosGroupedExpensesSnapshot) {
@@ -74,8 +101,8 @@ final class MonthlyIncomesSectionsViewModel {
     var totalAmountText = appAmountLabel("0.00")
     var emptyStateText = appLocalized("No income for this month")
     var sections: [GroupedExpenseSectionModel] = []
-    var hasLoadedSnapshot = false
     var expandedSectionIDs = Set<String>()
+    let readState = SnapshotReadState()
 
     private let observer: IosMonthlyIncomesObserver
     @ObservationIgnored private var expansionState = GroupedSectionExpansionState(
@@ -85,18 +112,44 @@ final class MonthlyIncomesSectionsViewModel {
     init(
         year: Int,
         month: Int,
-        groupingMode: ExpenseGroupingMode = .byDate
+        groupingMode: ExpenseGroupingMode = .byDate,
+        observer: IosMonthlyIncomesObserver? = nil
     ) {
-        observer = IosMonthlyIncomesObserver(
+        self.observer = observer ?? IosMonthlyIncomesObserver(
             year: Int32(year),
             month: Int32(month),
-            initialGroupingMode: groupingMode.bridgeValue
+            initialGroupingMode: groupingMode
         )
     }
 
     func observeSnapshots() async {
-        for await snapshot in observer.snapshots {
-            apply(snapshot: snapshot)
+        startObservation()
+        await readState.wait()
+    }
+
+    func retry() {
+        guard !readState.isStopped else { return }
+        startObservation()
+    }
+
+    func stop() { readState.stop() }
+
+    private func startObservation() {
+        readState.start { [weak self, observer] generation in
+            for await state in observer.states {
+                guard let self, readState.accepts(generation) else { return }
+                switch onEnum(of: state) {
+                case let .data(data):
+                    apply(snapshot: data.snapshot)
+                    readState.receivedData()
+                case .failed:
+                    readState.receivedFailure()
+                    if !readState.hasLoadedData {
+                        totalAmountText = appLocalized("Amount unavailable")
+                        emptyStateText = appLocalized("Data unavailable")
+                    }
+                }
+            }
         }
     }
 
@@ -113,7 +166,7 @@ final class MonthlyIncomesSectionsViewModel {
     }
 
     func updateGroupingMode(_ groupingMode: ExpenseGroupingMode) {
-        observer.setGroupingMode(groupingMode: groupingMode.bridgeValue)
+        observer.setGroupingMode(groupingMode: groupingMode)
     }
 
     private func apply(snapshot: IosMonthlyIncomesSnapshot) {
@@ -122,7 +175,6 @@ final class MonthlyIncomesSectionsViewModel {
         sections = snapshot.sections.map { section in
             GroupedExpenseSectionModel(section)
         }
-        hasLoadedSnapshot = true
         expandedSectionIDs = expansionState.nextExpandedSectionIDs(
             current: expandedSectionIDs,
             sections: sections

@@ -10,7 +10,7 @@ struct DashboardRootView: View {
 
     var body: some View {
         KotlinViewControllerHost(constrainToSafeArea: false) {
-            MainViewControllerKt.DashboardContentViewController(
+            DashboardContentViewController(
                 onOpenCategories: {
                     path.append(Route.categories)
                 },
@@ -85,7 +85,7 @@ struct CategoriesRootView: View {
             AppGlassBackdrop()
 
             KotlinViewControllerHost(constrainToSafeArea: false) {
-                MainViewControllerKt.CategoriesViewController(onClose: onClose)
+                CategoriesViewController(onClose: onClose)
             }
             .ignoresSafeArea()
         }
@@ -94,7 +94,7 @@ struct CategoriesRootView: View {
                 title: appLocalized("Categories"),
                 onBack: onClose,
                 onAdd: {
-                    IosCategoriesManagementBridgeKt.performIosCategoriesManagementAdd()
+                    performIosCategoriesManagementAdd()
                 }
             )
             .padding(.horizontal, CategoriesChromeLayout.horizontalPadding)

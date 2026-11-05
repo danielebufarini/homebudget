@@ -8,11 +8,12 @@ import it.danielebufarini.spesify.di.iosKoin
 import it.danielebufarini.spesify.localization.loadCategoryNameResolver
 import it.danielebufarini.spesify.ui.screens.categories.buildCategoryId
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
 
 class IosCategoryItem(
     val id: String,
@@ -28,36 +29,25 @@ class IosBooleanResult(
     val isSuccess: Boolean
 )
 
-class IosCategoriesController {
+class IosCategoriesController internal constructor(
+    private val snapshotSource: (String) -> Flow<IosCategoriesSnapshot>
+) {
+    constructor() : this(::categorySnapshots)
+
+    private val collectionMutex = Mutex()
+
     private val repository: ExpenseRepository by lazy {
         iosKoin().get()
     }
 
-    fun snapshots() = snapshotsForCategoryType(CATEGORY_TYPE_EXPENSE)
+    fun states() = statesForCategoryType(CATEGORY_TYPE_EXPENSE)
 
-    fun snapshotsForCategoryType(categoryType: String) = flow {
-        repository.seedStarterCategoriesIfEmpty()
-        emitAll(
-            repository.getAllCategories()
-                .map { categories ->
-                    val resolveCategoryName = loadCategoryNameResolver()
-                    val selectableCategories = categories
-                        .asSequence()
-                        .filter { category ->
-                            category.categoryType == categoryType && category.isArchived != 1L
-                        }
-                        .map { category ->
-                            IosCategoryItem(
-                                id = category.id,
-                                name = resolveCategoryName(category.id, category.name),
-                                iconKey = category.icon
-                            )
-                        }
-                        .toList()
-                    IosCategoriesSnapshot(categories = selectableCategories)
-                }
-        )
-    }.flowOn(Dispatchers.Default)
+    fun statesForCategoryType(categoryType: String): Flow<IosCategoriesState> = iosReadStates(
+        source = { snapshotSource(categoryType) },
+        data = IosCategoriesState::Data,
+        failed = IosCategoriesState.Failed,
+        collectionMutex = collectionMutex
+    )
 
     suspend fun insertCategory(name: String, iconKey: String): IosBooleanResult {
         return IosBooleanResult(insertCategoryAndReturnId(name, iconKey) != null)
@@ -120,4 +110,28 @@ class IosCategoriesController {
         }
         return IosBooleanResult(success)
     }
+}
+
+private fun categorySnapshots(categoryType: String): Flow<IosCategoriesSnapshot> = flow {
+    val repository = iosKoin().get<ExpenseRepository>()
+    repository.seedStarterCategoriesIfEmpty()
+    emitAll(
+        repository.getAllCategories().map { categories ->
+            val resolveCategoryName = loadCategoryNameResolver()
+            val selectableCategories = categories
+                .asSequence()
+                .filter { category ->
+                    category.categoryType == categoryType && category.isArchived != 1L
+                }
+                .map { category ->
+                    IosCategoryItem(
+                        id = category.id,
+                        name = resolveCategoryName(category.id, category.name),
+                        iconKey = category.icon
+                    )
+                }
+                .toList()
+            IosCategoriesSnapshot(categories = selectableCategories)
+        }
+    )
 }

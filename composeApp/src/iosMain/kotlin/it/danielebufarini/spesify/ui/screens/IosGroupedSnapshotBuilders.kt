@@ -41,24 +41,6 @@ internal data class IosPreparedGroup<T>(
     val rows: List<T>
 )
 
-private enum class IosGroupingStrategy {
-    Category,
-    Date;
-
-    val bridgeValue: String
-        get() = when (this) {
-            Category -> "category"
-            Date -> "date"
-        }
-
-    companion object {
-        fun fromBridgeValue(value: String): IosGroupingStrategy = when (value) {
-            "date" -> Date
-            else -> Category
-        }
-    }
-}
-
 internal fun buildSnapshotsCache(
     preparedExpenses: List<PreparedIosExpense>,
     key: GroupedExpensesCacheKey,
@@ -82,8 +64,8 @@ internal fun buildSnapshotsCache(
             totalAmountText = totalAmountText,
             emptyStateText = emptyStateText,
             sections = buildSections(
-                groupedExpenses = filteredExpenses.groupExpensesByStrategy(IosGroupingStrategy.Category),
-                groupingMode = "category",
+                groupedExpenses = filteredExpenses.groupExpensesByStrategy(ExpenseGroupingMode.ByCategory),
+                groupingMode = ExpenseGroupingMode.ByCategory,
                 screenType = key.screenType,
                 localization = localization
             )
@@ -92,8 +74,8 @@ internal fun buildSnapshotsCache(
             totalAmountText = totalAmountText,
             emptyStateText = emptyStateText,
             sections = buildSections(
-                groupedExpenses = filteredExpenses.groupExpensesByStrategy(IosGroupingStrategy.Date),
-                groupingMode = "date",
+                groupedExpenses = filteredExpenses.groupExpensesByStrategy(ExpenseGroupingMode.ByDate),
+                groupingMode = ExpenseGroupingMode.ByDate,
                 screenType = key.screenType,
                 localization = localization
             )
@@ -106,7 +88,7 @@ internal fun buildMonthlyIncomesSnapshot(
     categories: List<Category>,
     year: Int,
     month: Int,
-    groupingMode: String,
+    groupingMode: ExpenseGroupingMode,
     localization: IosGroupedLocalization
 ): IosMonthlyIncomesSnapshot {
     val categoriesById = categories.associateBy { it.id }
@@ -131,20 +113,20 @@ internal fun buildMonthlyIncomesSnapshot(
 
 internal fun buildPreparedIncomesSnapshot(
     preparedIncomes: List<PreparedIosIncome>,
-    groupingMode: String,
+    groupingMode: ExpenseGroupingMode,
     emptyStateText: String,
     localization: IosGroupedLocalization
 ): IosMonthlyIncomesSnapshot {
-    val strategy = IosGroupingStrategy.fromBridgeValue(groupingMode)
+    val strategy = groupingMode
     val sections = preparedIncomes
         .groupIncomesByStrategy(strategy)
         .map { group ->
             val sortedIncomes = group.rows.sortedIncomesByTransactionFields()
             IosIncomeSection(
-                id = "${strategy.bridgeValue}:${group.name}",
+                id = "${strategy.sectionIdPrefix}:${group.name}",
                 title = group.name,
-                categoryColorKey = if (strategy == IosGroupingStrategy.Date) null else sortedIncomes.firstOrNull()?.categoryId,
-                categoryIconKey = if (strategy == IosGroupingStrategy.Date) null else sortedIncomes.firstOrNull()?.categoryIconKey,
+                categoryColorKey = if (strategy == ExpenseGroupingMode.ByDate) null else sortedIncomes.firstOrNull()?.categoryId,
+                categoryIconKey = if (strategy == ExpenseGroupingMode.ByDate) null else sortedIncomes.firstOrNull()?.categoryIconKey,
                 totalAmountText = formatAmount(
                     sortedIncomes.sumAmountOf(PreparedIosIncome::amount),
                     localization.currencySymbol
@@ -153,8 +135,8 @@ internal fun buildPreparedIncomesSnapshot(
                     val incomeName = income.description?.ifBlank { localization.income } ?: localization.income
                     IosIncomeRow(
                         id = income.id,
-                        title = if (strategy == IosGroupingStrategy.Date) income.categoryName else incomeName,
-                        subtitleText = if (strategy == IosGroupingStrategy.Date) incomeName else income.dateText,
+                        title = if (strategy == ExpenseGroupingMode.ByDate) income.categoryName else incomeName,
+                        subtitleText = if (strategy == ExpenseGroupingMode.ByDate) incomeName else income.dateText,
                         amountText = income.amountText,
                         categoryColorKey = income.categoryId,
                         categoryIconKey = income.categoryIconKey,
@@ -216,18 +198,18 @@ internal fun buildRecurringExpensesSnapshot(
 
 internal fun buildSections(
     groupedExpenses: List<IosPreparedGroup<PreparedIosExpense>>,
-    groupingMode: String,
-    screenType: String,
+    groupingMode: ExpenseGroupingMode,
+    screenType: IosGroupedExpensesScreenType,
     localization: IosGroupedLocalization
 ): List<IosGroupedExpenseSection> {
-    val strategy = IosGroupingStrategy.fromBridgeValue(groupingMode)
+    val strategy = groupingMode
     return groupedExpenses.map { group ->
         val sortedExpenses = group.rows.sortedExpensesByTransactionFields()
         IosGroupedExpenseSection(
             id = group.name,
             title = group.name,
-            categoryColorKey = if (strategy == IosGroupingStrategy.Date) null else sortedExpenses.firstOrNull()?.categoryId,
-            categoryIconKey = if (strategy == IosGroupingStrategy.Date) null else sortedExpenses.firstOrNull()?.categoryIconKey,
+            categoryColorKey = if (strategy == ExpenseGroupingMode.ByDate) null else sortedExpenses.firstOrNull()?.categoryId,
+            categoryIconKey = if (strategy == ExpenseGroupingMode.ByDate) null else sortedExpenses.firstOrNull()?.categoryIconKey,
             totalAmountText = formatAmount(
                 sortedExpenses.sumAmountOf(PreparedIosExpense::amount),
                 localization.currencySymbol
@@ -237,8 +219,8 @@ internal fun buildSections(
                     ?: expenseFallbackTitle(screenType, localization)
                 IosGroupedExpenseRow(
                     id = expense.id,
-                    title = if (strategy == IosGroupingStrategy.Date) expense.categoryName else expenseName,
-                    subtitleText = if (strategy == IosGroupingStrategy.Date) expenseName else expense.dateText,
+                    title = if (strategy == ExpenseGroupingMode.ByDate) expense.categoryName else expenseName,
+                    subtitleText = if (strategy == ExpenseGroupingMode.ByDate) expenseName else expense.dateText,
                     amountText = expense.amountText,
                     categoryColorKey = expense.categoryId,
                     categoryIconKey = expense.categoryIconKey,
@@ -371,40 +353,40 @@ internal suspend fun loadIosRecurringLocalization(): IosRecurringLocalization =
 
 internal fun groupPreparedExpensesByMode(
     preparedExpenses: List<PreparedIosExpense>,
-    groupingMode: String
+    groupingMode: ExpenseGroupingMode
 ): List<IosPreparedGroup<PreparedIosExpense>> =
-    preparedExpenses.groupExpensesByStrategy(IosGroupingStrategy.fromBridgeValue(groupingMode))
+    preparedExpenses.groupExpensesByStrategy(groupingMode)
 
 private fun List<PreparedIosExpense>.groupExpensesByStrategy(
-    strategy: IosGroupingStrategy
+    strategy: ExpenseGroupingMode
 ): List<IosPreparedGroup<PreparedIosExpense>> = groupBy {
     when (strategy) {
-        IosGroupingStrategy.Category -> it.categoryName
-        IosGroupingStrategy.Date -> it.dateGroupTitleText
+        ExpenseGroupingMode.ByCategory -> it.categoryName
+        ExpenseGroupingMode.ByDate -> it.dateGroupTitleText
     }
 }
     .toPreparedGroups(strategy, PreparedIosExpense::dateMillis)
 
 private fun List<PreparedIosIncome>.groupIncomesByStrategy(
-    strategy: IosGroupingStrategy
+    strategy: ExpenseGroupingMode
 ): List<IosPreparedGroup<PreparedIosIncome>> = groupBy {
     when (strategy) {
-        IosGroupingStrategy.Category -> it.categoryName
-        IosGroupingStrategy.Date -> it.dateGroupTitleText
+        ExpenseGroupingMode.ByCategory -> it.categoryName
+        ExpenseGroupingMode.ByDate -> it.dateGroupTitleText
     }
 }
     .toPreparedGroups(strategy, PreparedIosIncome::dateMillis)
 
 private fun <T> Map<String, List<T>>.toPreparedGroups(
-    strategy: IosGroupingStrategy,
+    strategy: ExpenseGroupingMode,
     dateMillis: (T) -> Long
 ): List<IosPreparedGroup<T>> = toList()
     .sortedWith(
         when (strategy) {
-            IosGroupingStrategy.Date -> compareByDescending<Pair<String, List<T>>> {
+            ExpenseGroupingMode.ByDate -> compareByDescending<Pair<String, List<T>>> {
                 it.second.maxOfOrNull(dateMillis) ?: Long.MIN_VALUE
             }
-            IosGroupingStrategy.Category -> compareBy<Pair<String, List<T>>> { it.first }
+            ExpenseGroupingMode.ByCategory -> compareBy<Pair<String, List<T>>> { it.first }
         }
     )
     .map { (groupName, rows) ->
@@ -425,33 +407,40 @@ private fun List<PreparedIosIncome>.sortedIncomesByTransactionFields(): List<Pre
             .thenBy { it.description.orEmpty() }
     )
 
-private fun includeExpense(expense: PreparedIosExpense, screenType: String): Boolean = when (screenType) {
-    "shared" -> expense.isShared
-    else -> true
+private fun includeExpense(expense: PreparedIosExpense, screenType: IosGroupedExpensesScreenType): Boolean = when (screenType) {
+    IosGroupedExpensesScreenType.Shared -> expense.isShared
+    IosGroupedExpensesScreenType.Monthly, IosGroupedExpensesScreenType.Category, IosGroupedExpensesScreenType.Day -> true
 }
 
-private fun includeCategory(groupName: String, screenType: String, categoryName: String?): Boolean = when (screenType) {
-    "category" -> groupName == categoryName
-    else -> true
+private fun includeCategory(groupName: String, screenType: IosGroupedExpensesScreenType, categoryName: String?): Boolean = when (screenType) {
+    IosGroupedExpensesScreenType.Category -> groupName == categoryName
+    IosGroupedExpensesScreenType.Monthly, IosGroupedExpensesScreenType.Shared, IosGroupedExpensesScreenType.Day -> true
 }
 
-private fun expenseFallbackTitle(screenType: String, localization: IosGroupedLocalization): String = when (screenType) {
-    "shared" -> localization.sharedExpense
-    else -> localization.expense
+private fun expenseFallbackTitle(screenType: IosGroupedExpensesScreenType, localization: IosGroupedLocalization): String = when (screenType) {
+    IosGroupedExpensesScreenType.Shared -> localization.sharedExpense
+    IosGroupedExpensesScreenType.Monthly, IosGroupedExpensesScreenType.Category, IosGroupedExpensesScreenType.Day -> localization.expense
 }
 
 private fun emptyStateText(
-    screenType: String,
+    screenType: IosGroupedExpensesScreenType,
     categoryName: String?,
     localization: IosGroupedLocalization
 ): String = when (screenType) {
-    "shared" -> localization.noSharedExpensesForMonth
-    "day" -> localization.noExpensesForDay
-    "category" -> localization.noExpensesForCategoryThisMonthTemplate
+    IosGroupedExpensesScreenType.Shared -> localization.noSharedExpensesForMonth
+    IosGroupedExpensesScreenType.Day -> localization.noExpensesForDay
+    IosGroupedExpensesScreenType.Category -> localization.noExpensesForCategoryThisMonthTemplate
         .formatResourceArgs(categoryName ?: localization.category)
-    else -> localization.noExpensesForMonth
+    IosGroupedExpensesScreenType.Monthly -> localization.noExpensesForMonth
 }
 
 private fun formatDateGroupTitle(epochMillis: Long, shortMonthNames: List<String>): String {
     return formatExpenseDateGroupTitle(epochMillisToLocalDate(epochMillis), shortMonthNames)
 }
+
+// Historical section identifiers remain stable across the typed API migration.
+private val ExpenseGroupingMode.sectionIdPrefix: String
+    get() = when (this) {
+        ExpenseGroupingMode.ByCategory -> "category"
+        ExpenseGroupingMode.ByDate -> "date"
+    }

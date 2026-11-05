@@ -28,15 +28,15 @@ final class NativeExpenseEditorViewModel {
     var recurringSeriesId: String?
     var categories: [NativeExpenseCategory] = []
     var isSaving = false
+    let categoriesReadState = SnapshotReadState()
 
     private let expenseId: String
     private let editorController: any NativeExpenseEditing
-    private let categoriesController = IosCategoriesController()
+    private let categoriesController: IosCategoriesController
     private let categoryWriter: any NativeCategoryWriting
     private let writeTasks: ApplicationWriteTasks
     private let refreshWidget: @MainActor () -> Void
     @ObservationIgnored private var hasStarted = false
-    @ObservationIgnored private var categoriesTask: Task<Void, Never>?
     @ObservationIgnored private(set) var loadingTask: Task<Void, Never>?
     @ObservationIgnored private(set) var savingTask: Task<Void, Never>?
     @ObservationIgnored private(set) var categoryWriteTask: Task<Void, Never>?
@@ -45,19 +45,20 @@ final class NativeExpenseEditorViewModel {
 
     init(
         expenseId: String, editorController: any NativeExpenseEditing = IosExpenseEditorController(),
+        categoriesController: IosCategoriesController = IosCategoriesController(),
         categoryWriter: (any NativeCategoryWriting)? = nil,
         writeTasks: ApplicationWriteTasks = .shared,
         refreshWidget: @escaping @MainActor () -> Void = { SpesifyWidgetSummaryRefresher.shared.refresh() }
     ) {
         self.expenseId = expenseId
         self.editorController = editorController
+        self.categoriesController = categoriesController
         self.categoryWriter = categoryWriter ?? categoriesController
         self.writeTasks = writeTasks
         self.refreshWidget = refreshWidget
     }
 
     deinit {
-        categoriesTask?.cancel()
         loadingTask?.cancel()
         savingTask?.cancel()
         categoryWriteTask?.cancel()
@@ -100,8 +101,7 @@ final class NativeExpenseEditorViewModel {
     func stop() {
         isStopped = true
         lifecycleGeneration += 1
-        categoriesTask?.cancel()
-        categoriesTask = nil
+        categoriesReadState.stop()
         loadingTask?.cancel()
         savingTask?.cancel()
         categoryWriteTask?.cancel()
@@ -109,21 +109,29 @@ final class NativeExpenseEditorViewModel {
     }
 
     private func startCategoryObservationIfNeeded() {
-        guard categoriesTask == nil else {
-            return
-        }
+        guard categoriesReadState.task == nil || categoriesReadState.isStopped else { return }
+        observeCategories()
+    }
 
-        categoriesTask = Task { [weak self, categoriesController] in
-            for await snapshot in categoriesController.snapshots() {
-                guard let self, !Task.isCancelled, !isStopped else {
-                    return
-                }
-                categories = snapshot.categories.map { item in
-                    NativeExpenseCategory(
-                        id: item.id,
-                        name: item.name,
-                        iconKey: item.iconKey
-                    )
+    func retryCategories() {
+        guard !isStopped else { return }
+        observeCategories()
+    }
+
+    private func observeCategories() {
+        let lifecycle = lifecycleGeneration
+        categoriesReadState.start { [weak self, categoriesController] generation in
+            for await state in categoriesController.states() {
+                guard let self, !isStopped, lifecycle == lifecycleGeneration,
+                      categoriesReadState.accepts(generation) else { return }
+                switch onEnum(of: state) {
+                case let .data(data):
+                    categories = data.snapshot.categories.map { item in
+                        NativeExpenseCategory(id: item.id, name: item.name, iconKey: item.iconKey)
+                    }
+                    categoriesReadState.receivedData()
+                case .failed:
+                    categoriesReadState.receivedFailure()
                 }
             }
         }
@@ -131,6 +139,11 @@ final class NativeExpenseEditorViewModel {
 
     var selectedCategory: NativeExpenseCategory? {
         categories.first(where: { $0.id == selectedCategoryId })
+    }
+
+    var categoryValue: String {
+        if categoriesReadState.isUnavailable { return appLocalized("Data unavailable") }
+        return selectedCategory?.name ?? appLocalized("Select Category")
     }
 
     var canEdit: Bool {
@@ -146,7 +159,7 @@ final class NativeExpenseEditorViewModel {
     }
 
     var recurringMonthlyYears: Int {
-        Int(ExpenseInstallmentsKt.RECURRING_MONTHLY_OCCURRENCES / 12)
+        Int(RECURRING_MONTHLY_OCCURRENCES / 12)
     }
 
     func save(

@@ -41,11 +41,20 @@ struct RecurringExpensesSectionsScreen: View {
         .task {
             await viewModel.observeSnapshots()
         }
+        .onDisappear { viewModel.stop() }
+        .overlay {
+            if viewModel.readState.showsError {
+                SnapshotReadErrorDialog(
+                    onRetry: viewModel.retry,
+                    onClose: { viewModel.readState.showsError = false }
+                )
+            }
+        }
     }
 
     private var recurringList: some View {
         List {
-            if !viewModel.hasLoadedSnapshot {
+            if viewModel.readState.isLoading {
                 loadingSection
             } else if viewModel.rows.isEmpty {
                 emptySection
@@ -138,20 +147,46 @@ final class RecurringExpensesSectionsViewModel {
     var emptyStateTitle = appLocalized("No recurring expenses")
     var emptyStateDescription = appLocalized("Recurring expenses will appear here.")
     var rows: [GroupedExpenseRowModel] = []
-    var hasLoadedSnapshot = false
+    let readState = SnapshotReadState()
 
     private let observer: IosRecurringExpensesObserver
 
-    init(year: Int, month: Int) {
-        observer = IosRecurringExpensesObserver(
+    init(year: Int, month: Int, observer: IosRecurringExpensesObserver? = nil) {
+        self.observer = observer ?? IosRecurringExpensesObserver(
             year: Int32(year),
             month: Int32(month)
         )
     }
 
     func observeSnapshots() async {
-        for await snapshot in observer.snapshots {
-            apply(snapshot: snapshot)
+        startObservation()
+        await readState.wait()
+    }
+
+    func retry() {
+        guard !readState.isStopped else { return }
+        startObservation()
+    }
+
+    func stop() { readState.stop() }
+
+    private func startObservation() {
+        readState.start { [weak self, observer] generation in
+            for await state in observer.states {
+                guard let self, readState.accepts(generation) else { return }
+                switch onEnum(of: state) {
+                case let .data(data):
+                    apply(snapshot: data.snapshot)
+                    readState.receivedData()
+                case .failed:
+                    readState.receivedFailure()
+                    if !readState.hasLoadedData {
+                        totalAmountText = appLocalized("Amount unavailable")
+                        emptyStateTitle = appLocalized("Data unavailable")
+                        emptyStateDescription = appLocalized("Unable to load data")
+                    }
+                }
+            }
         }
     }
 
@@ -162,7 +197,6 @@ final class RecurringExpensesSectionsViewModel {
         emptyStateTitle = snapshot.emptyStateTitle
         emptyStateDescription = snapshot.emptyStateDescription
         rows = snapshot.rows.map(GroupedExpenseRowModel.init)
-        hasLoadedSnapshot = true
     }
 }
 

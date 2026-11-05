@@ -4,32 +4,66 @@ import it.danielebufarini.spesify.di.iosKoin
 
 import it.danielebufarini.spesify.data.ExpenseRepository
 import it.danielebufarini.spesify.data.monthBounds
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 
-class IosGroupedExpensesObserver(
-    private val year: Int,
-    private val month: Int,
-    private val screenType: String,
-    private val categoryName: String?,
-    private val dayOfMonth: Int? = null,
-    initialGroupingMode: String
+class IosGroupedExpensesObserver internal constructor(
+    initialGroupingMode: ExpenseGroupingMode,
+    private val snapshotSource: (StateFlow<ExpenseGroupingMode>) -> Flow<IosGroupedExpensesSnapshot>
 ) {
-    private val groupingMode = MutableStateFlow(initialGroupingMode)
-    private val cacheKey = GroupedExpensesCacheKey(
-        year = year,
-        month = month,
-        screenType = screenType,
-        categoryName = categoryName,
-        dayOfMonth = dayOfMonth
+    constructor(
+        year: Int,
+        month: Int,
+        screenType: IosGroupedExpensesScreenType,
+        categoryName: String?,
+        dayOfMonth: Int? = null,
+        initialGroupingMode: ExpenseGroupingMode
+    ) : this(
+        initialGroupingMode,
+        { groupingMode -> groupedExpensesSnapshots(year, month, screenType, categoryName, dayOfMonth, groupingMode) }
     )
 
-    val snapshots = flow {
-        val repository = repository()
+    private val groupingMode = MutableStateFlow(initialGroupingMode)
+
+    val states: Flow<IosGroupedExpensesState> = iosReadStates(
+        source = { snapshotSource(groupingMode) },
+        data = IosGroupedExpensesState::Data,
+        failed = IosGroupedExpensesState.Failed
+    )
+
+    fun setGroupingMode(groupingMode: ExpenseGroupingMode) {
+        if (this.groupingMode.value != groupingMode) {
+            this.groupingMode.value = groupingMode
+        }
+    }
+
+    suspend fun deleteExpense(id: String) {
+        repository().deleteExpense(id)
+    }
+
+    suspend fun deleteRecurringExpenseSeries(seriesId: String) {
+        repository().deleteRecurringExpenseSeries(seriesId)
+    }
+
+    private fun repository(): ExpenseRepository =
+        iosKoin().get()
+}
+
+private fun groupedExpensesSnapshots(
+    year: Int,
+    month: Int,
+    screenType: IosGroupedExpensesScreenType,
+    categoryName: String?,
+    dayOfMonth: Int?,
+    groupingMode: StateFlow<ExpenseGroupingMode>
+): Flow<IosGroupedExpensesSnapshot> {
+    val cacheKey = GroupedExpensesCacheKey(year, month, screenType, categoryName, dayOfMonth)
+    return flow {
+        val repository = iosKoin().get<ExpenseRepository>()
         repository.seedStarterCategoriesIfEmpty()
         val localization = loadIosGroupedLocalization()
         val (startMillis, endMillis) = monthBounds(year, month)
@@ -50,32 +84,24 @@ class IosGroupedExpensesObserver(
                 ).snapshotFor(currentGroupingMode)
             }
         )
-    }.flowOn(Dispatchers.Default)
-
-    fun setGroupingMode(groupingMode: String) {
-        if (this.groupingMode.value != groupingMode) {
-            this.groupingMode.value = groupingMode
-        }
     }
-
-    suspend fun deleteExpense(id: String) {
-        repository().deleteExpense(id)
-    }
-
-    suspend fun deleteRecurringExpenseSeries(seriesId: String) {
-        repository().deleteRecurringExpenseSeries(seriesId)
-    }
-
-    private fun repository(): ExpenseRepository =
-        iosKoin().get()
 }
 
-class IosRecurringExpensesObserver(
-    private val year: Int,
-    private val month: Int
+class IosRecurringExpensesObserver internal constructor(
+    snapshotSource: () -> Flow<IosRecurringExpensesSnapshot>
 ) {
-    val snapshots = flow {
-        val repository = repository()
+    constructor(year: Int, month: Int) : this({ recurringExpensesSnapshots(year, month) })
+
+    val states: Flow<IosRecurringExpensesState> = iosReadStates(
+        source = snapshotSource,
+        data = IosRecurringExpensesState::Data,
+        failed = IosRecurringExpensesState.Failed
+    )
+}
+
+private fun recurringExpensesSnapshots(year: Int, month: Int): Flow<IosRecurringExpensesSnapshot> =
+    flow {
+        val repository = iosKoin().get<ExpenseRepository>()
         repository.seedStarterCategoriesIfEmpty()
         val localization = loadIosRecurringLocalization()
         emitAll(
@@ -93,21 +119,50 @@ class IosRecurringExpensesObserver(
                 )
             }
         )
-    }.flowOn(Dispatchers.Default)
+    }
+
+class IosMonthlyIncomesObserver internal constructor(
+    initialGroupingMode: ExpenseGroupingMode,
+    private val snapshotSource: (StateFlow<ExpenseGroupingMode>) -> Flow<IosMonthlyIncomesSnapshot>
+) {
+    constructor(year: Int, month: Int, initialGroupingMode: ExpenseGroupingMode) : this(
+        initialGroupingMode,
+        { groupingMode -> monthlyIncomesSnapshots(year, month, groupingMode) }
+    )
+
+    private val groupingMode = MutableStateFlow(initialGroupingMode)
+
+    val states: Flow<IosMonthlyIncomesState> = iosReadStates(
+        source = { snapshotSource(groupingMode) },
+        data = IosMonthlyIncomesState::Data,
+        failed = IosMonthlyIncomesState.Failed
+    )
+
+    fun setGroupingMode(groupingMode: ExpenseGroupingMode) {
+        if (this.groupingMode.value != groupingMode) {
+            this.groupingMode.value = groupingMode
+        }
+    }
+
+    suspend fun deleteIncome(id: String) {
+        repository().deleteIncome(id)
+    }
+
+    suspend fun deleteRecurringIncomeSeries(seriesId: String) {
+        repository().deleteRecurringIncomeSeries(seriesId)
+    }
 
     private fun repository(): ExpenseRepository =
         iosKoin().get()
 }
 
-class IosMonthlyIncomesObserver(
-    private val year: Int,
-    private val month: Int,
-    initialGroupingMode: String
-) {
-    private val groupingMode = MutableStateFlow(initialGroupingMode)
-
-    val snapshots = flow {
-        val repository = repository()
+private fun monthlyIncomesSnapshots(
+    year: Int,
+    month: Int,
+    groupingMode: StateFlow<ExpenseGroupingMode>
+): Flow<IosMonthlyIncomesSnapshot> =
+    flow {
+        val repository = iosKoin().get<ExpenseRepository>()
         repository.seedStarterCategoriesIfEmpty()
         val localization = loadIosGroupedLocalization()
         val (startMillis, endMillis) = monthBounds(year, month)
@@ -127,22 +182,4 @@ class IosMonthlyIncomesObserver(
                 )
             }
         )
-    }.flowOn(Dispatchers.Default)
-
-    fun setGroupingMode(groupingMode: String) {
-        if (this.groupingMode.value != groupingMode) {
-            this.groupingMode.value = groupingMode
-        }
     }
-
-    suspend fun deleteIncome(id: String) {
-        repository().deleteIncome(id)
-    }
-
-    suspend fun deleteRecurringIncomeSeries(seriesId: String) {
-        repository().deleteRecurringIncomeSeries(seriesId)
-    }
-
-    private fun repository(): ExpenseRepository =
-        iosKoin().get()
-}

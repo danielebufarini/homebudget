@@ -23,11 +23,11 @@ class IosTransactionSearchSnapshot(
 
 class IosTransactionSearchObserver internal constructor(
     private val query: String,
-    initialGroupingMode: String,
+    initialGroupingMode: ExpenseGroupingMode,
     private val source: IosTransactionSearchDataSource,
     private val loadLocalization: suspend () -> IosGroupedLocalization
 ) {
-    constructor(query: String, initialGroupingMode: String) : this(
+    constructor(query: String, initialGroupingMode: ExpenseGroupingMode) : this(
         query, initialGroupingMode, RepositoryIosTransactionSearchDataSource(), ::loadIosGroupedLocalization
     )
     private val mutationMutex = Mutex()
@@ -58,7 +58,7 @@ class IosTransactionSearchObserver internal constructor(
         hasStarted = true
     }
 
-    suspend fun setGroupingMode(groupingMode: String) = mutationMutex.withLock {
+    suspend fun setGroupingMode(groupingMode: ExpenseGroupingMode) = mutationMutex.withLock {
         if (this.groupingMode != groupingMode) {
             this.groupingMode = groupingMode
             publishSnapshot()
@@ -139,7 +139,7 @@ private fun buildTransactionSearchSnapshot(
     expenses: List<Expense>,
     incomes: List<Income>,
     categories: List<Category>,
-    groupingMode: String,
+    groupingMode: ExpenseGroupingMode,
     localization: IosGroupedLocalization,
     canLoadMoreExpenseResults: Boolean,
     canLoadMoreIncomeResults: Boolean
@@ -182,7 +182,7 @@ private fun buildTransactionSearchSnapshot(
             sections = buildSections(
                 groupedExpenses = groupPreparedExpensesByMode(preparedExpenses, groupingMode),
                 groupingMode = groupingMode,
-                screenType = "monthly",
+                screenType = IosGroupedExpensesScreenType.Monthly,
                 localization = localization
             )
         ),

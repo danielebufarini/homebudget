@@ -145,6 +145,14 @@ struct NativeTransactionEditorScreen: View {
                 }
             }
         }
+        .overlay {
+            if !showRecurringDeleteDialog && !showRecurringSaveDialog && viewModel.categoriesReadState.showsError {
+                SnapshotReadErrorDialog(
+                    onRetry: viewModel.retryCategories,
+                    onClose: { viewModel.categoriesReadState.showsError = false }
+                )
+            }
+        }
         .onAppear {
             viewModel.start()
         }

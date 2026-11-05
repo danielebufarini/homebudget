@@ -1,3 +1,4 @@
+import ComposeApp
 import SwiftUI
 
 struct GroupedExpensesSectionsList: View {
@@ -70,11 +71,17 @@ struct GroupedExpensesSectionsList: View {
         .onChange(of: groupingMode) { _, updatedMode in
             viewModel.updateGroupingMode(updatedMode)
         }
+        .onDisappear { viewModel.stop() }
         .overlay {
             if let pendingExpenseDeleteRow {
                 AppGlassDialogOverlay {
                     expenseDeleteDialog(for: pendingExpenseDeleteRow)
                 }
+            } else if viewModel.readState.showsError {
+                SnapshotReadErrorDialog(
+                    onRetry: viewModel.retry,
+                    onClose: { viewModel.readState.showsError = false }
+                )
             }
         }
     }

@@ -52,5 +52,20 @@ final class ScreenshotSharingTests: XCTestCase {
         add(screenshot)
         runner.buttons["Done"].tap()
         XCTAssertTrue(received.waitForNonExistence(timeout: 10), runner.debugDescription)
+
+        // Consume this test's queued image and dismiss its unsaved editor. Otherwise
+        // the next UI test's launch opens this fixture instead of the dashboard.
+        app.launch()
+        defer { app.terminate() }
+        let editor = app.staticTexts.matching(NSPredicate(
+            format: "label IN %@", argumentArray: [["Add Expense", "Aggiungi spesa"]]
+        )).firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 15), app.debugDescription)
+        let cancel = app.buttons.matching(NSPredicate(
+            format: "label IN %@", argumentArray: [["Cancel", "Annulla"]]
+        )).firstMatch
+        XCTAssertTrue(cancel.isHittable, app.debugDescription)
+        cancel.tap()
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 10), app.debugDescription)
     }
 }
