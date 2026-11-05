@@ -40,11 +40,14 @@ struct ContentTransferDependencies {
     var screenshotCandidates: @MainActor (URL) async throws -> [NativeExpenseEditorPrefill]
     var refreshWidget: @MainActor () -> Void
     var writes: ApplicationWriteTasks = .shared
+    var nextSharedScreenshot: @MainActor () async throws -> URL? = { nil }
+    var removeSharedScreenshot: @MainActor (URL) async throws -> Void = { _ in }
 
     static func live() -> Self {
         let importer = IosCsvImportController()
         let exporter = IosCsvExportController()
         let screenshotImporter = PaymentScreenshotImportViewModel()
+        let sharedInbox = try? SharedScreenshotInbox.appGroup()
         return Self(
             readCsv: { try await ContentTransferFiles.readCsv(from: $0) },
             importCsv: { text in
@@ -57,7 +60,9 @@ struct ContentTransferDependencies {
             },
             isImageDocument: { try await ContentTransferFiles.isImageDocument($0) },
             screenshotCandidates: { try await screenshotImporter.candidates(fromImageFileAt: $0) },
-            refreshWidget: { SpesifyWidgetSummaryRefresher.shared.refresh() }
+            refreshWidget: { SpesifyWidgetSummaryRefresher.shared.refresh() },
+            nextSharedScreenshot: { try await sharedInbox?.next() },
+            removeSharedScreenshot: { try await sharedInbox?.remove($0) }
         )
     }
 }
@@ -76,6 +81,7 @@ final class ContentTransferViewModel {
     @ObservationIgnored private var revisions: [ContentTransferOperation: Int] = [:]
     @ObservationIgnored private var presentationRevision = 0
     @ObservationIgnored private var active = true
+    @ObservationIgnored private var checkingSharedScreenshot = false
 
     init(dependencies: ContentTransferDependencies = .live()) { self.dependencies = dependencies }
 
@@ -156,6 +162,29 @@ final class ContentTransferViewModel {
                       let self, isCurrent(.csvExport, revision) else { return }
                 show(appLocalized("Unable to export the CSV file"), style: .error)
             }
+        }
+    }
+
+    func importSharedScreenshotIfNeeded() async {
+        guard active, !isProcessingScreenshot, !checkingSharedScreenshot else { return }
+        checkingSharedScreenshot = true
+        defer { checkingSharedScreenshot = false }
+        do {
+            guard let url = try await dependencies.nextSharedScreenshot() else { return }
+            try Task.checkCancellation()
+            guard active, !isProcessingScreenshot else { return }
+            let previousScreenshot = screenshot?.id
+            let previousFeedback = feedback?.id
+            importScreenshot(from: url)
+            let revision = revisions[.screenshot]
+            await tasks[.screenshot]?.value
+            // A cancelled or superseded import leaves its image available for the next launch.
+            guard revisions[.screenshot] == revision,
+                  screenshot?.id != previousScreenshot || feedback?.id != previousFeedback else { return }
+            try await dependencies.removeSharedScreenshot(url)
+        } catch {
+            guard active, !Task.isCancelled, !(error is CancellationError) else { return }
+            show(paymentScreenshotImportMessage(for: error), style: .error)
         }
     }
 

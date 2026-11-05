@@ -25,10 +25,17 @@ extension SpesifyIntentTransactionKind {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct AddTransactionIntent: AppIntent {
     static let title: LocalizedStringResource = "Add Transaction"
     static let description = IntentDescription("Adds a single non-recurring expense or income to Spesify.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Type",

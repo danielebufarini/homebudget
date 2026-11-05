@@ -2,10 +2,17 @@ import AppIntents
 @preconcurrency import ComposeApp
 import Foundation
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct ListCategoriesIntent: AppIntent {
     static let title: LocalizedStringResource = "List Categories"
     static let description = IntentDescription("Lists active Spesify categories for the selected type.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Type",
@@ -24,10 +31,17 @@ struct ListCategoriesIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct AddCategoryIntent: AppIntent {
     static let title: LocalizedStringResource = "Add Category"
     static let description = IntentDescription("Adds a new Spesify category explicitly requested by the user.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Type",
@@ -66,10 +80,17 @@ struct AddCategoryIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct DeleteCategoryIntent: AppIntent {
     static let title: LocalizedStringResource = "Delete Category"
     static let description = IntentDescription("Deletes a Spesify category after moving existing transactions to another category.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Type",

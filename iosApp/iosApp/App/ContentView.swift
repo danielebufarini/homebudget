@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State var path = NavigationPath()
     @State var showVoiceExpenseSheet = false
     @State var voiceExpenseAutoStartRequest = 0
@@ -308,6 +309,9 @@ struct ContentView: View {
         .restoresInteractivePopGesture()
         .onAppear { transferModel.start() }
         .onDisappear { transferModel.stop() }
+        .task(id: canImportSharedScreenshot) {
+            if canImportSharedScreenshot { await transferModel.importSharedScreenshotIfNeeded() }
+        }
         .onChange(of: transferModel.feedback?.id) { _, _ in
             guard let feedback = transferModel.feedback else { return }
             showCsvFeedback(feedback.message, style: feedback.style)
@@ -337,6 +341,13 @@ struct ContentView: View {
             }
             .buttonStyle(.glass)
         }
+    }
+
+    private var canImportSharedScreenshot: Bool {
+        scenePhase == .active && path.isEmpty && !dashboardNavigationDrawerOpen
+            && !showVoiceExpenseSheet && !showPaymentScreenshotImport
+            && !showCsvTransferSheet && !showCsvExportSheet && !showCsvExporter
+            && activeImportPicker == nil
     }
 
     func startVoiceExpense() {

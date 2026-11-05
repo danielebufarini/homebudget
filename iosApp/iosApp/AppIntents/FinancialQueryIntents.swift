@@ -2,10 +2,17 @@ import AppIntents
 @preconcurrency import ComposeApp
 import Foundation
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct CurrentMonthExpenseTotalIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Current Month Expenses"
     static let description = IntentDescription("Returns the total expenses recorded in Spesify for the current month.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let result = try await IosFinancialQueryIntentController().getCurrentMonthExpensesTotal()
@@ -13,10 +20,17 @@ struct CurrentMonthExpenseTotalIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct MonthExpenseTotalIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Monthly Expenses"
     static let description = IntentDescription("Returns the total expenses recorded in Spesify for a selected month.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Month",
@@ -41,10 +55,17 @@ struct MonthExpenseTotalIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct PeriodExpenseTotalIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Expenses for Period"
     static let description = IntentDescription("Returns the total expenses recorded in Spesify for an inclusive date period.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Start Date",
@@ -73,10 +94,17 @@ struct PeriodExpenseTotalIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct CurrentMonthIncomeTotalIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Current Month Income"
     static let description = IntentDescription("Returns the total income recorded in Spesify for the current month.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let result = try await IosFinancialQueryIntentController().getCurrentMonthIncomeTotal()
@@ -84,10 +112,17 @@ struct CurrentMonthIncomeTotalIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct MonthIncomeTotalIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Monthly Income"
     static let description = IntentDescription("Returns the total income recorded in Spesify for a selected month.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Month",
@@ -112,10 +147,17 @@ struct MonthIncomeTotalIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct PeriodIncomeTotalIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Income for Period"
     static let description = IntentDescription("Returns the total income recorded in Spesify for an inclusive date period.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     @Parameter(
         title: "Start Date",
@@ -144,10 +186,17 @@ struct PeriodIncomeTotalIntent: AppIntent {
     }
 }
 
+#if SPESIFY_SIRI_AI
+@AppIntent(.tool)
+#endif
 struct CurrentBalanceIntent: AppIntent {
     static let title: LocalizedStringResource = "Get Current Balance"
     static let description = IntentDescription("Returns the current balance recorded in Spesify. Balance matches the dashboard cumulative balance through the current calendar month.")
     static let openAppWhenRun = false
+
+    #if SPESIFY_SIRI_AI
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    #endif
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let result = try await IosFinancialQueryIntentController().getCurrentBalance()
