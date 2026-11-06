@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
@@ -37,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,7 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,6 +78,8 @@ internal fun RecentTransactionsPage(
     categoriesById: Map<String, Category>,
     expanded: Boolean,
     filter: DashboardRecentTransactionFilter,
+    hideFutureExpenses: Boolean,
+    onHideFutureExpensesChange: (Boolean) -> Unit,
     onExpand: () -> Unit,
     onCollapse: () -> Unit,
     onFilterChange: (DashboardRecentTransactionFilter) -> Unit,
@@ -118,6 +124,31 @@ internal fun RecentTransactionsPage(
                 onExpand = onExpand,
                 onCollapse = onCollapse,
                 onFilterChange = onFilterChange
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 48.dp)
+                .testTag("dashboard_hide_future_expenses")
+                .toggleable(
+                    value = hideFutureExpenses,
+                    role = Role.Switch,
+                    onValueChange = onHideFutureExpensesChange
+                ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = strings.hideFutureExpenses,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = hideFutureExpenses,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics { }
             )
         }
 

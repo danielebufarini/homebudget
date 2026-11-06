@@ -10,6 +10,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import it.danielebufarini.spesify.data.CategoryManagementRepository
 import it.danielebufarini.spesify.data.DashboardPreferencesStore
 import it.danielebufarini.spesify.data.DashboardReadRepository
@@ -58,6 +62,7 @@ fun DashboardRoute(
     val dashboardPreferencesStore: DashboardPreferencesStore = koinInject()
     val strings = rememberDashboardStrings()
     val pinnedDashboardCard by dashboardPreferencesStore.pinnedDashboardCard.collectAsState()
+    val hideFutureExpenses by dashboardPreferencesStore.hideFutureExpenses.collectAsState()
 
     val categoriesFlow = remember(categoryRepository) {
         categoryRepository.getAllCategories()
@@ -71,12 +76,19 @@ fun DashboardRoute(
         currentMonthCursor()
     }
     val dashboardScope = rememberCoroutineScope()
-    val dashboardStore = remember(dashboardRepository, dashboardScope, currentMonth) {
+    val dashboardStore = remember(dashboardRepository, dashboardPreferencesStore, dashboardScope, currentMonth) {
         DashboardStateStore(
             repository = dashboardRepository,
             initialMonth = currentMonth,
-            scope = dashboardScope
+            scope = dashboardScope,
+            hideFutureExpenses = dashboardPreferencesStore.hideFutureExpenses
         )
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(dashboardStore, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            dashboardStore.refreshRecentTransactionsWhileVisible()
+        }
     }
 
     val selectedMonth by dashboardStore.selectedMonth.collectAsState()
@@ -137,6 +149,8 @@ fun DashboardRoute(
             categoryBreakdownExpanded = categoryBreakdownExpanded,
             recentTransactionsExpanded = recentTransactionsExpanded,
             recentTransactionsFilter = recentTransactionsFilter,
+            hideFutureExpenses = hideFutureExpenses,
+            onHideFutureExpensesChange = dashboardPreferencesStore::setHideFutureExpenses,
             pinnedDashboardCard = pinnedDashboardCard,
             onPinDashboardCard = dashboardPreferencesStore::pinDashboardCard,
             onExpandBalanceChart = {

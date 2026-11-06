@@ -19,6 +19,9 @@ enum class DashboardCardPage {
 
 interface DashboardPreferencesStore {
     val pinnedDashboardCard: StateFlow<DashboardCardPage?>
+    val hideFutureExpenses: StateFlow<Boolean>
 
     fun pinDashboardCard(page: DashboardCardPage?)
+
+    fun setHideFutureExpenses(hide: Boolean)
 }

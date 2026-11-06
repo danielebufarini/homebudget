@@ -185,8 +185,11 @@ internal class DashboardReadRepositoryAdapter(
             trailingMonthCount = trailingMonthCount
         )
 
-    override fun getDashboardRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> =
-        repository.getRecentTransactions(limit = limit)
+    override fun getDashboardRecentTransactions(
+        limit: Int,
+        expensesBeforeExclusiveMillis: Long?
+    ): Flow<List<DashboardRecentTransaction>> =
+        repository.getRecentTransactions(limit = limit, expensesBeforeExclusiveMillis = expensesBeforeExclusiveMillis)
 
     override fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview> =
         repository.getRecurringExpenseOverviewForMonth(year = year, month = month)

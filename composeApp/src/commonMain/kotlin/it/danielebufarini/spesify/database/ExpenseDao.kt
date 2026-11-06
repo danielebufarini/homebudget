@@ -18,6 +18,7 @@ interface ExpenseDao {
         SELECT id, 0 AS typeOrdinal, amount, date, categoryId, description
         FROM expense
         WHERE date < :toExclusiveMillis
+          AND (:expensesBeforeExclusiveMillis IS NULL OR date < :expensesBeforeExclusiveMillis)
         UNION ALL
         SELECT id, 1 AS typeOrdinal, amount, date, categoryId, description
         FROM income
@@ -28,7 +29,8 @@ interface ExpenseDao {
     )
     fun getRecentTransactions(
         limit: Int,
-        toExclusiveMillis: Long
+        toExclusiveMillis: Long,
+        expensesBeforeExclusiveMillis: Long? = null
     ): Flow<List<DashboardRecentTransactionRow>>
 
     @Query(

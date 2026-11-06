@@ -121,7 +121,10 @@ internal interface DashboardReadRepository {
         trailingMonthCount: Int = 6
     ): Flow<DashboardBalanceTrend>
 
-    fun getDashboardRecentTransactions(limit: Int = 15): Flow<List<DashboardRecentTransaction>>
+    fun getDashboardRecentTransactions(
+        limit: Int = 15,
+        expensesBeforeExclusiveMillis: Long? = null
+    ): Flow<List<DashboardRecentTransaction>>
 
     fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview>
 

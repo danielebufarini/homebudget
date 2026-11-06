@@ -24,7 +24,7 @@ import kotlin.test.assertFalse
 class DashboardStateStoreTest {
     @Test
     fun navigationCrossesYearsAndKeepsThePublicMonthReadOnly() = runTest {
-        val store = DashboardStateStore(EmptyDashboardRepository, MonthCursor(2026, 1), backgroundScope)
+        val store = DashboardStateStore(EmptyDashboardRepository, MonthCursor(2026, 1), backgroundScope, MutableStateFlow(false))
         assertFalse(store.selectedMonth is MutableStateFlow<*>)
         store.selectPreviousMonth()
         assertEquals(MonthCursor(2025, 12), store.selectedMonth.value)
@@ -35,7 +35,7 @@ class DashboardStateStoreTest {
     @Test
     fun concurrentNavigationDoesNotLoseAcceptedMonthChanges() = runTest {
         val initial = MonthCursor(2026, 11)
-        val store = DashboardStateStore(EmptyDashboardRepository, initial, backgroundScope)
+        val store = DashboardStateStore(EmptyDashboardRepository, initial, backgroundScope, MutableStateFlow(false))
         val workers = 8
         val steps = 1_000
         runTogether(workers) { repeat(steps) { store.selectNextMonth() } }
@@ -67,7 +67,10 @@ private object EmptyDashboardRepository : DashboardReadRepository {
         flowOf(emptyDashboardMonthSummary())
     override fun getDashboardBalanceTrend(selectedYear: Int, selectedMonth: Int, trailingMonthCount: Int) =
         flowOf(DashboardBalanceTrend(expenseTotalsByMonth = emptyList(), incomeTotalsByMonth = emptyList()))
-    override fun getDashboardRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> = flowOf(emptyList())
+    override fun getDashboardRecentTransactions(
+        limit: Int,
+        expensesBeforeExclusiveMillis: Long?
+    ): Flow<List<DashboardRecentTransaction>> = flowOf(emptyList())
     override fun getRecurringExpenseOverviewForMonth(year: Int, month: Int) =
         flowOf(RecurringExpenseOverview(expenses = emptyList(), totalAmount = 0L, nextOccurrenceDate = null))
     override suspend fun getWidgetMonthSummary(year: Int, month: Int) = WidgetMonthSummary(0L, 0L)

@@ -18,7 +18,9 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 
 class DashboardRepository(
-    database: SpesifyDatabase
+    database: SpesifyDatabase,
+    private val clock: Clock = Clock.System,
+    private val timeZone: () -> TimeZone = TimeZone::currentSystemDefault
 ) {
     private val expenseDao = database.expenseDao()
     private val incomeDao = database.incomeDao()
@@ -92,12 +94,16 @@ class DashboardRepository(
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }
 
-    fun getRecentTransactions(limit: Int): Flow<List<DashboardRecentTransaction>> {
-        val toExclusiveMillis = currentMonthUpperBoundMillis()
+    fun getRecentTransactions(
+        limit: Int,
+        expensesBeforeExclusiveMillis: Long? = null
+    ): Flow<List<DashboardRecentTransaction>> {
+        val toExclusiveMillis = currentMonthUpperBoundMillis(clock, timeZone())
 
         return expenseDao.getRecentTransactions(
             limit = limit,
-            toExclusiveMillis = toExclusiveMillis
+            toExclusiveMillis = toExclusiveMillis,
+            expensesBeforeExclusiveMillis = expensesBeforeExclusiveMillis
         ).map { rows ->
             rows.map { row ->
                 DashboardRecentTransaction(
@@ -180,9 +186,10 @@ class DashboardRepository(
 }
 
 private fun currentMonthUpperBoundMillis(
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
+    clock: Clock,
+    timeZone: TimeZone
 ): Long {
-    val today = Clock.System.now().toLocalDateTime(timeZone).date
+    val today = clock.now().toLocalDateTime(timeZone).date
     return MonthKey(
         year = today.year,
         month = today.month.number

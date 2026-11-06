@@ -163,8 +163,14 @@ class ExpenseRepository(
         )
     }
 
-    fun getDashboardRecentTransactions(limit: Int = 15): Flow<List<DashboardRecentTransaction>> {
-        return dashboardRepository.getRecentTransactions(limit = limit)
+    fun getDashboardRecentTransactions(
+        limit: Int = 15,
+        expensesBeforeExclusiveMillis: Long? = null
+    ): Flow<List<DashboardRecentTransaction>> {
+        return dashboardRepository.getRecentTransactions(
+            limit = limit,
+            expensesBeforeExclusiveMillis = expensesBeforeExclusiveMillis
+        )
     }
 
     fun getRecurringExpenseOverviewForMonth(year: Int, month: Int): Flow<RecurringExpenseOverview> {

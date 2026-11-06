@@ -22,6 +22,7 @@ import spesify.composeapp.generated.resources.expenses
 import spesify.composeapp.generated.resources.expenses_by_category
 import spesify.composeapp.generated.resources.full_weekday_names
 import spesify.composeapp.generated.resources.highest_day
+import spesify.composeapp.generated.resources.hide_future_expenses
 import spesify.composeapp.generated.resources.income
 import spesify.composeapp.generated.resources.monthly_summary
 import spesify.composeapp.generated.resources.no_expenses_for_month
@@ -59,6 +60,7 @@ internal data class DashboardStrings(
     val noExpensesInPeriod: String,
     val recentTransactions: String,
     val noRecentTransactions: String,
+    val hideFutureExpenses: String,
     val allTransactions: String,
     val expandBalanceChart: String,
     val collapseBalanceChart: String,
@@ -102,6 +104,7 @@ internal fun rememberDashboardStrings(): DashboardStrings {
         noExpensesInPeriod = stringResource(Res.string.no_expenses_in_period),
         recentTransactions = stringResource(Res.string.recent_transactions),
         noRecentTransactions = stringResource(Res.string.no_recent_transactions),
+        hideFutureExpenses = stringResource(Res.string.hide_future_expenses),
         allTransactions = stringResource(Res.string.all_transactions),
         expandBalanceChart = stringResource(Res.string.expand_balance_chart),
         collapseBalanceChart = stringResource(Res.string.collapse_balance_chart),
