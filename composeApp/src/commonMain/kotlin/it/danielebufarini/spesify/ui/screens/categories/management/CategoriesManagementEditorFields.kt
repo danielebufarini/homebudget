@@ -1,5 +1,6 @@
 package it.danielebufarini.spesify.ui.screens.categories.management
 
+import it.danielebufarini.spesify.ui.screens.transactions.keepFocusedFieldVisible
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -105,6 +106,7 @@ internal fun CategoryNameEditorField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
+                        .keepFocusedFieldVisible()
                         .onFocusChanged { focusState ->
                             isFocused = focusState.isFocused
                             if (focusState.isFocused) {

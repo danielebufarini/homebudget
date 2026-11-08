@@ -173,6 +173,8 @@ Notification-based expense detection is Android-only and opt-in. The Android hos
 
 Supported financial app packages are fetched with Ktor from the remote JSON whitelist and cached locally with Jetpack DataStore. The sync runs through WorkManager periodically and can also be triggered at cold start when the cache is empty or stale. If the remote sync fails and there is no cached whitelist yet, the app bootstraps the cache from the bundled asset [android_banks_packages_list.json](./androidApp/src/main/assets/android_banks_packages_list.json). Existing cache data is preserved on sync failure.
 
+Google Messages (`com.google.android.apps.messaging`) is also supported for Fineco SMS in the format `Fineco - SMS Gratuito: Autorizzato utilizzo Carta ***2813 Importo: 9,6 EUR, per: PEPCO 220135 MONZA. Info: 0228992899`. This source works immediately with existing or empty whitelist caches. Only matching card authorization SMS are processed; other Messages notifications are ignored and the local LLM fallback is disabled for this source.
+
 When Notification Listener access is enabled by the user, Spesify filters posted notifications by source package using the local whitelist, extracts notification text locally, and interprets candidate expense amounts and merchants through a shared pipeline. The pipeline runs the deterministic regex parser first and uses its high-confidence result directly. If regex parsing fails, produces low confidence, or finds an amount without a useful merchant, shared Kotlin extracts deterministic money candidates from explicit currency amounts before Android may fall back to the local Gemini Nano interpreter. Gemini receives the notification text and the allowed candidate list, then can only classify the text and select one `selectedAmountMinor` value from those candidates. The fallback is only attempted for whitelisted source packages, runs outside the notification listener callback, and normalizes strictly validated JSON into the same parsed candidate model used by regex.
 
 Matching notifications show a local confirmation notification with explicit actions: confirm, modify, or ignore. Confirm saves through the existing transaction creation path; modify opens the existing expense editor with parsed values pre-filled; ignore dismisses without saving. Raw notification contents are used only transiently for local interpretation: they are not persisted, logged, or sent to external services. Parsed amounts and LLM-selected candidates are represented internally as `Long` minor units.
@@ -225,7 +227,15 @@ xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'platfor
 
 ## Verification
 
-Run the local verification suite:
+Run the complete local verification suite with an installed iOS 27 simulator:
+
+```sh
+python3 scripts/verify-project.py --simulator AE95830E-53CD-4EEB-87E0-DE27609A795E
+```
+
+The Python 3 standard-library runner executes Gradle, Kotlin/Native tests, the real SKIE bridge tests, the normal `Refactoring` tests (including local UI tests), and a normal iOS Release build, in that order. It keeps command exit codes, logs, JUnit XML, XCResult bundles and generated-export evidence under a fresh `build/verification/<timestamp>/` directory. Missing reports, zero tests, unexpected identities/counts, skipped tests and failures make the runner fail. Expected test identities and parameter counts are recorded in `scripts/verification-tests.json`; update that inventory only when tests intentionally change. Check the runner itself with `python3 -m unittest discover -s scripts/tests -v`.
+
+The Gradle-only subset remains available:
 
 ```sh
 ./gradlew verifyAll
@@ -236,7 +246,8 @@ Run the local verification suite:
 - `:androidApp:test`
 - `:composeApp:testAndroidHostTest`
 - `:androidApp:assembleDebug`
-- `:composeApp:compileKotlinIosSimulatorArm64`
+- `:composeApp:linkDebugFrameworkIosSimulatorArm64`
+- `:composeApp:linkReleaseFrameworkIosSimulatorArm64` (after Debug, including SKIE generation and Swift compilation)
 
 Run the native Swift unit and UI tests with the shared `Refactoring` scheme (choose an installed iOS 27 simulator):
 
@@ -250,7 +261,9 @@ xcodebuild -project iosApp/iosApp.xcodeproj -scheme Refactoring \
 
 Run Kotlin/Native common and iOS-specific tests with `./gradlew :composeApp:iosSimulatorArm64Test`. This includes concurrent cold Koin bootstrap coverage; the Android host tests cover the specialized repository contracts against Room, including recurrence, rollback, search index updates and widget refresh after commit.
 
-The [refactoring action plan](./docs/ai/action-plan/kotlin-2.4.20-swift-6.4-refactoring-action-plan.md) records current gate results. The known whitelist ordering test remains enabled and failing; do not report `verifyAll` as passing while that failure remains.
+The `SkieInterop` scheme hosts `SkieInteropTests` in the application and requires `SPESIFY_SKIE_INTEROP_TESTS=true` when invoked directly. The runner supplies this setting, which enables the Kotlin source set `skieInteropMain` through `-Pspesify.skieInteropTests=true`. Its framework outputs are isolated in `composeApp/build/skie-interop`, with separate `build/verification/InteropDerivedData`. Normal app/test builds use the normal framework and `NormalDerivedData`. Fixture sources and exports are absent from both normal Debug and Release frameworks.
+
+The [SKIE hardening plan](./docs/ai/action-plan/skie-interop-hardening-action-plan.md) records the interoperability gates. Historical results remain in the [refactoring plan](./docs/ai/action-plan/kotlin-2.4.20-swift-6.4-refactoring-action-plan.md). The whitelist ordering test remains enabled: if it fails, the runner stays unsuccessful and `verifyAll` must not be reported as green.
 
 Run the assistant integration smoke checks after changing App Intents, AppFunctions, transaction creation, financial queries, category management, or amount/date parsing:
 
@@ -290,7 +303,7 @@ Run the iOS smoke checklist after changing SKIE, Kotlin/Native bridge APIs, Room
 
 Notification-based expense detection requires the user to enable Android Notification Listener access manually from system settings. This is not a normal runtime permission and cannot be granted through a permission dialog. On Android 13 and later, Spesify also needs the standard notification posting permission to show confirmation notifications.
 
-The feature remains inactive when the required access is missing. It only processes notifications locally from packages present in the cached supported-app whitelist.
+The feature remains inactive when the required access is missing. It only processes notifications locally from packages present in the cached supported-app whitelist, plus the Fineco card authorization SMS from Google Messages described above.
 
 ### Android AppFunctions
 

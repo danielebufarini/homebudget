@@ -1,5 +1,13 @@
 package it.danielebufarini.spesify.ui.screens.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Transition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,7 +46,7 @@ internal fun DashboardScreenScaffold(
     openVoiceExpenseRequest: Int = 0,
     selectedMonth: MonthCursor,
     totalAmount: Long,
-    showTopBar: Boolean = true,
+    bodyTransition: Transition<DashboardBodyMode>,
     showFab: Boolean,
     showQuickActions: Boolean = true,
     reserveQuickActionsSpace: Boolean = showQuickActions,
@@ -66,7 +74,13 @@ internal fun DashboardScreenScaffold(
 
         Scaffold(
             topBar = {
-                if (showTopBar) {
+                bodyTransition.AnimatedVisibility(
+                    visible = { it == DashboardBodyMode.Standard },
+                    enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
+                        expandVertically(spring(stiffness = Spring.StiffnessMediumLow)),
+                    exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
+                        shrinkVertically(spring(stiffness = Spring.StiffnessMediumLow))
+                ) {
                     if (isIos) {
                         IosDashboardTopBar(
                             strings = strings,

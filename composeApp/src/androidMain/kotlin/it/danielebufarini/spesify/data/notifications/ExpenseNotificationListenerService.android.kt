@@ -40,17 +40,19 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
         super.onDestroy()
     }
 
-    private suspend fun processNotification(sbn: StatusBarNotification) {
+    internal suspend fun processNotification(sbn: StatusBarNotification) {
         val sourcePackage = sbn.packageName?.takeIf(String::isNotBlank) ?: return
         Log.d(TAG, "Notification posted by package=$sourcePackage")
 
         val whitelistedPackages = whitelistRepository.getWhitelistedPackages()
         val isWhitelisted = sourcePackage in whitelistedPackages
+        val isGoogleMessages = sourcePackage == GOOGLE_MESSAGES_PACKAGE
         Log.d(
             TAG,
-            "Whitelist check: package=$sourcePackage whitelisted=$isWhitelisted cachedPackages=${whitelistedPackages.size}"
+            "Source check: package=$sourcePackage whitelisted=$isWhitelisted googleMessages=$isGoogleMessages cachedPackages=${whitelistedPackages.size}"
         )
-        if (!isWhitelisted) return
+        // SMS support must also work with an existing bank-only whitelist cache.
+        if (!isWhitelisted && !isGoogleMessages) return
 
         val rawText = NotificationTextExtractor.extract(sbn.notification)
         if (rawText.isBlank()) {
@@ -58,9 +60,11 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
             return
         }
 
+        if (isGoogleMessages && !finecoSmsRegex.containsMatchIn(rawText)) return
+
         val interpretedCandidate = interpretExpenseTextUseCase.execute(
             rawText = rawText,
-            canUseLocalLlmFallback = isWhitelisted
+            canUseLocalLlmFallback = isWhitelisted && !isGoogleMessages
         )
         if (interpretedCandidate == null) {
             Log.d(TAG, "Ignored whitelisted notification: no amount candidate found")
@@ -100,7 +104,11 @@ class ExpenseNotificationListenerService : NotificationListenerService(), KoinCo
 
     private companion object {
         private const val TAG = "SpesifyNotifDetect"
+        private const val GOOGLE_MESSAGES_PACKAGE = "com.google.android.apps.messaging"
         private const val MAX_PARALLEL_NOTIFICATION_JOBS = 2
+        private val finecoSmsRegex = Regex(
+            "(?i)\\bFineco\\s*-\\s*SMS\\s+Gratuito:\\s*Autorizzato\\s+utilizzo\\s+Carta\\s+\\*{3}\\d{4}\\s+Importo:"
+        )
         private val recentDeduplicator = RecentNotificationDeduplicator()
     }
 }

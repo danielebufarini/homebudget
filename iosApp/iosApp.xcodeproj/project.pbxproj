@@ -12,13 +12,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		6C100000000000000000000D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 6C1000000000000000000007;
-			remoteInfo = SpesifyShareExtension;
-		};
 		6A100000000000000000000D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
@@ -33,14 +26,21 @@
 			remoteGlobalIDString = 1E55858A6559A08CD51F2001;
 			remoteInfo = iosApp;
 		};
-		6D1000000000000000000006 /* PBXContainerItemProxy */ = {
+		6B2000000000000000000006 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 1E55858A6559A08CD51F2001;
 			remoteInfo = iosApp;
 		};
-		6B2000000000000000000006 /* PBXContainerItemProxy */ = {
+		6C100000000000000000000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6C1000000000000000000007;
+			remoteInfo = SpesifyShareExtension;
+		};
+		6D1000000000000000000006 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 853541A5AAEF880CD96E9072 /* Project object */;
 			proxyType = 1;
@@ -65,22 +65,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6C1000000000000000000001 /* SpesifyShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpesifyShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0EEC63C2493FB5B124983070 /* Spesify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spesify.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A1000000000000000000001 /* SpesifyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpesifyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B1000000000000000000001 /* SpesifyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpesifyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		6D1000000000000000000001 /* SkieInteropTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkieInteropTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B2000000000000000000001 /* SpesifyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpesifyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C1000000000000000000001 /* SpesifyShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpesifyShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D1000000000000000000001 /* SkieInteropTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkieInteropTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6C1000000000000000000003 /* Exceptions for "SpesifyShare" folder in "SpesifyShareExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 6C1000000000000000000007 /* SpesifyShareExtension */;
-		};
 		43794822F84CB26FBF13E017 /* Exceptions for "iosApp" folder in "iosApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -95,22 +88,16 @@
 			);
 			target = 6A1000000000000000000007 /* SpesifyWidgetExtension */;
 		};
+		6C1000000000000000000003 /* Exceptions for "SpesifyShare" folder in "SpesifyShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6C1000000000000000000007 /* SpesifyShareExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6C1000000000000000000002 /* SpesifyShare */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6C1000000000000000000003 /* Exceptions for "SpesifyShare" folder in "SpesifyShareExtension" target */,
-			);
-			path = SpesifyShare;
-			sourceTree = "<group>";
-		};
-		6C2000000000000000000002 /* SharedScreenshotImport */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SharedScreenshotImport;
-			sourceTree = "<group>";
-		};
 		2ED80F9D9E7C0DC6D57A0826 /* iosApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -137,26 +124,32 @@
 			path = SpesifyTests;
 			sourceTree = "<group>";
 		};
-		6D1000000000000000000002 /* SkieInteropTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SkieInteropTests;
-			sourceTree = "<group>";
-		};
 		6B2000000000000000000002 /* SpesifyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SpesifyUITests;
 			sourceTree = "<group>";
 		};
+		6C1000000000000000000002 /* SpesifyShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6C1000000000000000000003 /* Exceptions for "SpesifyShare" folder in "SpesifyShareExtension" target */,
+			);
+			path = SpesifyShare;
+			sourceTree = "<group>";
+		};
+		6C2000000000000000000002 /* SharedScreenshotImport */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SharedScreenshotImport;
+			sourceTree = "<group>";
+		};
+		6D1000000000000000000002 /* SkieInteropTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SkieInteropTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		6C1000000000000000000005 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		229CDE7927522DAAD6659938 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -178,14 +171,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D1000000000000000000004 /* Frameworks */ = {
+		6B2000000000000000000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6B2000000000000000000004 /* Frameworks */ = {
+		6C1000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D1000000000000000000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -275,27 +275,6 @@
 			productReference = 6A1000000000000000000001 /* SpesifyWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		6C1000000000000000000007 /* SpesifyShareExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6C1000000000000000000008 /* Build configuration list for PBXNativeTarget "SpesifyShareExtension" */;
-			buildPhases = (
-				6C1000000000000000000004 /* Sources */,
-				6C1000000000000000000005 /* Frameworks */,
-				6C1000000000000000000006 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				6C1000000000000000000002 /* SpesifyShare */,
-				6C2000000000000000000002 /* SharedScreenshotImport */,
-			);
-			name = SpesifyShareExtension;
-			productName = SpesifyShareExtension;
-			productReference = 6C1000000000000000000001 /* SpesifyShareExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		6B1000000000000000000008 /* SpesifyTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6B1000000000000000000009 /* Build configuration list for PBXNativeTarget "SpesifyTests" */;
@@ -315,27 +294,6 @@
 			name = SpesifyTests;
 			productName = SpesifyTests;
 			productReference = 6B1000000000000000000001 /* SpesifyTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		6D1000000000000000000008 /* SkieInteropTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6D1000000000000000000009 /* Build configuration list for PBXNativeTarget "SkieInteropTests" */;
-			buildPhases = (
-				6D1000000000000000000003 /* Sources */,
-				6D1000000000000000000004 /* Frameworks */,
-				6D1000000000000000000005 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				6D1000000000000000000007 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				6D1000000000000000000002 /* SkieInteropTests */,
-			);
-			name = SkieInteropTests;
-			productName = SkieInteropTests;
-			productReference = 6D1000000000000000000001 /* SkieInteropTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		6B2000000000000000000008 /* SpesifyUITests */ = {
@@ -359,6 +317,48 @@
 			productReference = 6B2000000000000000000001 /* SpesifyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		6C1000000000000000000007 /* SpesifyShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C1000000000000000000008 /* Build configuration list for PBXNativeTarget "SpesifyShareExtension" */;
+			buildPhases = (
+				6C1000000000000000000004 /* Sources */,
+				6C1000000000000000000005 /* Frameworks */,
+				6C1000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6C1000000000000000000002 /* SpesifyShare */,
+				6C2000000000000000000002 /* SharedScreenshotImport */,
+			);
+			name = SpesifyShareExtension;
+			productName = SpesifyShareExtension;
+			productReference = 6C1000000000000000000001 /* SpesifyShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		6D1000000000000000000008 /* SkieInteropTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6D1000000000000000000009 /* Build configuration list for PBXNativeTarget "SkieInteropTests" */;
+			buildPhases = (
+				6D1000000000000000000003 /* Sources */,
+				6D1000000000000000000004 /* Frameworks */,
+				6D1000000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6D1000000000000000000007 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6D1000000000000000000002 /* SkieInteropTests */,
+			);
+			name = SkieInteropTests;
+			productName = SkieInteropTests;
+			productReference = 6D1000000000000000000001 /* SkieInteropTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -369,14 +369,6 @@
 				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
-					6C1000000000000000000007 = {
-						CreatedOnToolsVersion = 27.1;
-						SystemCapabilities = {
-							com.apple.ApplicationGroups.iOS = {
-								enabled = 1;
-							};
-						};
-					};
 					1E55858A6559A08CD51F2001 = {
 						CreatedOnToolsVersion = 16.2;
 						SystemCapabilities = {
@@ -403,11 +395,19 @@
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = 1E55858A6559A08CD51F2001;
 					};
-					6D1000000000000000000008 = {
+					6B2000000000000000000008 = {
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = 1E55858A6559A08CD51F2001;
 					};
-					6B2000000000000000000008 = {
+					6C1000000000000000000007 = {
+						CreatedOnToolsVersion = 27.1;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+					6D1000000000000000000008 = {
 						CreatedOnToolsVersion = 27.1;
 						TestTargetID = 1E55858A6559A08CD51F2001;
 					};
@@ -439,13 +439,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		6C1000000000000000000006 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6A1000000000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -460,14 +453,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D1000000000000000000005 /* Resources */ = {
+		6B2000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6B2000000000000000000005 /* Resources */ = {
+		6C1000000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D1000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -506,13 +506,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		6C1000000000000000000004 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6A1000000000000000000004 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -527,14 +520,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D1000000000000000000003 /* Sources */ = {
+		6B2000000000000000000003 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6B2000000000000000000003 /* Sources */ = {
+		6C1000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D1000000000000000000003 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -551,11 +551,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		6C100000000000000000000E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 6C1000000000000000000007 /* SpesifyShareExtension */;
-			targetProxy = 6C100000000000000000000D /* PBXContainerItemProxy */;
-		};
 		6A100000000000000000000E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 6A1000000000000000000007 /* SpesifyWidgetExtension */;
@@ -566,64 +561,24 @@
 			target = 1E55858A6559A08CD51F2001 /* iosApp */;
 			targetProxy = 6B1000000000000000000006 /* PBXContainerItemProxy */;
 		};
-		6D1000000000000000000007 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1E55858A6559A08CD51F2001 /* iosApp */;
-			targetProxy = 6D1000000000000000000006 /* PBXContainerItemProxy */;
-		};
 		6B2000000000000000000007 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E55858A6559A08CD51F2001 /* iosApp */;
 			targetProxy = 6B2000000000000000000006 /* PBXContainerItemProxy */;
 		};
+		6C100000000000000000000E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6C1000000000000000000007 /* SpesifyShareExtension */;
+			targetProxy = 6C100000000000000000000D /* PBXContainerItemProxy */;
+		};
+		6D1000000000000000000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E55858A6559A08CD51F2001 /* iosApp */;
+			targetProxy = 6D1000000000000000000006 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		6C1000000000000000000009 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = SpesifyShare/SpesifyShare.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GJDF7BKBVD;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = SpesifyShare/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MARKETING_VERSION = 1.8.0;
-				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.share;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		6C100000000000000000000A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = SpesifyShare/SpesifyShare.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GJDF7BKBVD;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = SpesifyShare/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MARKETING_VERSION = 1.8.0;
-				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.share;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
 		05B8CFABFAA343A9EFD8EA58 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 3CDBE807B7135A1722FEF72F /* Configuration */;
@@ -717,7 +672,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.2;
 				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -808,28 +763,6 @@
 			};
 			name = Debug;
 		};
-		6D100000000000000000000A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SkieInteropTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spesify.app/Spesify";
-			};
-			name = Debug;
-		};
 		6B100000000000000000000B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -843,28 +776,6 @@
 					"@loader_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SpesifyTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spesify.app/Spesify";
-			};
-			name = Release;
-		};
-		6D100000000000000000000B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SkieInteropTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -913,6 +824,103 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = iosApp;
+			};
+			name = Release;
+		};
+		6C1000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = SpesifyShare/SpesifyShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GJDF7BKBVD;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SpesifyShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		6C100000000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = SpesifyShare/SpesifyShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GJDF7BKBVD;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SpesifyShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		6D100000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SkieInteropTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spesify.app/Spesify";
+			};
+			name = Debug;
+		};
+		6D100000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify.SkieInteropTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spesify.app/Spesify";
 			};
 			name = Release;
 		};
@@ -1016,7 +1024,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.2;
 				PRODUCT_BUNDLE_IDENTIFIER = it.danielebufarini.spesify;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1031,15 +1039,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6C1000000000000000000008 /* Build configuration list for PBXNativeTarget "SpesifyShareExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6C1000000000000000000009 /* Debug */,
-				6C100000000000000000000A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		6A1000000000000000000008 /* Build configuration list for PBXNativeTarget "SpesifyWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1058,20 +1057,29 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		6D1000000000000000000009 /* Build configuration list for PBXNativeTarget "SkieInteropTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6D100000000000000000000A /* Debug */,
-				6D100000000000000000000B /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		6B2000000000000000000009 /* Build configuration list for PBXNativeTarget "SpesifyUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6B200000000000000000000A /* Debug */,
 				6B200000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6C1000000000000000000008 /* Build configuration list for PBXNativeTarget "SpesifyShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6C1000000000000000000009 /* Debug */,
+				6C100000000000000000000A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6D1000000000000000000009 /* Build configuration list for PBXNativeTarget "SkieInteropTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6D100000000000000000000A /* Debug */,
+				6D100000000000000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

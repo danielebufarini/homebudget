@@ -3,6 +3,7 @@ package it.danielebufarini.spesify.ui.screens.dashboard
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.OpenInFull
@@ -25,15 +27,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import it.danielebufarini.spesify.data.DashboardCardPage
 import it.danielebufarini.spesify.data.DashboardRecentTransaction
 import it.danielebufarini.spesify.database.Category
 import it.danielebufarini.spesify.ui.screens.platform.PlatformCard
+import kotlin.math.abs
 
 private data class DashboardChartPageSpec(
     val page: DashboardCardPage,
@@ -43,6 +51,8 @@ private data class DashboardChartPageSpec(
 @Composable
 internal fun DashboardCharts(
     modifier: Modifier,
+    cardModifier: Modifier,
+    pagerState: PagerState,
     strings: DashboardStrings,
     balanceChartState: BalanceChartState,
     categoryTotals: List<CategoryTotal>,
@@ -70,13 +80,6 @@ internal fun DashboardCharts(
             DashboardChartPageSpec(DashboardCardPage.RecentTransactions, strings.recentTransactions)
         )
     }
-    val initialPage = pages.indexOfFirst { it.page == pinnedDashboardCard }
-        .takeIf { it >= 0 }
-        ?: 0
-    val pagerState = rememberPagerState(
-        initialPage = initialPage,
-        pageCount = { pages.size }
-    )
     val currentPage = pages[pagerState.currentPage.coerceIn(0, pages.lastIndex)]
     val currentPagePinned = currentPage.page == pinnedDashboardCard
     val pinRotationDegrees by animateFloatAsState(
@@ -85,7 +88,7 @@ internal fun DashboardCharts(
         label = "dashboardPinRotation"
     )
 
-    PlatformCard(modifier = modifier, contentPadding = PaddingValues(0.dp)) {
+    PlatformCard(modifier = modifier.then(cardModifier), contentPadding = PaddingValues(0.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -144,7 +147,12 @@ internal fun DashboardCharts(
                 }
 
                 Row(
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 64.dp)
+                        .heightIn(min = 48.dp)
+                        .testTag("dashboard_card_title")
+                        .expandOnTitleSwipe(expandAction),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -181,7 +189,7 @@ internal fun DashboardCharts(
                 }
             }
 
-            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize().testTag("dashboard_pager")) { page ->
                 when (pages[page].page) {
                     DashboardCardPage.Balance -> BalanceChartPage(
                         strings = strings,
@@ -214,5 +222,26 @@ internal fun DashboardCharts(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Modifier.expandOnTitleSwipe(onExpand: () -> Unit): Modifier {
+    val expand by rememberUpdatedState(onExpand)
+    val threshold = with(LocalDensity.current) { 48.dp.toPx() }
+    return pointerInput(threshold) {
+        var drag = Offset.Zero
+        detectDragGestures(
+            onDragStart = { drag = Offset.Zero },
+            onDragCancel = { drag = Offset.Zero },
+            onDragEnd = {
+                if (-drag.y >= threshold && -drag.y > abs(drag.x)) expand()
+                drag = Offset.Zero
+            },
+            onDrag = { change, amount ->
+                drag += amount
+                if (-drag.y > abs(drag.x)) change.consume()
+            }
+        )
     }
 }

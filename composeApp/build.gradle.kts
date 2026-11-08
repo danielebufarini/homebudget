@@ -79,7 +79,9 @@ kotlin {
         androidResources {
             enable = true
         }
-        withHostTest {}
+        withHostTest {
+            isIncludeAndroidResources = true
+        }
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_25)
         }
@@ -168,6 +170,11 @@ tasks.matching {
     it.name.startsWith("compileKotlin") || it.name.startsWith("ksp")
 }.configureEach {
     dependsOn(generateBuildInfo)
+}
+
+tasks.withType<Test>().configureEach {
+    // Robolectric's Android shared memory setup uses SharedSecrets on Java 25.
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
 }
 
 compose {

@@ -1,27 +1,31 @@
 package it.danielebufarini.spesify.ui.screens.expenses
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -58,31 +62,20 @@ internal fun TransactionViewModeCarousel(
     onModeSelected: (ExpenseGroupingMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.28f),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
-        )
+    Row(
+        modifier = modifier
+            .horizontalScroll(rememberScrollState())
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 4.dp, vertical = 3.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            modes.forEach { (mode, label) ->
-                TransactionViewModeCarouselItem(
-                    label = label,
-                    selected = selectedMode == mode,
-                    onClick = { onModeSelected(mode) }
-                )
-            }
+        modes.forEach { (mode, label) ->
+            TransactionViewModeCarouselItem(
+                label = label,
+                icon = if (mode == ExpenseGroupingMode.ByCategory) Icons.Rounded.GridView else Icons.Rounded.CalendarMonth,
+                selected = selectedMode == mode,
+                onClick = { onModeSelected(mode) }
+            )
         }
     }
 }
@@ -90,23 +83,24 @@ internal fun TransactionViewModeCarousel(
 @Composable
 private fun TransactionViewModeCarouselItem(
     label: String,
+    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit
 ) {
     val containerColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.70f)
+            MaterialTheme.colorScheme.primary
         } else {
-            Color.Transparent
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
         },
         animationSpec = tween(durationMillis = 180),
         label = "TransactionViewModeContainerColor"
     )
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.onSurface
+            MaterialTheme.colorScheme.onPrimary
         } else {
-            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
+            MaterialTheme.colorScheme.onSurfaceVariant
         },
         animationSpec = tween(durationMillis = 180),
         label = "TransactionViewModeContentColor"
@@ -118,36 +112,41 @@ private fun TransactionViewModeCarouselItem(
 
     Surface(
         modifier = Modifier
-            .animateContentSize(animationSpec = tween(durationMillis = 180))
-            .defaultMinSize(minWidth = 72.dp, minHeight = 40.dp)
+            .defaultMinSize(minWidth = 64.dp, minHeight = 48.dp)
+            .clip(CircleShape)
             .selectable(
                 selected = selected,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                role = Role.Button,
+                role = Role.RadioButton,
                 onClick = onClick
             )
             .semantics {
                 contentDescription = accessibilityLabel
-            },
-        shape = RoundedCornerShape(19.dp),
+            }
+            .padding(vertical = 6.dp),
+        shape = CircleShape,
         color = containerColor,
         contentColor = contentColor,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
-        border = if (selected) {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f))
+        border = if (!selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         } else {
             null
         }
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            maxLines = 1,
-            color = contentColor
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = 1,
+                color = contentColor
+            )
+        }
     }
 }

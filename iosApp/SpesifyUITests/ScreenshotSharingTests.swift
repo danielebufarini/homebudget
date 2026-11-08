@@ -4,6 +4,16 @@ import XCTest
 final class ScreenshotSharingTests: XCTestCase {
     @MainActor
     func testInMemoryScreenshotCanBeSharedWithSpesify() throws {
+        try checkSharing(openMore: false)
+    }
+
+    @MainActor
+    func testInMemoryScreenshotCanBeSharedWithSpesifyFromMore() throws {
+        try checkSharing(openMore: true)
+    }
+
+    @MainActor
+    private func checkSharing(openMore: Bool) throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
@@ -35,14 +45,25 @@ final class ScreenshotSharingTests: XCTestCase {
         let shareButton = runner.buttons["Share screenshot fixture"]
         XCTAssertTrue(shareButton.waitForExistence(timeout: 10), runner.debugDescription)
         shareButton.tap()
-        XCTAssertTrue(runner.collectionViews["activityCollectionView"].waitForExistence(timeout: 10), runner.debugDescription)
-        let spesify = runner.cells["Spesify"].firstMatch
-        if !spesify.exists {
-            let more = runner.cells["More"].firstMatch
+        let activities = runner.collectionViews["activityCollectionView"]
+        XCTAssertTrue(activities.waitForExistence(timeout: 10), runner.debugDescription)
+        var spesify = activities.cells["Spesify"].firstMatch
+        if openMore || !spesify.exists {
+            let more = activities.cells["More"].firstMatch
             XCTAssertTrue(more.waitForExistence(timeout: 10), runner.debugDescription)
             more.tap()
+            let hierarchy = XCTAttachment(string: runner.debugDescription)
+            hierarchy.name = "Apps list after More"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let apps = runner.otherElements["ShareSheet.EditAppsView"]
+            XCTAssertTrue(apps.waitForExistence(timeout: 10), runner.debugDescription)
+            // The Apps list labels the text inside each row, not the cell. A global
+            // cells["Spesify"] query instead matches the obscured share-sheet icon.
+            spesify = apps.tables.cells.containing(.staticText, identifier: "Spesify").firstMatch
         }
         XCTAssertTrue(spesify.waitForExistence(timeout: 10), runner.debugDescription)
+        XCTAssertTrue(spesify.isHittable, runner.debugDescription)
         spesify.tap()
         let received = runner.staticTexts["Screenshot received. Open Spesify to review the expense."]
         XCTAssertTrue(received.waitForExistence(timeout: 15), runner.debugDescription)

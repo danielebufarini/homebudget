@@ -161,7 +161,7 @@ internal fun SoftTextField(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.clip(RoundedCornerShape(22.dp)),
+        modifier = modifier.keepFocusedFieldVisible().clip(RoundedCornerShape(22.dp)),
         readOnly = readOnly,
         enabled = enabled,
         singleLine = singleLine,

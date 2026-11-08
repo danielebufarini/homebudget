@@ -2,6 +2,8 @@ package it.danielebufarini.spesify.ui.screens.income
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -80,6 +82,7 @@ internal fun AddIncomeEditorContent(
     val dismissKeyboard = rememberKeyboardDismissAction()
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         containerColor = if (useFloatingBottomBar) Color.Transparent else MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -115,6 +118,7 @@ internal fun AddIncomeEditorContent(
                 .fillMaxSize()
                 .dismissKeyboardOnOutsideTap(dismissKeyboard)
                 .padding(padding)
+                .consumeWindowInsets(padding)
                 .padding(
                     start = 16.dp,
                     top = contentTopPadding,

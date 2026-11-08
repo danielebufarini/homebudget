@@ -1,5 +1,6 @@
 package it.danielebufarini.spesify.ui.screens.dashboard
 
+import it.danielebufarini.spesify.ui.screens.transactions.keepFocusedFieldVisible
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -68,7 +70,9 @@ internal fun DashboardSearchBar(
                 onValueChange = onQueryChange,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 14.dp)
+                    .keepFocusedFieldVisible()
+                    .testTag("dashboard_search_field"),
                 singleLine = true,
                 textStyle = TextStyle(
                     color = colorScheme.onSurface,

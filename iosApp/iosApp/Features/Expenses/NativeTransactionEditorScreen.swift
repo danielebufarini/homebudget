@@ -13,6 +13,7 @@ struct NativeTransactionEditorScreen: View {
     @State private var showAddCategorySheet = false
     @State private var showRecurringDeleteDialog = false
     @State private var showRecurringSaveDialog = false
+    @FocusState private var isDescriptionFocused: Bool
 
     init(
         initialKind: AddTransactionKind,
@@ -48,17 +49,28 @@ struct NativeTransactionEditorScreen: View {
 
     var body: some View {
         ZStack {
-            ScrollView {
-                content
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 24)
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear.frame(height: reservedTopInset)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: ExpenseEditorChromeLayout.reservedBottomInset)
+            ScrollViewReader { scroll in
+                ScrollView {
+                    content
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 24)
+                }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Color.clear.frame(height: reservedTopInset)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear.frame(height: ExpenseEditorChromeLayout.reservedBottomInset)
+                }
+                .onChange(of: isDescriptionFocused) { _, focused in
+                    if focused { scroll.scrollTo("editor_description", anchor: .center) }
+                }
+                .onChange(of: viewModel.description) { _, _ in
+                    if isDescriptionFocused { scroll.scrollTo("editor_description", anchor: .center) }
+                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { _ in
+                    if isDescriptionFocused { scroll.scrollTo("editor_description", anchor: .center) }
+                }
             }
 
             chrome
@@ -200,8 +212,10 @@ struct NativeTransactionEditorScreen: View {
 
                     NativeExpenseDescriptionField(
                         descriptionText: $viewModel.description,
-                        readOnly: false
+                        readOnly: false,
+                        isDescriptionFocused: $isDescriptionFocused
                     )
+                    .id("editor_description")
                 }
 
                 AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {

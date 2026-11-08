@@ -130,7 +130,7 @@ internal fun RecentTransactionsPage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 48.dp)
+                .defaultMinSize(minHeight = 36.dp)
                 .testTag("dashboard_hide_future_expenses")
                 .toggleable(
                     value = hideFutureExpenses,
@@ -142,7 +142,7 @@ internal fun RecentTransactionsPage(
         ) {
             Text(
                 text = strings.hideFutureExpenses,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f)
             )
             Switch(

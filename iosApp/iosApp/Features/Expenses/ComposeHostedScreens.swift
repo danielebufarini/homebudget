@@ -9,7 +9,10 @@ struct DashboardRootView: View {
     let onNavigationDrawerVisibilityChange: (Bool) -> Void
 
     var body: some View {
-        KotlinViewControllerHost(constrainToSafeArea: false) {
+        KotlinViewControllerHost(
+            constrainToSafeArea: false,
+            coordinatesDashboardOrientation: true
+        ) {
             DashboardContentViewController(
                 onOpenCategories: {
                     path.append(Route.categories)

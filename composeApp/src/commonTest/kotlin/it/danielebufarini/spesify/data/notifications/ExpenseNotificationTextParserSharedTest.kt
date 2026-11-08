@@ -28,6 +28,18 @@ class ExpenseNotificationTextParserSharedTest {
     }
 
     @Test
+    fun parse_extractsFinecoSmsWithSingleDecimalDigit() {
+        val rawText = "Fineco - SMS Gratuito: Autorizzato utilizzo Carta ***2813 Importo: 9,6 EUR, per: PEPCO 220135 MONZA. Info: 0228992899"
+
+        val parsed = parser.parse(rawText)
+
+        assertEquals(960L, parsed?.amountMinor)
+        assertEquals("PEPCO 220135 MONZA", parsed?.merchant)
+        assertEquals("EUR", parsed?.currency)
+        assertEquals(listOf(960L), parser.moneyCandidates(rawText).map { it.amountMinor })
+    }
+
+    @Test
     fun parseAll_extractsMultipleStructuredPaymentBlocks() {
         val parsed = parser.parseAll(
             """

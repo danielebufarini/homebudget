@@ -18,6 +18,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = spesifyVersionCode
         versionName = spesifyVersionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -79,6 +80,12 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.koin.core)
     debugImplementation(libs.compose.uiTooling)
+    androidTestImplementation(libs.compose.foundation)
+    androidTestImplementation(libs.compose.material3)
+    androidTestImplementation(libs.compose.uiTestJunit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.core)
     ksp(libs.androidx.appfunctions.compiler)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

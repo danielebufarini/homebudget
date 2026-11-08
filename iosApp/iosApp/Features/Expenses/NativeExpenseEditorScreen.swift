@@ -12,6 +12,7 @@ struct NativeExpenseEditorScreen: View {
     @State private var showAddCategorySheet = false
     @State private var showRecurringDeleteDialog = false
     @State private var showRecurringSaveDialog = false
+    @FocusState private var isDescriptionFocused: Bool
 
     init(
         expenseId: String,
@@ -41,89 +42,102 @@ struct NativeExpenseEditorScreen: View {
 
     var body: some View {
         ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 220)
-                    } else if viewModel.didFailToLoad {
-                        AppGlassListCard {
-                            Text(appLocalized("Expense not found."))
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    } else {
-                        NativeExpenseAmountCard(
-                            amount: $viewModel.amount,
-                            readOnly: readOnly
-                        )
-
-                        AppGlassSheetSection(title: appLocalized("Expense Details"), spacing: 14) {
-                            NativeExpensePickerRow(
-                                label: appLocalized("Category"),
-                                value: viewModel.categoryValue,
-                                iconKey: viewModel.selectedCategory?.iconKey ?? "category",
-                                colorKey: viewModel.selectedCategoryId,
-                                enabled: !readOnly,
-                                action: { showCategoryPicker = true }
-                            )
-
-                            NativeExpensePickerRow(
-                                label: appLocalized("Date"),
-                                value: nativeExpenseEditorDateString(viewModel.selectedDate),
-                                systemImageName: "calendar",
-                                enabled: !readOnly,
-                                action: { showDatePicker = true }
-                            )
-
-                            NativeExpenseDescriptionField(
-                                descriptionText: $viewModel.description,
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, minHeight: 220)
+                        } else if viewModel.didFailToLoad {
+                            AppGlassListCard {
+                                Text(appLocalized("Expense not found."))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        } else {
+                            NativeExpenseAmountCard(
+                                amount: $viewModel.amount,
                                 readOnly: readOnly
                             )
-                        }
 
-                        AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {
-                            if viewModel.hasRecurringSeries {
-                                NativeExpenseInfoCard(
-                                    systemImageName: "arrow.triangle.2.circlepath",
-                                    text: appLocalized("This expense belongs to a recurring monthly series.")
-                                )
-                            } else {
-                                NativeExpenseToggleRow(
-                                    label: appLocalized("Recurring Monthly"),
-                                    systemImageName: "arrow.triangle.2.circlepath",
-                                    isOn: $viewModel.isRecurringMonthly,
-                                    enabled: !readOnly
+                            AppGlassSheetSection(title: appLocalized("Expense Details"), spacing: 14) {
+                                NativeExpensePickerRow(
+                                    label: appLocalized("Category"),
+                                    value: viewModel.categoryValue,
+                                    iconKey: viewModel.selectedCategory?.iconKey ?? "category",
+                                    colorKey: viewModel.selectedCategoryId,
+                                    enabled: !readOnly,
+                                    action: { showCategoryPicker = true }
                                 )
 
-                                if viewModel.isRecurringMonthly {
-                                    NativeExpenseInfoCard(
-                                        systemImageName: "arrow.triangle.2.circlepath",
-                                        text: recurringExpenseInfoText
-                                    )
-                                }
+                                NativeExpensePickerRow(
+                                    label: appLocalized("Date"),
+                                    value: nativeExpenseEditorDateString(viewModel.selectedDate),
+                                    systemImageName: "calendar",
+                                    enabled: !readOnly,
+                                    action: { showDatePicker = true }
+                                )
+
+                                NativeExpenseDescriptionField(
+                                    descriptionText: $viewModel.description,
+                                    readOnly: readOnly,
+                                    isDescriptionFocused: $isDescriptionFocused
+                                )
+                                .id("editor_description")
                             }
 
-                            NativeExpenseToggleRow(
-                                label: appLocalized("Shared Expense"),
-                                systemImageName: "person.2.fill",
-                                isOn: $viewModel.isShared,
-                                enabled: !readOnly
-                            )
+                            AppGlassSheetSection(title: appLocalized("Options"), spacing: 14) {
+                                if viewModel.hasRecurringSeries {
+                                    NativeExpenseInfoCard(
+                                        systemImageName: "arrow.triangle.2.circlepath",
+                                        text: appLocalized("This expense belongs to a recurring monthly series.")
+                                    )
+                                } else {
+                                    NativeExpenseToggleRow(
+                                        label: appLocalized("Recurring Monthly"),
+                                        systemImageName: "arrow.triangle.2.circlepath",
+                                        isOn: $viewModel.isRecurringMonthly,
+                                        enabled: !readOnly
+                                    )
+
+                                    if viewModel.isRecurringMonthly {
+                                        NativeExpenseInfoCard(
+                                            systemImageName: "arrow.triangle.2.circlepath",
+                                            text: recurringExpenseInfoText
+                                        )
+                                    }
+                                }
+
+                                NativeExpenseToggleRow(
+                                    label: appLocalized("Shared Expense"),
+                                    systemImageName: "person.2.fill",
+                                    isOn: $viewModel.isShared,
+                                    enabled: !readOnly
+                                )
+                            }
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Color.clear.frame(height: ExpenseEditorChromeLayout.reservedTopInset)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear.frame(height: ExpenseEditorChromeLayout.reservedBottomInset)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: isDescriptionFocused) { _, focused in
+                    if focused { scroll.scrollTo("editor_description", anchor: .center) }
+                }
+                .onChange(of: viewModel.description) { _, _ in
+                    if isDescriptionFocused { scroll.scrollTo("editor_description", anchor: .center) }
+                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { _ in
+                    if isDescriptionFocused { scroll.scrollTo("editor_description", anchor: .center) }
+                }
             }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear.frame(height: ExpenseEditorChromeLayout.reservedTopInset)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: ExpenseEditorChromeLayout.reservedBottomInset)
-            }
-            .scrollDismissesKeyboard(.interactively)
 
             VStack {
                 ExpenseEditorGlassHeader(

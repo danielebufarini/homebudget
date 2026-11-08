@@ -1,5 +1,6 @@
 package it.danielebufarini.spesify.ui.screens.dashboard
 
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,9 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,6 +33,7 @@ import it.danielebufarini.spesify.data.DashboardReadRepository
 import it.danielebufarini.spesify.data.DashboardRecentTransactionType
 import it.danielebufarini.spesify.data.subtractAmountsExact
 import it.danielebufarini.spesify.ui.screens.categories.EnsureStarterCategoriesSeeded
+import it.danielebufarini.spesify.ui.screens.common.MonthCursor
 import it.danielebufarini.spesify.ui.screens.platform.rememberIsIosPlatform
 import org.koin.compose.koinInject
 
@@ -75,11 +79,14 @@ fun DashboardRoute(
     val currentMonth = remember {
         currentMonthCursor()
     }
+    var savedYear by rememberSaveable { mutableIntStateOf(currentMonth.year) }
+    var savedMonth by rememberSaveable { mutableIntStateOf(currentMonth.month) }
+    val initialMonth = remember { MonthCursor(savedYear, savedMonth) }
     val dashboardScope = rememberCoroutineScope()
-    val dashboardStore = remember(dashboardRepository, dashboardPreferencesStore, dashboardScope, currentMonth) {
+    val dashboardStore = remember(dashboardRepository, dashboardPreferencesStore, dashboardScope, initialMonth) {
         DashboardStateStore(
             repository = dashboardRepository,
-            initialMonth = currentMonth,
+            initialMonth = initialMonth,
             scope = dashboardScope,
             hideFutureExpenses = dashboardPreferencesStore.hideFutureExpenses
         )
@@ -92,6 +99,10 @@ fun DashboardRoute(
     }
 
     val selectedMonth by dashboardStore.selectedMonth.collectAsState()
+    SideEffect {
+        savedYear = selectedMonth.year
+        savedMonth = selectedMonth.month
+    }
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
@@ -128,6 +139,17 @@ fun DashboardRoute(
     val monthlySavingsAmount = remember(summary.incomeAmount, summary.totalAmount) {
         subtractAmountsExact(summary.incomeAmount, summary.totalAmount)
     }
+    val bodyMode = when {
+        balanceChartExpanded -> DashboardBodyMode.BalanceChartExpanded
+        categoryBreakdownExpanded -> DashboardBodyMode.CategoryBreakdownExpanded
+        recentTransactionsExpanded -> DashboardBodyMode.RecentTransactionsExpanded
+        else -> DashboardBodyMode.Standard
+    }
+    val bodyTransition = updateTransition(bodyMode, label = "dashboardExpansion")
+    LockDashboardOrientation(landscape = balanceChartExpanded)
+    LaunchedEffect(balanceChartExpanded) {
+        onBalanceChartExpansionChange(balanceChartExpanded)
+    }
     DisposableEffect(Unit) {
         onDispose {
             onBalanceChartExpansionChange(false)
@@ -145,9 +167,7 @@ fun DashboardRoute(
             recurringTotalAmount = recurringExpenseOverview.totalAmount,
             chartState = chartState,
             recentTransactions = recentTransactions,
-            balanceChartExpanded = balanceChartExpanded,
-            categoryBreakdownExpanded = categoryBreakdownExpanded,
-            recentTransactionsExpanded = recentTransactionsExpanded,
+            transition = bodyTransition,
             recentTransactionsFilter = recentTransactionsFilter,
             hideFutureExpenses = hideFutureExpenses,
             onHideFutureExpensesChange = dashboardPreferencesStore::setHideFutureExpenses,
@@ -157,22 +177,18 @@ fun DashboardRoute(
                 categoryBreakdownExpanded = false
                 recentTransactionsExpanded = false
                 balanceChartExpanded = true
-                onBalanceChartExpansionChange(true)
             },
             onCollapseBalanceChart = {
                 balanceChartExpanded = false
-                onBalanceChartExpansionChange(false)
             },
             onExpandCategoryBreakdown = {
                 balanceChartExpanded = false
-                onBalanceChartExpansionChange(false)
                 recentTransactionsExpanded = false
                 categoryBreakdownExpanded = true
             },
             onCollapseCategoryBreakdown = { categoryBreakdownExpanded = false },
             onExpandRecentTransactions = {
                 balanceChartExpanded = false
-                onBalanceChartExpansionChange(false)
                 categoryBreakdownExpanded = false
                 recentTransactionsExpanded = true
             },
@@ -223,7 +239,7 @@ fun DashboardRoute(
             openVoiceExpenseRequest = openVoiceExpenseRequest,
             selectedMonth = selectedMonth,
             totalAmount = summary.totalAmount,
-            showTopBar = !balanceChartExpanded && !categoryBreakdownExpanded && !recentTransactionsExpanded,
+            bodyTransition = bodyTransition,
             showFab = showFab,
             showQuickActions = showQuickActions,
             reserveQuickActionsSpace = reserveQuickActionsSpace,

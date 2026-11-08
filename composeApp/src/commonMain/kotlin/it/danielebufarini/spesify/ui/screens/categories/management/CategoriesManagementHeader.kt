@@ -1,5 +1,6 @@
 package it.danielebufarini.spesify.ui.screens.categories.management
 
+import it.danielebufarini.spesify.ui.screens.transactions.keepFocusedFieldVisible
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -176,7 +177,8 @@ internal fun CategorySearchBar(
                 onValueChange = onQueryChange,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 14.dp)
+                    .keepFocusedFieldVisible(),
                 singleLine = true,
                 textStyle = TextStyle(
                     color = palette.textPrimary,

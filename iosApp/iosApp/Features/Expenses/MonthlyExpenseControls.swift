@@ -3,60 +3,53 @@ import SwiftUI
 
 struct ExpenseGroupingCarousel: View {
     @Binding var selection: ExpenseGroupingMode
-    @Namespace private var selectionNamespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 2) {
-                groupingButton(title: appLocalized("Category"), mode: .byCategory)
-                groupingButton(title: appLocalized("Date"), mode: .byDate)
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    groupingButton(title: appLocalized("Category"), systemImage: "square.grid.2x2", mode: .byCategory)
+                    groupingButton(title: appLocalized("Date"), systemImage: "calendar", mode: .byDate)
+                }
+                .padding(.vertical, 2)
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 3)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        .background(
-            AppThemePalette.chromeSurface.opacity(0.34),
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(AppThemePalette.chromeStroke.opacity(0.58), lineWidth: 1)
-        }
         .frame(minHeight: MonthlyTransactionsHeaderLayout.groupingHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func groupingButton(title: String, mode: ExpenseGroupingMode) -> some View {
+    private func groupingButton(title: String, systemImage: String, mode: ExpenseGroupingMode) -> some View {
         let isSelected = selection == mode
 
-        return Button {
-            select(mode)
-        } label: {
-            Text(title)
-                .font(.subheadline.weight(isSelected ? .semibold : .medium))
-                .foregroundStyle(isSelected ? AppThemePalette.onSurface : AppThemePalette.onSurface.opacity(0.66))
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .padding(.horizontal, 14)
-                .frame(minWidth: 78, minHeight: 40)
-                .background {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 19, style: .continuous)
-                            .fill(AppThemePalette.chromeSurface.opacity(0.84))
-                            .matchedGeometryEffect(id: "selected-expense-grouping-mode", in: selectionNamespace)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 19, style: .continuous)
-                                    .stroke(AppThemePalette.chromeStroke, lineWidth: 1)
-                            }
-                    }
+        return Group {
+            if isSelected {
+                Button { select(mode) } label: {
+                    groupingLabel(title: title, systemImage: systemImage)
                 }
-                .contentShape(Rectangle())
-                .animation(.easeInOut(duration: 0.18), value: isSelected)
+                .buttonStyle(.glassProminent)
+            } else {
+                Button { select(mode) } label: {
+                    groupingLabel(title: title, systemImage: systemImage)
+                }
+                .buttonStyle(.glass)
+            }
         }
-        .buttonStyle(.plain)
+        .tint(Color.accentColor)
+        .buttonBorderShape(.capsule)
         .accessibilityLabel(appLocalized("View transactions by %@", title))
+        .accessibilityIdentifier(mode == .byCategory ? "grouping_category" : "grouping_date")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func groupingLabel(title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 4)
+            .frame(minHeight: 30)
     }
 
     private func select(_ mode: ExpenseGroupingMode) {
@@ -64,7 +57,7 @@ struct ExpenseGroupingCarousel: View {
             return
         }
 
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
             selection = mode
         }
 
@@ -80,7 +73,7 @@ enum MonthlyTransactionsHeaderLayout {
     static let selectorTopSpacing: CGFloat = 14
     static let selectorHeight: CGFloat = 54
     static let groupingTopSpacing: CGFloat = 10
-    static let groupingHeight: CGFloat = 44
+    static let groupingHeight: CGFloat = 48
     static let bottomSpacing: CGFloat = 20
     static var reservedTopInset: CGFloat {
         MonthNavigationHeaderLayout.topPadding +

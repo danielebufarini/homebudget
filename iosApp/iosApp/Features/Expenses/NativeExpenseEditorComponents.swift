@@ -54,7 +54,7 @@ struct NativeExpensePickerRow: View {
 struct NativeExpenseDescriptionField: View {
     @Binding var descriptionText: String
     let readOnly: Bool
-    @FocusState private var isDescriptionFocused: Bool
+    @FocusState.Binding var isDescriptionFocused: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -72,6 +72,7 @@ struct NativeExpenseDescriptionField: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     TextField("", text: $descriptionText, axis: .vertical)
+                        .accessibilityIdentifier("editor_description")
                         .font(.title3.weight(.medium))
                         .textInputAutocapitalization(.sentences)
                         .autocorrectionDisabled(false)

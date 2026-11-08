@@ -15,20 +15,24 @@ func appDismissKeyboard() {
 
 struct KotlinViewControllerHost: UIViewControllerRepresentable {
     let constrainToSafeArea: Bool
+    let coordinatesDashboardOrientation: Bool
     let makeViewController: () -> UIViewController
 
     init(
         constrainToSafeArea: Bool = true,
+        coordinatesDashboardOrientation: Bool = false,
         makeViewController: @escaping () -> UIViewController
     ) {
         self.constrainToSafeArea = constrainToSafeArea
+        self.coordinatesDashboardOrientation = coordinatesDashboardOrientation
         self.makeViewController = makeViewController
     }
 
     func makeUIViewController(context: Context) -> UIViewController {
         SafeAreaContainerViewController(
             contentViewController: makeViewController(),
-            constrainToSafeArea: constrainToSafeArea
+            constrainToSafeArea: constrainToSafeArea,
+            coordinatesDashboardOrientation: coordinatesDashboardOrientation
         )
     }
 
@@ -38,13 +42,19 @@ struct KotlinViewControllerHost: UIViewControllerRepresentable {
 final class SafeAreaContainerViewController: UIViewController {
     private let contentViewController: UIViewController
     private let constrainToSafeArea: Bool
+    private let coordinatesDashboardOrientation: Bool
+    var dashboardBalanceExpanded: Bool
 
     init(
         contentViewController: UIViewController,
-        constrainToSafeArea: Bool
+        constrainToSafeArea: Bool,
+        coordinatesDashboardOrientation: Bool = false,
+        dashboardBalanceExpanded: Bool = false
     ) {
         self.contentViewController = contentViewController
         self.constrainToSafeArea = constrainToSafeArea
+        self.coordinatesDashboardOrientation = coordinatesDashboardOrientation
+        self.dashboardBalanceExpanded = dashboardBalanceExpanded
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -58,6 +68,9 @@ final class SafeAreaContainerViewController: UIViewController {
 
         view.backgroundColor = .clear
         view.isOpaque = false
+        if coordinatesDashboardOrientation {
+            AppOrientationController.attachDashboard(self)
+        }
 
         addChild(contentViewController)
         contentViewController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -83,6 +96,29 @@ final class SafeAreaContainerViewController: UIViewController {
         }
 
         contentViewController.didMove(toParent: self)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if coordinatesDashboardOrientation {
+            AppOrientationController.attachDashboard(self)
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if coordinatesDashboardOrientation {
+            AppOrientationController.detachDashboard(self)
+        }
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        guard coordinatesDashboardOrientation else { return }
+        coordinator.animate(alongsideTransition: { _ in
+            self.view.setNeedsLayout()
+            self.view.layoutIfNeeded()
+        })
     }
 }
 

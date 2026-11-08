@@ -176,55 +176,65 @@ struct NativeAddCategorySheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 10)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    AppGlassSheetSection(spacing: 14, verticalPadding: 16) {
-                        TextField(appLocalized("Category Name"), text: $name)
-                            .textInputAutocapitalization(.words)
-                            .focused($isNameFocused)
-                            .submitLabel(.done)
-                            .onSubmit {
-                                dismissNameKeyboard()
-                            }
-                            .toolbar {
-                                ToolbarItemGroup(placement: .keyboard) {
-                                    Spacer()
-                                    Button(appLocalized("Done")) {
-                                        dismissNameKeyboard()
-                                    }
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        AppGlassSheetSection(spacing: 14, verticalPadding: 16) {
+                            TextField(appLocalized("Category Name"), text: $name)
+                                .id("category_name")
+                                .accessibilityIdentifier("category_name")
+                                .textInputAutocapitalization(.words)
+                                .focused($isNameFocused)
+                                .submitLabel(.done)
+                                .onSubmit {
+                                    dismissNameKeyboard()
                                 }
-                            }
-                    }
-
-                    ForEach(nativeExpenseEditorIconSections) { section in
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(section.title)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-
-                            LazyVGrid(
-                                columns: nativeExpenseCategoryIconChoiceColumns,
-                                alignment: .leading,
-                                spacing: 12
-                            ) {
-                                ForEach(section.iconKeys, id: \.self) { iconKey in
-                                    NativeExpenseCategoryIconChoice(
-                                        iconKey: iconKey,
-                                        isSelected: selectedIconKey == iconKey,
-                                        action: {
-                                            selectedIconKey = iconKey
+                                .toolbar {
+                                    ToolbarItemGroup(placement: .keyboard) {
+                                        Spacer()
+                                        Button(appLocalized("Done")) {
                                             dismissNameKeyboard()
                                         }
-                                    )
+                                    }
+                                }
+                        }
+
+                        ForEach(nativeExpenseEditorIconSections) { section in
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(section.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+
+                                LazyVGrid(
+                                    columns: nativeExpenseCategoryIconChoiceColumns,
+                                    alignment: .leading,
+                                    spacing: 12
+                                ) {
+                                    ForEach(section.iconKeys, id: \.self) { iconKey in
+                                        NativeExpenseCategoryIconChoice(
+                                            iconKey: iconKey,
+                                            isSelected: selectedIconKey == iconKey,
+                                            action: {
+                                                selectedIconKey = iconKey
+                                                dismissNameKeyboard()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: isNameFocused) { _, focused in
+                    if focused { scroll.scrollTo("category_name", anchor: .center) }
+                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { _ in
+                    if isNameFocused { scroll.scrollTo("category_name", anchor: .center) }
+                }
             }
-            .scrollDismissesKeyboard(.interactively)
 
             AppGlassSheetActionBar {
                 Button(appLocalized("Cancel")) {

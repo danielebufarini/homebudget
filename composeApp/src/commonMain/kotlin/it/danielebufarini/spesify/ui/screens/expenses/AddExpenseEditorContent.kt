@@ -2,6 +2,8 @@ package it.danielebufarini.spesify.ui.screens.expenses
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -83,6 +85,7 @@ internal fun AddExpenseEditorContent(
     val dismissKeyboard = rememberKeyboardDismissAction()
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         containerColor = if (useIosHostedFloatingChrome) Color.Transparent else MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -116,6 +119,7 @@ internal fun AddExpenseEditorContent(
                 .fillMaxSize()
                 .dismissKeyboardOnOutsideTap(dismissKeyboard)
                 .padding(padding)
+                .consumeWindowInsets(padding)
                 .padding(
                     start = 16.dp,
                     top = contentTopPadding,
